@@ -11,6 +11,30 @@ Commands for setup, collaboration, and continuity across Curve Labs projects.
 
 ---
 
+## Branch Awareness
+
+**When working in a project repo (tristero, lace):**
+
+Always check which branch the user is on. If they're on `main` or `master`, remind them before making changes:
+
+```
+You're on main. Create a branch before making changes:
+
+  /branch [description]
+
+Or manually:
+  git checkout -b feature/YYYY-MM-DD-your-description
+
+Then when ready:
+  /commit     # stage and commit
+  /push       # push to GitHub
+  /pr         # create pull request
+```
+
+Only remind once per session unless they switch back to main.
+
+---
+
 ## Entry Point Behavior
 
 **When opened in curve-labs-core directly (not as submodule):**
