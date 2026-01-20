@@ -1,24 +1,375 @@
 # Curve Labs Collaborator Skill
 
-Commands for maintaining continuity across sessions and collaborators.
+Commands for setup, collaboration, and continuity across Curve Labs projects.
 
-## Commands
+## Philosophy
+
+1. **Always show what you're doing** — Every command narrates its actions
+2. **One command, one job** — Lean commands that compose
+3. **Teach the pattern** — User understands what's happening and why
+4. **Suggest, don't automate decisions** — Prompt user to run the next logical command
+
+---
+
+## Setup & Sync
+
+### /setup
+
+First-time setup for a Curve Labs project.
+
+**Usage**: `/setup [project]`
+
+**What it does**:
+1. Clones the project repo
+2. Initializes submodules (curve-labs-core)
+3. Clones shared memory repo (if not present)
+4. Creates memory symlink
+5. Sets up development environment
+
+**Example**:
+```
+> /setup tristero
+
+Setting up Tristero...
+
+[1/5] Cloning repo...
+      git clone git@github.com:Curve-Labs/tristero.git ~/dev/tristero
+      ✓ Cloned to ~/dev/tristero
+
+[2/5] Initializing submodules...
+      git submodule update --init --recursive
+      ✓ curve-labs-core loaded
+
+[3/5] Cloning shared memory...
+      git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
+      ✓ Memory repo ready
+
+[4/5] Linking memory...
+      ln -s ~/dev/curve-labs-memory ~/dev/tristero/memory
+      ✓ Linked as ./memory
+
+[5/5] Setting up Python environment...
+      uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
+      ✓ Virtual environment ready
+
+Setup complete.
+
+⚠ Missing .env file. Run /env to configure API keys.
+```
+
+**Next**: Run `/env` to configure environment variables.
+
+---
+
+### /pull
+
+Get latest from all repos (project, memory, submodules).
+
+**Usage**: `/pull`
+
+**What it does**:
+1. Pulls latest from memory repo
+2. Pulls latest from current project
+3. Updates submodules to latest
+
+**Example**:
+```
+> /pull
+
+Pulling latest...
+
+[curve-labs-memory]  git pull
+                     ✓ 3 new commits (last: "Handoff: MCP research" by Cem)
+
+[tristero]           git pull
+                     ✓ Already up to date
+
+[curve-labs-core]    git submodule update --remote
+                     ✓ Updated to latest
+
+Ready. Recent activity:
+- Jan 20: Cem handed off MCP research (memory/conversations/2026-01/20-cem-mcp.md)
+
+You might want to read that handoff before starting.
+```
+
+**Next**: Read any recent handoffs, then start working.
+
+---
+
+### /env
+
+Configure environment variables for current project.
+
+**Usage**: `/env`
+
+**What it does**:
+1. Checks which env vars are required/optional
+2. Shows which are missing
+3. Prompts to add missing keys
+4. Writes to .env file
+
+**Example**:
+```
+> /env
+
+Checking .env...
+
+Required for Tristero:
+  OPENROUTER_API_KEY  ✗ missing
+  OPENAI_API_KEY      ✗ missing
+
+Optional:
+  LLM_MODEL           ✓ set (anthropic/claude-3.5-sonnet)
+
+To add missing keys:
+  1. Get OpenRouter key from: https://openrouter.ai/keys
+  2. Get OpenAI key from: https://platform.openai.com/api-keys
+
+Paste your OPENROUTER_API_KEY (or 'skip'):
+> sk-or-...
+
+✓ Added to .env
+
+Paste your OPENAI_API_KEY (or 'skip'):
+> sk-...
+
+✓ Added to .env
+
+Environment ready.
+```
+
+**Next**: You're ready to work. Run `/status` to see recent activity.
+
+---
+
+## Branching & Commits
+
+### /branch
+
+Create a feature or bugfix branch with consistent naming.
+
+**Usage**: `/branch [description]`
+
+**What it does**:
+1. Determines branch type (feature/bugfix)
+2. Creates branch with date-prefixed name
+3. Switches to the new branch
+
+**Example**:
+```
+> /branch mcp authentication
+
+Creating branch...
+
+Convention: feature/YYYY-MM-DD-short-description
+            bugfix/YYYY-MM-DD-short-description
+
+This looks like a feature.
+
+  git checkout -b feature/2026-01-20-mcp-authentication
+  ✓ Created and switched to feature/2026-01-20-mcp-authentication
+
+You're now on a feature branch. When ready:
+- /commit to save your work
+- /pr when ready for review
+```
+
+**Next**: Make your changes, then `/commit` when ready.
+
+---
+
+### /commit
+
+Stage changes and commit with a message.
+
+**Usage**: `/commit [message?]`
+
+**What it does**:
+1. Shows modified and untracked files
+2. Stages relevant files (ignores build artifacts)
+3. Prompts for or suggests commit message
+4. Creates the commit
+
+**Example**:
+```
+> /commit
+
+Checking changes...
+
+Modified files:
+  src/mcp/auth.py        (+42, -3)
+  src/mcp/server.py      (+8, -2)
+  tests/test_auth.py     (+28, new file)
+
+Untracked:
+  src/mcp/__pycache__/   (ignored ✓)
+
+Staging modified files...
+  git add src/mcp/auth.py src/mcp/server.py tests/test_auth.py
+
+Enter commit message (or I can suggest one):
+> Add MCP authentication with API key validation
+
+  git commit -m "Add MCP authentication with API key validation"
+  ✓ Committed (abc1234)
+
+Changes committed locally. Run /push to share, or /pr when ready for review.
+```
+
+**Next**: Run `/push` to share, or keep working and commit again.
+
+---
+
+### /push
+
+Push current branch to remote.
+
+**Usage**: `/push`
+
+**What it does**:
+1. Pushes current branch to origin
+2. Sets upstream if first push
+
+**Example**:
+```
+> /push
+
+Pushing feature/2026-01-20-mcp-authentication...
+
+  git push -u origin feature/2026-01-20-mcp-authentication
+  ✓ Pushed
+
+Branch is now on GitHub.
+Run /pr when ready for review.
+```
+
+**Next**: Run `/pr` when ready for review.
+
+---
+
+### /pr
+
+Create a pull request for current branch.
+
+**Usage**: `/pr`
+
+**What it does**:
+1. Summarizes branch changes
+2. Prompts for title and description
+3. Creates PR via GitHub CLI
+4. Returns PR URL
+
+**Example**:
+```
+> /pr
+
+Creating pull request...
+
+Branch: feature/2026-01-20-mcp-authentication
+Commits: 3 commits ahead of main
+Changes: +78 lines, -5 lines, 3 files
+
+Title: Add MCP authentication with API key validation
+       (from your last commit — edit? y/n)
+> n
+
+Description — summarize what this PR does:
+> Adds API key validation to MCP server. Keys are checked against env var. Includes tests.
+
+  Creating PR via GitHub CLI...
+  ✓ PR #42 created: https://github.com/Curve-Labs/tristero/pull/42
+
+PR ready for review. Share the link with the team.
+```
+
+**Next**: Share the PR link. Run `/handoff` if ending your session.
+
+---
+
+## Collaboration
+
+### /status
+
+See what's happening across Curve Labs projects.
+
+**Usage**: `/status`
+
+**What it does**:
+1. Shows current git state
+2. Reads memory/conversations/index.md for recent activity
+3. Lists open handoffs and pending PRs
+
+**Example**:
+```
+> /status
+
+Curve Labs Status
+─────────────────
+
+Your current state:
+  Project:  Tristero
+  Branch:   feature/2026-01-20-mcp-authentication (3 commits ahead)
+  Changes:  2 uncommitted files
+
+Recent activity (from memory/conversations/index.md):
+  Jan 20  Cem — MCP exploration, decided on stdio transport
+  Jan 19  Oz — Architecture planning, memory system design
+  Jan 19  Oz — LACE/Tristero comparison
+
+Open handoffs:
+  → Cem's MCP research (Jan 20) — you might want to read this
+
+Pending PRs:
+  #41 — "Fix reflection loop" (waiting on review)
+```
+
+**Next**: Read any relevant handoffs, or continue working.
+
+---
 
 ### /handoff
 
-Create a handoff document for session continuity. Use when ending a significant work session or switching contexts.
+End a session with a summary for the next person (or future you).
 
 **Usage**: `/handoff [topic]`
 
-**Behavior**:
-1. Summarize what was accomplished this session
-2. List any open threads or unfinished work
-3. Note key decisions made and their rationale
-4. Identify next steps with clear entry points
-5. Save to `memory/conversations/YYYY-MM/YYYY-MM-DD-handoff-[topic].md`
-6. Update `memory/conversations/index.md`
+**What it does**:
+1. Summarizes what was accomplished
+2. Notes open questions and next steps
+3. Creates handoff file in memory/conversations/
+4. Updates the conversation index
 
-**Handoff Document Template**:
+**Example**:
+```
+> /handoff mcp auth
+
+Creating handoff...
+
+I'll summarize this session. Checking what we did...
+
+Session summary:
+- Added MCP authentication (feature branch)
+- Created PR #42
+- Open question: how to handle key rotation?
+
+Writing to memory/conversations/2026-01/20-oz-mcp-auth.md...
+  ✓ Created
+
+Updating memory/conversations/index.md...
+  ✓ Added entry
+
+Now commit the memory repo:
+
+  cd ~/dev/curve-labs-memory
+  git add .
+  git commit -m "Handoff: MCP auth session"
+  git push
+
+Or run /save-memory and I'll do it.
+```
+
+**Handoff file template**:
 ```markdown
 # Handoff: [Topic]
 
@@ -28,7 +379,7 @@ Create a handoff document for session continuity. Use when ending a significant 
 
 ## Session Summary
 
-[2-3 sentences on what this session accomplished]
+[2-3 sentences on what was accomplished]
 
 ## Key Decisions
 
@@ -41,79 +392,132 @@ Create a handoff document for session continuity. Use when ending a significant 
 ## Open Threads
 
 - [ ] [Unfinished item with context]
-- [ ] [Another item]
 
 ## Next Steps
 
 1. [Clear action with entry point]
-2. [Another action]
 
 ## Entry Points
 
 For the next session, start by:
-- Reading: [specific file or section]
-- Running: [specific command if applicable]
-- Reviewing: [specific context needed]
+- Reading: [specific file]
+- Running: [specific command]
 ```
+
+**Next**: Run `/save-memory` to push the handoff.
 
 ---
 
-### /status
+### /save-memory
 
-Get current state across Curve Labs projects.
+Commit and push the shared memory repo.
 
-**Usage**: `/status [project?]`
+**Usage**: `/save-memory`
 
-**Behavior**:
-1. Check `memory/conversations/index.md` for recent activity
-2. Summarize active work streams per project
-3. Identify any handoffs awaiting pickup
-4. Note decisions pending review
+**What it does**:
+1. Stages all changes in memory repo
+2. Commits with descriptive message
+3. Pushes to origin
 
-**Output Format**:
+**Example**:
 ```
-## Curve Labs Status
+> /save-memory
 
-### Recent Activity
-- [Date]: [Summary] (@collaborator)
+Saving shared memory...
 
-### Active Threads
-- **LACE**: [current focus]
-- **Tristero**: [current focus]
+  cd ~/dev/curve-labs-memory
+  git add .
 
-### Pending Handoffs
-- [Handoff title] — created [date] by [collaborator]
+Changes to save:
+  conversations/2026-01/20-oz-mcp-auth.md (new)
+  conversations/index.md (modified)
 
-### Open Decisions
-- [Decision needing review]
+  git commit -m "Handoff: MCP auth session"
+  ✓ Committed
+
+  git push
+  ✓ Pushed
+
+Memory saved. Others will see your handoff on their next /pull.
 ```
+
+**Next**: You're done! Others will see your handoff on `/pull`.
 
 ---
 
 ### /reflect
 
-Capture emergent patterns or insights for the knowledge base.
+Capture a decision, finding, or pattern for the knowledge base.
 
-**Usage**: `/reflect [topic]`
+**Usage**: `/reflect`
 
-**Behavior**:
-1. Prompt for the insight or pattern observed
-2. Categorize: decision | finding | pattern
-3. Save to appropriate location in `memory/knowledge/`
-4. Cross-reference with related entries if applicable
+**What it does**:
+1. Prompts for category (decision/finding/pattern)
+2. Prompts for content
+3. Saves to memory/knowledge/
+4. Reminds to run /save-memory
+
+**Example**:
+```
+> /reflect
+
+What did you notice? (decision / finding / pattern)
+> decision
+
+What was decided?
+> Use stdio transport for MCP instead of HTTP
+
+Why?
+> Simpler auth model, Claude Code expects it, fewer moving parts
+
+Saving to memory/knowledge/decisions/2026-01-20-mcp-stdio-transport.md...
+  ✓ Created
+
+Run /save-memory to share with the team.
+```
 
 **Categories**:
-- **decisions/**: Choices made with rationale (reversible or not)
-- **findings/**: Discoveries, learnings, things that worked or didn't
-- **patterns/**: Recurring structures, approaches, or anti-patterns
+- **decisions/**: Choices made with rationale
+- **findings/**: Discoveries, learnings, what worked or didn't
+- **patterns/**: Recurring structures, approaches, anti-patterns
+
+**Next**: Run `/save-memory` to share.
 
 ---
 
-## Automatic Behaviors
+## Help
 
-When working on Curve Labs projects, this skill enables:
+### /help
 
-1. **Session awareness**: Track when significant work happens
-2. **Continuity prompts**: Suggest `/handoff` when ending long sessions
-3. **Context loading**: Offer to check knowledge base when uncertainty detected
-4. **Cross-project awareness**: Note when work in one project affects another
+Show available commands.
+
+**Usage**: `/help` or `/help [command]`
+
+**Example**:
+```
+> /help
+
+Curve Labs Commands
+───────────────────
+
+Setup & Sync:
+  /setup [project]   First-time project setup
+  /pull              Get latest from all repos
+  /env               Configure API keys
+
+Branching & Code:
+  /branch [name]     Create feature/bugfix branch
+  /commit            Stage and commit changes
+  /push              Push current branch
+  /pr                Create pull request
+
+Collaboration:
+  /status            See activity across projects
+  /handoff [topic]   End session, create summary
+  /save-memory       Push memory repo
+  /reflect           Capture decision/finding/pattern
+
+Help:
+  /help              Show this list
+  /help [command]    Detailed help for command
+```
