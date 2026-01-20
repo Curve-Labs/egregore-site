@@ -11,6 +11,47 @@ Commands for setup, collaboration, and continuity across Curve Labs projects.
 
 ---
 
+## Entry Point Detection
+
+**When Claude is opened directly in curve-labs-core (not as submodule):**
+
+Check if `memory/` symlink exists:
+
+**IF memory/ exists:**
+```
+Welcome back to Curve Labs.
+
+/activity — See what's happening
+/pull — Get latest from team
+
+Or just start working. I'll remember everything.
+```
+
+**IF memory/ does NOT exist:**
+```
+Welcome to Curve Labs.
+
+Looks like first time setup. I'll get you ready:
+- Shared memory (notes, handoffs, research)
+- Optionally: project codebases (tristero, lace)
+
+Ready to set up? (yes / tell me more)
+```
+
+If user says "tell me more":
+> Explain collaborative Claude concept briefly — shared memory across sessions,
+> handoffs between people, accumulated decisions and findings. Then offer setup again.
+
+**Trigger phrases for /setup:**
+- "set me up"
+- "getting started"
+- "first time"
+- "new here"
+- "yes" (in response to setup prompt)
+- Any request to be set up for Curve Labs
+
+---
+
 ## Branch Awareness
 
 **When working in a project repo (tristero, lace):**
@@ -35,72 +76,74 @@ Only remind once per session unless they switch back to main.
 
 ---
 
-## Entry Point Behavior
-
-**When opened in curve-labs-core directly (not as submodule):**
-
-This repo is the starting point for new contributors. On first message, greet:
-
-```
-Welcome to Curve Labs.
-
-Is this your first time? I can set you up.
-Or say /status if you're already set up and want to see what's happening.
-
-Projects: tristero, lace
-Commands: /help
-```
-
-**Trigger phrases for /setup:**
-- "set me up"
-- "getting started"
-- "first time"
-- "new here"
-- "setup"
-- Any request to be set up for Curve Labs
-
-When triggered, ask which project they want to work on, then run `/setup [project]`.
-
----
-
 ## Setup & Sync
 
 ### /setup
 
-First-time setup for a Curve Labs project.
+First-time setup for Curve Labs. Sets up shared memory first, projects are optional.
 
-**Usage**: `/setup [project]`
+**Usage**: `/setup` or `/setup [project]`
 
-**What it does**:
-1. Clones the project repo
-2. Initializes submodules (curve-labs-core)
-3. Clones shared memory repo (if not present)
-4. Creates memory symlink
-5. Sets up development environment
+**Important — Always use SSH for cloning:**
+- Always use: `git clone git@github.com:Curve-Labs/[repo].git`
+- Never try HTTP fetch first (repos are private)
+- If clone fails, explain: "I can't access this repo. Do you have SSH keys set up for GitHub? Run: `ssh -T git@github.com` to check."
 
-**Example**:
+**Example (first time, no arguments):**
+```
+> /setup
+
+[1/2] Setting up shared memory...
+      git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
+      ✓ Ready
+
+      Linking to current directory...
+      ln -s ~/dev/curve-labs-memory ./memory
+      ✓ Linked
+
+[2/2] Project codebases (optional)
+
+      Do you want to work on any project code?
+
+      • tristero — Coordination infrastructure (Python)
+      • lace — Knowledge graph system (Python + Node)
+
+      Type project names (comma-separated), 'all', or 'none'
+
+      'none' = Just collaborative research, no code repos
+
+> none
+
+✓ Setup complete.
+
+You now have collaborative Claude with shared memory.
+- /activity — See what's happening
+- /handoff — Leave notes for others
+- /reflect — Save decisions/findings
+- /pull — Get latest from team
+
+To add a project later: /setup tristero
+```
+
+**Example (adding a specific project later):**
 ```
 > /setup tristero
 
 Setting up Tristero...
 
-[1/5] Cloning repo...
+[1/4] Cloning repo...
       git clone git@github.com:Curve-Labs/tristero.git ~/dev/tristero
       ✓ Cloned to ~/dev/tristero
 
-[2/5] Initializing submodules...
+[2/4] Initializing submodules...
       git submodule update --init --recursive
       ✓ curve-labs-core loaded
 
-[3/5] Cloning shared memory...
-      git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
-      ✓ Memory repo ready
-
-[4/5] Linking memory...
+[3/4] Linking memory...
       ln -s ~/dev/curve-labs-memory ~/dev/tristero/memory
       ✓ Linked as ./memory
 
-[5/5] Setting up Python environment...
+[4/4] Setting up Python environment...
       uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
       ✓ Virtual environment ready
 
@@ -109,19 +152,19 @@ Setup complete.
 ⚠ Missing .env file. Run /env to configure API keys.
 ```
 
-**Next**: Run `/env` to configure environment variables.
+**Next**: Run `/env` to configure environment variables, or `/activity` to see what's happening.
 
 ---
 
 ### /pull
 
-Get latest from all repos (project, memory, submodules).
+Get latest from all repos (memory, project, submodules).
 
 **Usage**: `/pull`
 
 **What it does**:
 1. Pulls latest from memory repo
-2. Pulls latest from current project
+2. Pulls latest from current project (if in one)
 3. Updates submodules to latest
 
 **Example**:
@@ -191,7 +234,7 @@ Paste your OPENAI_API_KEY (or 'skip'):
 Environment ready.
 ```
 
-**Next**: You're ready to work. Run `/status` to see recent activity.
+**Next**: You're ready to work. Run `/activity` to see recent activity.
 
 ---
 
@@ -339,30 +382,29 @@ PR ready for review. Share the link with the team.
 
 ---
 
-## Collaboration
+## Team Awareness
 
-### /status
+### /activity
 
-See what's happening across Curve Labs projects.
+See what's happening across Curve Labs.
 
-**Usage**: `/status`
+**Usage**: `/activity`
 
 **What it does**:
-1. Shows current git state
+1. Shows current git state (if in a project)
 2. Reads memory/conversations/index.md for recent activity
 3. Lists open handoffs and pending PRs
 
 **Example**:
 ```
-> /status
+> /activity
 
-Curve Labs Status
-─────────────────
+Curve Labs Activity
+───────────────────
 
 Your current state:
-  Project:  Tristero
-  Branch:   feature/2026-01-20-mcp-authentication (3 commits ahead)
-  Changes:  2 uncommitted files
+  Location: curve-labs-core
+  Memory:   ✓ linked
 
 Recent activity (from memory/conversations/index.md):
   Jan 20  Cem — MCP exploration, decided on stdio transport
@@ -373,7 +415,7 @@ Open handoffs:
   → Cem's MCP research (Jan 20) — you might want to read this
 
 Pending PRs:
-  #41 — "Fix reflection loop" (waiting on review)
+  tristero #41 — "Fix reflection loop" (waiting on review)
 ```
 
 **Next**: Read any relevant handoffs, or continue working.
@@ -552,24 +594,24 @@ Show available commands.
 Curve Labs Commands
 ───────────────────
 
-Setup & Sync:
-  /setup [project]   First-time project setup
-  /pull              Get latest from all repos
-  /env               Configure API keys
+Getting Started:
+  /setup              Set up memory and projects
+  /pull               Get latest from all repos
 
-Branching & Code:
-  /branch [name]     Create feature/bugfix branch
-  /commit            Stage and commit changes
-  /push              Push current branch
-  /pr                Create pull request
+Team Awareness:
+  /activity           See what's happening across CL
+  /handoff [topic]    End session, leave notes for others
+  /reflect            Capture decision/finding/pattern
+  /save-memory        Push your notes to team
 
-Collaboration:
-  /status            See activity across projects
-  /handoff [topic]   End session, create summary
-  /save-memory       Push memory repo
-  /reflect           Capture decision/finding/pattern
+Working on Code:
+  /branch [name]      Create feature branch
+  /commit             Stage and commit
+  /push               Push branch
+  /pr                 Create pull request
+  /env                Configure API keys
 
 Help:
-  /help              Show this list
-  /help [command]    Detailed help for command
+  /help               This list
+  /help [command]     Details on specific command
 ```

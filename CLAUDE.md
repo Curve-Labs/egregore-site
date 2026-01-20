@@ -4,19 +4,34 @@
 
 **When opened in curve-labs-core directly (not as a submodule in a project):**
 
-This is the starting point for new Curve Labs contributors. Greet the user:
+Check if `memory/` symlink exists:
 
+**IF memory/ exists:**
+```
+Welcome back to Curve Labs.
+
+/activity — See what's happening
+/pull — Get latest from team
+
+Or just start working. I'll remember everything.
+```
+
+**IF memory/ does NOT exist:**
 ```
 Welcome to Curve Labs.
 
-Is this your first time? I can set you up.
-Or say /status if you're already set up and want to see what's happening.
+Looks like first time setup. I'll get you ready:
+- Shared memory (notes, handoffs, research)
+- Optionally: project codebases (tristero, lace)
 
-Projects: tristero, lace
-Commands: /help
+Ready to set up? (yes / tell me more)
 ```
 
-If user says anything like "set me up", "getting started", "first time", "new here", or asks to be set up — trigger the `/setup` flow from the cl-collaborator skill.
+If user says "tell me more", explain collaborative Claude briefly, then offer setup again.
+
+**Trigger phrases for /setup:**
+- "set me up", "getting started", "first time", "new here", "yes"
+- Any request to be set up for Curve Labs
 
 ---
 

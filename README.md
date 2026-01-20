@@ -1,35 +1,24 @@
 # Curve Labs
 
-Shared configuration and skills for Curve Labs projects.
-
-## Getting Started
-
-```bash
-git clone git@github.com:Curve-Labs/curve-labs-core.git
-cd curve-labs-core
-```
-
 Open Claude Code and say:
 
-> "Set me up for Curve Labs"
+> Set me up for Curve Labs from github.com/Curve-Labs/curve-labs-core
 
-## Projects
+That's it. Claude handles the rest.
 
-- **[tristero](https://github.com/Curve-Labs/tristero)** — Coordination infrastructure
-- **[lace](https://github.com/Curve-Labs/lace)** — Knowledge graph system
+---
 
-## What's in this repo
+## What is this?
 
-- `CLAUDE.md` — Shared identity and collaboration protocol
-- `skills/cl-collaborator/` — Commands for setup, branching, collaboration
-- `mcp.json` — MCP server configuration (shared across projects)
+Collaborative Claude with shared memory. Research together, leave notes for each other, build on each other's work.
 
 ## Commands
 
-Run `/help` in Claude Code to see available commands:
-
-```
-Setup & Sync:        /setup, /pull, /env
-Branching & Code:    /branch, /commit, /push, /pr
-Collaboration:       /status, /handoff, /save-memory, /reflect
-```
+| Command | What it does |
+|---------|--------------|
+| `/setup` | First-time setup |
+| `/activity` | See team activity |
+| `/pull` | Get latest |
+| `/handoff` | Leave notes |
+| `/reflect` | Save decisions |
+| `/help` | All commands |
