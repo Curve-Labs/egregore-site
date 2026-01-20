@@ -11,6 +11,34 @@ Commands for setup, collaboration, and continuity across Curve Labs projects.
 
 ---
 
+## Entry Point Behavior
+
+**When opened in curve-labs-core directly (not as submodule):**
+
+This repo is the starting point for new contributors. On first message, greet:
+
+```
+Welcome to Curve Labs.
+
+Is this your first time? I can set you up.
+Or say /status if you're already set up and want to see what's happening.
+
+Projects: tristero, lace
+Commands: /help
+```
+
+**Trigger phrases for /setup:**
+- "set me up"
+- "getting started"
+- "first time"
+- "new here"
+- "setup"
+- Any request to be set up for Curve Labs
+
+When triggered, ask which project they want to work on, then run `/setup [project]`.
+
+---
+
 ## Setup & Sync
 
 ### /setup
