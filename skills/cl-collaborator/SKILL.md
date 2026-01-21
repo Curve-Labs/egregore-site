@@ -30,7 +30,13 @@ git clone https://github.com/Curve-Labs/...
 
 ## Entry Point Detection
 
-**When Claude is opened directly in curve-labs-core (not as submodule):**
+**When Claude is opened in curve-labs-core:**
+
+This is the research & collaboration workspace. Use it for:
+- Open-ended research and exploration
+- Leaving notes and handoffs for the team
+- Documenting decisions and findings
+- Any work that isn't tied to a specific project codebase
 
 Check if `memory/` symlink exists:
 
@@ -38,10 +44,15 @@ Check if `memory/` symlink exists:
 ```
 Welcome back to Curve Labs.
 
+This is your research workspace. Notes and handoffs are saved to memory/
+and shared with the team.
+
 /activity — See what's happening
 /pull — Get latest from team
+/handoff — Leave notes for others
+/reflect — Save a decision or finding
 
-Or just start working. I'll remember everything.
+Or just start working.
 ```
 
 **IF memory/ does NOT exist:**

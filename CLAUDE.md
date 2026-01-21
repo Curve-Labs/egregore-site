@@ -78,19 +78,22 @@ When user says "set me up":
    ✓ Repos cloned and memory linked!
 
    Your workspace:
-     ./curve-labs-core/   — Shared configuration
-     ./curve-labs-memory/ — Shared knowledge & notes
+     ./curve-labs-core/   — Research & collaboration workspace
+     ./curve-labs-memory/ — Shared knowledge (accessed via memory/ symlink)
      ./tristero/          — (if selected)
      ./lace/              — (if selected)
 
-   Next step — open Claude Code in a project folder:
+   Next step — open Claude Code:
 
-     cd tristero && claude    # To work on Tristero
-     cd lace && claude        # To work on LACE
-     cd curve-labs-core && claude  # For research (no specific project)
+     cd curve-labs-core && claude  # Research, notes, collaboration
+     cd tristero && claude         # Work on Tristero code
+     cd lace && claude             # Work on LACE code
 
-   When you enter a project for the first time, I'll help you set up
-   the environment (Python packages, API keys, etc.)
+   For research and notes, use curve-labs-core. Your notes and handoffs
+   are saved to memory/ and shared with the team via /save-memory.
+
+   When you enter a code project for the first time, I'll help you
+   set up the environment (Python packages, API keys, etc.)
    ```
 
 3. **IF YES** (we're in the full repo) — follow normal Entry Point Behavior below.
