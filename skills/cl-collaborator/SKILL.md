@@ -83,6 +83,66 @@ git clone git@github.com:Curve-Labs/[repo].git
 
 ---
 
+## Project Folder Entry Point
+
+**When Claude is opened in a project folder (tristero, lace):**
+
+On any user message, first check the project state:
+
+1. **Check memory link**: `ls -la memory 2>/dev/null`
+2. **Check Python environment**: `ls .venv 2>/dev/null` (for Python projects)
+3. **Check .env file**: `ls .env 2>/dev/null`
+
+**IF memory/ is NOT linked:**
+```
+This project isn't connected to shared memory yet.
+
+Run: ln -s ../curve-labs-memory ./memory
+
+Or if you haven't set up Curve Labs yet, go to your workspace root
+and run the bootstrap setup first.
+```
+
+**IF memory/ IS linked but .venv doesn't exist (Python projects):**
+```
+Welcome to [Project Name].
+
+First time here — need to set up the environment.
+This will create a virtual environment and install dependencies.
+
+Ready? (yes / not now)
+```
+
+If yes:
+```
+Setting up environment...
+
+  uv venv
+  ✓ Virtual environment created
+
+  source .venv/bin/activate && uv pip install -r requirements.txt
+  ✓ Dependencies installed
+
+  Checking for .env...
+  ⚠ No .env file. Run /env to configure API keys.
+
+Ready to work!
+```
+
+If "not now": Proceed normally, remind again next session.
+
+**IF everything is set up:**
+```
+Welcome back to [Project Name].
+
+/activity — See what's happening
+/pull — Get latest
+
+Or just start working.
+```
+
+---
+
 ## Branch Awareness
 
 **When working in a project repo (tristero, lace):**

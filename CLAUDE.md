@@ -75,7 +75,7 @@ When user says "set me up":
 
    **Completion message:**
    ```
-   ✓ Setup complete!
+   ✓ Repos cloned and memory linked!
 
    Your workspace:
      ./curve-labs-core/   — Shared configuration
@@ -89,11 +89,8 @@ When user says "set me up":
      cd lace && claude        # To work on LACE
      cd curve-labs-core && claude  # For research (no specific project)
 
-   Once there, you'll have access to:
-     /activity  — See what the team has been working on
-     /handoff   — Leave notes for others (or future you)
-     /reflect   — Save a decision or finding
-     /pull      — Get latest from team
+   When you enter a project for the first time, I'll help you set up
+   the environment (Python packages, API keys, etc.)
    ```
 
 3. **IF YES** (we're in the full repo) — follow normal Entry Point Behavior below.
