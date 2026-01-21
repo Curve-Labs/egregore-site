@@ -63,7 +63,44 @@ When user says "set me up":
 
 Check if `memory/` symlink exists:
 
-**IF memory/ exists:**
+**IF memory/ does NOT exist:**
+```
+Welcome to Curve Labs.
+
+Setting up shared memory first...
+```
+Then clone curve-labs-memory and link it, then proceed to project setup below.
+
+**IF memory/ exists (or after linking it):**
+
+When user says "set me up", ALWAYS offer project setup:
+```
+Curve Labs is ready. Memory is linked.
+
+Do you want to set up any project codebases?
+
+• tristero — Coordination infrastructure (Python)
+• lace — Knowledge graph system (Python + Node)
+
+Type project names (comma-separated), 'all', or 'none'
+
+'none' = Just collaborative research, no code repos
+```
+
+After project setup (or 'none'):
+```
+Setup complete!
+
+What you can do now:
+  /activity     — See what the team has been working on
+  /handoff      — Leave notes for others (or future you)
+  /reflect      — Save a decision or finding
+  /pull         — Get latest from team
+
+To add a project later: /setup tristero
+```
+
+**On subsequent visits (not saying "set me up"):**
 ```
 Welcome back to Curve Labs.
 
@@ -72,19 +109,6 @@ Welcome back to Curve Labs.
 
 Or just start working. I'll remember everything.
 ```
-
-**IF memory/ does NOT exist:**
-```
-Welcome to Curve Labs.
-
-Looks like first time setup. I'll get you ready:
-- Shared memory (notes, handoffs, research)
-- Optionally: project codebases (tristero, lace)
-
-Ready to set up? (yes / tell me more)
-```
-
-If user says "tell me more", explain collaborative Claude briefly, then offer setup again.
 
 **Trigger phrases for /setup:**
 - "set me up", "getting started", "first time", "new here", "yes"
