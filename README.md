@@ -59,7 +59,7 @@ lace/                   ← Project: Knowledge graph system
 | `/handoff [topic]` | Leave notes for others |
 | `/reflect` | Save a decision or finding |
 | `/pull` | Get latest from team |
-| `/save-memory` | Push your notes |
+| `/save` | Commit and push all repos |
 | `/setup [project]` | Set up a project |
 
 ## Projects
