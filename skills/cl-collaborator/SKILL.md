@@ -84,26 +84,37 @@ First-time setup for Curve Labs. Sets up shared memory first, projects are optio
 
 **Usage**: `/setup` or `/setup [project]`
 
-**Important — Always use SSH for cloning:**
-- Always use: `git clone git@github.com:Curve-Labs/[repo].git`
-- Never try HTTP fetch first (repos are private)
-- If clone fails, explain: "I can't access this repo. Do you have SSH keys set up for GitHub? Run: `ssh -T git@github.com` to check."
+**Always use SSH for cloning (repos are private):**
+```
+git clone git@github.com:Curve-Labs/[repo].git
+```
+
+**If clone fails:**
+```
+Can't access repo. Check your SSH keys: ssh -T git@github.com
+```
+
+**Show reflective messages at each step** — tell the user what's happening right now.
 
 **Example (first time, no arguments):**
 ```
 > /setup
 
-[1/2] Setting up shared memory...
+Setting up Curve Labs...
+
+[1/2] Cloning shared memory repo...
+      This stores handoffs, decisions, and research notes across the team.
+
       git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
-      ✓ Ready
+      ✓ Cloned
 
-      Linking to current directory...
+      Creating symlink so Claude can access it from here...
       ln -s ~/dev/curve-labs-memory ./memory
-      ✓ Linked
+      ✓ Linked as ./memory
 
-[2/2] Project codebases (optional)
+[2/2] Project codebases
 
-      Do you want to work on any project code?
+      Memory is ready. Now, do you want to work on any project code?
 
       • tristero — Coordination infrastructure (Python)
       • lace — Knowledge graph system (Python + Node)
@@ -117,10 +128,12 @@ First-time setup for Curve Labs. Sets up shared memory first, projects are optio
 ✓ Setup complete.
 
 You now have collaborative Claude with shared memory.
-- /activity — See what's happening
-- /handoff — Leave notes for others
-- /reflect — Save decisions/findings
-- /pull — Get latest from team
+
+What you can do now:
+  /activity     — See what the team has been working on
+  /handoff      — Leave notes for others (or future you)
+  /reflect      — Save a decision or finding
+  /pull         — Get latest from team
 
 To add a project later: /setup tristero
 ```
@@ -131,25 +144,41 @@ To add a project later: /setup tristero
 
 Setting up Tristero...
 
-[1/4] Cloning repo...
+[1/4] Cloning the repo...
       git clone git@github.com:Curve-Labs/tristero.git ~/dev/tristero
       ✓ Cloned to ~/dev/tristero
 
-[2/4] Initializing submodules...
+[2/4] Loading shared configuration...
       git submodule update --init --recursive
-      ✓ curve-labs-core loaded
+      ✓ curve-labs-core submodule loaded
 
-[3/4] Linking memory...
+[3/4] Linking shared memory...
       ln -s ~/dev/curve-labs-memory ~/dev/tristero/memory
       ✓ Linked as ./memory
 
 [4/4] Setting up Python environment...
+      Creating virtual environment and installing dependencies...
       uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-      ✓ Virtual environment ready
+      ✓ Environment ready
 
 Setup complete.
 
 ⚠ Missing .env file. Run /env to configure API keys.
+```
+
+**If clone fails:**
+```
+[1/4] Cloning the repo...
+      git clone git@github.com:Curve-Labs/tristero.git ~/dev/tristero
+      ✗ Failed
+
+Can't access this repo. This is likely an SSH key issue.
+
+Check your SSH connection to GitHub:
+  ssh -T git@github.com
+
+If that fails, you need to set up SSH keys:
+  https://docs.github.com/en/authentication/connecting-to-github-with-ssh
 ```
 
 **Next**: Run `/env` to configure environment variables, or `/activity` to see what's happening.
