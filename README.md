@@ -1,12 +1,17 @@
 # Curve Labs
 
-Clone this repo, open Claude Code, and say:
+## Setup
+
+```bash
+git clone git@github.com:Curve-Labs/curve-labs-core.git
+cd curve-labs-core
+```
+
+Open Claude Code and say:
 
 ```
-Set me up for Curve Labs
+set me up
 ```
-
-That's it. Claude handles the rest.
 
 ---
 
