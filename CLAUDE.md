@@ -31,11 +31,11 @@ When user says "set me up":
    ```
 
 2. **IF NOT** (file doesn't exist) — we're in bootstrap mode.
-   Clone into the CURRENT directory (where user opened Claude):
+   Complete the ENTIRE setup in one go (no closing/reopening Claude Code):
    ```
    Setting up Curve Labs...
 
-   [1/3] Cloning the full configuration repo here...
+   [1/3] Cloning configuration repo...
          git clone git@github.com:Curve-Labs/curve-labs-core.git ./curve-labs-core
          ✓ Done
 
@@ -47,10 +47,49 @@ When user says "set me up":
          ln -s ../curve-labs-memory ./curve-labs-core/memory
          ✓ Linked
 
-   Setup complete!
+   Core setup complete!
 
-   Now: cd curve-labs-core and reopen Claude Code there.
-   Then say "set me up" again to configure projects.
+   ---
+
+   Do you want to set up any project codebases?
+
+   • tristero — Coordination infrastructure (Python)
+   • lace — Knowledge graph system (Python + Node)
+
+   Type project names (comma-separated), 'all', or 'none'
+
+   'none' = Just collaborative research, no code repos
+   ```
+
+   **After user responds:**
+   - If 'none': Show completion message (below)
+   - If project names: Clone each project, link memory, show completion
+
+   **Project setup (for each requested project):**
+   ```
+   Setting up [project]...
+         git clone git@github.com:Curve-Labs/[project].git ./[project]
+         ln -s ../curve-labs-memory ./[project]/memory
+         ✓ Done
+   ```
+
+   **Completion message:**
+   ```
+   ✓ Setup complete!
+
+   Your workspace:
+     ./curve-labs-core/   — Shared configuration
+     ./curve-labs-memory/ — Shared knowledge & notes
+     ./tristero/          — (if selected)
+     ./lace/              — (if selected)
+
+   To start working, open Claude Code in any project folder.
+
+   Commands you can use:
+     /activity  — See what the team has been working on
+     /handoff   — Leave notes for others (or future you)
+     /reflect   — Save a decision or finding
+     /pull      — Get latest from team
    ```
 
 3. **IF YES** (we're in the full repo) — follow normal Entry Point Behavior below.
