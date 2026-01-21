@@ -136,18 +136,18 @@ Setting up Curve Labs...
 [1/2] Setting up shared memory repo...
       This stores handoffs, decisions, and research notes across the team.
 
-      Checking ~/dev/curve-labs-memory...
+      Checking for curve-labs-memory...
 
-      IF not exists:
-        git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
+      IF not exists (as sibling ../curve-labs-memory):
+        git clone git@github.com:Curve-Labs/curve-labs-memory.git ../curve-labs-memory
         ✓ Cloned
 
       IF already exists:
-        cd ~/dev/curve-labs-memory && git pull
+        cd ../curve-labs-memory && git pull
         ✓ Already have it, pulled latest
 
       Creating symlink so Claude can access it from here...
-      ln -s ~/dev/curve-labs-memory ./memory
+      ln -s ../curve-labs-memory ./memory
       ✓ Linked as ./memory
 
 [2/2] Project codebases
@@ -183,25 +183,25 @@ To add a project later: /setup tristero
 Setting up Tristero...
 
 [1/4] Getting the repo...
-      Checking ~/dev/tristero...
+      Checking for ../tristero...
 
       IF not exists:
-        git clone git@github.com:Curve-Labs/tristero.git ~/dev/tristero
-        ✓ Cloned to ~/dev/tristero
+        git clone git@github.com:Curve-Labs/tristero.git ../tristero
+        ✓ Cloned to ../tristero
 
       IF already exists:
-        cd ~/dev/tristero && git pull
+        cd ../tristero && git pull
         ✓ Already have it, pulled latest
 
 [2/4] Loading shared configuration...
-      git submodule update --init --recursive
+      cd ../tristero && git submodule update --init --recursive
       ✓ curve-labs-core submodule loaded
 
 [3/4] Linking shared memory...
       Checking if memory symlink exists...
 
       IF not linked:
-        ln -s ~/dev/curve-labs-memory ~/dev/tristero/memory
+        ln -s ../curve-labs-memory ../tristero/memory
         ✓ Linked as ./memory
 
       IF already linked:
@@ -209,7 +209,7 @@ Setting up Tristero...
 
 [4/4] Setting up Python environment...
       Creating virtual environment and installing dependencies...
-      uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
+      cd ../tristero && uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
       ✓ Environment ready
 
 Setup complete.

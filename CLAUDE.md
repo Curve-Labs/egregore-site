@@ -30,25 +30,26 @@ When user says "set me up":
    ls skills/cl-collaborator/SKILL.md
    ```
 
-2. **IF NOT** (file doesn't exist) — we're in bootstrap mode:
+2. **IF NOT** (file doesn't exist) — we're in bootstrap mode.
+   Clone into the CURRENT directory (where user opened Claude):
    ```
    Setting up Curve Labs...
 
-   [1/3] Cloning the full configuration repo...
-         git clone git@github.com:Curve-Labs/curve-labs-core.git ~/dev/curve-labs-core
+   [1/3] Cloning the full configuration repo here...
+         git clone git@github.com:Curve-Labs/curve-labs-core.git ./curve-labs-core
          ✓ Done
 
    [2/3] Cloning shared memory...
-         git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
+         git clone git@github.com:Curve-Labs/curve-labs-memory.git ./curve-labs-memory
          ✓ Done
 
    [3/3] Linking memory...
-         ln -s ~/dev/curve-labs-memory ~/dev/curve-labs-core/memory
+         ln -s ../curve-labs-memory ./curve-labs-core/memory
          ✓ Linked
 
    Setup complete!
 
-   Now: cd ~/dev/curve-labs-core and reopen Claude Code there.
+   Now: cd curve-labs-core and reopen Claude Code there.
    Then say "set me up" again to configure projects.
    ```
 
