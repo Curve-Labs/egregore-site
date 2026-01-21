@@ -1,8 +1,10 @@
 # Curve Labs
 
-Open Claude Code and say:
+Clone this repo, open Claude Code, and say:
 
-> Set me up for Curve Labs from github.com/Curve-Labs/curve-labs-core
+```
+Set me up for Curve Labs
+```
 
 That's it. Claude handles the rest.
 

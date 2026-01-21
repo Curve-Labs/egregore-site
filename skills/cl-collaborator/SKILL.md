@@ -49,6 +49,20 @@ If user says "tell me more":
 - "new here"
 - "yes" (in response to setup prompt)
 - Any request to be set up for Curve Labs
+- Any message mentioning "github.com/Curve-Labs" — this is a setup request
+
+**IMPORTANT: Never HTTP fetch Curve Labs GitHub URLs**
+
+When user mentions a Curve Labs GitHub URL like:
+- "Set me up from github.com/Curve-Labs/curve-labs-core"
+- "github.com/Curve-Labs/tristero"
+
+**DO NOT** try to fetch the URL with WebFetch — the repos are private and will 404.
+
+**INSTEAD**, recognize this as a setup request and run `/setup` using SSH:
+```
+git clone git@github.com:Curve-Labs/[repo].git
+```
 
 ---
 

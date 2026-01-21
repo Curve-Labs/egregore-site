@@ -32,6 +32,10 @@ If user says "tell me more", explain collaborative Claude briefly, then offer se
 **Trigger phrases for /setup:**
 - "set me up", "getting started", "first time", "new here", "yes"
 - Any request to be set up for Curve Labs
+- Any message mentioning "github.com/Curve-Labs" — treat as setup request
+
+**IMPORTANT: Never HTTP fetch Curve Labs GitHub URLs.**
+Repos are private. Use `git clone git@github.com:Curve-Labs/[repo].git` instead.
 
 ---
 
