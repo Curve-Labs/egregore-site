@@ -580,10 +580,13 @@ End a session with a summary for the next person (or future you).
 **Usage**: `/handoff [topic]`
 
 **What it does**:
-1. Summarizes what was accomplished
-2. Notes open questions and next steps
-3. Creates handoff file in memory/conversations/
-4. Updates the conversation index
+1. Gets author name from `git config user.name`
+2. Summarizes what was accomplished
+3. Notes open questions and next steps
+4. Creates handoff file in memory/conversations/YYYY-MM/
+5. Updates the conversation index
+
+Handoffs are broadcast to the team — anyone who runs `/pull` sees them.
 
 **Example**:
 ```
@@ -614,13 +617,16 @@ Now commit the memory repo:
 Or run /save-memory and I'll do it.
 ```
 
+**File naming**: `memory/conversations/YYYY-MM/DD-[author]-[topic].md`
+Example: `memory/conversations/2026-01/21-oz-mcp-auth.md`
+
 **Handoff file template**:
 ```markdown
 # Handoff: [Topic]
 
 **Date**: YYYY-MM-DD
-**Collaborator**: [Name]
-**Project**: [LACE/Tristero/Infrastructure]
+**Author**: [from git config user.name]
+**Project**: [LACE/Tristero/Research]
 
 ## Session Summary
 
