@@ -83,9 +83,13 @@ When user says "set me up":
      ./tristero/          — (if selected)
      ./lace/              — (if selected)
 
-   To start working, open Claude Code in any project folder.
+   Next step — open Claude Code in a project folder:
 
-   Commands you can use:
+     cd tristero && claude    # To work on Tristero
+     cd lace && claude        # To work on LACE
+     cd curve-labs-core && claude  # For research (no specific project)
+
+   Once there, you'll have access to:
      /activity  — See what the team has been working on
      /handoff   — Leave notes for others (or future you)
      /reflect   — Save a decision or finding
