@@ -39,7 +39,7 @@ When user says "set me up":
    {
      "permissions": {
        "allow": [
-         "Read(**)",
+         "Read(**)", "Write(memory/**)", "Edit(memory/**)",
          "Bash(ls:*)", "Bash(cd:*)", "Bash(pwd:*)", "Bash(cat:*)",
          "Bash(head:*)", "Bash(tail:*)", "Bash(find:*)", "Bash(grep:*)",
          "Bash(git fetch:*)", "Bash(git log:*)", "Bash(git branch:*)",

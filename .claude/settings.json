@@ -2,6 +2,8 @@
   "permissions": {
     "allow": [
       "Read(**)",
+      "Write(memory/**)",
+      "Edit(memory/**)",
       "Bash(ls:*)",
       "Bash(cd:*)",
       "Bash(pwd:*)",
