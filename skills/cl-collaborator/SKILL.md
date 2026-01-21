@@ -540,59 +540,115 @@ PR ready for review. Share the link with the team.
 
 ### /activity
 
-See what's happening across Curve Labs.
+See what's happening across Curve Labs — handoffs, decisions, commits, branches, and PRs.
 
-**Usage**: `/activity`
+**Usage**: `/activity [project?]`
 
 **What it does**:
-1. Check memory link: `ls -la memory 2>/dev/null`
-2. Check sibling projects: `ls -d ../tristero ../lace 2>/dev/null`
-3. Read memory/conversations/index.md for recent activity
-4. Show current state and recent handoffs
 
-**Example**:
+1. **Check memory for explicit items**:
+   - Read `memory/conversations/index.md` for recent handoffs
+   - Check `memory/knowledge/decisions/` for recent decisions
+   - Check `memory/knowledge/findings/` for recent findings
+
+2. **Check git activity across repos** (for each local project: tristero, lace, zen):
+   ```bash
+   cd ../[project]
+   git fetch origin
+   git log --oneline --since="7 days ago" --all --format="%h %s (%an, %ar)"
+   ```
+
+   Check for open branches:
+   ```bash
+   git branch -r --list 'origin/feature/*' --list 'origin/bugfix/*'
+   ```
+
+3. **Check for open PRs** (if gh CLI available):
+   ```bash
+   gh pr list --repo Curve-Labs/[project] --state open --json number,title,author,createdAt
+   ```
+
+4. Compile and display
+
+**Output format**:
 ```
 > /activity
 
 Curve Labs Activity
 ───────────────────
 
-Your workspace:
-  Location: curve-labs-core (research workspace)
-  Memory:   ✓ linked
+Handoffs:
+  → Jan 20: "MCP auth" by Cem → @oz ⚡ (for you)
+  → Jan 19: "Memory architecture" by Oz
 
-Projects:
-  ../tristero  ✓ cloned (cd tristero && claude to work on it)
-  ../lace      ✓ cloned (cd lace && claude to work on it)
+Decisions:
+  → Jan 20: Use stdio for MCP transport
 
-Recent activity (from memory/conversations/index.md):
-  Jan 20  Cem — MCP exploration, decided on stdio transport
-  Jan 19  Oz — Architecture planning, memory system design
+Findings:
+  → Jan 19: COALA framework maps to filesystem
 
-Open handoffs:
-  → Cem's MCP research (Jan 20) — you might want to read this
+Recent commits (last 7 days):
+  tristero:
+    → abc1234 Fix reflection loop (Cem, 2 hours ago)
+    → def5678 Add chunked responses (Oz, 5 hours ago)
+  lace:
+    → 789abcd Update vector index config (Oz, 1 day ago)
+
+Active branches:
+  tristero:
+    → feature/2026-01-20-mcp-streaming (Oz)
+  lace:
+    → (none)
+
+Open PRs:
+  tristero:
+    → #43 "MCP streaming fix" by Oz — awaiting review
+  lace:
+    → (none)
+
+─────────────────────────────
+To pick up a handoff: "Continue the MCP auth handoff"
+To review a PR: "Show me PR #43"
 ```
 
-**If no recent activity (fresh workspace)**:
+**If no project repos cloned:**
+
+Only show memory items (handoffs, decisions, findings) and note:
 ```
 Curve Labs Activity
 ───────────────────
 
-Your workspace:
-  Location: curve-labs-core (research workspace)
-  Memory:   ✓ linked
+Handoffs:
+  → Jan 20: "MCP auth" by Cem
 
-Projects:
-  ../tristero  ✓ cloned
-  ../lace      ✓ cloned
+Decisions:
+  → (none)
 
-No recent activity yet. You can:
-  - Start researching or leave notes here
-  - cd ../tristero && claude to work on Tristero
-  - cd ../lace && claude to work on LACE
+Findings:
+  → (none)
+
+Git activity: No project repos set up. Run /setup tristero to add.
 ```
 
-**Next**: Read any relevant handoffs, or start working.
+**Performance note:**
+
+Show memory items immediately, then git info as it loads:
+```
+Curve Labs Activity
+───────────────────
+
+Handoffs:
+  → Jan 20: "MCP auth" by Cem
+
+Checking git activity...
+  [tristero] ✓
+  [lace] ✓
+
+Recent commits:
+  ...
+```
+
+**Next**: Read any relevant handoffs, review open PRs, or start working.
 
 ---
 
@@ -779,7 +835,7 @@ Getting Started:
   /pull               Get latest from all repos
 
 Team Awareness:
-  /activity           See what's happening across CL
+  /activity           See handoffs, decisions, commits, PRs across CL
   /handoff [topic]    End session, leave notes for others
   /reflect            Capture decision/finding/pattern
   /save-memory        Push your notes to team
