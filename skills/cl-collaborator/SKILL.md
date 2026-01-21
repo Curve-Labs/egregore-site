@@ -686,14 +686,7 @@ Writing to memory/conversations/2026-01/20-oz-mcp-auth.md...
 Updating memory/conversations/index.md...
   ✓ Added entry
 
-Now commit the memory repo:
-
-  cd ~/dev/curve-labs-memory
-  git add .
-  git commit -m "Handoff: MCP auth session"
-  git push
-
-Or run /save-memory and I'll do it.
+Run /save to commit and push.
 ```
 
 **File naming**: `memory/conversations/YYYY-MM/DD-[author]-[topic].md`
@@ -734,44 +727,70 @@ For the next session, start by:
 - Running: [specific command]
 ```
 
-**Next**: Run `/save-memory` to push the handoff.
+**Next**: Run `/save` to push your changes.
 
 ---
 
-### /save-memory
+### /save
 
-Commit and push the shared memory repo.
+Commit and push ALL Curve Labs repos with uncommitted changes.
 
-**Usage**: `/save-memory`
+**Usage**: `/save`
 
 **What it does**:
-1. Stages all changes in memory repo
-2. Commits with descriptive message
-3. Pushes to origin
+1. Checks each CL repo for uncommitted changes:
+   - curve-labs-memory (via memory/ symlink)
+   - curve-labs-core (current repo)
+   - Any sibling project repos (tristero, lace, zen)
+2. For each repo with changes, commits and pushes
+3. Auto-generates commit messages based on context
+
+**Commit message auto-generation**:
+- If handoff was just created: "Handoff: [topic]"
+- If decision was added: "Decision: [short title]"
+- If skills/commands changed: "Update [skill/command name]"
+- Otherwise: ask user for commit message
 
 **Example**:
 ```
-> /save-memory
+> /save
 
-Saving shared memory...
+Checking CL repos for changes...
 
-  cd ~/dev/curve-labs-memory
-  git add .
+[curve-labs-memory]
+  Modified:
+    conversations/2026-01/21-oz-mcp-auth.md (new)
+    conversations/index.md
 
-Changes to save:
-  conversations/2026-01/20-oz-mcp-auth.md (new)
-  conversations/index.md (modified)
+  Commit message: Handoff: MCP auth session
+  ✓ Committed and pushed
 
-  git commit -m "Handoff: MCP auth session"
-  ✓ Committed
+[curve-labs-core]
+  Modified:
+    skills/cl-collaborator/SKILL.md
 
-  git push
-  ✓ Pushed
+  Commit message: Update cl-collaborator skill
+  ✓ Committed and pushed
 
-Memory saved. Others will see your handoff on their next /pull.
+[tristero]
+  No uncommitted changes
+
+[lace]
+  No uncommitted changes
+
+All changes saved. Team will see updates on /pull.
 ```
 
-**Next**: You're done! Others will see your handoff on `/pull`.
+**If no changes anywhere**:
+```
+> /save
+
+Checking CL repos for changes...
+
+No uncommitted changes across CL repos.
+```
+
+**Next**: You're done! Others will see your changes on `/pull`.
 
 ---
 
@@ -785,7 +804,7 @@ Capture a decision, finding, or pattern for the knowledge base.
 1. Prompts for category (decision/finding/pattern)
 2. Prompts for content
 3. Saves to memory/knowledge/
-4. Reminds to run /save-memory
+4. Reminds to run /save
 
 **Example**:
 ```
@@ -803,7 +822,7 @@ Why?
 Saving to memory/knowledge/decisions/2026-01-20-mcp-stdio-transport.md...
   ✓ Created
 
-Run /save-memory to share with the team.
+Run /save to share with the team.
 ```
 
 **Categories**:
@@ -811,7 +830,7 @@ Run /save-memory to share with the team.
 - **findings/**: Discoveries, learnings, what worked or didn't
 - **patterns/**: Recurring structures, approaches, anti-patterns
 
-**Next**: Run `/save-memory` to share.
+**Next**: Run `/save` to share.
 
 ---
 
@@ -838,7 +857,7 @@ Team Awareness:
   /activity           See handoffs, decisions, commits, PRs across CL
   /handoff [topic]    End session, leave notes for others
   /reflect            Capture decision/finding/pattern
-  /save-memory        Push your notes to team
+  /save               Commit and push all CL repos
 
 Working on Code:
   /branch [name]      Create feature branch

@@ -111,7 +111,7 @@ When user says "set me up":
      cd lace && claude             # Work on LACE code
 
    For research and notes, use curve-labs-core. Your notes and handoffs
-   are saved to memory/ and shared with the team via /save-memory.
+   are saved to memory/ and shared with the team via /save.
 
    When you enter a code project for the first time, I'll help you
    set up the environment (Python packages, API keys, etc.)
@@ -259,7 +259,7 @@ For decisions that affect multiple sessions or collaborators:
 Skills are reusable capabilities in `skills/`. Each skill has a `SKILL.md` that defines commands and behaviors.
 
 Current skills:
-- **cl-collaborator** — Core collaboration commands: `/activity`, `/handoff`, `/reflect`, `/pull`, `/save-memory`, `/setup`, `/branch`, `/commit`, `/push`, `/pr`, `/env`
+- **cl-collaborator** — Core collaboration commands: `/activity`, `/handoff`, `/reflect`, `/pull`, `/save`, `/setup`, `/branch`, `/commit`, `/push`, `/pr`, `/env`
 
 ## Commands
 
@@ -270,7 +270,7 @@ Core commands:
 - `/handoff [topic]` — Leave notes for others (or future you)
 - `/reflect` — Capture a decision, finding, or pattern
 - `/pull` — Get latest from all repos
-- `/save-memory` — Push your notes to the team
+- `/save` — Commit and push all CL repos
 
 ## MCPs (Model Context Protocol)
 
