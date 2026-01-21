@@ -42,12 +42,7 @@ When user says "set me up":
          "Read(**)", "Write(memory/**)", "Edit(memory/**)",
          "Bash(ls:*)", "Bash(cd:*)", "Bash(pwd:*)", "Bash(cat:*)",
          "Bash(head:*)", "Bash(tail:*)", "Bash(find:*)", "Bash(grep:*)",
-         "Bash(git fetch:*)", "Bash(git log:*)", "Bash(git branch:*)",
-         "Bash(git status:*)", "Bash(git diff:*)", "Bash(git show:*)",
-         "Bash(gh pr list:*)", "Bash(gh pr view:*)",
-         "Bash(git clone:*)", "Bash(git pull:*)", "Bash(git push:*)",
-         "Bash(git add:*)", "Bash(git commit:*)", "Bash(git checkout:*)",
-         "Bash(git submodule:*)",
+         "Bash(git:*)", "Bash(gh:*)",
          "Bash(ln:*)", "Bash(mkdir:*)",
          "Bash(uv:*)", "Bash(source:*)", "Bash(pip:*)",
          "Bash(pnpm:*)", "Bash(npm:*)"
