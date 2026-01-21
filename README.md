@@ -2,16 +2,20 @@
 
 ## Setup
 
+**Option 1: Quick start**
+
+1. Create a folder and save the CLAUDE.md file there (ask a teammate to send it)
+2. Open Claude Code in that folder
+3. Say `set me up`
+
+**Option 2: Git clone**
+
 ```bash
 git clone git@github.com:Curve-Labs/curve-labs-core.git
 cd curve-labs-core
 ```
 
-Open Claude Code and say:
-
-```
-set me up
-```
+Open Claude Code and say `set me up`
 
 ---
 

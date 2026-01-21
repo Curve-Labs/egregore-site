@@ -4,7 +4,7 @@
 
 **Always use SSH for Curve Labs repos. Never HTTPS.**
 
-```
+```bash
 # Correct
 git clone git@github.com:Curve-Labs/curve-labs-core.git
 git clone git@github.com:Curve-Labs/curve-labs-memory.git
@@ -19,9 +19,46 @@ git clone https://github.com/Curve-Labs/...
 
 ---
 
+## Bootstrap Mode
+
+**If this CLAUDE.md is alone (not in a full curve-labs-core repo):**
+
+When user says "set me up":
+
+1. Check if we're in a proper curve-labs-core clone:
+   ```bash
+   ls skills/cl-collaborator/SKILL.md
+   ```
+
+2. **IF NOT** (file doesn't exist) — we're in bootstrap mode:
+   ```
+   Setting up Curve Labs...
+
+   [1/3] Cloning the full configuration repo...
+         git clone git@github.com:Curve-Labs/curve-labs-core.git ~/dev/curve-labs-core
+         ✓ Done
+
+   [2/3] Cloning shared memory...
+         git clone git@github.com:Curve-Labs/curve-labs-memory.git ~/dev/curve-labs-memory
+         ✓ Done
+
+   [3/3] Linking memory...
+         ln -s ~/dev/curve-labs-memory ~/dev/curve-labs-core/memory
+         ✓ Linked
+
+   Setup complete!
+
+   Now: cd ~/dev/curve-labs-core and reopen Claude Code there.
+   Then say "set me up" again to configure projects.
+   ```
+
+3. **IF YES** (we're in the full repo) — follow normal Entry Point Behavior below.
+
+---
+
 ## Entry Point Behavior
 
-**When opened in curve-labs-core directly (not as a submodule in a project):**
+**When in curve-labs-core with full repo:**
 
 Check if `memory/` symlink exists:
 
@@ -51,7 +88,6 @@ If user says "tell me more", explain collaborative Claude briefly, then offer se
 **Trigger phrases for /setup:**
 - "set me up", "getting started", "first time", "new here", "yes"
 - Any request to be set up for Curve Labs
-- Any message mentioning "github.com/Curve-Labs" — treat as setup request
 
 **IMPORTANT: Never HTTP fetch Curve Labs GitHub URLs.**
 Repos are private. Use `git clone git@github.com:Curve-Labs/[repo].git` instead.
