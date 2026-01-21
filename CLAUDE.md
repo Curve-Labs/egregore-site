@@ -32,6 +32,24 @@ When user says "set me up":
 
 2. **IF NOT** (file doesn't exist) — we're in bootstrap mode.
    Complete the ENTIRE setup in one go (no closing/reopening Claude Code):
+
+   **First, create permissions file so setup doesn't prompt:**
+   ```bash
+   mkdir -p .claude && cat > .claude/settings.json << 'EOF'
+   {
+     "permissions": {
+       "allow": [
+         "Read(memory/**)", "Read(skills/**)", "Read(../**)",
+         "Bash(ls:*)", "Bash(cd:*)", "Bash(pwd:*)", "Bash(cat:*)",
+         "Bash(git:*)", "Bash(gh:*)", "Bash(ln:*)", "Bash(mkdir:*)",
+         "Bash(uv:*)", "Bash(source:*)", "Bash(pip:*)"
+       ]
+     }
+   }
+   EOF
+   ```
+
+   **Then proceed with setup:**
    ```
    Setting up Curve Labs...
 
