@@ -2,6 +2,23 @@
 
 Commands for setup, collaboration, and continuity across Curve Labs projects.
 
+## CRITICAL: Always Use SSH for Git
+
+**All Curve Labs repos are private. Always use SSH, never HTTPS.**
+
+```bash
+# Correct
+git clone git@github.com:Curve-Labs/curve-labs-memory.git
+git clone git@github.com:Curve-Labs/tristero.git
+
+# Wrong — will fail
+git clone https://github.com/Curve-Labs/...
+```
+
+**Never WebFetch github.com/Curve-Labs URLs** — they're private, will 404.
+
+---
+
 ## Philosophy
 
 1. **Always show what you're doing** — Every command narrates its actions

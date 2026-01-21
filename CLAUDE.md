@@ -1,5 +1,24 @@
 # Curve Labs — Claude Code Configuration
 
+## CRITICAL: Git Operations
+
+**Always use SSH for Curve Labs repos. Never HTTPS.**
+
+```
+# Correct
+git clone git@github.com:Curve-Labs/curve-labs-core.git
+git clone git@github.com:Curve-Labs/curve-labs-memory.git
+git clone git@github.com:Curve-Labs/tristero.git
+git clone git@github.com:Curve-Labs/lace.git
+
+# Wrong — will fail or cause auth issues
+git clone https://github.com/Curve-Labs/...
+```
+
+**Never WebFetch/HTTP fetch github.com/Curve-Labs URLs** — repos are private, will 404.
+
+---
+
 ## Entry Point Behavior
 
 **When opened in curve-labs-core directly (not as a submodule in a project):**
