@@ -2,6 +2,13 @@
   "permissions": {
     "allow": [
       "Read(memory/**)",
+      "Read(skills/**)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(pwd:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git pull:*)",
@@ -11,9 +18,11 @@
       "Bash(git checkout:*)",
       "Bash(git branch:*)",
       "Bash(git config:*)",
+      "Bash(git diff:*)",
       "Bash(gh pr:*)",
-      "Bash(ls:*)",
-      "Bash(cd:*)"
+      "Bash(gh repo:*)",
+      "Bash(ln:*)",
+      "Bash(mkdir:*)"
     ]
   }
 }
