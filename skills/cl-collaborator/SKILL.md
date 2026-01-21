@@ -542,9 +542,10 @@ See what's happening across Curve Labs.
 **Usage**: `/activity`
 
 **What it does**:
-1. Shows current git state (if in a project)
-2. Reads memory/conversations/index.md for recent activity
-3. Lists open handoffs and pending PRs
+1. Check memory link: `ls -la memory 2>/dev/null`
+2. Check sibling projects: `ls -d ../tristero ../lace 2>/dev/null`
+3. Read memory/conversations/index.md for recent activity
+4. Show current state and recent handoffs
 
 **Example**:
 ```
@@ -553,23 +554,42 @@ See what's happening across Curve Labs.
 Curve Labs Activity
 ───────────────────
 
-Your current state:
-  Location: curve-labs-core
+Your workspace:
+  Location: curve-labs-core (research workspace)
   Memory:   ✓ linked
+
+Projects:
+  ../tristero  ✓ cloned (cd tristero && claude to work on it)
+  ../lace      ✓ cloned (cd lace && claude to work on it)
 
 Recent activity (from memory/conversations/index.md):
   Jan 20  Cem — MCP exploration, decided on stdio transport
   Jan 19  Oz — Architecture planning, memory system design
-  Jan 19  Oz — LACE/Tristero comparison
 
 Open handoffs:
   → Cem's MCP research (Jan 20) — you might want to read this
-
-Pending PRs:
-  tristero #41 — "Fix reflection loop" (waiting on review)
 ```
 
-**Next**: Read any relevant handoffs, or continue working.
+**If no recent activity (fresh workspace)**:
+```
+Curve Labs Activity
+───────────────────
+
+Your workspace:
+  Location: curve-labs-core (research workspace)
+  Memory:   ✓ linked
+
+Projects:
+  ../tristero  ✓ cloned
+  ../lace      ✓ cloned
+
+No recent activity yet. You can:
+  - Start researching or leave notes here
+  - cd ../tristero && claude to work on Tristero
+  - cd ../lace && claude to work on LACE
+```
+
+**Next**: Read any relevant handoffs, or start working.
 
 ---
 
