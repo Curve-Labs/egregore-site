@@ -1,4 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp.json",
-  "mcpServers": {}
+  "mcpServers": {
+    "telegram": {
+      "command": "npx",
+      "args": ["-y", "@harnyk/telegram-notifier-mcp"],
+      "env": {
+        "TELEGRAM_BOT_TOKEN": "8407884160:AAGYg_fq64cO1Po0AenKUbhnC-r2iC6cG6A",
+        "TELEGRAM_CHAT_ID": "-1003081443167"
+      }
+    }
+  }
 }
