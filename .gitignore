@@ -1,0 +1,9 @@
+# Local symlink to shared memory (created by /setup)
+memory
+
+# OS files
+.DS_Store
+
+# Editor
+*.swp
+*~
