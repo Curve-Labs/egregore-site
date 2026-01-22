@@ -317,9 +317,10 @@ Get latest from all repos (memory, project, submodules).
 **Usage**: `/pull`
 
 **What it does**:
-1. Pulls latest from memory repo
-2. Pulls latest from current project (if in one)
-3. Updates submodules to latest
+1. Pulls latest from curve-labs-core
+2. Checks if memory symlink exists — if not, creates it: `ln -s ../curve-labs-memory memory`
+3. Pulls latest from memory repo
+4. Pulls latest from sibling projects (tristero, lace) if they exist
 
 **Example**:
 ```
