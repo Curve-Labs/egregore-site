@@ -30,6 +30,14 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")  # e.g., https://your-app.railway.app
 PORT = int(os.environ.get("PORT", 8443))
 
+# Security: Only respond to allowed chats/users
+# Channel: -1003081443167, Oz: 154132702
+# Can override via env: ALLOWED_CHAT_IDS=123,456,789
+DEFAULT_ALLOWED_CHATS = [-1003081443167, 154132702]
+ALLOWED_CHAT_IDS = [
+    int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
+] or DEFAULT_ALLOWED_CHATS
+
 # GitHub API URL for private repo access
 GITHUB_API_URL = "https://api.github.com/repos/Curve-Labs/curve-labs-memory/contents/activity.json"
 
@@ -38,6 +46,15 @@ MAX_ACTIVITY_DAYS = 14
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def is_allowed_chat(update: Update) -> bool:
+    """Check if the chat is in the allowed list."""
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id if update.effective_user else None
+
+    # Allow if chat OR user is in the allowed list
+    return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS
 
 
 async def fetch_activity() -> dict:
@@ -225,11 +242,17 @@ async def handle_query(update: Update, query: str) -> None:
 
 async def activity_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /activity command."""
+    if not is_allowed_chat(update):
+        logger.warning(f"Unauthorized access attempt from chat {update.effective_chat.id}")
+        return
     await handle_query(update, "What's been happening in the last 24 hours?")
 
 
 async def week_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /week command."""
+    if not is_allowed_chat(update):
+        logger.warning(f"Unauthorized access attempt from chat {update.effective_chat.id}")
+        return
     await handle_query(update, "Summarize activity from the last week.")
 
 
@@ -237,6 +260,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """Handle any text message as a natural language query."""
     if not update.message or not update.message.text:
         return
+
+    if not is_allowed_chat(update):
+        return  # Silently ignore unauthorized chats
 
     text = update.message.text.strip()
 
@@ -262,6 +288,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command."""
+    if not is_allowed_chat(update):
+        await update.message.reply_text("This bot is private to Curve Labs.")
+        return
     await update.message.reply_text(
         "Curve Labs Activity Bot\n\n"
         "Ask me anything about team activity:\n"
