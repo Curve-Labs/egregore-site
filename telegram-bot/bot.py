@@ -232,7 +232,7 @@ def format_simple_activity(events: list, hours: int = 24) -> str:
     return "\n".join(lines)
 
 
-async def handle_query(update: Update, query: str) -> None:
+async def handle_query(update: Update, query: str, fallback_hours: int = 24) -> None:
     """Handle a natural language query about activity."""
     try:
         data = await fetch_activity()
@@ -251,7 +251,7 @@ async def handle_query(update: Update, query: str) -> None:
             await update.message.reply_text(llm_response)
         else:
             # Fallback to simple format
-            simple_response = format_simple_activity(events, hours=24)
+            simple_response = format_simple_activity(events, hours=fallback_hours)
             await update.message.reply_text(simple_response)
 
     except httpx.HTTPError as e:
@@ -276,7 +276,7 @@ async def week_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not is_allowed_chat(update):
         logger.warning(f"Unauthorized access attempt from chat {update.effective_chat.id}")
         return
-    await handle_query(update, "Summarize activity from the last week.")
+    await handle_query(update, "Summarize activity from the last week.", fallback_hours=168)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
