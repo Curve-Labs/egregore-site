@@ -15,9 +15,20 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=False)  # Don't override Railway env vars
 
 import httpx
+
+# Debug: Log all env vars at startup (masked)
+import logging
+logging.basicConfig(level=logging.INFO)
+_startup_logger = logging.getLogger("startup")
+_startup_logger.info("=== Environment Variables at Startup ===")
+for key in ["TELEGRAM_BOT_TOKEN", "GITHUB_TOKEN", "ANTHROPIC_API_KEY", "WEBHOOK_URL", "PORT", "ALLOWED_CHAT_IDS"]:
+    val = os.environ.get(key, "")
+    masked = f"{val[:4]}...{val[-4:]}" if len(val) > 8 else ("SET" if val else "NOT SET")
+    _startup_logger.info(f"  {key}: {masked}")
+_startup_logger.info("=========================================")
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
