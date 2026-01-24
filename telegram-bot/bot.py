@@ -63,16 +63,28 @@ async def fetch_activity() -> dict:
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "CurveLabsActivityBot"
     }
+
+    logger.info(f"GITHUB_TOKEN present: {bool(GITHUB_TOKEN)}")
+    logger.info(f"GITHUB_TOKEN length: {len(GITHUB_TOKEN) if GITHUB_TOKEN else 0}")
+
     if GITHUB_TOKEN:
         headers["Authorization"] = f"token {GITHUB_TOKEN}"
 
     async with httpx.AsyncClient() as client:
-        resp = await client.get(GITHUB_API_URL, headers=headers, timeout=10)
-        resp.raise_for_status()
+        try:
+            resp = await client.get(GITHUB_API_URL, headers=headers, timeout=10)
+            logger.info(f"GitHub API response status: {resp.status_code}")
+            resp.raise_for_status()
 
-        data = resp.json()
-        content = base64.b64decode(data["content"]).decode("utf-8")
-        return json.loads(content)
+            data = resp.json()
+            content = base64.b64decode(data["content"]).decode("utf-8")
+            return json.loads(content)
+        except httpx.HTTPStatusError as e:
+            logger.error(f"GitHub API HTTP error: {e.response.status_code} - {e.response.text}")
+            raise
+        except Exception as e:
+            logger.error(f"GitHub API error: {type(e).__name__}: {e}")
+            raise
 
 
 def filter_recent(events: list, days: int = MAX_ACTIVITY_DAYS) -> list:
