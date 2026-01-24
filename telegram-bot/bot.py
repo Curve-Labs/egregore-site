@@ -24,7 +24,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 _startup_logger = logging.getLogger("startup")
 _startup_logger.info("=== Environment Variables at Startup ===")
-for key in ["TELEGRAM_BOT_TOKEN", "GITHUB_TOKEN", "ANTHROPIC_API_KEY", "WEBHOOK_URL", "PORT", "ALLOWED_CHAT_IDS"]:
+for key in ["TELEGRAM_BOT_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "ANTHROPIC_API_KEY", "WEBHOOK_URL", "PORT", "ALLOWED_CHAT_IDS"]:
     val = os.environ.get(key, "")
     masked = f"{val[:4]}...{val[-4:]}" if len(val) > 8 else ("SET" if val else "NOT SET")
     _startup_logger.info(f"  {key}: {masked}")
@@ -34,7 +34,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # Config
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_TOKEN = os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Webhook config for Railway
