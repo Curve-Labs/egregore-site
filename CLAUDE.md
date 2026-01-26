@@ -6,7 +6,7 @@
 
 ```bash
 # Correct
-git clone git@github.com:Curve-Labs/curve-labs-core.git
+git clone git@github.com:Curve-Labs/egregore.git
 git clone git@github.com:Curve-Labs/curve-labs-memory.git
 git clone git@github.com:Curve-Labs/tristero.git
 git clone git@github.com:Curve-Labs/lace.git
@@ -21,11 +21,11 @@ git clone https://github.com/Curve-Labs/...
 
 ## Bootstrap Mode
 
-**If this CLAUDE.md is alone (not in a full curve-labs-core repo):**
+**If this CLAUDE.md is alone (not in a full egregore repo):**
 
 When user says "set me up":
 
-1. Check if we're in a proper curve-labs-core clone:
+1. Check if we're in a proper egregore clone:
    ```bash
    ls skills/cl-collaborator/SKILL.md
    ```
@@ -57,7 +57,7 @@ When user says "set me up":
    Setting up Egregore...
 
    [1/3] Cloning configuration repo...
-         git clone git@github.com:Curve-Labs/curve-labs-core.git ./curve-labs-core
+         git clone git@github.com:Curve-Labs/egregore.git ./egregore
          ✓ Done
 
    [2/3] Cloning shared memory...
@@ -65,7 +65,7 @@ When user says "set me up":
          ✓ Done
 
    [3/3] Linking memory...
-         ln -s ../curve-labs-memory ./curve-labs-core/memory
+         ln -s ../curve-labs-memory ./egregore/memory
          ✓ Linked
 
    Core setup complete!
@@ -99,18 +99,18 @@ When user says "set me up":
    ✓ Repos cloned and memory linked!
 
    Your workspace:
-     ./curve-labs-core/   — Research & collaboration workspace
+     ./egregore/   — Research & collaboration workspace
      ./curve-labs-memory/ — Shared knowledge (accessed via memory/ symlink)
      ./tristero/          — (if selected)
      ./lace/              — (if selected)
 
    Next step — open Claude Code:
 
-     cd curve-labs-core && claude  # Research, notes, collaboration
+     cd egregore && claude  # Research, notes, collaboration
      cd tristero && claude         # Work on Tristero code
      cd lace && claude             # Work on LACE code
 
-   For research and notes, use curve-labs-core. Your notes and handoffs
+   For research and notes, use egregore. Your notes and handoffs
    are saved to memory/ and shared with the team via /save.
 
    When you enter a code project for the first time, I'll help you
@@ -123,7 +123,7 @@ When user says "set me up":
 
 ## Entry Point Behavior
 
-**When in curve-labs-core with full repo:**
+**When in egregore with full repo:**
 
 Check if `memory/` symlink exists:
 

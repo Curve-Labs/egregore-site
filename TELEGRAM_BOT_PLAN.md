@@ -14,7 +14,7 @@ Create a Telegram bot that responds to "@bot What's happening" in group chats an
 - **API Server:** FastAPI + Uvicorn
 - **Bot:** python-telegram-bot library
 - **Deployment:** Railway for both services (API + Bot)
-- **Repo Location:** Both services live in `curve-labs-core/` repository
+- **Repo Location:** Both services live in `egregore/` repository
 
 ## Critical Files to Reference
 
@@ -26,11 +26,11 @@ Create a Telegram bot that responds to "@bot What's happening" in group chats an
 
 ### Phase 1: Activity API Server
 
-Create in `curve-labs-core/activity-api/`
+Create in `egregore/activity-api/`
 
 #### 1.1 Project Structure
 ```
-curve-labs-core/
+egregore/
 └── activity-api/
     ├── .env.example
     ├── .gitignore
@@ -222,11 +222,11 @@ GITHUB_TOKEN=optional-for-private-repos-and-pr-fetching
 
 ### Phase 2: Telegram Bot
 
-Create in `curve-labs-core/telegram-bot/`
+Create in `egregore/telegram-bot/`
 
 #### 2.1 Project Structure
 ```
-curve-labs-core/
+egregore/
 └── telegram-bot/
     ├── .env.example
     ├── .gitignore
@@ -361,7 +361,7 @@ PORT=8080
    Save this token - you'll use it for both services
 
 3. **Push to GitHub**
-   - Commit `activity-api/` and `telegram-bot/` directories to curve-labs-core
+   - Commit `activity-api/` and `telegram-bot/` directories to egregore
    - Push to GitHub
 
 #### 3.2 Deploy Activity API to Railway
@@ -369,7 +369,7 @@ PORT=8080
 1. **Create New Railway Project**
    - Go to https://railway.app
    - Click "New Project" → "Deploy from GitHub repo"
-   - Select `curve-labs-core` repository
+   - Select `egregore` repository
    - Choose "Add Service" → select the repo
 
 2. **Configure Root Directory**
@@ -398,7 +398,7 @@ PORT=8080
 
 1. **Add Another Service**
    - In the same Railway project, click "New Service"
-   - Select the same GitHub repo (`curve-labs-core`)
+   - Select the same GitHub repo (`egregore`)
 
 2. **Configure Root Directory**
    - Set **Root Directory** to `telegram-bot`

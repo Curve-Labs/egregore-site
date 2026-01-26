@@ -37,7 +37,7 @@ You are not a tool — you are a collaborator in a living organization. Act acco
 
 ## Entry Point Detection
 
-**When Claude is opened in curve-labs-core:**
+**When Claude is opened in egregore:**
 
 This is the research & collaboration workspace. Use it for:
 - Open-ended research and exploration
@@ -89,7 +89,7 @@ If user says "tell me more":
 **IMPORTANT: Never HTTP fetch Egregore GitHub URLs**
 
 When user mentions a Egregore GitHub URL like:
-- "Set me up from github.com/Curve-Labs/curve-labs-core"
+- "Set me up from github.com/Curve-Labs/egregore"
 - "github.com/Curve-Labs/tristero"
 
 **DO NOT** try to fetch the URL with WebFetch — the repos are private and will 404.
@@ -273,7 +273,7 @@ Setting up Tristero...
 
 [2/4] Loading shared configuration...
       cd ../tristero && git submodule update --init --recursive
-      ✓ curve-labs-core submodule loaded
+      ✓ egregore submodule loaded
 
 [3/4] Linking shared memory...
       Checking if memory symlink exists...
@@ -321,7 +321,7 @@ Get latest from all repos (memory, project, submodules).
 **Usage**: `/pull`
 
 **What it does**:
-1. Pulls latest from curve-labs-core
+1. Pulls latest from egregore
 2. Checks if memory symlink exists — if not, creates it: `ln -s ../curve-labs-memory memory`
 3. Pulls latest from memory repo
 4. Pulls latest from sibling projects (tristero, lace) if they exist
@@ -338,7 +338,7 @@ Pulling latest...
 [tristero]           git pull
                      ✓ Already up to date
 
-[curve-labs-core]    git submodule update --remote
+[egregore]    git submodule update --remote
                      ✓ Updated to latest
 
 Ready. Recent activity:
@@ -769,7 +769,7 @@ Save your contributions to Egregore. Uses branch + PR + auto-merge for clean con
    - PR merges automatically
    - User sees: "Contribution merged"
 
-2. **For curve-labs-core** (commands, skills):
+2. **For egregore** (commands, skills):
    - Same branch + PR + auto-merge flow
 
 3. **For project repos** (tristero, lace):
@@ -796,7 +796,7 @@ Saving to Egregore...
 
   ✓ Contribution merged
 
-[curve-labs-core]
+[egregore]
   No changes
 
 [tristero]
