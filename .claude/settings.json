@@ -51,9 +51,7 @@
       "Bash(realpath:*)",
       "Bash(GITHUB_TOKEN=:*)",
       "mcp__neo4j__*",
-      "mcp__telegram__*",
-      "WebFetch(*)",
-      "WebSearch(*)"
+      "mcp__telegram__*"
     ]
   }
 }
