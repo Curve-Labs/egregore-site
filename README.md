@@ -22,8 +22,8 @@ Curve Labs runs on:
 **Option 2: Git clone**
 
 ```bash
-git clone git@github.com:Curve-Labs/curve-labs-core.git
-cd curve-labs-core
+git clone git@github.com:Curve-Labs/egregore.git
+cd egregore
 claude
 ```
 
@@ -32,7 +32,7 @@ Say `set me up`
 ## Structure
 
 ```
-curve-labs-core/        ← You are here (research workspace)
+egregore/        ← You are here (research workspace)
 ├── CLAUDE.md           ← Agent identity and protocols
 ├── memory/             ← Shared knowledge (symlink)
 ├── skills/             ← Reusable capabilities

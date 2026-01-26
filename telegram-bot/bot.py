@@ -150,7 +150,7 @@ Key concepts:
 - Projects: tristero, lace, infrastructure - quests link to these
 
 How to add something:
-1. Open Claude Code in curve-labs-core folder
+1. Open Claude Code in egregore folder
 2. Run /add (for a thought) or /add https://... (for a source)
 3. System suggests which quest to link it to
 4. Run /save to push
