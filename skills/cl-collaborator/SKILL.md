@@ -589,9 +589,30 @@ Fast, personal view of what's happening — your projects, your sessions, team a
 
 **What it does**:
 
-1. **Get current user** from git config, map to Person node (oz, cem, ali)
-2. **Query Neo4j** for personal + team activity (4 fast queries)
-3. **Display table visualization**
+1. **Smart sync** — fetch all repos, pull only if behind (fast)
+2. **Get current user** from git config, map to Person node (oz, cem, ali)
+3. **Query Neo4j** for personal + team activity (4 fast queries)
+4. **Display table visualization**
+
+**Smart sync (before queries):**
+
+```bash
+# For each repo (memory, egregore, tristero, lace):
+git fetch origin --quiet
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/main)
+if [ "$LOCAL" != "$REMOTE" ]; then
+  git pull origin main --quiet
+  echo "[repo] ✓ pulled (X new commits)"
+else
+  echo "[repo] ✓ current"
+fi
+```
+
+This is fast because:
+- `git fetch` only checks remote (no file transfer)
+- `git pull` only runs if actually behind
+- Large repos (tristero, lace) skip pull when current
 
 **Neo4j Queries:**
 
