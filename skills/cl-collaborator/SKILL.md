@@ -205,13 +205,42 @@ Can't access repo. Check your SSH keys: ssh -T git@github.com
 
 **Show reflective messages at each step** — tell the user what's happening right now.
 
+**Neo4j registration (after memory setup):**
+
+When completing setup, register the person in the knowledge graph:
+
+1. Get full name from git: `git config user.name` → "Oguzhan Broccoli"
+2. Ask for short name: "What should we call you?" → "oz"
+3. Create/update Person node via Neo4j MCP
+
+```
+[2/3] Registering you in the knowledge graph...
+      Your git name: Oguzhan Broccoli
+
+      What should we call you? (short name for the team)
+      > oz
+
+      ✓ Registered as "oz" (Oguzhan Broccoli)
+```
+
+Use `mcp__neo4j__write_neo4j_cypher` with:
+```cypher
+MERGE (p:Person {name: $name})
+ON CREATE SET p.joined = date(), p.fullName = $fullName
+RETURN p.name AS name, p.joined AS joined
+```
+
+Where `$name` is the user-provided short name (lowercase) and `$fullName` is from `git config user.name`.
+
+**Existing team members:** oz, cem, ali — already registered, no changes needed.
+
 **Example (first time, no arguments):**
 ```
 > /setup
 
 Setting up Egregore...
 
-[1/2] Setting up shared memory repo...
+[1/3] Setting up shared memory repo...
       This stores handoffs, decisions, and research notes across the team.
 
       Checking for curve-labs-memory...
@@ -228,7 +257,16 @@ Setting up Egregore...
       ln -s ../curve-labs-memory ./memory
       ✓ Linked as ./memory
 
-[2/2] Project codebases
+[2/3] Registering you in the knowledge graph...
+      Getting your identity: git config user.name → "Oz Broccoli"
+
+      What should we call you? (short name for the team)
+      > oz
+
+      MERGE (p:Person {name: 'oz'}) ...
+      ✓ Registered as "oz" (Oz Broccoli)
+
+[3/3] Project codebases
 
       Memory is ready. Now, do you want to work on any project code?
 
@@ -551,20 +589,28 @@ See what's happening across Egregore — quests, handoffs, artifacts, commits, b
 
 **What it does**:
 
-1. **Check quests**:
-   - Read `memory/quests/` for active quests (status: active in frontmatter)
-   - Show quest count and recent activity
+1. **Query Neo4j for graph activity** (if MCP available):
 
-2. **Check artifacts**:
-   - Read `memory/artifacts/` for recent artifacts (last 7 days)
-   - Group by type
+   Team members and their projects:
+   ```cypher
+   MATCH (p:Person)-[w:WORKS_ON]->(proj:Project)
+   RETURN p.name AS person, collect(proj.name) AS projects
+   ```
 
-3. **Check memory for explicit items**:
-   - Read `memory/conversations/index.md` for recent handoffs
-   - Check `memory/knowledge/decisions/` for recent decisions
-   - Check `memory/knowledge/findings/` for recent findings
+   Recent sessions (when implemented):
+   ```cypher
+   MATCH (s:Session)-[:BY]->(p:Person)
+   WHERE s.date >= date() - duration('P7D')
+   RETURN s.date, s.summary, p.name
+   ORDER BY s.date DESC
+   ```
 
-4. **Check git activity across repos** (for each local project: tristero, lace):
+2. **Check filesystem for content**:
+   - Read `memory/quests/` for active quests
+   - Read `memory/artifacts/` for recent artifacts
+   - Read `memory/conversations/index.md` for handoffs
+
+3. **Check git activity across repos** (for each local project: tristero, lace):
    ```bash
    cd ../[project]
    git fetch origin
@@ -576,12 +622,12 @@ See what's happening across Egregore — quests, handoffs, artifacts, commits, b
    git branch -r --list 'origin/feature/*' --list 'origin/bugfix/*'
    ```
 
-3. **Check for open PRs** (if gh CLI available):
+4. **Check for open PRs** (if gh CLI available):
    ```bash
    gh pr list --repo Curve-Labs/[project] --state open --json number,title,author,createdAt
    ```
 
-4. Compile and display
+5. Compile and display
 
 **Output format**:
 ```
@@ -686,8 +732,33 @@ End a session with a summary for the next person (or future you).
 3. Notes open questions and next steps
 4. Creates handoff file in memory/conversations/YYYY-MM/
 5. Updates the conversation index
+6. Creates Session node in Neo4j (links to Person and Project)
 
 Handoffs are broadcast to the team — anyone who runs `/pull` sees them.
+
+**Neo4j Session creation:**
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (s:Session {
+  id: $sessionId,
+  date: date($date),
+  topic: $topic,
+  summary: $summary,
+  file: $filePath
+})
+CREATE (s)-[:BY]->(p)
+WITH s
+OPTIONAL MATCH (proj:Project {name: $project})
+FOREACH (_ IN CASE WHEN proj IS NOT NULL THEN [1] ELSE [] END |
+  CREATE (s)-[:ABOUT]->(proj)
+)
+RETURN s.id
+```
+
+Where:
+- `$sessionId` = `YYYY-MM-DD-author-topic` (matches filename)
+- `$author` = short name (oz, cem, ali)
+- `$project` = project name if specified
 
 **Example**:
 ```
@@ -707,6 +778,9 @@ Writing to memory/conversations/2026-01/20-oz-mcp-auth.md...
 
 Updating memory/conversations/index.md...
   ✓ Added entry
+
+Recording session in knowledge graph...
+  ✓ Session node created, linked to oz → infrastructure
 
 Run /save to commit and push.
 ```
@@ -956,7 +1030,32 @@ Ingest an artifact with minimal friction. The system suggests relations.
 3. Suggests relevant quests based on content
 4. Suggests topics
 5. Creates artifact file with proper frontmatter
-6. Confirms relations created
+6. Creates Artifact node in Neo4j with relationships
+7. Confirms relations created
+
+**Neo4j Artifact creation:**
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (a:Artifact {
+  id: $artifactId,
+  title: $title,
+  type: $type,
+  created: date(),
+  file: $filePath,
+  origin: $origin
+})
+CREATE (a)-[:CONTRIBUTED_BY]->(p)
+WITH a
+UNWIND $quests AS questId
+MATCH (q:Quest {id: questId})
+CREATE (a)-[:PART_OF]->(q)
+RETURN a.id
+```
+
+Where:
+- `$artifactId` = filename without extension (e.g., `2026-01-26-oz-temporal-thought`)
+- `$type` = source | thought | finding | decision
+- `$origin` = URL for external sources, null for thoughts
 
 **Example (external source)**:
 ```
@@ -980,6 +1079,7 @@ Confirm? (y / edit tags / n)
 > y
 
 ✓ memory/artifacts/2026-01-26-benchmarking-llm-reasoning.md
+✓ Artifact node created in knowledge graph
 ✓ Linked: benchmark-eval → tristero
 
 To see the graph: /quest benchmark-eval
@@ -1003,7 +1103,8 @@ Relevant quests:
 Topics: [evaluation, temporality, dynamic-ontologies]
 
 ✓ memory/artifacts/2026-01-26-oz-temporal-evaluation-thought.md
-✓ Linked: benchmark-eval
+✓ Artifact node created, linked to oz
+✓ Linked to quest: benchmark-eval
 ```
 
 **File naming**: `YYYY-MM-DD-[author]-[short-title].md` for thoughts
@@ -1026,6 +1127,31 @@ Manage quests — open-ended explorations that anyone can contribute to.
 - `contribute [name]` — Add a contribution entry
 - `pause [name]` — Pause a quest
 - `complete [name]` — Complete with outcome
+
+**Neo4j Quest creation (on `/quest new`):**
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (q:Quest {
+  id: $slug,
+  title: $title,
+  status: 'active',
+  started: date(),
+  question: $question
+})
+CREATE (q)-[:STARTED_BY]->(p)
+WITH q
+UNWIND $projects AS projName
+MATCH (proj:Project {name: projName})
+CREATE (q)-[:RELATES_TO]->(proj)
+RETURN q.id
+```
+
+**Neo4j Quest status update (on `/quest pause` or `/quest complete`):**
+```cypher
+MATCH (q:Quest {id: $slug})
+SET q.status = $status, q.completed = CASE WHEN $status = 'completed' THEN date() ELSE null END
+RETURN q.id, q.status
+```
 
 **Example (list)**:
 ```
@@ -1103,6 +1229,9 @@ Add initial threads? (or skip)
 > - Prototype with Claude tool use
 > done
 
+Recording in knowledge graph...
+  ✓ Quest node created, linked to tristero + lace
+
 ✓ Quest created. Run /save to share.
 ```
 
@@ -1174,6 +1303,39 @@ Entry Points:
 ```
 
 **Next**: Run `/quest [name]` to dive into a quest, or `cd ../[project] && claude` to work on code.
+
+---
+
+## Neo4j Knowledge Graph
+
+Egregore uses Neo4j for tracking activity, relationships between people, projects, quests, and artifacts.
+
+### Schema
+
+**Nodes**:
+- `Person` — Team members (name, fullName, joined)
+- `Project` — tristero, lace, infrastructure (name, description, domain)
+- `Quest` — Open-ended explorations (id, title, status)
+- `Artifact` — Content items (id, title, type, created)
+- `Session` — Work sessions (id, date, summary)
+
+**Relationships**:
+- `(Person)-[:WORKS_ON]->(Project)` — Who works on what
+- `(Person)-[:CONTRIBUTED]->(Artifact)` — Who created what
+- `(Quest)-[:RELATES_TO]->(Project)` — Quest-project links
+- `(Artifact)-[:PART_OF]->(Quest)` — Artifact-quest links
+- `(Session)-[:BY]->(Person)` — Session authorship
+
+### Auto-registration
+
+When a new person runs `/setup`, they're automatically added to the graph:
+
+```cypher
+MERGE (p:Person {name: $name})
+ON CREATE SET p.joined = date(), p.fullName = $fullName
+```
+
+This happens automatically — no manual seeding needed.
 
 ---
 
