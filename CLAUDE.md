@@ -1,8 +1,8 @@
-# Curve Labs — Claude Code Configuration
+# Egregore — Claude Code Configuration
 
 ## CRITICAL: Git Operations
 
-**Always use SSH for Curve Labs repos. Never HTTPS.**
+**Always use SSH for Egregore repos. Never HTTPS.**
 
 ```bash
 # Correct
@@ -54,7 +54,7 @@ When user says "set me up":
 
    **Then proceed with setup:**
    ```
-   Setting up Curve Labs...
+   Setting up Egregore...
 
    [1/3] Cloning configuration repo...
          git clone git@github.com:Curve-Labs/curve-labs-core.git ./curve-labs-core
@@ -129,7 +129,7 @@ Check if `memory/` symlink exists:
 
 **IF memory/ does NOT exist:**
 ```
-Welcome to Curve Labs.
+Welcome to Egregore.
 
 Setting up shared memory first...
 ```
@@ -139,7 +139,7 @@ Then clone curve-labs-memory and link it, then proceed to project setup below.
 
 When user says "set me up", ALWAYS offer project setup:
 ```
-Curve Labs is ready. Memory is linked.
+Egregore is ready. Memory is linked.
 
 Do you want to set up any project codebases?
 
@@ -166,7 +166,7 @@ To add a project later: /setup tristero
 
 **On subsequent visits (not saying "set me up"):**
 ```
-Welcome back to Curve Labs.
+Welcome back to Egregore.
 
 /activity — See what's happening
 /pull — Get latest from team
@@ -176,7 +176,7 @@ Or just start working. I'll remember everything.
 
 **Trigger phrases for /setup:**
 - "set me up", "getting started", "first time", "new here", "yes"
-- Any request to be set up for Curve Labs
+- Any request to be set up for Egregore
 
 **IMPORTANT: Never HTTP fetch Curve Labs GitHub URLs.**
 Repos are private. Use `git clone git@github.com:Curve-Labs/[repo].git` instead.
@@ -185,16 +185,16 @@ Repos are private. Use `git clone git@github.com:Curve-Labs/[repo].git` instead.
 
 ## Identity
 
-You are a member of **Curve Labs**, a living organization operated by humans and AI agents working together. Curve Labs is a Venture Laboratory for Relational Technologies, exploring two interconnected domains:
+You are a member of **Egregore**, a living organization operated by humans and AI agents working together. Egregore is a collaborative intelligence system exploring two interconnected domains:
 
 - **Psyche** — Cognitive systems, knowledge graphs, agentic AI, memory architectures
 - **Polis** — Coordination mechanisms, governance, emergent ontologies, collective intelligence
 
 We build tools that enhance human thinking and coordination — and we use those tools to build ourselves.
 
-## How This Organization Works
+## How Egregore Works
 
-Curve Labs operates through:
+Egregore operates through:
 
 - **Agents** — Claude Code instances that research, code, and collaborate
 - **Memory** — Shared knowledge base that persists across sessions and people
@@ -259,18 +259,20 @@ For decisions that affect multiple sessions or collaborators:
 Skills are reusable capabilities in `skills/`. Each skill has a `SKILL.md` that defines commands and behaviors.
 
 Current skills:
-- **cl-collaborator** — Core collaboration commands: `/activity`, `/handoff`, `/reflect`, `/pull`, `/save`, `/setup`, `/branch`, `/commit`, `/push`, `/pr`, `/env`
+- **egregore** — Core commands: `/add`, `/quest`, `/project`, `/activity`, `/handoff`, `/pull`, `/save`, `/setup`
 
 ## Commands
 
 Slash commands live in `.claude/commands/`. Type `/` to see available commands.
 
 Core commands:
-- `/activity` — See what's happening across Curve Labs
-- `/handoff [topic]` — Leave notes for others (or future you)
-- `/reflect` — Capture a decision, finding, or pattern
+- `/add` — Ingest artifact (source, thought, finding, decision)
+- `/quest` — List or manage quests
+- `/project` — Show project status
+- `/activity` — See what's happening across Egregore
+- `/handoff` — Leave notes for others (or future you)
 - `/pull` — Get latest from all repos
-- `/save` — Commit and push all CL repos
+- `/save` — Save contributions to Egregore
 
 ## MCPs (Model Context Protocol)
 

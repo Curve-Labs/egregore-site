@@ -1,7 +1,8 @@
 """
-Curve Labs Activity Bot
+Egregore Activity Bot
 
-A Telegram bot that answers natural language queries about team activity.
+A Telegram bot that answers natural language queries about team activity
+and explains how to use the Egregore collaboration system.
 Uses LLM to understand questions and generate contextual responses.
 
 Deploy to Railway with webhook mode for production.
@@ -141,12 +142,39 @@ def format_events_for_llm(events: list) -> str:
     return "\n".join(lines)
 
 
+EGREGORE_HELP = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
+
+How to contribute:
+
+1. Open Claude Code in the curve-labs-core folder
+2. Use /add to contribute:
+   - /add https://... (add an external source)
+   - /add (add a thought, finding, or decision)
+3. Link to quests when prompted (or create new ones with /quest new)
+4. Use /save to push your contribution
+
+Key commands:
+- /add - Ingest content (sources, thoughts, findings, decisions)
+- /quest - List or create quests (open explorations)
+- /project - See project status
+- /activity - See recent contributions
+- /save - Save your work
+
+The flow: /add -> tag to quest -> /save -> team sees it on /activity"""
+
+
 async def ask_llm(question: str, activity_context: str) -> str:
     """Ask Claude to answer question based on activity context."""
     if not ANTHROPIC_API_KEY:
         return None
 
-    system_prompt = """You are the Curve Labs activity assistant. Answer questions about team activity based on the provided context.
+    system_prompt = f"""You are the Egregore activity assistant. Egregore is a living organization where humans and AI agents collaborate.
+
+Answer questions about team activity based on the provided context.
+
+If asked how to use Egregore, add content, or contribute, include this help:
+
+{EGREGORE_HELP}
 
 Guidelines:
 - Be concise and direct
@@ -156,7 +184,7 @@ Guidelines:
 - If you don't have enough information, say so clearly
 - Format lists with dashes, not bullets"""
 
-    user_prompt = f"""Recent Curve Labs activity (last {MAX_ACTIVITY_DAYS} days):
+    user_prompt = f"""Recent Egregore activity (last {MAX_ACTIVITY_DAYS} days):
 
 {activity_context}
 
@@ -207,7 +235,7 @@ def format_simple_activity(events: list, hours: int = 24) -> str:
         return f"No activity in the last {period}."
 
     period = "24 hours" if hours == 24 else f"{hours // 24} days"
-    lines = [f"Curve Labs - Last {period}:\n"]
+    lines = [f"Egregore - Last {period}:\n"]
 
     for event in reversed(recent[-10:]):
         event_type = event.get("type", "unknown")
@@ -312,18 +340,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command."""
     if not is_allowed_chat(update):
-        await update.message.reply_text("This bot is private to Curve Labs.")
+        await update.message.reply_text("This bot is private to Egregore.")
         return
     await update.message.reply_text(
-        "Curve Labs Activity Bot\n\n"
-        "Ask me anything about team activity:\n"
+        "Egregore Activity Bot\n\n"
+        "Ask me anything:\n"
         "- What's Oz been working on?\n"
         "- Any decisions this week?\n"
-        "- Summarize recent activity\n\n"
+        "- Summarize recent activity\n"
+        "- How do I add something new?\n\n"
         "Commands:\n"
         "/activity - Last 24 hours\n"
-        "/week - Last 7 days"
+        "/week - Last 7 days\n"
+        "/help - How to use Egregore"
     )
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /help command - explain how to use Egregore."""
+    if not is_allowed_chat(update):
+        return
+    await update.message.reply_text(EGREGORE_HELP)
 
 
 def main() -> None:
@@ -331,6 +368,7 @@ def main() -> None:
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("activity", activity_command))
     app.add_handler(CommandHandler("week", week_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

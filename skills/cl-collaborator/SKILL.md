@@ -1,10 +1,14 @@
-# Curve Labs Collaborator Skill
+# Egregore Skill
 
-Core capabilities for operating within Curve Labs — a living organization of humans and AI agents.
+Core capabilities for operating within Egregore — a living organization of humans and AI agents working together.
+
+## What is Egregore?
+
+Egregore is a collaborative intelligence system where humans and AI agents share knowledge, accumulate decisions, and build on each other's work. Knowledge flows in through artifacts, organizes around quests, and connects to projects.
 
 ## CRITICAL: Always Use SSH for Git
 
-**All Curve Labs repos are private. Always use SSH, never HTTPS.**
+**All Egregore repos are private. Always use SSH, never HTTPS.**
 
 ```bash
 # Correct
@@ -45,7 +49,7 @@ Check if `memory/` symlink exists:
 
 **IF memory/ exists:**
 ```
-Welcome back to Curve Labs.
+Welcome back to Egregore.
 
 This is your research workspace. Notes and handoffs are saved to memory/
 and shared with the team.
@@ -60,7 +64,7 @@ Or just start working.
 
 **IF memory/ does NOT exist:**
 ```
-Welcome to Curve Labs.
+Welcome to Egregore.
 
 Looks like first time setup. I'll get you ready:
 - Shared memory (notes, handoffs, research)
@@ -79,12 +83,12 @@ If user says "tell me more":
 - "first time"
 - "new here"
 - "yes" (in response to setup prompt)
-- Any request to be set up for Curve Labs
+- Any request to be set up for Egregore
 - Any message mentioning "github.com/Curve-Labs" — this is a setup request
 
-**IMPORTANT: Never HTTP fetch Curve Labs GitHub URLs**
+**IMPORTANT: Never HTTP fetch Egregore GitHub URLs**
 
-When user mentions a Curve Labs GitHub URL like:
+When user mentions a Egregore GitHub URL like:
 - "Set me up from github.com/Curve-Labs/curve-labs-core"
 - "github.com/Curve-Labs/tristero"
 
@@ -113,7 +117,7 @@ This project isn't connected to shared memory yet.
 
 Run: ln -s ../curve-labs-memory ./memory
 
-Or if you haven't set up Curve Labs yet, go to your workspace root
+Or if you haven't set up Egregore yet, go to your workspace root
 and run the bootstrap setup first.
 ```
 
@@ -185,7 +189,7 @@ Only remind once per session unless they switch back to main.
 
 ### /setup
 
-First-time setup for Curve Labs. Sets up shared memory first, projects are optional.
+First-time setup for Egregore. Sets up shared memory first, projects are optional.
 
 **Usage**: `/setup` or `/setup [project]`
 
@@ -205,7 +209,7 @@ Can't access repo. Check your SSH keys: ssh -T git@github.com
 ```
 > /setup
 
-Setting up Curve Labs...
+Setting up Egregore...
 
 [1/2] Setting up shared memory repo...
       This stores handoffs, decisions, and research notes across the team.
@@ -541,18 +545,26 @@ PR ready for review. Share the link with the team.
 
 ### /activity
 
-See what's happening across Curve Labs — handoffs, decisions, commits, branches, and PRs.
+See what's happening across Egregore — quests, handoffs, artifacts, commits, branches, and PRs.
 
 **Usage**: `/activity [project?]`
 
 **What it does**:
 
-1. **Check memory for explicit items**:
+1. **Check quests**:
+   - Read `memory/quests/` for active quests (status: active in frontmatter)
+   - Show quest count and recent activity
+
+2. **Check artifacts**:
+   - Read `memory/artifacts/` for recent artifacts (last 7 days)
+   - Group by type
+
+3. **Check memory for explicit items**:
    - Read `memory/conversations/index.md` for recent handoffs
    - Check `memory/knowledge/decisions/` for recent decisions
    - Check `memory/knowledge/findings/` for recent findings
 
-2. **Check git activity across repos** (for each local project: tristero, lace, zen):
+4. **Check git activity across repos** (for each local project: tristero, lace):
    ```bash
    cd ../[project]
    git fetch origin
@@ -575,8 +587,17 @@ See what's happening across Curve Labs — handoffs, decisions, commits, branche
 ```
 > /activity
 
-Curve Labs Activity
+Egregore Activity
 ───────────────────
+
+Active Quests:
+  → benchmark-eval (tristero) — 4 artifacts, Oz + Ali
+  → research-agent (lace, tristero) — 1 artifact, Oz
+
+Recent Contributions:
+  → 2 hours ago: Oz contributed to benchmark-eval (2 artifacts)
+  → 1 day ago: Ali created quest: research-agent
+  → 2 days ago: Cem added finding: MCP streaming works
 
 Handoffs:
   → Jan 20: "MCP auth" by Cem → @oz ⚡ (for you)
@@ -616,7 +637,7 @@ To review a PR: "Show me PR #43"
 
 Only show memory items (handoffs, decisions, findings) and note:
 ```
-Curve Labs Activity
+Egregore Activity
 ───────────────────
 
 Handoffs:
@@ -635,7 +656,7 @@ Git activity: No project repos set up. Run /setup tristero to add.
 
 Show memory items immediately, then git info as it loads:
 ```
-Curve Labs Activity
+Egregore Activity
 ───────────────────
 
 Handoffs:
@@ -734,64 +755,83 @@ For the next session, start by:
 
 ### /save
 
-Commit and push ALL Curve Labs repos with uncommitted changes.
+Save your contributions to Egregore. Uses branch + PR + auto-merge for clean contribution history.
 
 **Usage**: `/save`
 
 **What it does**:
-1. Checks each CL repo for uncommitted changes:
-   - curve-labs-memory (via memory/ symlink)
-   - curve-labs-core (current repo)
-   - Any sibling project repos (tristero, lace, zen)
-2. For each repo with changes, commits and pushes
-3. Auto-generates commit messages based on context
 
-**Commit message auto-generation**:
-- If handoff was just created: "Handoff: [topic]"
-- If decision was added: "Decision: [short title]"
-- If skills/commands changed: "Update [skill/command name]"
-- Otherwise: ask user for commit message
+1. **For memory repo** (artifacts, quests, handoffs):
+   - Pull latest from main
+   - Create contribution branch: `contrib/YYYY-MM-DD-[author]-[summary]`
+   - Commit all changes
+   - Create PR with auto-merge
+   - PR merges automatically
+   - User sees: "Contribution merged"
+
+2. **For curve-labs-core** (commands, skills):
+   - Same branch + PR + auto-merge flow
+
+3. **For project repos** (tristero, lace):
+   - Warn user: "You have code changes. Use /push and /pr for review."
+   - Code changes require human review
 
 **Example**:
 ```
 > /save
 
-Checking CL repos for changes...
+Saving to Egregore...
 
-[curve-labs-memory]
-  Modified:
-    conversations/2026-01/21-oz-mcp-auth.md (new)
-    conversations/index.md
+[memory]
+  Changes:
+    artifacts/2026-01-26-oz-helm-review.md (new)
+    artifacts/2026-01-26-oz-temporal-thought.md (new)
+    quests/benchmark-eval.md (updated)
 
-  Commit message: Handoff: MCP auth session
-  ✓ Committed and pushed
+  Creating contribution...
+    git checkout -b contrib/2026-01-26-oz-benchmark-artifacts
+    git commit -m "Add: 2 artifacts for benchmark-eval quest"
+    gh pr create --title "Add: 2 artifacts for benchmark-eval"
+    gh pr merge --auto --merge
+
+  ✓ Contribution merged
 
 [curve-labs-core]
-  Modified:
-    skills/cl-collaborator/SKILL.md
-
-  Commit message: Update cl-collaborator skill
-  ✓ Committed and pushed
+  No changes
 
 [tristero]
-  No uncommitted changes
+  ⚠ Code changes detected. Use /push and /pr for review.
 
-[lace]
-  No uncommitted changes
-
-All changes saved. Team will see updates on /pull.
+Done. Team sees your contribution on /activity.
 ```
 
-**If no changes anywhere**:
+**If on a contribution branch already**:
 ```
 > /save
 
-Checking CL repos for changes...
+Saving to Egregore...
 
-No uncommitted changes across CL repos.
+[memory]
+  On branch: contrib/2026-01-26-oz-benchmark-artifacts
+  Adding to existing contribution...
+
+  ✓ Contribution updated and merged
 ```
 
-**Next**: You're done! Others will see your changes on `/pull`.
+**If no changes**:
+```
+> /save
+
+No uncommitted changes.
+```
+
+**Why this flow?**
+- Non-technical users never see git complexity
+- Each contribution is a discrete, revertable unit
+- `/activity` shows contributions clearly
+- Code changes still get proper review
+
+**Next**: Run `/activity` to see your contribution, or keep working.
 
 ---
 
@@ -835,6 +875,308 @@ Run /save to share with the team.
 
 ---
 
+## Knowledge Graph
+
+Egregore uses a lightweight knowledge graph in the filesystem. Content goes in one place; relations are metadata, not location.
+
+### Structure
+
+```
+memory/
+  artifacts/              # All content lives here
+    README.md
+    2026-01-26-oz-thought.md
+    2026-01-26-helm-source.md
+
+  quests/                 # Open-ended explorations
+    index.md
+    _template.md
+    benchmark-eval.md
+
+  projects/               # Project status pages
+    tristero.md
+    lace.md
+    infrastructure.md
+```
+
+### Artifacts
+
+All research content — sources, thoughts, findings, decisions — lives in `memory/artifacts/`. Relations are declared in frontmatter:
+
+```yaml
+---
+title: HELM Framework Review
+type: source | thought | finding | decision
+author: Oz (or "external" for sources)
+origin: https://... (for external sources)
+date: 2026-01-26
+quests: [benchmark-eval, research-agent]
+topics: [evaluation, benchmarks, llm]
+---
+
+[Content here]
+```
+
+**Artifact types**:
+- `source` — External content (papers, articles, docs)
+- `thought` — Original thinking, hypotheses, intuitions
+- `finding` — Discoveries, what worked or didn't
+- `decision` — Choices made with rationale
+
+### Quests
+
+Quests are open-ended explorations that bridge artifacts and projects. They declare which projects they relate to:
+
+```yaml
+---
+title: Evaluation Benchmark for Dynamic Ontologies
+slug: benchmark-eval
+status: active | paused | completed
+projects: [tristero]
+started: 2026-01-26
+started_by: Oz
+---
+```
+
+### Projects
+
+Project files in `memory/projects/` aggregate linked quests and artifacts automatically.
+
+---
+
+### /add
+
+Ingest an artifact with minimal friction. The system suggests relations.
+
+**Usage**: `/add [url?]`
+
+**What it does**:
+1. If URL provided, fetches and extracts content
+2. Asks for or infers content type
+3. Suggests relevant quests based on content
+4. Suggests topics
+5. Creates artifact file with proper frontmatter
+6. Confirms relations created
+
+**Example (external source)**:
+```
+> /add https://arxiv.org/abs/2311.04934
+
+Fetching...
+
+This looks like: "Benchmarking LLM Reasoning"
+Type: source (external)
+
+I see relevance to:
+  → Quest: benchmark-eval (high)
+  → Quest: research-agent (medium)
+  → Topics: [evaluation, reasoning, llm]
+
+[x] benchmark-eval
+[ ] research-agent
+[ ] No quest (general research)
+
+Confirm? (y / edit tags / n)
+> y
+
+✓ memory/artifacts/2026-01-26-benchmarking-llm-reasoning.md
+✓ Linked: benchmark-eval → tristero
+
+To see the graph: /quest benchmark-eval
+```
+
+**Example (thought)**:
+```
+> /add
+
+What do you have?
+> I'm thinking that dynamic ontologies need a temporal dimension
+> in their evaluation - not just "is this good" but "how does
+> goodness change as the ontology evolves"
+
+Type: thought
+Author: Oz (from git config)
+
+Relevant quests:
+  → benchmark-eval (this extends the core question)
+
+Topics: [evaluation, temporality, dynamic-ontologies]
+
+✓ memory/artifacts/2026-01-26-oz-temporal-evaluation-thought.md
+✓ Linked: benchmark-eval
+```
+
+**File naming**: `YYYY-MM-DD-[author]-[short-title].md` for thoughts
+                 `YYYY-MM-DD-[short-title]-source.md` for sources
+
+**Next**: Run `/save` to share, or `/quest [name]` to see the graph.
+
+---
+
+### /quest
+
+Manage quests — open-ended explorations that anyone can contribute to.
+
+**Usage**: `/quest [name?]` or `/quest [subcommand] [name]`
+
+**Subcommands**:
+- (none) — List active quests
+- `[name]` — Show quest details and linked artifacts
+- `new` — Create a new quest interactively
+- `contribute [name]` — Add a contribution entry
+- `pause [name]` — Pause a quest
+- `complete [name]` — Complete with outcome
+
+**Example (list)**:
+```
+> /quest
+
+Active Quests
+─────────────
+
+| Quest | Project | Artifacts | Contributors |
+|-------|---------|-----------|--------------|
+| benchmark-eval | tristero | 4 | Oz, Ali |
+| research-agent | lace, tristero | 1 | Oz |
+
+Paused: (none)
+
+To see details: /quest benchmark-eval
+To create: /quest new
+```
+
+**Example (show)**:
+```
+> /quest benchmark-eval
+
+Quest: Evaluation Benchmark for Dynamic Ontologies
+──────────────────────────────────────────────────
+
+Status: active
+Projects: tristero
+Started: 2026-01-26 by Oz
+
+The Question:
+  What does it mean for a dynamic ontology to be "good"?
+  How do we measure emergence, coherence, utility over time?
+
+Threads:
+  - [ ] Survey existing ontology evaluation methods
+  - [ ] Define "dynamic" — what changes, how fast?
+  - [x] Look at HELM for inspiration
+
+Artifacts (4):
+  → 2026-01-26 [source] HELM Framework Review
+  → 2026-01-26 [thought] Temporal dimension in evaluation (Oz)
+  → 2026-01-27 [source] Benchmarking LLM Reasoning
+  → 2026-01-27 [finding] HELM adaptable with modifications (Ali)
+
+Contributors: Oz, Ali
+
+Entry points:
+  - Read the HELM finding
+  - Check tristero/benchmarks/ for prototype
+```
+
+**Example (new)**:
+```
+> /quest new
+
+Creating a new quest...
+
+What's the question or goal?
+> Build a research agent that can autonomously explore topics
+
+Short slug (lowercase, hyphens):
+> research-agent
+
+Which projects does this relate to?
+  [x] tristero
+  [x] lace
+  [ ] infrastructure
+
+✓ Created memory/quests/research-agent.md
+
+Add initial threads? (or skip)
+> - Survey existing research agent architectures
+> - Define scope: what does "research" mean here?
+> - Prototype with Claude tool use
+> done
+
+✓ Quest created. Run /save to share.
+```
+
+**Example (contribute)**:
+```
+> /quest contribute benchmark-eval
+
+What did you contribute?
+> Reviewed HELM paper, found it's adaptable for ontology eval
+
+✓ Added contribution to quest
+
+To add an artifact: /add
+```
+
+**Next**: Use `/add` to attach artifacts, `/save` to share.
+
+---
+
+### /project
+
+Show project status — linked quests, recent artifacts, entry points.
+
+**Usage**: `/project [name?]`
+
+**Without arguments**: List all projects
+**With name**: Show project details
+
+**Example (list)**:
+```
+> /project
+
+Projects
+────────
+
+| Project | Domain | Quests | Recent Artifacts |
+|---------|--------|--------|------------------|
+| tristero | Polis | 2 active | 4 (last: today) |
+| lace | Psyche | 1 active | 2 (last: 2 days) |
+| infrastructure | Meta | 0 | 1 (last: 3 days) |
+
+To see details: /project tristero
+```
+
+**Example (show)**:
+```
+> /project tristero
+
+Project: Tristero
+─────────────────
+
+Domain: Polis — Coordination mechanisms, governance, emergent ontologies
+
+Repository: git@github.com:Curve-Labs/tristero.git
+
+Active Quests:
+  → benchmark-eval (4 artifacts, Oz + Ali)
+  → research-agent (1 artifact, Oz)
+
+Recent Artifacts (via quests):
+  → 2026-01-27 [finding] HELM adaptable with modifications
+  → 2026-01-26 [source] HELM Framework Review
+  → 2026-01-26 [thought] Temporal dimension in evaluation
+
+Entry Points:
+  - Code: cd ../tristero && claude
+  - Docs: tristero/README.md
+  - Recent work: /activity tristero
+```
+
+**Next**: Run `/quest [name]` to dive into a quest, or `cd ../[project] && claude` to work on code.
+
+---
+
 ## Help
 
 ### /help
@@ -847,15 +1189,21 @@ Show available commands.
 ```
 > /help
 
-Curve Labs Commands
+Egregore Commands
 ───────────────────
 
 Getting Started:
   /setup              Set up memory and projects
   /pull               Get latest from all repos
 
+Knowledge Graph:
+  /add [url?]         Ingest artifact (source, thought, finding, decision)
+  /quest [name?]      List or show quests
+  /quest new          Create a new quest
+  /project [name?]    Show project status and linked quests
+
 Team Awareness:
-  /activity           See handoffs, decisions, commits, PRs across CL
+  /activity           See quests, artifacts, handoffs, commits, PRs
   /handoff [topic]    End session, leave notes for others
   /reflect            Capture decision/finding/pattern
   /save               Commit and push all CL repos
