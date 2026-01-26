@@ -583,140 +583,92 @@ PR ready for review. Share the link with the team.
 
 ### /activity
 
-See what's happening across Egregore — quests, handoffs, artifacts, commits, branches, and PRs.
+Fast, personal view of what's happening — your projects, your sessions, team activity.
 
-**Usage**: `/activity [project?]`
+**Usage**: `/activity`
 
 **What it does**:
 
-1. **Query Neo4j for graph activity** (if MCP available):
+1. **Get current user** from git config, map to Person node (oz, cem, ali)
+2. **Query Neo4j** for personal + team activity (4 fast queries)
+3. **Display table visualization**
 
-   Team members and their projects:
-   ```cypher
-   MATCH (p:Person)-[w:WORKS_ON]->(proj:Project)
-   RETURN p.name AS person, collect(proj.name) AS projects
-   ```
+**Neo4j Queries:**
 
-   Recent sessions (when implemented):
-   ```cypher
-   MATCH (s:Session)-[:BY]->(p:Person)
-   WHERE s.date >= date() - duration('P7D')
-   RETURN s.date, s.summary, p.name
-   ORDER BY s.date DESC
-   ```
+```cypher
+// Query 1: My projects
+MATCH (p:Person {name: $me})-[w:WORKS_ON]->(proj:Project)
+RETURN proj.name AS project, proj.domain AS domain, w.role AS role
 
-2. **Check filesystem for content**:
-   - Read `memory/quests/` for active quests
-   - Read `memory/artifacts/` for recent artifacts
-   - Read `memory/conversations/index.md` for handoffs
+// Query 2: My recent sessions
+MATCH (s:Session)-[:BY]->(p:Person {name: $me})
+RETURN s.date AS date, s.topic AS topic, s.summary AS summary
+ORDER BY s.date DESC LIMIT 5
 
-3. **Check git activity across repos** (for each local project: tristero, lace):
-   ```bash
-   cd ../[project]
-   git fetch origin
-   git log --oneline --since="7 days ago" --all --format="%h %s (%an, %ar)"
-   ```
+// Query 3: Team activity (others, last 7 days)
+MATCH (s:Session)-[:BY]->(p:Person)
+WHERE p.name <> $me AND s.date >= date() - duration('P7D')
+RETURN s.date AS date, s.topic AS topic, p.name AS by
+ORDER BY s.date DESC LIMIT 5
 
-   Check for open branches:
-   ```bash
-   git branch -r --list 'origin/feature/*' --list 'origin/bugfix/*'
-   ```
-
-4. **Check for open PRs** (if gh CLI available):
-   ```bash
-   gh pr list --repo Curve-Labs/[project] --state open --json number,title,author,createdAt
-   ```
-
-5. Compile and display
-
-**Output format**:
-```
-> /activity
-
-Egregore Activity
-───────────────────
-
-Active Quests:
-  → benchmark-eval (tristero) — 4 artifacts, Oz + Ali
-  → research-agent (lace, tristero) — 1 artifact, Oz
-
-Recent Contributions:
-  → 2 hours ago: Oz contributed to benchmark-eval (2 artifacts)
-  → 1 day ago: Ali created quest: research-agent
-  → 2 days ago: Cem added finding: MCP streaming works
-
-Handoffs:
-  → Jan 20: "MCP auth" by Cem → @oz ⚡ (for you)
-  → Jan 19: "Memory architecture" by Oz
-
-Decisions:
-  → Jan 20: Use stdio for MCP transport
-
-Findings:
-  → Jan 19: COALA framework maps to filesystem
-
-Recent commits (last 7 days):
-  tristero:
-    → abc1234 Fix reflection loop (Cem, 2 hours ago)
-    → def5678 Add chunked responses (Oz, 5 hours ago)
-  lace:
-    → 789abcd Update vector index config (Oz, 1 day ago)
-
-Active branches:
-  tristero:
-    → feature/2026-01-20-mcp-streaming (Oz)
-  lace:
-    → (none)
-
-Open PRs:
-  tristero:
-    → #43 "MCP streaming fix" by Oz — awaiting review
-  lace:
-    → (none)
-
-─────────────────────────────
-To pick up a handoff: "Continue the MCP auth handoff"
-To review a PR: "Show me PR #43"
+// Query 4: Active quests
+MATCH (q:Quest {status: 'active'})-[:RELATES_TO]->(proj:Project)
+OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
+RETURN q.id AS quest, q.title AS title, collect(DISTINCT proj.name) AS projects, count(a) AS artifacts
 ```
 
-**If no project repos cloned:**
+**Output format:**
 
-Only show memory items (handoffs, decisions, findings) and note:
 ```
-Egregore Activity
-───────────────────
-
-Handoffs:
-  → Jan 20: "MCP auth" by Cem
-
-Decisions:
-  → (none)
-
-Findings:
-  → (none)
-
-Git activity: No project repos set up. Run /setup tristero to add.
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  EGREGORE ACTIVITY                                            oz · Jan 26  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  YOUR PROJECTS                                                              │
+│  ┌────────────────┬──────────┬──────────┐                                   │
+│  │ Project        │ Domain   │ Role     │                                   │
+│  ├────────────────┼──────────┼──────────┤                                   │
+│  │ infrastructure │ both     │ lead     │                                   │
+│  │ tristero       │ polis    │ —        │                                   │
+│  │ lace           │ psyche   │ —        │                                   │
+│  └────────────────┴──────────┴──────────┘                                   │
+│                                                                             │
+│  YOUR RECENT SESSIONS                                                       │
+│  ┌────────────┬─────────────────────────┬───────────────────────────────┐   │
+│  │ Date       │ Topic                   │ Summary                       │   │
+│  ├────────────┼─────────────────────────┼───────────────────────────────┤   │
+│  │ 2026-01-26 │ Neo4j ontology complete │ Schema, seed data, commands   │   │
+│  └────────────┴─────────────────────────┴───────────────────────────────┘   │
+│                                                                             │
+│  TEAM ACTIVITY (last 7 days)                                                │
+│  ┌────────────┬─────────────────────────┬──────────┐                        │
+│  │ Date       │ Topic                   │ By       │                        │
+│  ├────────────┼─────────────────────────┼──────────┤                        │
+│  │ 2026-01-26 │ Telegram bot fix        │ ali      │                        │
+│  │ 2026-01-26 │ Evaluation benchmarks   │ cem      │                        │
+│  └────────────┴─────────────────────────┴──────────┘                        │
+│                                                                             │
+│  ACTIVE QUESTS                                                              │
+│  ┌──────────────────┬─────────────────────┬───────────┬───────────┐         │
+│  │ Quest            │ Title               │ Projects  │ Artifacts │         │
+│  ├──────────────────┼─────────────────────┼───────────┼───────────┤         │
+│  │ benchmark-eval   │ Evaluation metrics  │ tristero  │ 4         │         │
+│  └──────────────────┴─────────────────────┴───────────┴───────────┘         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Performance note:**
-
-Show memory items immediately, then git info as it loads:
+**If sections are empty**, show placeholder:
 ```
-Egregore Activity
-───────────────────
-
-Handoffs:
-  → Jan 20: "MCP auth" by Cem
-
-Checking git activity...
-  [tristero] ✓
-  [lace] ✓
-
-Recent commits:
-  ...
+│  ACTIVE QUESTS                                                              │
+│  (none yet — use /quest new to create one)                                  │
 ```
 
-**Next**: Read any relevant handoffs, review open PRs, or start working.
+**Why this is fast:**
+- 4 simple Neo4j queries (indexed on name, date)
+- No filesystem reads for core view
+- Personal first, team second
+- Table format is scannable
 
 ---
 
