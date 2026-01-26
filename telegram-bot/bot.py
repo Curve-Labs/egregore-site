@@ -142,25 +142,22 @@ def format_events_for_llm(events: list) -> str:
     return "\n".join(lines)
 
 
-EGREGORE_HELP = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
+EGREGORE_CONTEXT = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
 
-How to contribute:
+Key concepts:
+- Artifacts: content (sources, thoughts, findings, decisions) stored in memory/artifacts/
+- Quests: open-ended explorations that artifacts link to
+- Projects: tristero, lace, infrastructure - quests link to these
 
-1. Open Claude Code in the curve-labs-core folder
-2. Use /add to contribute:
-   - /add https://... (add an external source)
-   - /add (add a thought, finding, or decision)
-3. Link to quests when prompted (or create new ones with /quest new)
-4. Use /save to push your contribution
+How to add something:
+1. Open Claude Code in curve-labs-core folder
+2. Run /add (for a thought) or /add https://... (for a source)
+3. System suggests which quest to link it to
+4. Run /save to push
 
-Key commands:
-- /add - Ingest content (sources, thoughts, findings, decisions)
-- /quest - List or create quests (open explorations)
-- /project - See project status
-- /activity - See recent contributions
-- /save - Save your work
+Commands: /add, /quest, /quest new, /project, /activity, /save
 
-The flow: /add -> tag to quest -> /save -> team sees it on /activity"""
+The flow: /add -> tag to quest -> /save -> team sees on /activity"""
 
 
 async def ask_llm(question: str, activity_context: str) -> str:
@@ -168,21 +165,23 @@ async def ask_llm(question: str, activity_context: str) -> str:
     if not ANTHROPIC_API_KEY:
         return None
 
-    system_prompt = f"""You are the Egregore activity assistant. Egregore is a living organization where humans and AI agents collaborate.
+    system_prompt = f"""You are Egregore, a living organization where humans and AI agents collaborate.
 
-Answer questions about team activity based on the provided context.
+You know about:
+{EGREGORE_CONTEXT}
 
-If asked how to use Egregore, add content, or contribute, include this help:
+Answer questions conversationally. Only share what's relevant to the question asked.
 
-{EGREGORE_HELP}
+Examples:
+- "How do I add something?" -> Explain /add command briefly
+- "What's a quest?" -> Explain quests briefly
+- "What has Oz been doing?" -> Summarize from activity context
 
 Guidelines:
-- Be concise and direct
+- Be concise and direct - answer the specific question
+- Do not dump all information at once
 - Do not use emojis
-- If asked about a specific person, focus on their activities
-- If asked about a time period, filter appropriately
-- If you don't have enough information, say so clearly
-- Format lists with dashes, not bullets"""
+- If you don't know, say so"""
 
     user_prompt = f"""Recent Egregore activity (last {MAX_ACTIVITY_DAYS} days):
 
@@ -343,24 +342,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("This bot is private to Egregore.")
         return
     await update.message.reply_text(
-        "Egregore Activity Bot\n\n"
-        "Ask me anything:\n"
-        "- What's Oz been working on?\n"
-        "- Any decisions this week?\n"
-        "- Summarize recent activity\n"
-        "- How do I add something new?\n\n"
-        "Commands:\n"
+        "I'm Egregore. Ask me anything:\n\n"
+        "- What's been happening?\n"
+        "- What's Oz working on?\n"
+        "- How do I add something?\n"
+        "- What's a quest?\n\n"
         "/activity - Last 24 hours\n"
-        "/week - Last 7 days\n"
-        "/help - How to use Egregore"
+        "/week - Last 7 days"
     )
-
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /help command - explain how to use Egregore."""
-    if not is_allowed_chat(update):
-        return
-    await update.message.reply_text(EGREGORE_HELP)
 
 
 def main() -> None:
@@ -368,7 +357,6 @@ def main() -> None:
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("activity", activity_command))
     app.add_handler(CommandHandler("week", week_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
