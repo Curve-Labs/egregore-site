@@ -1,193 +1,292 @@
 """
-Egregore Activity Bot
+Egregore Bot
 
-A Telegram bot that answers natural language queries about team activity
-and explains how to use the Egregore collaboration system.
-Uses LLM to understand questions and generate contextual responses.
+A Telegram bot that answers natural language queries about Egregore
+by querying the Neo4j knowledge graph directly.
+
+Uses LLM (Haiku) to:
+1. Parse questions and pick the right query
+2. Format results as natural language
 
 Deploy to Railway with webhook mode for production.
 """
 
 import os
 import json
-import base64
 import logging
-from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from dotenv import load_dotenv
-load_dotenv(override=False)  # Don't override Railway env vars
+load_dotenv(override=False)
 
 import httpx
+from neo4j import GraphDatabase
 
-# Debug: Log all env vars at startup (masked)
-import logging
-logging.basicConfig(level=logging.INFO)
-_startup_logger = logging.getLogger("startup")
-_startup_logger.info("=== Environment Variables at Startup ===")
-for key in ["TELEGRAM_BOT_TOKEN", "REPO_KEY", "GH_TOKEN", "GITHUB_TOKEN", "ANTHROPIC_API_KEY", "WEBHOOK_URL", "PORT", "ALLOWED_CHAT_IDS"]:
-    val = os.environ.get(key, "")
-    masked = f"{val[:4]}...{val[-4:]}" if len(val) > 8 else ("SET" if val else "NOT SET")
-    _startup_logger.info(f"  {key}: {masked}")
-_startup_logger.info("=========================================")
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Config
-BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-GITHUB_TOKEN = os.environ.get("REPO_KEY", "") or os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-
-# Webhook config for Railway
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")  # e.g., https://your-app.railway.app
-PORT = int(os.environ.get("PORT", 8443))
-
-# Security: Only respond to allowed chats/users
-# Channel: -1003081443167, Oz: 154132702
-# Can override via env: ALLOWED_CHAT_IDS=123,456,789
-DEFAULT_ALLOWED_CHATS = [-1003081443167, 154132702]
-ALLOWED_CHAT_IDS = [
-    int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
-] or DEFAULT_ALLOWED_CHATS
-
-# GitHub API URL for private repo access
-GITHUB_API_URL = "https://api.github.com/repos/Curve-Labs/curve-labs-memory/contents/activity.json"
-
-# Memory management: only load events from last N days
-MAX_ACTIVITY_DAYS = 14
+# =============================================================================
+# CONFIG
+# =============================================================================
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Telegram
+BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+PORT = int(os.environ.get("PORT", 8443))
 
-def is_allowed_chat(update: Update) -> bool:
-    """Check if the chat is in the allowed list."""
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id if update.effective_user else None
+# Neo4j Aura
+NEO4J_URI = os.environ.get("NEO4J_URI", "")
+NEO4J_USER = os.environ.get("NEO4J_USER", "")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 
-    # Allow if chat OR user is in the allowed list
-    return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS
+# Anthropic (for Haiku)
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# Security: Only respond to allowed chats/users
+# Channel: -1003081443167, Oz: 154132702, Ali: 952778083, Cem: 72463248
+DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248]
+ALLOWED_CHAT_IDS = [
+    int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
+] or DEFAULT_ALLOWED
+
+# Log startup config
+logger.info("=== Egregore Bot Starting ===")
+logger.info(f"NEO4J_URI: {'SET' if NEO4J_URI else 'NOT SET'}")
+logger.info(f"ANTHROPIC_API_KEY: {'SET' if ANTHROPIC_API_KEY else 'NOT SET'}")
+logger.info(f"ALLOWED_CHAT_IDS: {ALLOWED_CHAT_IDS}")
+
+# =============================================================================
+# NEO4J CONNECTION
+# =============================================================================
+
+neo4j_driver = None
+
+def get_neo4j_driver():
+    """Get or create Neo4j driver."""
+    global neo4j_driver
+    if neo4j_driver is None and NEO4J_URI:
+        neo4j_driver = GraphDatabase.driver(
+            NEO4J_URI,
+            auth=(NEO4J_USER, NEO4J_PASSWORD)
+        )
+        logger.info("Neo4j driver initialized")
+    return neo4j_driver
 
 
-async def fetch_activity() -> dict:
-    """Fetch activity.json from GitHub API (works with private repos)."""
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "CurveLabsActivityBot"
+def run_query(query: str, params: dict = None) -> list:
+    """Run a Cypher query and return results."""
+    driver = get_neo4j_driver()
+    if not driver:
+        logger.warning("Neo4j not configured")
+        return []
+
+    try:
+        with driver.session() as session:
+            result = session.run(query, params or {})
+            return [dict(record) for record in result]
+    except Exception as e:
+        logger.error(f"Neo4j query failed: {e}")
+        return []
+
+
+# =============================================================================
+# PREDEFINED QUERIES
+# =============================================================================
+
+QUERIES = {
+    "recent_activity": {
+        "description": "Recent sessions/activity from the team (last 7 days)",
+        "params": [],
+        "cypher": """
+            MATCH (s:Session)-[:BY]->(p:Person)
+            WHERE s.date >= date() - duration('P7D')
+            RETURN s.date AS date, s.topic AS topic, p.name AS person, s.summary AS summary
+            ORDER BY s.date DESC LIMIT 10
+        """
+    },
+    "person_projects": {
+        "description": "What projects a specific person works on",
+        "params": ["name"],
+        "cypher": """
+            MATCH (p:Person {name: $name})-[w:WORKS_ON]->(proj:Project)
+            RETURN proj.name AS project, proj.domain AS domain, w.role AS role
+        """
+    },
+    "person_sessions": {
+        "description": "Recent sessions by a specific person",
+        "params": ["name"],
+        "cypher": """
+            MATCH (s:Session)-[:BY]->(p:Person {name: $name})
+            RETURN s.date AS date, s.topic AS topic, s.summary AS summary
+            ORDER BY s.date DESC LIMIT 5
+        """
+    },
+    "quest_details": {
+        "description": "Details about a specific quest",
+        "params": ["quest_id"],
+        "cypher": """
+            MATCH (q:Quest {id: $quest_id})
+            OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
+            OPTIONAL MATCH (q)-[:STARTED_BY]->(p:Person)
+            OPTIONAL MATCH (q)-[:RELATES_TO]->(proj:Project)
+            RETURN q.title AS title, q.status AS status, q.question AS question,
+                   p.name AS started_by,
+                   collect(DISTINCT a.title) AS artifacts,
+                   collect(DISTINCT proj.name) AS projects
+        """
+    },
+    "active_quests": {
+        "description": "All currently active quests",
+        "params": [],
+        "cypher": """
+            MATCH (q:Quest {status: 'active'})
+            OPTIONAL MATCH (q)-[:RELATES_TO]->(proj:Project)
+            OPTIONAL MATCH (q)-[:STARTED_BY]->(p:Person)
+            RETURN q.id AS id, q.title AS title,
+                   collect(DISTINCT proj.name) AS projects,
+                   p.name AS started_by
+        """
+    },
+    "search_artifacts": {
+        "description": "Search artifacts by keyword in title",
+        "params": ["term"],
+        "cypher": """
+            MATCH (a:Artifact)
+            WHERE toLower(a.title) CONTAINS toLower($term)
+            OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
+            OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
+            RETURN a.title AS title, a.type AS type, a.created AS created,
+                   p.name AS author, collect(DISTINCT q.id) AS quests
+            LIMIT 10
+        """
+    },
+    "all_people": {
+        "description": "List all team members and their projects",
+        "params": [],
+        "cypher": """
+            MATCH (p:Person)
+            OPTIONAL MATCH (p)-[:WORKS_ON]->(proj:Project)
+            RETURN p.name AS name, p.fullName AS fullName,
+                   collect(DISTINCT proj.name) AS projects
+        """
+    },
+    "project_details": {
+        "description": "Details about a specific project",
+        "params": ["name"],
+        "cypher": """
+            MATCH (proj:Project {name: $name})
+            OPTIONAL MATCH (q:Quest {status: 'active'})-[:RELATES_TO]->(proj)
+            OPTIONAL MATCH (p:Person)-[:WORKS_ON]->(proj)
+            RETURN proj.name AS name, proj.domain AS domain,
+                   proj.description AS description,
+                   collect(DISTINCT q.id) AS quests,
+                   collect(DISTINCT p.name) AS team
+        """
+    },
+    "all_projects": {
+        "description": "List all projects",
+        "params": [],
+        "cypher": """
+            MATCH (proj:Project)
+            OPTIONAL MATCH (p:Person)-[:WORKS_ON]->(proj)
+            RETURN proj.name AS name, proj.domain AS domain,
+                   collect(DISTINCT p.name) AS team
+        """
     }
-
-    logger.info(f"GITHUB_TOKEN present: {bool(GITHUB_TOKEN)}")
-    logger.info(f"GITHUB_TOKEN length: {len(GITHUB_TOKEN) if GITHUB_TOKEN else 0}")
-
-    if GITHUB_TOKEN:
-        headers["Authorization"] = f"token {GITHUB_TOKEN}"
-
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(GITHUB_API_URL, headers=headers, timeout=10)
-            logger.info(f"GitHub API response status: {resp.status_code}")
-            resp.raise_for_status()
-
-            data = resp.json()
-            content = base64.b64decode(data["content"]).decode("utf-8")
-            return json.loads(content)
-        except httpx.HTTPStatusError as e:
-            logger.error(f"GitHub API HTTP error: {e.response.status_code} - {e.response.text}")
-            raise
-        except Exception as e:
-            logger.error(f"GitHub API error: {type(e).__name__}: {e}")
-            raise
+}
 
 
-def filter_recent(events: list, days: int = MAX_ACTIVITY_DAYS) -> list:
-    """Filter events from the last N days."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    recent = []
-    for e in events:
-        ts_str = e.get("timestamp", "")
-        try:
-            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-            if ts > cutoff:
-                recent.append(e)
-        except (ValueError, TypeError):
-            continue
-    return recent
+# =============================================================================
+# LLM FUNCTIONS
+# =============================================================================
 
-
-def format_events_for_llm(events: list) -> str:
-    """Format events as context for LLM."""
-    lines = []
-    for e in events:
-        event_type = e.get("type", "unknown")
-        author = e.get("author", "Unknown")
-        timestamp = e.get("timestamp", "")[:10]  # Just date
-        project = e.get("project", "")
-
-        if event_type == "handoff":
-            topic = e.get("topic", "untitled")
-            lines.append(f"- {timestamp}: {author} handed off on {project}: {topic}")
-        elif event_type == "save":
-            repos = e.get("repos", [])
-            lines.append(f"- {timestamp}: {author} saved changes to {', '.join(repos)}")
-        elif event_type == "decision":
-            title = e.get("title", "untitled")
-            lines.append(f"- {timestamp}: {author} made decision: {title}")
-        elif event_type == "finding":
-            title = e.get("title", "untitled")
-            lines.append(f"- {timestamp}: {author} found: {title}")
-        else:
-            summary = e.get("summary", e.get("topic", event_type))
-            lines.append(f"- {timestamp}: {author}: {summary}")
-
-    return "\n".join(lines)
-
-
-EGREGORE_CONTEXT = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
-
-Key concepts:
-- Artifacts: content (sources, thoughts, findings, decisions) stored in memory/artifacts/
-- Quests: open-ended explorations that artifacts link to
-- Projects: tristero, lace, infrastructure - quests link to these
-
-How to add something:
-1. Open Claude Code in egregore folder
-2. Run /add (for a thought) or /add https://... (for a source)
-3. System suggests which quest to link it to
-4. Run /save to push
-
-Commands: /add, /quest, /quest new, /project, /activity, /save
-
-The flow: /add -> tag to quest -> /save -> team sees on /activity"""
-
-
-async def ask_llm(question: str, activity_context: str) -> str:
-    """Ask Claude to answer question based on activity context."""
+async def pick_query(question: str) -> Optional[dict]:
+    """Use LLM to pick which query to run and extract parameters."""
     if not ANTHROPIC_API_KEY:
         return None
 
-    system_prompt = f"""You are Egregore, a living organization where humans and AI agents collaborate.
+    query_descriptions = "\n".join([
+        f"- {name}: {q['description']} (params: {q['params'] or 'none'})"
+        for name, q in QUERIES.items()
+    ])
 
-You know about:
-{EGREGORE_CONTEXT}
+    system_prompt = f"""You help pick the right database query for user questions about Egregore.
 
-Answer questions conversationally. Only share what's relevant to the question asked.
+Available queries:
+{query_descriptions}
+
+Respond with ONLY valid JSON: {{"query": "query_name", "params": {{"param": "value"}}}}
+If no query fits, respond: {{"query": null}}
+
+Rules for params:
+- Person names are lowercase: oz, ali, cem
+- Quest IDs are slugs: nlnet-commons-fund, grants, benchmark-eval
+- Project names: lace, tristero, infrastructure
+- Search terms: use the key phrase from the question
 
 Examples:
-- "How do I add something?" -> Explain /add command briefly
-- "What's a quest?" -> Explain quests briefly
-- "What has Oz been doing?" -> Summarize from activity context
+- "What's happening?" -> {{"query": "recent_activity", "params": {{}}}}
+- "What is Oz working on?" -> {{"query": "person_projects", "params": {{"name": "oz"}}}}
+- "Tell me about the FAMP proposal" -> {{"query": "search_artifacts", "params": {{"term": "FAMP"}}}}
+- "What quests are active?" -> {{"query": "active_quests", "params": {{}}}}
+- "What is nlnet-commons-fund?" -> {{"query": "quest_details", "params": {{"quest_id": "nlnet-commons-fund"}}}}
+- "Who's on the team?" -> {{"query": "all_people", "params": {{}}}}"""
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 150,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": question}]
+                },
+                timeout=15
+            )
+            resp.raise_for_status()
+            text = resp.json()["content"][0]["text"].strip()
+
+            # Parse JSON response
+            result = json.loads(text)
+            if result.get("query") is None:
+                return None
+            return result
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM response as JSON: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"LLM query picker failed: {e}")
+            return None
+
+
+async def format_response(question: str, results: list) -> str:
+    """Use LLM to format query results as natural language."""
+    if not ANTHROPIC_API_KEY:
+        # Fallback: just return formatted JSON
+        return f"Results:\n{json.dumps(results, indent=2, default=str)}"
+
+    if not results:
+        return "No results found."
+
+    system_prompt = """You are Egregore assistant. Format database results as a helpful response.
 
 Guidelines:
-- Be concise and direct - answer the specific question
-- Do not dump all information at once
-- Do not use emojis
-- If you don't know, say so"""
-
-    user_prompt = f"""Recent Egregore activity (last {MAX_ACTIVITY_DAYS} days):
-
-{activity_context}
-
-Question: {question}"""
+- Be concise and direct
+- Use bullet points for lists
+- Don't mention "database" or "query"
+- Don't use emojis
+- If data is empty/null, acknowledge it gracefully
+- For dates, just show YYYY-MM-DD"""
 
     async with httpx.AsyncClient() as client:
         try:
@@ -202,155 +301,190 @@ Question: {question}"""
                     "model": "claude-haiku-4-5-20251001",
                     "max_tokens": 500,
                     "system": system_prompt,
-                    "messages": [
-                        {"role": "user", "content": user_prompt}
-                    ]
+                    "messages": [{
+                        "role": "user",
+                        "content": f"Question: {question}\n\nData: {json.dumps(results, default=str)}"
+                    }]
                 },
-                timeout=30
+                timeout=15
             )
             resp.raise_for_status()
-            data = resp.json()
-            return data["content"][0]["text"]
+            return resp.json()["content"][0]["text"]
         except Exception as e:
-            logger.error(f"LLM request failed: {e}")
-            return None
+            logger.error(f"LLM response formatter failed: {e}")
+            return f"Results:\n{json.dumps(results, indent=2, default=str)}"
 
 
-def format_simple_activity(events: list, hours: int = 24) -> str:
-    """Simple activity format (fallback when LLM unavailable)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-    recent = []
-    for e in events:
-        ts_str = e.get("timestamp", "")
+# =============================================================================
+# EGREGORE CONTEXT (for general questions)
+# =============================================================================
+
+EGREGORE_CONTEXT = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
+
+Key concepts:
+- Artifacts: content (sources, thoughts, findings, decisions) in memory/artifacts/
+- Quests: open-ended explorations that artifacts link to
+- Projects: tristero (polis), lace (psyche), infrastructure
+- Sessions: work sessions logged by team members
+
+How to add something:
+1. Open Claude Code in egregore folder
+2. Run /add (for a thought) or /add https://... (for a source)
+3. System suggests which quest to link it to
+4. Run /save to push
+
+Commands: /add, /quest, /project, /activity, /handoff, /save, /pull"""
+
+
+async def answer_general(question: str) -> str:
+    """Answer general questions about Egregore (not data queries)."""
+    if not ANTHROPIC_API_KEY:
+        return "I can answer questions about Egregore activity. Try: What's happening?"
+
+    system_prompt = f"""You are Egregore, a living organization where humans and AI collaborate.
+
+{EGREGORE_CONTEXT}
+
+Answer the user's question concisely. If it's about how Egregore works, explain briefly.
+If it seems like a data question but you couldn't match it, suggest rephrasing.
+Don't use emojis."""
+
+    async with httpx.AsyncClient() as client:
         try:
-            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-            if ts > cutoff:
-                recent.append(e)
-        except (ValueError, TypeError):
-            continue
-
-    if not recent:
-        period = "24 hours" if hours == 24 else f"{hours // 24} days"
-        return f"No activity in the last {period}."
-
-    period = "24 hours" if hours == 24 else f"{hours // 24} days"
-    lines = [f"Egregore - Last {period}:\n"]
-
-    for event in reversed(recent[-10:]):
-        event_type = event.get("type", "unknown")
-        author = event.get("author", "Unknown")
-
-        if event_type == "handoff":
-            topic = event.get("topic", "untitled")
-            lines.append(f"- {author} handed off: {topic}")
-        elif event_type == "save":
-            repos = event.get("repos", [])
-            lines.append(f"- {author} saved to {', '.join(repos)}")
-        elif event_type == "decision":
-            title = event.get("title", "untitled")
-            lines.append(f"- {author} decided: {title}")
-        elif event_type == "finding":
-            title = event.get("title", "untitled")
-            lines.append(f"- {author} found: {title}")
-        else:
-            summary = event.get("summary", event_type)
-            lines.append(f"- {author}: {summary}")
-
-    return "\n".join(lines)
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 300,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": question}]
+                },
+                timeout=15
+            )
+            resp.raise_for_status()
+            return resp.json()["content"][0]["text"]
+        except Exception as e:
+            logger.error(f"General answer failed: {e}")
+            return "I can help with: activity, quests, projects, artifacts, people. Try asking 'What's happening?'"
 
 
-async def handle_query(update: Update, query: str, fallback_hours: int = 24) -> None:
-    """Handle a natural language query about activity."""
-    try:
-        data = await fetch_activity()
-        events = data.get("events", [])
-        recent = filter_recent(events, days=MAX_ACTIVITY_DAYS)
+# =============================================================================
+# MAIN HANDLER
+# =============================================================================
 
-        if not recent:
-            await update.message.reply_text("No recent activity to report.")
-            return
+def is_allowed(update: Update) -> bool:
+    """Check if chat/user is allowed."""
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id if update.effective_user else None
+    return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS
 
-        # Try LLM-powered response
-        activity_context = format_events_for_llm(recent)
-        llm_response = await ask_llm(query, activity_context)
 
-        if llm_response:
-            await update.message.reply_text(llm_response)
-        else:
-            # Fallback to simple format
-            simple_response = format_simple_activity(events, hours=fallback_hours)
-            await update.message.reply_text(simple_response)
+async def handle_question(update: Update, question: str) -> None:
+    """Main question handler - picks query, runs it, formats response."""
 
-    except httpx.HTTPError as e:
-        logger.error(f"Failed to fetch activity: {e}")
-        await update.message.reply_text("Couldn't fetch activity. Try again later.")
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        if update.message:
-            await update.message.reply_text("Something went wrong.")
+    # Check if Neo4j is configured
+    if not NEO4J_URI:
+        await update.message.reply_text(
+            "Knowledge graph not configured. Contact admin."
+        )
+        return
+
+    # Try to pick a query
+    query_choice = await pick_query(question)
+
+    if query_choice is None:
+        # No matching query - answer as general question
+        response = await answer_general(question)
+        await update.message.reply_text(response)
+        return
+
+    query_name = query_choice.get("query")
+    params = query_choice.get("params", {})
+
+    if query_name not in QUERIES:
+        response = await answer_general(question)
+        await update.message.reply_text(response)
+        return
+
+    # Run the query
+    cypher = QUERIES[query_name]["cypher"]
+    logger.info(f"Running query: {query_name} with params: {params}")
+
+    results = run_query(cypher, params)
+
+    if not results:
+        await update.message.reply_text(
+            "No results found. Try a different question or check if the data exists."
+        )
+        return
+
+    # Format and send response
+    response = await format_response(question, results)
+    await update.message.reply_text(response)
+
+
+# =============================================================================
+# TELEGRAM HANDLERS
+# =============================================================================
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /start command."""
+    if not is_allowed(update):
+        await update.message.reply_text("This bot is private to Egregore.")
+        return
+
+    await update.message.reply_text(
+        "I'm Egregore. Ask me anything about our work:\n\n"
+        "- What's happening?\n"
+        "- What is Oz working on?\n"
+        "- What quests are active?\n"
+        "- Tell me about the FAMP proposal\n"
+        "- Who's on the team?\n\n"
+        "Or ask how to use Egregore (commands, adding artifacts, etc.)"
+    )
 
 
 async def activity_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /activity command."""
-    if not is_allowed_chat(update):
-        logger.warning(f"Unauthorized access attempt from chat {update.effective_chat.id}")
+    if not is_allowed(update):
         return
-    await handle_query(update, "What's been happening in the last 24 hours?")
-
-
-async def week_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /week command."""
-    if not is_allowed_chat(update):
-        logger.warning(f"Unauthorized access attempt from chat {update.effective_chat.id}")
-        return
-    await handle_query(update, "Summarize activity from the last week.", fallback_hours=168)
+    await handle_question(update, "What's been happening recently?")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle any text message as a natural language query."""
+    """Handle any text message."""
     if not update.message or not update.message.text:
         return
 
-    if not is_allowed_chat(update):
-        return  # Silently ignore unauthorized chats
+    if not is_allowed(update):
+        return
 
     text = update.message.text.strip()
 
-    # Skip if it looks like it's not meant for the bot
-    # (In group chats, only respond if mentioned or replied to)
+    # In groups, only respond if mentioned or replied to
     chat_type = update.effective_chat.type
     if chat_type in ["group", "supergroup"]:
-        # Only respond if bot is mentioned or message is a reply to bot
         bot_username = context.bot.username
-        if f"@{bot_username}" not in text and not (
-            update.message.reply_to_message and
-            update.message.reply_to_message.from_user.id == context.bot.id
-        ):
-            return
-        # Remove bot mention from query
+        if f"@{bot_username}" not in text:
+            if not (update.message.reply_to_message and
+                    update.message.reply_to_message.from_user.id == context.bot.id):
+                return
         text = text.replace(f"@{bot_username}", "").strip()
 
     if not text:
         return
 
-    await handle_query(update, text)
+    await handle_question(update, text)
 
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /start command."""
-    if not is_allowed_chat(update):
-        await update.message.reply_text("This bot is private to Egregore.")
-        return
-    await update.message.reply_text(
-        "I'm Egregore. Ask me anything:\n\n"
-        "- What's been happening?\n"
-        "- What's Oz working on?\n"
-        "- How do I add something?\n"
-        "- What's a quest?\n\n"
-        "/activity - Last 24 hours\n"
-        "/week - Last 7 days"
-    )
-
+# =============================================================================
+# MAIN
+# =============================================================================
 
 def main() -> None:
     """Start the bot."""
@@ -358,11 +492,9 @@ def main() -> None:
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("activity", activity_command))
-    app.add_handler(CommandHandler("week", week_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     if WEBHOOK_URL:
-        # Webhook mode for Railway/production
         logger.info(f"Starting webhook on port {PORT}")
         app.run_webhook(
             listen="0.0.0.0",
@@ -371,7 +503,6 @@ def main() -> None:
             webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
         )
     else:
-        # Polling mode for local development
         logger.info("Starting polling mode...")
         app.run_polling(allowed_updates=Update.ALL_TYPES)
 
