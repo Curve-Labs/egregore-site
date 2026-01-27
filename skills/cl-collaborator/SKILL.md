@@ -869,7 +869,14 @@ Save your contributions to Egregore. Uses branch + PR + auto-merge for clean con
 
 **What it does**:
 
-1. **For memory repo** (artifacts, quests, handoffs):
+1. **Sync to Neo4j first** (CRITICAL):
+   - Scan memory/conversations/ for files without Session nodes
+   - Scan memory/artifacts/ for files without Artifact nodes
+   - Scan memory/quests/ for files without Quest nodes
+   - Create missing nodes automatically
+   - Report: "Synced 2 sessions, 1 artifact to graph"
+
+2. **For memory repo** (artifacts, quests, handoffs):
    - Pull latest from main
    - Create contribution branch: `contrib/YYYY-MM-DD-[author]-[summary]`
    - Commit all changes
@@ -877,18 +884,43 @@ Save your contributions to Egregore. Uses branch + PR + auto-merge for clean con
    - PR merges automatically
    - User sees: "Contribution merged"
 
-2. **For egregore** (commands, skills):
+3. **For egregore** (commands, skills):
    - Same branch + PR + auto-merge flow
 
-3. **For project repos** (tristero, lace):
+4. **For project repos** (tristero, lace):
    - Warn user: "You have code changes. Use /push and /pr for review."
    - Code changes require human review
+
+**Neo4j Sync Logic:**
+
+```cypher
+// For each file in conversations/YYYY-MM/*.md, check if Session exists:
+MATCH (s:Session {id: $fileId}) RETURN s.id
+// If null, parse frontmatter and create Session node
+
+// For each file in artifacts/*.md:
+MATCH (a:Artifact {id: $fileId}) RETURN a.id
+// If null, parse frontmatter and create Artifact node
+
+// For each file in quests/*.md (not index.md, not _template.md):
+MATCH (q:Quest {id: $slug}) RETURN q.id
+// If null, parse frontmatter and create Quest node
+```
+
+Parse frontmatter for: author, date, topic/title, project, quests (for artifacts).
+
+This ensures files and graph stay in sync even if earlier commands skipped Neo4j.
 
 **Example**:
 ```
 > /save
 
 Saving to Egregore...
+
+[sync] Checking Neo4j...
+  conversations/2026-01/27-ali-bot-upgrade-plan.md → missing Session
+  ✓ Created Session node for ali
+  Synced: 1 session
 
 [memory]
   Changes:
