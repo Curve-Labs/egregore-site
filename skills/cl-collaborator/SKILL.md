@@ -656,18 +656,17 @@ Fast, personal view of what's happening — your projects, your sessions, team a
 
 **Smart sync (before queries):**
 
+Use `git -C` to avoid `cd &&` chains (which don't match `Bash(git:*)` permission):
+
 ```bash
-# For each repo (memory, egregore, tristero, lace):
-git fetch origin --quiet
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
-if [ "$LOCAL" != "$REMOTE" ]; then
-  git pull origin main --quiet
-  echo "[repo] ✓ pulled (X new commits)"
-else
-  echo "[repo] ✓ current"
-fi
+# For each repo path:
+git -C /path/to/repo fetch origin --quiet
+git -C /path/to/repo rev-parse HEAD           # LOCAL
+git -C /path/to/repo rev-parse origin/main    # REMOTE
+# if different: git -C /path/to/repo pull origin main --quiet
 ```
+
+**IMPORTANT:** Never use `cd /path && git ...` — this starts with `cd` and triggers permission prompts. Always use `git -C /path ...` which starts with `git` and matches `Bash(git:*)`.
 
 This is fast because:
 - `git fetch` only checks remote (no file transfer)
