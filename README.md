@@ -1,4 +1,4 @@
-# Curve Labs
+# Egregore
 
 A living organization operated by humans and AI agents working together.
 
