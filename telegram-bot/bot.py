@@ -254,6 +254,7 @@ Examples:
             )
             resp.raise_for_status()
             text = resp.json()["content"][0]["text"].strip()
+            logger.info(f"LLM response: {text}")  # DEBUG
 
             # Parse JSON response
             result = json.loads(text)
