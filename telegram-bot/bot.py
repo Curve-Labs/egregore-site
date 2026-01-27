@@ -218,7 +218,7 @@ async def pick_query(question: str) -> Optional[dict]:
 Available queries:
 {query_descriptions}
 
-Respond with ONLY valid JSON: {{"query": "query_name", "params": {{"param": "value"}}}}
+Respond with ONLY raw JSON, no markdown, no code blocks: {{"query": "query_name", "params": {{"param": "value"}}}}
 If no query fits, respond: {{"query": null}}
 
 Rules for params:
@@ -255,6 +255,13 @@ Examples:
             resp.raise_for_status()
             text = resp.json()["content"][0]["text"].strip()
             logger.info(f"LLM response: {text}")  # DEBUG
+
+            # Strip markdown code blocks if present
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+                text = text.strip()
 
             # Parse JSON response
             result = json.loads(text)
