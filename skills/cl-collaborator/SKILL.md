@@ -764,7 +764,9 @@ End a session with a summary for the next person (or future you).
 3. Notes open questions and next steps
 4. Creates handoff file in memory/conversations/YYYY-MM/
 5. Updates the conversation index
-6. Creates Session node in Neo4j (links to Person and Project)
+6. **MUST** create Session node in Neo4j (links to Person and Project)
+
+**CRITICAL: Step 6 is NOT optional.** Without the Neo4j Session node, the handoff won't appear in `/activity`. Always run the Cypher query below using `mcp__neo4j__write_neo4j_cypher`.
 
 Handoffs are broadcast to the team — anyone who runs `/pull` sees them.
 
