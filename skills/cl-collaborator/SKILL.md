@@ -778,7 +778,7 @@ CREATE (s:Session {
   date: date($date),
   topic: $topic,
   summary: $summary,
-  file: $filePath
+  filePath: $filePath
 })
 CREATE (s)-[:BY]->(p)
 WITH s
@@ -1107,7 +1107,7 @@ CREATE (a:Artifact {
   title: $title,
   type: $type,
   created: date(),
-  file: $filePath,
+  filePath: $filePath,
   origin: $origin
 })
 CREATE (a)-[:CONTRIBUTED_BY]->(p)
@@ -1202,7 +1202,8 @@ CREATE (q:Quest {
   title: $title,
   status: 'active',
   started: date(),
-  question: $question
+  question: $question,
+  filePath: $filePath
 })
 CREATE (q)-[:STARTED_BY]->(p)
 WITH q
@@ -1211,6 +1212,8 @@ MATCH (proj:Project {name: projName})
 CREATE (q)-[:RELATES_TO]->(proj)
 RETURN q.id
 ```
+
+Where `$filePath` = `memory/quests/{slug}.md`
 
 **Neo4j Quest status update (on `/quest pause` or `/quest complete`):**
 ```cypher
