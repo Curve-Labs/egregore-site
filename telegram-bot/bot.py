@@ -46,8 +46,8 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Security: Only respond to allowed chats/users
-# Channel: -1003081443167, Oz: 154132702, Ali: 952778083, Cem: 72463248
-DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248]
+# Channel: -1003081443167, Oz: 154132702, Ali: 952778083, Cem: 72463248, Pali: 515146069, Damla: 5549297057
+DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248, 515146069, 5549297057]
 ALLOWED_CHAT_IDS = [
     int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
 ] or DEFAULT_ALLOWED
@@ -90,6 +90,17 @@ def run_query(query: str, params: dict = None) -> list:
     except Exception as e:
         logger.error(f"Neo4j query failed: {e}")
         return []
+
+
+def lookup_person_by_telegram_id(telegram_id: int) -> Optional[str]:
+    """Look up Person name by Telegram ID."""
+    results = run_query(
+        "MATCH (p:Person {telegramId: $tid}) RETURN p.name AS name",
+        {"tid": telegram_id}
+    )
+    if results and results[0].get("name"):
+        return results[0]["name"]
+    return None
 
 
 # =============================================================================
@@ -290,23 +301,37 @@ def build_tools_schema() -> list:
     return tools
 
 
-async def agent_decide(question: str, conversation_context: str = "") -> dict:
+async def agent_decide(question: str, conversation_context: str = "", sender_name: str = None) -> dict:
     """LLM agent with tool use decides what to do."""
     if not ANTHROPIC_API_KEY:
         return {"action": "respond", "message": "API not configured."}
 
     tools = build_tools_schema()
-    
+
     context_info = ""
     if conversation_context:
         context_info = f"\n\nPrevious context:\n{conversation_context}\n\nUse this to understand follow-ups like 'which ones', 'tell me more', etc."
 
+    # Identity context for "my" / "I" questions
+    sender_info = ""
+    if sender_name:
+        sender_info = f"""
+SENDER IDENTITY: The person asking this question is "{sender_name}".
+When they say "my", "I", "me", or ask about themselves, use name="{sender_name}" in queries.
+Examples for {sender_name}:
+- "What am I working on?" -> query_person_sessions(name="{sender_name}")
+- "My activity" -> query_person_sessions(name="{sender_name}")
+- "What have I done?" -> query_person_sessions(name="{sender_name}")
+- "My quests" -> query_person_quests(name="{sender_name}")
+- "What did I write?" -> query_person_artifacts(name="{sender_name}")
+"""
+
     system_prompt = f"""You are Egregore, the shared memory for Curve Labs - an INTERNAL tool for team members.
 
-IMPORTANT: Everyone works on the same projects (lace, tristero, infrastructure). 
+IMPORTANT: Everyone works on the same projects (lace, tristero, infrastructure).
 Don't answer "working on" questions with just project names - that's not useful.
 Instead, show ACTIVITY: sessions, quests, artifacts.
-
+{sender_info}
 QUERY PRIORITY for "what is X working on?" or "what's X doing?":
 1. query_person_sessions - shows their recent actual work/activity
 2. query_person_quests - shows initiatives they're driving
@@ -320,7 +345,7 @@ TEAM (lowercase for queries): oz, ali, cem
 Examples:
 - "What is Cem working on?" -> query_person_sessions(name="cem")
 - "What's Oz been up to?" -> query_person_sessions(name="oz")
-- "What quests did Cem start?" -> query_person_quests(name="cem")  
+- "What quests did Cem start?" -> query_person_quests(name="cem")
 - "What has Ali written?" -> query_person_artifacts(name="ali")
 - "What's happening?" -> query_recent_activity
 - Single word "cem" -> query_person_sessions(name="cem")
@@ -594,11 +619,18 @@ async def handle_question(update: Update, context, question: str) -> None:
         await update.message.reply_text("Knowledge graph not configured.")
         return
 
+    # Look up sender's identity from Telegram ID
+    sender_name = None
+    if update.effective_user:
+        sender_name = lookup_person_by_telegram_id(update.effective_user.id)
+        if sender_name:
+            logger.info(f"Identified sender: {sender_name} (Telegram ID: {update.effective_user.id})")
+
     # Get conversation context for follow-ups
     conv_context = get_conversation_context(context)
 
     # Agent decides (tool use)
-    decision = await agent_decide(question, conv_context)
+    decision = await agent_decide(question, conv_context, sender_name)
     
     action = decision.get("action")
     
