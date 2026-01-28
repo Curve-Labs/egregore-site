@@ -5,7 +5,7 @@
       "command": "npx",
       "args": ["-y", "@harnyk/telegram-notifier-mcp"],
       "env": {
-        "TELEGRAM_BOT_TOKEN": "8407884160:AAGYg_fq64cO1Po0AenKUbhnC-r2iC6cG6A",
+        "TELEGRAM_BOT_TOKEN": "${TELEGRAM_BOT_TOKEN}",
         "TELEGRAM_CHAT_ID": "-1003081443167"
       }
     },
@@ -15,7 +15,7 @@
         "mcp-neo4j-cypher",
         "--db-url", "neo4j+s://c02bbdac.databases.neo4j.io",
         "--username", "neo4j",
-        "--password", "PB9CiWraMh93SLEQBWPddwXGUoMoBsXsMc_o_WrVwgk",
+        "--password", "${NEO4J_PASSWORD}",
         "--database", "neo4j"
       ]
     }

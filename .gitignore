@@ -10,3 +10,7 @@ memory
 # Editor
 *.swp
 *~
+
+# environment variables
+.env
+.env.local
