@@ -195,45 +195,137 @@ QUERIES = {
             RETURN proj.name AS name, proj.domain AS domain,
                    collect(DISTINCT p.name) AS team
         """
+    },
+    "person_quests": {
+        "description": "Quests started by a specific person",
+        "params": ["name"],
+        "cypher": """
+            MATCH (q:Quest)-[:STARTED_BY]->(p:Person {name: $name})
+            OPTIONAL MATCH (q)-[:RELATES_TO]->(proj:Project)
+            WITH q, collect(DISTINCT proj.name) AS projects
+            ORDER BY q.created DESC
+            RETURN q.id AS id, q.title AS title, q.status AS status,
+                   q.question AS question, projects
+        """
+    },
+    "person_artifacts": {
+        "description": "Artifacts contributed by a specific person",
+        "params": ["name"],
+        "cypher": """
+            MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person {name: $name})
+            OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
+            WITH a, collect(DISTINCT q.id) AS quests
+            ORDER BY a.created DESC
+            RETURN a.title AS title, a.type AS type, a.created AS created, quests
+            LIMIT 10
+        """
+    },
+    "recent_artifacts": {
+        "description": "Recently added artifacts",
+        "params": [],
+        "cypher": """
+            MATCH (a:Artifact)
+            OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
+            OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
+            WITH a, p, collect(DISTINCT q.id) AS quests
+            ORDER BY a.created DESC LIMIT 10
+            RETURN a.title AS title, a.type AS type, a.created AS created,
+                   p.name AS author, quests
+        """
+    },
+    "recent_quests": {
+        "description": "Recently created quests",
+        "params": [],
+        "cypher": """
+            MATCH (q:Quest)
+            OPTIONAL MATCH (q)-[:STARTED_BY]->(p:Person)
+            OPTIONAL MATCH (q)-[:RELATES_TO]->(proj:Project)
+            WITH q, p, collect(DISTINCT proj.name) AS projects
+            ORDER BY q.created DESC LIMIT 10
+            RETURN q.id AS id, q.title AS title, q.status AS status,
+                   p.name AS started_by, projects
+        """
     }
 }
 
 
 # =============================================================================
-# LLM FUNCTIONS
+# LLM AGENT WITH TOOL USE
 # =============================================================================
 
-async def pick_query(question: str) -> Optional[dict]:
-    """Use LLM to pick which query to run and extract parameters."""
+def build_tools_schema() -> list:
+    """Build Anthropic tools schema from QUERIES."""
+    tools = []
+    for name, q in QUERIES.items():
+        tool = {
+            "name": f"query_{name}",
+            "description": q["description"],
+            "input_schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+        for param in q.get("params", []):
+            tool["input_schema"]["properties"][param] = {
+                "type": "string",
+                "description": f"The {param} (use lowercase for person names: oz, ali, cem)"
+            }
+            tool["input_schema"]["required"].append(param)
+        tools.append(tool)
+    
+    # Direct response tool
+    tools.append({
+        "name": "respond_directly",
+        "description": "Respond directly without querying. Use for greetings, explaining how Egregore works, or when no data query is needed.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "The response message"}
+            },
+            "required": ["message"]
+        }
+    })
+    
+    return tools
+
+
+async def agent_decide(question: str, conversation_context: str = "") -> dict:
+    """LLM agent with tool use decides what to do."""
     if not ANTHROPIC_API_KEY:
-        return None
+        return {"action": "respond", "message": "API not configured."}
 
-    query_descriptions = "\n".join([
-        f"- {name}: {q['description']} (params: {q['params'] or 'none'})"
-        for name, q in QUERIES.items()
-    ])
+    tools = build_tools_schema()
+    
+    context_info = ""
+    if conversation_context:
+        context_info = f"\n\nPrevious context:\n{conversation_context}\n\nUse this to understand follow-ups like 'which ones', 'tell me more', etc."
 
-    system_prompt = f"""You help pick the right database query for user questions about Egregore.
+    system_prompt = f"""You are Egregore, the shared memory for Curve Labs - an INTERNAL tool for team members.
 
-Available queries:
-{query_descriptions}
+IMPORTANT: Everyone works on the same projects (lace, tristero, infrastructure). 
+Don't answer "working on" questions with just project names - that's not useful.
+Instead, show ACTIVITY: sessions, quests, artifacts.
 
-Respond with ONLY raw JSON, no markdown, no code blocks: {{"query": "query_name", "params": {{"param": "value"}}}}
-If no query fits, respond: {{"query": null}}
+QUERY PRIORITY for "what is X working on?" or "what's X doing?":
+1. query_person_sessions - shows their recent actual work/activity
+2. query_person_quests - shows initiatives they're driving
+3. query_person_artifacts - shows what they've created
 
-Rules for params:
-- Person names are lowercase: oz, ali, cem
-- Quest IDs are slugs: nlnet-commons-fund, grants, benchmark-eval
-- Project names: lace, tristero, infrastructure
-- Search terms: use the key phrase from the question
+DO NOT use query_person_projects for "working on" questions - it just shows repo assignments.
+
+TEAM (lowercase for queries): oz, ali, cem
+{context_info}
 
 Examples:
-- "What's happening?" -> {{"query": "recent_activity", "params": {{}}}}
-- "What is Oz working on?" -> {{"query": "person_projects", "params": {{"name": "oz"}}}}
-- "Tell me about the FAMP proposal" -> {{"query": "search_artifacts", "params": {{"term": "FAMP"}}}}
-- "What quests are active?" -> {{"query": "active_quests", "params": {{}}}}
-- "What is nlnet-commons-fund?" -> {{"query": "quest_details", "params": {{"quest_id": "nlnet-commons-fund"}}}}
-- "Who's on the team?" -> {{"query": "all_people", "params": {{}}}}"""
+- "What is Cem working on?" -> query_person_sessions(name="cem")
+- "What's Oz been up to?" -> query_person_sessions(name="oz")
+- "What quests did Cem start?" -> query_person_quests(name="cem")  
+- "What has Ali written?" -> query_person_artifacts(name="ali")
+- "What's happening?" -> query_recent_activity
+- Single word "cem" -> query_person_sessions(name="cem")
+- "Tell me about lace" -> query_project_details(name="lace")
+- "What is Egregore?" -> respond_directly (brief explanation)"""
 
     async with httpx.AsyncClient() as client:
         try:
@@ -246,55 +338,75 @@ Examples:
                 },
                 json={
                     "model": "claude-haiku-4-5-20251001",
-                    "max_tokens": 150,
+                    "max_tokens": 400,
                     "system": system_prompt,
+                    "tools": tools,
                     "messages": [{"role": "user", "content": question}]
                 },
                 timeout=15
             )
             resp.raise_for_status()
-            text = resp.json()["content"][0]["text"].strip()
-            logger.info(f"LLM response: {text}")  # DEBUG
+            data = resp.json()
+            
+            # Check for tool use
+            for block in data.get("content", []):
+                if block.get("type") == "tool_use":
+                    tool_name = block.get("name", "")
+                    tool_input = block.get("input", {})
+                    logger.info(f"Agent chose: {tool_name} with {tool_input}")
+                    
+                    if tool_name == "respond_directly":
+                        return {"action": "respond", "message": tool_input.get("message", "")}
+                    
+                    if tool_name.startswith("query_"):
+                        query_name = tool_name[6:]
+                        return {"action": "query", "query": query_name, "params": tool_input}
+            
+            # Fallback to text response
+            for block in data.get("content", []):
+                if block.get("type") == "text":
+                    return {"action": "respond", "message": block.get("text", "")}
+            
+            return {"action": "respond", "message": "I'm not sure how to help with that."}
 
-            # Strip markdown code blocks if present
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-                text = text.strip()
-
-            # Parse JSON response
-            result = json.loads(text)
-            if result.get("query") is None:
-                return None
-            return result
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response as JSON: {e}")
-            return None
         except Exception as e:
-            logger.error(f"LLM query picker failed: {e}")
-            return None
+            logger.error(f"Agent failed: {e}")
+            return {"action": "respond", "message": "Something went wrong. Try asking differently?"}
 
 
-async def format_response(question: str, results: list) -> str:
-    """Use LLM to format query results as natural language."""
+async def format_response(question: str, query_name: str, results: list, params: dict = None) -> str:
+    """Use LLM to format query results as conversational text."""
     if not ANTHROPIC_API_KEY:
-        # Fallback: just return formatted JSON
-        return f"Results:\n{json.dumps(results, indent=2, default=str)}"
+        return f"Found {len(results)} results."
 
     if not results:
         return "No results found."
 
-    system_prompt = """You are Egregore assistant. Format database results as a helpful response.
+    system_prompt = """You are Egregore, shared memory for Curve Labs. Internal tool - everyone knows each other.
 
-Guidelines:
-- Be concise and direct
-- Use bullet points for lists
-- Don't mention "database" or "query"
-- Don't use emojis
-- If data is empty/null, acknowledge it gracefully
-- For dates, just show YYYY-MM-DD"""
+FORMAT RULES:
+
+FOR EXPLICIT LIST QUERIES ("what quests are active", "who's on the team", "list projects"):
+- Use clean list format: one item per line
+- Include key info per item
+
+FOR EVERYTHING ELSE (activity, "what's X doing", updates):
+- Write naturally like you're catching someone up over coffee
+- "Cem's been deep in the evaluation stuff - surveyed 80+ datasets and landed on LLMs4OL Task B. Also wrapped up the Egregore Spec and handed it to Oz."
+- NOT log format: "Cem - 4 sessions: Item 1, Item 2..."
+- Weave the information into sentences, mention what's interesting
+- 2-3 short paragraphs max
+
+TONE:
+- Conversational, not structured
+- Skip intros - everyone knows each other
+- Include specifics (dates, names) but naturally
+- End with casual follow-up
+
+BAD (log-like): "Cem - 4 sessions this week: Egregore Spec V2 (Jan 28), Evaluation benchmarks (Jan 26)..."
+GOOD (natural): "Cem's been heads-down on evaluation benchmarks - surveyed 80+ datasets and locked in LLMs4OL Task B. The big handoff was the Egregore Spec V2 going to Oz, ready for the blog launch."
+
+NO markdown, NO emojis."""
 
     async with httpx.AsyncClient() as client:
         try:
@@ -307,11 +419,11 @@ Guidelines:
                 },
                 json={
                     "model": "claude-haiku-4-5-20251001",
-                    "max_tokens": 500,
+                    "max_tokens": 600,
                     "system": system_prompt,
                     "messages": [{
                         "role": "user",
-                        "content": f"Question: {question}\n\nData: {json.dumps(results, default=str)}"
+                        "content": f"Question: {question}\nQuery type: {query_name}\nData: {json.dumps(results, default=str)}"
                     }]
                 },
                 timeout=15
@@ -320,28 +432,76 @@ Guidelines:
             return resp.json()["content"][0]["text"]
         except Exception as e:
             logger.error(f"LLM response formatter failed: {e}")
-            return f"Results:\n{json.dumps(results, indent=2, default=str)}"
+            return f"Found {len(results)} results for {query_name}."
+
+
+async def generate_no_results_response(question: str, query_name: str, params: dict) -> str:
+    """Generate a helpful response when no results are found."""
+    if not ANTHROPIC_API_KEY:
+        return "Nothing in the graph for that yet. Try a different angle?"
+
+    search_context = f"Query: {query_name}, Params: {params}"
+    
+    system_prompt = """You are Egregore, shared memory for Curve Labs. Talking to INTERNAL team members.
+A search returned no results. Keep it brief and casual:
+
+1. Quick acknowledgment (not apologetic)
+2. Suggest what they could try instead
+3. One line max
+
+TONE: Like a colleague saying "nothing on that yet, try X"
+NO markdown, NO emojis, NO formal language."""
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 300,
+                    "system": system_prompt,
+                    "messages": [{
+                        "role": "user",
+                        "content": f"User asked: {question}\n{search_context}\n\nNo results were found. Provide a helpful response."
+                    }]
+                },
+                timeout=15
+            )
+            resp.raise_for_status()
+            return resp.json()["content"][0]["text"]
+        except Exception as e:
+            logger.error(f"No results response failed: {e}")
+            return "No results found for that search. Try asking about team members (oz, ali, cem), projects (lace, tristero), or recent activity."
 
 
 # =============================================================================
 # EGREGORE CONTEXT (for general questions)
 # =============================================================================
 
-EGREGORE_CONTEXT = """Egregore is a collaborative intelligence system where humans and AI agents share knowledge.
+EGREGORE_CONTEXT = """Egregore = our shared memory + async coordination system.
 
-Key concepts:
-- Artifacts: content (sources, thoughts, findings, decisions) in memory/artifacts/
-- Quests: open-ended explorations that artifacts link to
-- Projects: tristero (polis), lace (psyche), infrastructure
-- Sessions: work sessions logged by team members
+The concept: collective intelligence that emerges from shared focus (thoughtform/group mind).
+The system: Neo4j graph connecting people, projects, quests, artifacts. This bot queries it.
 
-How to add something:
-1. Open Claude Code in egregore folder
-2. Run /add (for a thought) or /add https://... (for a source)
-3. System suggests which quest to link it to
-4. Run /save to push
+Quick reference:
+- Quests: ongoing explorations (NLNet grant, evaluation benchmark, etc.)
+- Artifacts: content we create (blog posts, decisions, findings)
+- Sessions: daily work logs
 
-Commands: /add, /quest, /project, /activity, /handoff, /save, /pull"""
+To add stuff: /add in Claude Code, then /save"""
+
+
+# Team info - kept brief for internal use
+TEAM_INFO = {
+    "oz": "lace, tristero, infrastructure - architecture side",
+    "ali": "infrastructure, deployment, this bot",
+    "cem": "research - emergent ontologies, evaluation frameworks"
+}
 
 
 async def answer_general(question: str) -> str:
@@ -382,6 +542,41 @@ Don't use emojis."""
 
 
 # =============================================================================
+# CONVERSATION CONTEXT
+# =============================================================================
+
+MAX_HISTORY = 5
+
+def get_conversation_context(context) -> str:
+    """Get recent conversation history for follow-ups."""
+    history = context.chat_data.get("history", [])
+    if not history:
+        return ""
+    
+    lines = []
+    for entry in history[-3:]:  # Last 3 exchanges
+        lines.append(f"Q: {entry['question']}")
+        lines.append(f"A: {entry['summary']}")
+    return "\n".join(lines)
+
+
+def store_in_context(context, question: str, query_name: str, result_summary: str):
+    """Store exchange in conversation context."""
+    if "history" not in context.chat_data:
+        context.chat_data["history"] = []
+    
+    context.chat_data["history"].append({
+        "question": question,
+        "query": query_name,
+        "summary": result_summary
+    })
+    
+    # Trim old entries
+    if len(context.chat_data["history"]) > MAX_HISTORY:
+        context.chat_data["history"] = context.chat_data["history"][-MAX_HISTORY:]
+
+
+# =============================================================================
 # MAIN HANDLER
 # =============================================================================
 
@@ -392,48 +587,59 @@ def is_allowed(update: Update) -> bool:
     return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS
 
 
-async def handle_question(update: Update, question: str) -> None:
-    """Main question handler - picks query, runs it, formats response."""
+async def handle_question(update: Update, context, question: str) -> None:
+    """Main question handler - agent decides what to do."""
 
-    # Check if Neo4j is configured
     if not NEO4J_URI:
-        await update.message.reply_text(
-            "Knowledge graph not configured. Contact admin."
-        )
+        await update.message.reply_text("Knowledge graph not configured.")
         return
 
-    # Try to pick a query
-    query_choice = await pick_query(question)
+    # Get conversation context for follow-ups
+    conv_context = get_conversation_context(context)
 
-    if query_choice is None:
-        # No matching query - answer as general question
-        response = await answer_general(question)
+    # Agent decides (tool use)
+    decision = await agent_decide(question, conv_context)
+    
+    action = decision.get("action")
+    
+    if action == "respond":
+        # Direct response from agent
+        response = decision.get("message", "")
         await update.message.reply_text(response)
+        store_in_context(context, question, "direct", response[:100])
         return
-
-    query_name = query_choice.get("query")
-    params = query_choice.get("params", {})
-
-    if query_name not in QUERIES:
-        response = await answer_general(question)
+    
+    if action == "query":
+        query_name = decision.get("query")
+        params = decision.get("params", {})
+        
+        if query_name not in QUERIES:
+            await update.message.reply_text("I couldn't find that information.")
+            return
+        
+        # Run the query
+        cypher = QUERIES[query_name]["cypher"]
+        logger.info(f"Running query: {query_name} with params: {params}")
+        
+        results = run_query(cypher, params)
+        
+        if not results:
+            # Give helpful response based on what was searched
+            helpful_msg = await generate_no_results_response(question, query_name, params)
+            await update.message.reply_text(helpful_msg)
+            return
+        
+        # Format and send response (pass params for person context)
+        response = await format_response(question, query_name, results, params)
         await update.message.reply_text(response)
+        
+        # Store in context
+        summary = f"{query_name}: {len(results)} results"
+        store_in_context(context, question, query_name, summary)
         return
-
-    # Run the query
-    cypher = QUERIES[query_name]["cypher"]
-    logger.info(f"Running query: {query_name} with params: {params}")
-
-    results = run_query(cypher, params)
-
-    if not results:
-        await update.message.reply_text(
-            "No results found. Try a different question or check if the data exists."
-        )
-        return
-
-    # Format and send response
-    response = await format_response(question, results)
-    await update.message.reply_text(response)
+    
+    # Fallback
+    await update.message.reply_text("I'm not sure how to help with that.")
 
 
 # =============================================================================
@@ -461,7 +667,7 @@ async def activity_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Handle /activity command."""
     if not is_allowed(update):
         return
-    await handle_question(update, "What's been happening recently?")
+    await handle_question(update, context, "What's been happening recently?")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -487,7 +693,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not text:
         return
 
-    await handle_question(update, text)
+    await handle_question(update, context, text)
 
 
 # =============================================================================
