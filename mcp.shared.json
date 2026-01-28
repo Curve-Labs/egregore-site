@@ -3,10 +3,10 @@
   "mcpServers": {
     "telegram": {
       "command": "npx",
-      "args": ["-y", "@harnyk/telegram-notifier-mcp"],
+      "args": ["-y", "@iqai/mcp-telegram"],
       "env": {
-        "TELEGRAM_BOT_TOKEN": "${TELEGRAM_BOT_TOKEN}",
-        "TELEGRAM_CHAT_ID": "-1003081443167"
+        "TELEGRAM_BOT_TOKEN": "8369604228:AAFEJLgCqzfx9hgPJR31nbiLRFYh9Z2oN_Q",
+        "SAMPLING_ENABLED": "false"
       }
     },
     "neo4j": {
@@ -15,7 +15,7 @@
         "mcp-neo4j-cypher",
         "--db-url", "neo4j+s://c02bbdac.databases.neo4j.io",
         "--username", "neo4j",
-        "--password", "${NEO4J_PASSWORD}",
+        "--password", "PB9CiWraMh93SLEQBWPddwXGUoMoBsXsMc_o_WrVwgk",
         "--database", "neo4j"
       ]
     }

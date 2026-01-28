@@ -3,10 +3,10 @@
   "mcpServers": {
     "telegram": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@harnyk/telegram-notifier-mcp"],
+      "args": ["/c", "npx", "-y", "@iqai/mcp-telegram"],
       "env": {
-        "TELEGRAM_BOT_TOKEN": "8407884160:AAGYg_fq64cO1Po0AenKUbhnC-r2iC6cG6A",
-        "TELEGRAM_CHAT_ID": "-1003081443167"
+        "TELEGRAM_BOT_TOKEN": "8369604228:AAFEJLgCqzfx9hgPJR31nbiLRFYh9Z2oN_Q",
+        "SAMPLING_ENABLED": "false"
       }
     },
     "neo4j": {
