@@ -2,16 +2,17 @@
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp.json",
   "mcpServers": {
     "telegram": {
-      "command": "npx",
-      "args": ["-y", "@harnyk/telegram-notifier-mcp"],
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@harnyk/telegram-notifier-mcp"],
       "env": {
-        "TELEGRAM_BOT_TOKEN": "8407884160:AAGYg_fq64cO1Po0AenKUbhnC-r2iC6cG6A",
+        "TELEGRAM_BOT_TOKEN": "8369604228:AAFEJLgCqzfx9hgPJR31nbiLRFYh9Z2oN_Q",
         "TELEGRAM_CHAT_ID": "-1003081443167"
       }
     },
     "neo4j": {
-      "command": "uvx",
+      "command": "cmd",
       "args": [
+        "/c", "uvx",
         "mcp-neo4j-cypher",
         "--db-url", "neo4j+s://c02bbdac.databases.neo4j.io",
         "--username", "neo4j",
