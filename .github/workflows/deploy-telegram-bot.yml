@@ -1,0 +1,22 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'telegram-bot/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --service telegram-bot -d
+        working-directory: ./telegram-bot
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
