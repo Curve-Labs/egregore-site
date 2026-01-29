@@ -93,7 +93,7 @@ Team members: oz, ali, cem
 
 **Notification API**:
 ```bash
-curl -X POST http://localhost:8444/notify \
+curl -X POST https://curve-labs-core-production.up.railway.app/notify \
   -H "Content-Type: application/json" \
   --data-raw '{"recipient":"cem","message":"...","type":"handoff"}'
 ```
