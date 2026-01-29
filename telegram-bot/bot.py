@@ -108,6 +108,58 @@ def lookup_person_by_telegram_id(telegram_id: int) -> Optional[str]:
     return None
 
 
+# Known Telegram IDs -> Person names (for auto-registration)
+KNOWN_TELEGRAM_IDS = {
+    154132702: "oz",
+    952778083: "ali",
+    72463248: "cem",
+    515146069: "pali",
+    5549297057: "damla",
+}
+
+
+def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optional[str]:
+    """Auto-register a Telegram ID to a Person node if we can match them.
+
+    Returns the person's name if registered, None otherwise.
+    """
+    # First check if already registered
+    existing = lookup_person_by_telegram_id(telegram_id)
+    if existing:
+        return existing
+
+    # Check known IDs mapping
+    if telegram_id in KNOWN_TELEGRAM_IDS:
+        name = KNOWN_TELEGRAM_IDS[telegram_id]
+        results = run_query(
+            """MATCH (p:Person {name: $name})
+               SET p.telegramId = $tid
+               RETURN p.name AS name""",
+            {"name": name, "tid": telegram_id}
+        )
+        if results:
+            logger.info(f"Auto-registered {name} with Telegram ID {telegram_id}")
+            return results[0].get("name")
+
+    # Try matching by first name (lowercase)
+    if first_name:
+        name_lower = first_name.lower().strip()
+        # Check if there's a Person with this name
+        results = run_query(
+            """MATCH (p:Person)
+               WHERE p.name = $name OR toLower(p.fullName) STARTS WITH $name
+               AND p.telegramId IS NULL
+               SET p.telegramId = $tid
+               RETURN p.name AS name""",
+            {"name": name_lower, "tid": telegram_id}
+        )
+        if results:
+            logger.info(f"Auto-registered {results[0].get('name')} with Telegram ID {telegram_id} (matched by first name)")
+            return results[0].get("name")
+
+    return None
+
+
 # =============================================================================
 # PREDEFINED QUERIES
 # =============================================================================
@@ -624,12 +676,19 @@ async def handle_question(update: Update, context, question: str) -> None:
         await update.message.reply_text("Knowledge graph not configured.")
         return
 
-    # Look up sender's identity from Telegram ID
+    # Look up or auto-register sender's identity from Telegram ID
     sender_name = None
     if update.effective_user:
-        sender_name = lookup_person_by_telegram_id(update.effective_user.id)
+        telegram_id = update.effective_user.id
+        first_name = update.effective_user.first_name
+
+        # Try lookup first, then auto-register if not found
+        sender_name = lookup_person_by_telegram_id(telegram_id)
+        if not sender_name:
+            sender_name = auto_register_telegram_id(telegram_id, first_name)
+
         if sender_name:
-            logger.info(f"Identified sender: {sender_name} (Telegram ID: {update.effective_user.id})")
+            logger.info(f"Identified sender: {sender_name} (Telegram ID: {telegram_id})")
 
     # Get conversation context for follow-ups
     conv_context = get_conversation_context(context)
