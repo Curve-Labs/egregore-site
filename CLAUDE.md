@@ -27,7 +27,7 @@ When user says "set me up":
 
 1. Check if we're in a proper egregore clone:
    ```bash
-   ls skills/cl-collaborator/SKILL.md
+   ls .claude/commands/activity.md
    ```
 
 2. **IF NOT** (file doesn't exist) — we're in bootstrap mode.
@@ -198,9 +198,9 @@ Egregore operates through:
 
 - **Agents** — Claude Code instances that research, code, and collaborate
 - **Memory** — Shared knowledge base that persists across sessions and people
-- **Skills** — Reusable capabilities defined in `skills/`
 - **Commands** — Slash commands for common operations in `.claude/commands/`
 - **MCPs** — Model Context Protocol servers for external integrations (defined in `mcp.json`)
+- **Skills** — Reusable capabilities in `skills/` (blog-writer, grant-finder, etc.)
 
 You are not just a tool — you are a collaborator with access to the organization's memory, decisions, and ongoing work. Act accordingly: take initiative, build on previous work, and leave clear trails for others.
 
@@ -254,13 +254,6 @@ For decisions that affect multiple sessions or collaborators:
 2. **Document** — If approved, create entry in `memory/knowledge/decisions/YYYY-MM-DD-short-title.md`
 3. **Reference** — Link to decision in relevant conversations
 
-## Skills
-
-Skills are reusable capabilities in `skills/`. Each skill has a `SKILL.md` that defines commands and behaviors.
-
-Current skills:
-- **egregore** — Core commands: `/add`, `/quest`, `/project`, `/activity`, `/handoff`, `/pull`, `/save`, `/setup`
-
 ## Commands
 
 Slash commands live in `.claude/commands/`. Type `/` to see available commands.
@@ -273,6 +266,20 @@ Core commands:
 - `/handoff` — Leave notes for others (or future you)
 - `/pull` — Get latest from all repos
 - `/save` — Save contributions to Egregore
+
+## Proactive Behaviors
+
+**Suggest commands at the right moments:**
+
+- **End of significant session** → Suggest `/handoff` to leave notes for others
+- **After creating artifacts/handoffs/quests** → Remind to run `/save`
+- **User shares interesting source/finding** → Offer to `/add` it to the knowledge base
+- **On main branch in code repo** → Remind to `/branch` before making changes (once per session)
+
+**Leave trails for others:**
+- Document decisions as you make them
+- Note what worked and what didn't
+- Make entry points clear for the next person
 
 ## MCPs (Model Context Protocol)
 
