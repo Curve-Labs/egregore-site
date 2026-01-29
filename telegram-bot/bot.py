@@ -917,7 +917,7 @@ def main() -> None:
         # Single Starlette app with both endpoints
         starlette_app = Starlette(
             routes=[
-                Route(f"/{BOT_TOKEN}", handle_telegram_webhook, methods=["POST"]),
+                Route("/webhook", handle_telegram_webhook, methods=["POST"]),
                 Route("/notify", handle_notify_request, methods=["POST"]),
                 Route("/health", health_check, methods=["GET"]),
             ]
@@ -929,7 +929,7 @@ def main() -> None:
             await ptb_app.start()
 
             # Set webhook
-            webhook_url = f"https://{WEBHOOK_URL}/{BOT_TOKEN}"
+            webhook_url = f"https://{WEBHOOK_URL}/webhook"
             await ptb_app.bot.set_webhook(url=webhook_url)
             logger.info(f"Webhook set to {webhook_url}")
 
