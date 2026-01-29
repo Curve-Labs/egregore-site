@@ -3,4 +3,5 @@ python-dotenv==1.0.0
 neo4j==5.27.0
 httpx==0.25.2
 uvicorn==0.24.0
+starlette==0.32.0
 
