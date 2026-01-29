@@ -861,6 +861,71 @@ For the next session, start by:
 
 ---
 
+### Notifications
+
+When creating a handoff or quest, check if it's directed at someone and notify them via Telegram.
+
+**Detection**: Understand from natural language who the recipient is:
+- "handoff to cem" → notify cem
+- "for oz to pick up" → notify oz
+- "ali should look at this" → notify ali
+- "quest involving cem and oz" → notify both
+
+Team members: oz, ali, cem
+
+**Notification API**:
+```bash
+curl -X POST http://localhost:8444/notify \
+  -H "Content-Type: application/json" \
+  --data-raw '{"recipient":"cem","message":"...","type":"handoff"}'
+```
+
+**When to notify**:
+
+1. `/handoff` — If the user indicates it's for someone specific
+2. `/quest new` — If the quest involves or is assigned to specific people
+3. Any context where work is being handed to someone
+
+**Message format**:
+
+For handoffs:
+```
+Hey Cem, oz handed off: {topic}
+
+"{summary}"
+
+Check it out when you can.
+```
+
+For quests:
+```
+Hey Cem, oz started a quest you're involved in: {title}
+
+"{question}"
+```
+
+**Example flow**:
+```
+> handoff the neo4j work to cem
+
+Creating handoff...
+  ✓ memory/conversations/2026-01/28-oz-neo4j.md
+
+Recording in Neo4j...
+  ✓ Session node created
+
+Notifying cem...
+  ✓ Sent
+
+Run /save to commit and push.
+```
+
+**If no recipient**: Don't notify anyone. Not every handoff is directed at a specific person.
+
+**Implementation**: Notification API runs on port 8444 (alongside bot). Telegram IDs are stored in Neo4j Person nodes.
+
+---
+
 ### /save
 
 Save your contributions to Egregore. Uses branch + PR + auto-merge for clean contribution history.
@@ -1382,7 +1447,7 @@ Egregore uses Neo4j for tracking activity, relationships between people, project
 ### Schema
 
 **Nodes**:
-- `Person` — Team members (name, fullName, joined)
+- `Person` — Team members (name, fullName, joined, telegramId)
 - `Project` — tristero, lace, infrastructure (name, description, domain)
 - `Quest` — Open-ended explorations (id, title, status)
 - `Artifact` — Content items (id, title, type, created)

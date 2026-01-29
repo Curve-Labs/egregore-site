@@ -24,6 +24,7 @@ from neo4j import GraphDatabase
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from aiohttp import web
 
 # =============================================================================
 # CONFIG
@@ -729,12 +730,123 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 # =============================================================================
+# NOTIFICATIONS
+# =============================================================================
+
+def get_telegram_id(name: str) -> Optional[int]:
+    """Look up Telegram ID by person name from Neo4j.
+
+    Matches against name, fullName, or aliases (case-insensitive).
+    Examples: 'oz', 'oguzhan', 'Oz Broccoli' all resolve to oz's telegramId.
+    """
+    name_lower = name.lower().strip()
+
+    # Try exact match on name first (fastest)
+    results = run_query(
+        "MATCH (p:Person {name: $name}) WHERE p.telegramId IS NOT NULL RETURN p.telegramId AS telegramId",
+        {"name": name_lower}
+    )
+    if results and results[0].get("telegramId"):
+        return int(results[0]["telegramId"])
+
+    # Try fuzzy match on fullName or aliases
+    results = run_query(
+        """MATCH (p:Person)
+           WHERE p.telegramId IS NOT NULL AND (
+               toLower(p.fullName) CONTAINS $name
+               OR $name IN [x IN coalesce(p.aliases, []) | toLower(x)]
+           )
+           RETURN p.telegramId AS telegramId
+           LIMIT 1""",
+        {"name": name_lower}
+    )
+    if results and results[0].get("telegramId"):
+        return int(results[0]["telegramId"])
+
+    return None
+
+
+async def send_notification(bot, recipient: str, message: str, notification_type: str = "mention") -> bool:
+    """Send a notification to a team member."""
+    telegram_id = get_telegram_id(recipient)
+    if not telegram_id:
+        logger.warning(f"No Telegram ID found for {recipient}")
+        return False
+
+    try:
+        await bot.send_message(chat_id=telegram_id, text=message)
+        logger.info(f"Notification sent to {recipient} ({telegram_id})")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send notification to {recipient}: {e}")
+        return False
+
+
+# Global reference to bot for HTTP handler
+telegram_bot = None
+
+
+async def handle_notify_request(request):
+    """HTTP endpoint for sending notifications.
+
+    POST /notify
+    {
+        "recipient": "oz",           # Person name (lowercase)
+        "message": "...",            # Notification message
+        "type": "handoff|quest|mention"  # Optional
+    }
+    """
+    global telegram_bot
+
+    if not telegram_bot:
+        return web.json_response({"error": "Bot not initialized"}, status=503)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+
+    recipient = data.get("recipient")
+    message = data.get("message")
+    notification_type = data.get("type", "mention")
+
+    if not recipient or not message:
+        return web.json_response({"error": "Missing recipient or message"}, status=400)
+
+    success = await send_notification(telegram_bot, recipient, message, notification_type)
+
+    if success:
+        return web.json_response({"status": "sent", "recipient": recipient})
+    else:
+        return web.json_response({"error": f"Could not notify {recipient}"}, status=404)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
+async def run_http_server(bot, port: int):
+    """Run HTTP server for notification API."""
+    global telegram_bot
+    telegram_bot = bot
+
+    app = web.Application()
+    app.router.add_post('/notify', handle_notify_request)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logger.info(f"Notification API running on port {port}")
+    return runner
+
+
 def main() -> None:
     """Start the bot."""
+    global telegram_bot
+
     app = Application.builder().token(BOT_TOKEN).build()
+    telegram_bot = app.bot
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("activity", activity_command))
@@ -742,15 +854,41 @@ def main() -> None:
 
     if WEBHOOK_URL:
         logger.info(f"Starting webhook on port {PORT}")
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        )
+        # In webhook mode, notification API runs on PORT+1
+        import asyncio
+
+        async def run_both():
+            # Start notification API
+            await run_http_server(app.bot, PORT + 1)
+            # Start webhook (this blocks)
+            await app.initialize()
+            await app.start()
+            await app.updater.start_webhook(
+                listen="0.0.0.0",
+                port=PORT,
+                url_path=BOT_TOKEN,
+                webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+            )
+            # Keep running
+            while True:
+                await asyncio.sleep(3600)
+
+        asyncio.run(run_both())
     else:
         logger.info("Starting polling mode...")
-        app.run_polling(allowed_updates=Update.ALL_TYPES)
+        # In polling mode, also start notification API
+        import asyncio
+
+        async def run_both():
+            await run_http_server(app.bot, 8080)
+            await app.initialize()
+            await app.start()
+            await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            # Keep running
+            while True:
+                await asyncio.sleep(3600)
+
+        asyncio.run(run_both())
 
 
 if __name__ == "__main__":
