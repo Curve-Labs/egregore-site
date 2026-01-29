@@ -1,3 +1,4 @@
+# Telegram bot dependencies
 python-telegram-bot[webhooks]==20.7
 python-dotenv==1.0.0
 neo4j==5.27.0
