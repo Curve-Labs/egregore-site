@@ -24,7 +24,11 @@ from neo4j import GraphDatabase
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from aiohttp import web
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.routing import Route
+import uvicorn
 
 # =============================================================================
 # CONFIG
@@ -786,7 +790,7 @@ async def send_notification(bot, recipient: str, message: str, notification_type
 telegram_bot = None
 
 
-async def handle_notify_request(request):
+async def handle_notify_request(request: Request) -> JSONResponse:
     """HTTP endpoint for sending notifications.
 
     POST /notify
@@ -799,96 +803,87 @@ async def handle_notify_request(request):
     global telegram_bot
 
     if not telegram_bot:
-        return web.json_response({"error": "Bot not initialized"}, status=503)
+        return JSONResponse({"error": "Bot not initialized"}, status_code=503)
 
     try:
         data = await request.json()
     except Exception:
-        return web.json_response({"error": "Invalid JSON"}, status=400)
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
     recipient = data.get("recipient")
     message = data.get("message")
     notification_type = data.get("type", "mention")
 
     if not recipient or not message:
-        return web.json_response({"error": "Missing recipient or message"}, status=400)
+        return JSONResponse({"error": "Missing recipient or message"}, status_code=400)
 
     success = await send_notification(telegram_bot, recipient, message, notification_type)
 
     if success:
-        return web.json_response({"status": "sent", "recipient": recipient})
+        return JSONResponse({"status": "sent", "recipient": recipient})
     else:
-        return web.json_response({"error": f"Could not notify {recipient}"}, status=404)
+        return JSONResponse({"error": f"Could not notify {recipient}"}, status_code=404)
 
 
 # =============================================================================
 # MAIN
 # =============================================================================
 
-async def run_http_server(bot, port: int):
-    """Run HTTP server for notification API."""
-    global telegram_bot
-    telegram_bot = bot
-
-    app = web.Application()
-    app.router.add_post('/notify', handle_notify_request)
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    logger.info(f"Notification API running on port {port}")
-    return runner
-
-
 def main() -> None:
     """Start the bot."""
     global telegram_bot
 
-    app = Application.builder().token(BOT_TOKEN).build()
-    telegram_bot = app.bot
+    ptb_app = Application.builder().token(BOT_TOKEN).build()
+    telegram_bot = ptb_app.bot
 
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("activity", activity_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    ptb_app.add_handler(CommandHandler("start", start_command))
+    ptb_app.add_handler(CommandHandler("activity", activity_command))
+    ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     if WEBHOOK_URL:
-        logger.info(f"Starting webhook on port {PORT}")
-        # In webhook mode, notification API runs on PORT+1
+        logger.info(f"Starting webhook + notification API on port {PORT}")
         import asyncio
 
-        async def run_both():
-            # Start notification API
-            await run_http_server(app.bot, PORT + 1)
-            # Start webhook (this blocks)
-            await app.initialize()
-            await app.start()
-            await app.updater.start_webhook(
-                listen="0.0.0.0",
-                port=PORT,
-                url_path=BOT_TOKEN,
-                webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
-            )
-            # Keep running
-            while True:
-                await asyncio.sleep(3600)
+        async def handle_telegram_webhook(request: Request) -> PlainTextResponse:
+            """Handle incoming Telegram webhook updates."""
+            data = await request.json()
+            update = Update.de_json(data, ptb_app.bot)
+            await ptb_app.process_update(update)
+            return PlainTextResponse("ok")
 
-        asyncio.run(run_both())
+        async def health_check(request: Request) -> PlainTextResponse:
+            """Health check endpoint."""
+            return PlainTextResponse("ok")
+
+        # Single Starlette app with both endpoints
+        starlette_app = Starlette(
+            routes=[
+                Route(f"/{BOT_TOKEN}", handle_telegram_webhook, methods=["POST"]),
+                Route("/notify", handle_notify_request, methods=["POST"]),
+                Route("/health", health_check, methods=["GET"]),
+            ]
+        )
+
+        async def run_server():
+            # Initialize PTB app
+            await ptb_app.initialize()
+            await ptb_app.start()
+
+            # Set webhook
+            webhook_url = f"https://{WEBHOOK_URL}/{BOT_TOKEN}"
+            await ptb_app.bot.set_webhook(url=webhook_url)
+            logger.info(f"Webhook set to {webhook_url}")
+
+            # Run uvicorn
+            config = uvicorn.Config(starlette_app, host="0.0.0.0", port=PORT, log_level="info")
+            server = uvicorn.Server(config)
+            await server.serve()
+
+        asyncio.run(run_server())
     else:
         logger.info("Starting polling mode...")
-        # In polling mode, also start notification API
-        import asyncio
-
-        async def run_both():
-            await run_http_server(app.bot, 8080)
-            await app.initialize()
-            await app.start()
-            await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-            # Keep running
-            while True:
-                await asyncio.sleep(3600)
-
-        asyncio.run(run_both())
+        # In polling mode, use simple run_polling
+        ptb_app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
