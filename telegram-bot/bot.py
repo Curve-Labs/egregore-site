@@ -14,6 +14,7 @@ Deploy to Railway with webhook mode for production.
 import os
 import json
 import logging
+from datetime import date
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -313,6 +314,51 @@ QUERIES = {
             RETURN q.id AS id, q.title AS title, q.status AS status,
                    p.name AS started_by, projects
         """
+    },
+    "activity_on_date": {
+        "description": "All activity (sessions, artifacts) on a specific date. Use for 'what happened today/yesterday'",
+        "params": ["date"],
+        "cypher": """
+            MATCH (s:Session)-[:BY]->(p:Person)
+            WHERE s.date = date($date)
+            RETURN 'session' AS type, s.topic AS title, p.name AS person, s.summary AS summary, s.date AS date
+            UNION
+            MATCH (a:Artifact)-[:AUTHORED_BY]->(p:Person)
+            WHERE a.date = date($date)
+            RETURN 'artifact' AS type, a.title AS title, p.name AS person, a.summary AS summary, a.date AS date
+        """
+    },
+    "person_sessions_on_date": {
+        "description": "Sessions by a specific person on a specific date. Use for 'what did X do today'",
+        "params": ["name", "date"],
+        "cypher": """
+            MATCH (s:Session)-[:BY]->(p:Person {name: $name})
+            WHERE s.date = date($date)
+            RETURN s.date AS date, s.topic AS topic, s.summary AS summary
+            ORDER BY s.date DESC
+        """
+    },
+    "handoffs_to_person": {
+        "description": "Handoffs addressed to a specific person. Use for 'what was handed off to X'",
+        "params": ["recipient"],
+        "cypher": """
+            MATCH (a:Artifact {type: 'handoff'})-[:FOR]->(recipient:Person {name: $recipient})
+            OPTIONAL MATCH (a)-[:AUTHORED_BY]->(author:Person)
+            RETURN a.title AS title, a.summary AS summary, a.date AS date,
+                   author.name AS from_person
+            ORDER BY a.date DESC
+        """
+    },
+    "handoffs_from_person": {
+        "description": "Handoffs written by a specific person. Use for 'what did X hand off'",
+        "params": ["author"],
+        "cypher": """
+            MATCH (a:Artifact {type: 'handoff'})-[:AUTHORED_BY]->(author:Person {name: $author})
+            OPTIONAL MATCH (a)-[:FOR]->(recipient:Person)
+            RETURN a.title AS title, a.summary AS summary, a.date AS date,
+                   recipient.name AS to_person
+            ORDER BY a.date DESC
+        """
     }
 }
 
@@ -383,7 +429,13 @@ Examples for {sender_name}:
 - "What did I write?" -> query_person_artifacts(name="{sender_name}")
 """
 
+    today_str = date.today().isoformat()
+
     system_prompt = f"""You are Egregore, the shared memory for Curve Labs - an INTERNAL tool for team members.
+
+TODAY'S DATE: {today_str}
+When user says "today", use date parameter = "{today_str}"
+When user says "yesterday", use date parameter for the day before.
 
 IMPORTANT: Everyone works on the same projects (lace, tristero, infrastructure).
 Don't answer "working on" questions with just project names - that's not useful.
@@ -396,6 +448,11 @@ QUERY PRIORITY for "what is X working on?" or "what's X doing?":
 
 DO NOT use query_person_projects for "working on" questions - it just shows repo assignments.
 
+DATE-SPECIFIC QUERIES:
+- "What happened today?" -> query_activity_on_date(date="{today_str}")
+- "What did X do today?" -> query_person_sessions_on_date(name="x", date="{today_str}")
+- "What did X handoff to Y?" -> query_handoffs_to_person(recipient="y") then filter by sender
+
 TEAM (lowercase for queries): oz, ali, cem
 {context_info}
 
@@ -405,6 +462,7 @@ Examples:
 - "What quests did Cem start?" -> query_person_quests(name="cem")
 - "What has Ali written?" -> query_person_artifacts(name="ali")
 - "What's happening?" -> query_recent_activity
+- "What's happening today?" -> query_activity_on_date(date="{today_str}")
 - Single word "cem" -> query_person_sessions(name="cem")
 - "Tell me about lace" -> query_project_details(name="lace")
 - "What is Egregore?" -> respond_directly (brief explanation)"""
