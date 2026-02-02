@@ -157,22 +157,31 @@ Setup complete!
 
 What you can do now:
   /activity     — See what the team has been working on
+  /sync-repos   — Pull latest from all repos (smart, only if behind)
   /handoff      — Leave notes for others (or future you)
-  /reflect      — Save a decision or finding
-  /pull         — Get latest from team
 
 To add a project later: /setup tristero
 ```
 
 **On subsequent visits (not saying "set me up"):**
-```
-Welcome back to Egregore.
 
-/activity — See what's happening
-/pull — Get latest from team
+1. Query Neo4j for sessions newer than 2 days:
+   ```cypher
+   MATCH (s:Session)-[:BY]->(p:Person)
+   WHERE s.date >= date() - duration('P2D')
+   RETURN count(s) AS recent, collect(DISTINCT p.name) AS who
+   ```
 
-Or just start working. I'll remember everything.
-```
+2. Show welcome based on result:
+   ```
+   # If recent sessions found:
+   Welcome back. 3 new sessions in the last 2 days (cem, ali).
+   /activity to see what changed, /sync-repos to pull latest.
+
+   # If no recent sessions:
+   Welcome back to Egregore.
+   /activity — See what's happening
+   ```
 
 **Trigger phrases for /setup:**
 - "set me up", "getting started", "first time", "new here", "yes"
@@ -259,12 +268,12 @@ For decisions that affect multiple sessions or collaborators:
 Slash commands live in `.claude/commands/`. Type `/` to see available commands.
 
 Core commands:
+- `/activity` — See what's happening across Egregore (Neo4j, fast)
+- `/sync-repos` — Smart sync all repos (fetch, only pull if behind)
+- `/pull` — Pull current repo + memory only
+- `/handoff` — Leave notes for others (or future you)
 - `/add` — Ingest artifact (source, thought, finding, decision)
 - `/quest` — List or manage quests
-- `/project` — Show project status
-- `/activity` — See what's happening across Egregore
-- `/handoff` — Leave notes for others (or future you)
-- `/pull` — Get latest from all repos
 - `/save` — Save contributions to Egregore
 
 ## Proactive Behaviors

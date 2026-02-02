@@ -2,28 +2,22 @@ Fast, personal view of what's happening — your projects, your sessions, team a
 
 Topic: $ARGUMENTS
 
-## What to do
+## Execution rules
 
-1. **Smart sync** — fetch all repos, pull only if behind (fast)
-2. **Get current user** from git config, map to Person node (oz, cem, ali)
-3. **Query Neo4j** for personal + team activity (4 fast queries)
-4. **Display table visualization**
+**Neo4j-first.** All data comes from Neo4j. No filesystem access to sibling repos.
+- 1 Bash call: git config user.name
+- 4 Neo4j queries (run in parallel)
+- File-based fallback only if Neo4j unavailable
 
-## Smart sync (before queries)
-
-Use `git -C` to avoid `cd &&` chains (which don't match `Bash(git:*)` permission):
+## Step 1: Get current user
 
 ```bash
-# For each repo path:
-git -C /path/to/repo fetch origin --quiet
-git -C /path/to/repo rev-parse HEAD           # LOCAL
-git -C /path/to/repo rev-parse origin/main    # REMOTE
-# if different: git -C /path/to/repo pull origin main --quiet
+git config user.name
 ```
 
-**IMPORTANT:** Never use `cd /path && git ...` — this starts with `cd` and triggers permission prompts. Always use `git -C /path ...` which starts with `git` and matches `Bash(git:*)`.
+Map to Person node: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, "Ali" → ali
 
-## Neo4j Queries
+## Step 2: Neo4j Queries (run all in parallel)
 
 ```cypher
 // Query 1: My projects
@@ -47,56 +41,68 @@ OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
 RETURN q.id AS quest, q.title AS title, collect(DISTINCT proj.name) AS projects, count(a) AS artifacts
 ```
 
+## Step 3: File-based fallback
+
+If Neo4j unavailable, use memory/ symlink (doesn't trigger sibling permissions):
+
+```bash
+# Active quests
+grep -l "status: active" memory/quests/*.md 2>/dev/null | xargs -I{} basename {} | grep -v template
+
+# Recent artifacts
+ls -t memory/artifacts/*.md 2>/dev/null | head -10 | xargs -I{} basename {}
+```
+
 ## Output format
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  EGREGORE ACTIVITY                                            oz · Jan 26  │
+│  EGREGORE ACTIVITY                                            oz · Feb 01  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  YOUR PROJECTS                                                              │
-│  ┌────────────────┬──────────┬──────────┐                                   │
-│  │ Project        │ Domain   │ Role     │                                   │
-│  ├────────────────┼──────────┼──────────┤                                   │
-│  │ infrastructure │ both     │ lead     │                                   │
-│  │ tristero       │ polis    │ —        │                                   │
-│  │ lace           │ psyche   │ —        │                                   │
-│  └────────────────┴──────────┴──────────┘                                   │
+│  PROJECTS                                                                   │
+│  ┌────────────────┬──────────┬────────────────────────────────┐             │
+│  │ Project        │ Domain   │ Access                         │             │
+│  ├────────────────┼──────────┼────────────────────────────────┤             │
+│  │ curve-labs-core│ both     │ (here)                         │             │
+│  │ tristero       │ polis    │ cd ../tristero && claude       │             │
+│  │ lace           │ psyche   │ cd ../lace && claude           │             │
+│  └────────────────┴──────────┴────────────────────────────────┘             │
 │                                                                             │
 │  YOUR RECENT SESSIONS                                                       │
 │  ┌────────────┬─────────────────────────┬───────────────────────────────┐   │
 │  │ Date       │ Topic                   │ Summary                       │   │
 │  ├────────────┼─────────────────────────┼───────────────────────────────┤   │
-│  │ 2026-01-26 │ Neo4j ontology complete │ Schema, seed data, commands   │   │
+│  │ 2026-01-31 │ NLNet grant submitted   │ €30k for open-source Egregore │   │
 │  └────────────┴─────────────────────────┴───────────────────────────────┘   │
 │                                                                             │
 │  TEAM ACTIVITY (last 7 days)                                                │
 │  ┌────────────┬─────────────────────────┬──────────┐                        │
 │  │ Date       │ Topic                   │ By       │                        │
 │  ├────────────┼─────────────────────────┼──────────┤                        │
-│  │ 2026-01-26 │ Telegram bot fix        │ ali      │                        │
-│  │ 2026-01-26 │ Evaluation benchmarks   │ cem      │                        │
+│  │ 2026-01-30 │ Blog versions reviewed  │ cem      │                        │
+│  │ 2026-01-27 │ Bot deployed to Railway │ ali      │                        │
 │  └────────────┴─────────────────────────┴──────────┘                        │
 │                                                                             │
 │  ACTIVE QUESTS                                                              │
 │  ┌──────────────────┬─────────────────────┬───────────┬───────────┐         │
 │  │ Quest            │ Title               │ Projects  │ Artifacts │         │
 │  ├──────────────────┼─────────────────────┼───────────┼───────────┤         │
-│  │ benchmark-eval   │ Evaluation metrics  │ tristero  │ 4         │         │
+│  │ nlnet-commons    │ NLNet grant app     │ egregore  │ 4         │         │
+│  │ blog-launch      │ V2 blog content     │ egregore  │ 2         │         │
 │  └──────────────────┴─────────────────────┴───────────┴───────────┘         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**If sections are empty**, show placeholder:
+**If sections are empty**, show:
 ```
-│  ACTIVE QUESTS                                                              │
 │  (none yet — use /quest new to create one)                                  │
 ```
 
-## Notes
+## Rules
 
-- Check for sibling project folders (../tristero, ../lace) and show if they exist
-- Do NOT suggest "/setup" for projects that are already cloned — instead tell user to "cd ../[project] && claude"
-- Show active quests from memory/quests/ (read frontmatter for status: active)
-- Show recent artifacts from memory/artifacts/ (last 7 days)
+- **No sibling directory access** — all data from Neo4j or memory/ symlink
+- Projects from Neo4j → show `cd ../[project] && claude`
+- Minimize tool calls — run Neo4j queries in parallel
+- File-based fallback only if Neo4j MCP unavailable
