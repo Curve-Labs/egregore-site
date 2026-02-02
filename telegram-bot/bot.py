@@ -14,8 +14,11 @@ Deploy to Railway with webhook mode for production.
 import os
 import json
 import logging
+import time
 from datetime import date
 from typing import Optional
+
+from analytics import log_query_event
 
 from dotenv import load_dotenv
 load_dotenv(override=False)
@@ -405,9 +408,18 @@ def build_tools_schema() -> list:
 
 
 async def agent_decide(question: str, conversation_context: str = "", sender_name: str = None) -> dict:
-    """LLM agent with tool use decides what to do."""
+    """LLM agent with tool use decides what to do.
+
+    Returns dict with:
+        action: "respond" or "query"
+        message: (if respond) the response text
+        query: (if query) the query name
+        params: (if query) the query parameters
+        usage: {"input_tokens": int, "output_tokens": int}
+        latency_ms: float
+    """
     if not ANTHROPIC_API_KEY:
-        return {"action": "respond", "message": "API not configured."}
+        return {"action": "respond", "message": "API not configured.", "usage": {}, "latency_ms": 0}
 
     tools = build_tools_schema()
 
@@ -469,6 +481,7 @@ Examples:
 
     async with httpx.AsyncClient() as client:
         try:
+            start_time = time.perf_counter()
             resp = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
@@ -485,42 +498,53 @@ Examples:
                 },
                 timeout=15
             )
+            latency_ms = (time.perf_counter() - start_time) * 1000
             resp.raise_for_status()
             data = resp.json()
-            
+
+            # Extract token usage
+            usage = data.get("usage", {})
+            usage_info = {
+                "input_tokens": usage.get("input_tokens", 0),
+                "output_tokens": usage.get("output_tokens", 0)
+            }
+
             # Check for tool use
             for block in data.get("content", []):
                 if block.get("type") == "tool_use":
                     tool_name = block.get("name", "")
                     tool_input = block.get("input", {})
                     logger.info(f"Agent chose: {tool_name} with {tool_input}")
-                    
+
                     if tool_name == "respond_directly":
-                        return {"action": "respond", "message": tool_input.get("message", "")}
-                    
+                        return {"action": "respond", "message": tool_input.get("message", ""), "usage": usage_info, "latency_ms": latency_ms}
+
                     if tool_name.startswith("query_"):
                         query_name = tool_name[6:]
-                        return {"action": "query", "query": query_name, "params": tool_input}
-            
+                        return {"action": "query", "query": query_name, "params": tool_input, "usage": usage_info, "latency_ms": latency_ms}
+
             # Fallback to text response
             for block in data.get("content", []):
                 if block.get("type") == "text":
-                    return {"action": "respond", "message": block.get("text", "")}
-            
-            return {"action": "respond", "message": "I'm not sure how to help with that."}
+                    return {"action": "respond", "message": block.get("text", ""), "usage": usage_info, "latency_ms": latency_ms}
+
+            return {"action": "respond", "message": "I'm not sure how to help with that.", "usage": usage_info, "latency_ms": latency_ms}
 
         except Exception as e:
             logger.error(f"Agent failed: {e}")
-            return {"action": "respond", "message": "Something went wrong. Try asking differently?"}
+            return {"action": "respond", "message": "Something went wrong. Try asking differently?", "usage": {}, "latency_ms": 0}
 
 
-async def format_response(question: str, query_name: str, results: list, params: dict = None) -> str:
-    """Use LLM to format query results as conversational text."""
+async def format_response(question: str, query_name: str, results: list, params: dict = None) -> tuple:
+    """Use LLM to format query results as conversational text.
+
+    Returns tuple of (response_text, usage_dict, latency_ms)
+    """
     if not ANTHROPIC_API_KEY:
-        return f"Found {len(results)} results."
+        return f"Found {len(results)} results.", {}, 0
 
     if not results:
-        return "No results found."
+        return "No results found.", {}, 0
 
     system_prompt = """You are Egregore, shared memory for Curve Labs. Internal tool - everyone knows each other.
 
@@ -550,6 +574,7 @@ NO markdown, NO emojis."""
 
     async with httpx.AsyncClient() as client:
         try:
+            start_time = time.perf_counter()
             resp = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
@@ -568,11 +593,20 @@ NO markdown, NO emojis."""
                 },
                 timeout=15
             )
+            latency_ms = (time.perf_counter() - start_time) * 1000
             resp.raise_for_status()
-            return resp.json()["content"][0]["text"]
+            data = resp.json()
+
+            usage = data.get("usage", {})
+            usage_info = {
+                "input_tokens": usage.get("input_tokens", 0),
+                "output_tokens": usage.get("output_tokens", 0)
+            }
+
+            return data["content"][0]["text"], usage_info, latency_ms
         except Exception as e:
             logger.error(f"LLM response formatter failed: {e}")
-            return f"Found {len(results)} results for {query_name}."
+            return f"Found {len(results)} results for {query_name}.", {}, 0
 
 
 async def generate_no_results_response(question: str, query_name: str, params: dict) -> str:
@@ -734,64 +768,127 @@ async def handle_question(update: Update, context, question: str) -> None:
         await update.message.reply_text("Knowledge graph not configured.")
         return
 
-    # Look up or auto-register sender's identity from Telegram ID
+    # Track user info for analytics
+    user_id = None
     sender_name = None
     if update.effective_user:
-        telegram_id = update.effective_user.id
+        user_id = update.effective_user.id
         first_name = update.effective_user.first_name
 
         # Try lookup first, then auto-register if not found
-        sender_name = lookup_person_by_telegram_id(telegram_id)
+        sender_name = lookup_person_by_telegram_id(user_id)
         if not sender_name:
-            sender_name = auto_register_telegram_id(telegram_id, first_name)
+            sender_name = auto_register_telegram_id(user_id, first_name)
 
         if sender_name:
-            logger.info(f"Identified sender: {sender_name} (Telegram ID: {telegram_id})")
+            logger.info(f"Identified sender: {sender_name} (Telegram ID: {user_id})")
 
     # Get conversation context for follow-ups
     conv_context = get_conversation_context(context)
 
-    # Agent decides (tool use)
+    # Agent decides (tool use) - now returns usage and latency
     decision = await agent_decide(question, conv_context, sender_name)
-    
+
     action = decision.get("action")
-    
+    decision_usage = decision.get("usage", {})
+    decision_latency = decision.get("latency_ms", 0)
+
     if action == "respond":
         # Direct response from agent
         response = decision.get("message", "")
         await update.message.reply_text(response)
         store_in_context(context, question, "direct", response[:100])
+
+        # Log analytics for direct response
+        log_query_event(
+            query_type="direct",
+            tokens_in=decision_usage.get("input_tokens", 0),
+            tokens_out=decision_usage.get("output_tokens", 0),
+            latency_ms=decision_latency,
+            results_count=0,
+            success=True,
+            user_id=user_id,
+            user_name=sender_name,
+            question=question,
+            decision_tokens_in=decision_usage.get("input_tokens", 0),
+            decision_tokens_out=decision_usage.get("output_tokens", 0),
+            decision_latency_ms=decision_latency,
+        )
         return
-    
+
     if action == "query":
         query_name = decision.get("query")
         params = decision.get("params", {})
-        
+
         if query_name not in QUERIES:
             await update.message.reply_text("I couldn't find that information.")
             return
-        
-        # Run the query
+
+        # Run the query with timing
         cypher = QUERIES[query_name]["cypher"]
         logger.info(f"Running query: {query_name} with params: {params}")
-        
+
+        neo4j_start = time.perf_counter()
         results = run_query(cypher, params)
-        
+        neo4j_latency = (time.perf_counter() - neo4j_start) * 1000
+
         if not results:
             # Give helpful response based on what was searched
             helpful_msg = await generate_no_results_response(question, query_name, params)
             await update.message.reply_text(helpful_msg)
+
+            # Log analytics for empty results
+            log_query_event(
+                query_type=query_name,
+                tokens_in=decision_usage.get("input_tokens", 0),
+                tokens_out=decision_usage.get("output_tokens", 0),
+                latency_ms=decision_latency + neo4j_latency,
+                results_count=0,
+                success=True,  # Query worked, just no results
+                user_id=user_id,
+                user_name=sender_name,
+                question=question,
+                decision_tokens_in=decision_usage.get("input_tokens", 0),
+                decision_tokens_out=decision_usage.get("output_tokens", 0),
+                decision_latency_ms=decision_latency,
+                neo4j_latency_ms=neo4j_latency,
+            )
             return
-        
+
         # Format and send response (pass params for person context)
-        response = await format_response(question, query_name, results, params)
+        response, format_usage, format_latency = await format_response(question, query_name, results, params)
         await update.message.reply_text(response)
-        
+
         # Store in context
         summary = f"{query_name}: {len(results)} results"
         store_in_context(context, question, query_name, summary)
+
+        # Calculate totals for analytics
+        total_tokens_in = decision_usage.get("input_tokens", 0) + format_usage.get("input_tokens", 0)
+        total_tokens_out = decision_usage.get("output_tokens", 0) + format_usage.get("output_tokens", 0)
+        total_latency = decision_latency + neo4j_latency + format_latency
+
+        # Log analytics
+        log_query_event(
+            query_type=query_name,
+            tokens_in=total_tokens_in,
+            tokens_out=total_tokens_out,
+            latency_ms=total_latency,
+            results_count=len(results),
+            success=True,
+            user_id=user_id,
+            user_name=sender_name,
+            question=question,
+            decision_tokens_in=decision_usage.get("input_tokens", 0),
+            decision_tokens_out=decision_usage.get("output_tokens", 0),
+            decision_latency_ms=decision_latency,
+            format_tokens_in=format_usage.get("input_tokens", 0),
+            format_tokens_out=format_usage.get("output_tokens", 0),
+            format_latency_ms=format_latency,
+            neo4j_latency_ms=neo4j_latency,
+        )
         return
-    
+
     # Fallback
     await update.message.reply_text("I'm not sure how to help with that.")
 
