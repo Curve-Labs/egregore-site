@@ -1,34 +1,29 @@
-Get latest from all repos (memory, project, submodules).
+Pull latest for current repo and shared memory.
 
 ## What to do
 
-1. Pull latest from egregore
-2. Check if memory symlink exists — if not, create it: `ln -s ../curve-labs-memory memory`
-3. Pull latest from memory repo
-4. Pull latest from sibling projects (tristero, lace) if they exist
+1. Pull current repo (curve-labs-core or whichever you're in)
+2. Check memory symlink exists — if not: `ln -s ../curve-labs-memory memory`
+3. Pull memory repo via symlink
 
-## Example
+**Does NOT sync sibling repos.** Use `/sync-repos` for that.
 
-```
-> /pull
+## Execution
 
-Pulling latest...
+```bash
+# Current repo
+git pull origin main --quiet
 
-[curve-labs-memory]  git pull
-                     ✓ 3 new commits (last: "Handoff: MCP research" by Cem)
-
-[tristero]           git pull
-                     ✓ Already up to date
-
-[egregore]    git submodule update --remote
-                     ✓ Updated to latest
-
-Ready. Recent activity:
-- Jan 20: Cem handed off MCP research (memory/conversations/2026-01/20-cem-mcp.md)
-
-You might want to read that handoff before starting.
+# Memory (via symlink)
+git -C memory pull origin main --quiet
 ```
 
-## Next
+## Output
 
-Read any recent handoffs, then start working.
+```
+Pulling...
+  curve-labs-core    ✓ up to date
+  memory             ↓ 2 commits → pulled
+
+For sibling repos (tristero, lace): /sync-repos
+```
