@@ -465,7 +465,7 @@ DATE-SPECIFIC QUERIES:
 - "What did X do today?" -> query_person_sessions_on_date(name="x", date="{today_str}")
 - "What did X handoff to Y?" -> query_handoffs_to_person(recipient="y") then filter by sender
 
-TEAM (lowercase for queries): oz, ali, cem
+TEAM (lowercase for queries): oz, ali, cem, pali, damla
 {context_info}
 
 Examples:
@@ -674,7 +674,9 @@ To add stuff: /add in Claude Code, then /save"""
 TEAM_INFO = {
     "oz": "lace, tristero, infrastructure - architecture side",
     "ali": "infrastructure, deployment, this bot",
-    "cem": "research - emergent ontologies, evaluation frameworks"
+    "cem": "research - emergent ontologies, evaluation frameworks",
+    "pali": "design, product, user experience",
+    "damla": "operations, coordination"
 }
 
 
