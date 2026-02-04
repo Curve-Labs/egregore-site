@@ -1070,9 +1070,11 @@ def main() -> None:
             return PlainTextResponse("ok")
 
         # Single Starlette app with both endpoints
+        # Use token as webhook path for security (only Telegram knows it)
+        webhook_path = f"/{BOT_TOKEN}"
         starlette_app = Starlette(
             routes=[
-                Route("/webhook", handle_telegram_webhook, methods=["POST"]),
+                Route(webhook_path, handle_telegram_webhook, methods=["POST"]),
                 Route("/notify", handle_notify_request, methods=["POST"]),
                 Route("/health", health_check, methods=["GET"]),
             ]
@@ -1083,10 +1085,10 @@ def main() -> None:
             await ptb_app.initialize()
             await ptb_app.start()
 
-            # Set webhook
-            webhook_url = f"https://{WEBHOOK_URL}/webhook"
+            # Set webhook (use token as path for security)
+            webhook_url = f"https://{WEBHOOK_URL}/{BOT_TOKEN}"
             await ptb_app.bot.set_webhook(url=webhook_url)
-            logger.info(f"Webhook set to {webhook_url}")
+            logger.info(f"Webhook set to https://{WEBHOOK_URL}/[TOKEN]")
 
             # Run uvicorn
             config = uvicorn.Config(starlette_app, host="0.0.0.0", port=PORT, log_level="info")
