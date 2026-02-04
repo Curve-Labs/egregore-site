@@ -675,8 +675,8 @@ TEAM_INFO = {
     "oz": "lace, tristero, infrastructure - architecture side",
     "ali": "infrastructure, deployment, this bot",
     "cem": "research - emergent ontologies, evaluation frameworks",
-    "pali": "design, product, user experience",
-    "damla": "operations, coordination"
+    "pali": "operations, coordination",
+    "damla": "design, product, user experience"
 }
 
 
