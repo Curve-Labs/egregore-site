@@ -1,5 +1,7 @@
 Pull latest for current repo and shared memory.
 
+**Note:** `/activity` auto-syncs. Use `/pull` only when you need to sync without viewing activity.
+
 ## What to do
 
 1. Pull current repo (curve-labs-core or whichever you're in)

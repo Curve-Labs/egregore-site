@@ -2,12 +2,39 @@ Fast, personal view of what's happening — your projects, your sessions, team a
 
 Topic: $ARGUMENTS
 
+**Auto-syncs.** Pulls latest if behind before showing activity.
+
 ## Execution rules
 
 **Neo4j-first.** All data comes from Neo4j. No filesystem access to sibling repos.
+- Smart sync: fetch, pull only if behind (runs in parallel with queries)
 - 1 Bash call: git config user.name
 - 6 Neo4j queries (run in parallel)
 - File-based fallback only if Neo4j unavailable
+
+## Step 0: Smart sync (parallel with Step 2)
+
+```bash
+# Fetch and check if behind (fast)
+git fetch origin main --quiet
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/main)
+if [ "$LOCAL" != "$REMOTE" ]; then
+  git pull origin main --quiet
+  echo "synced"
+fi
+
+# Same for memory
+git -C memory fetch origin main --quiet 2>/dev/null
+LOCAL=$(git -C memory rev-parse HEAD 2>/dev/null)
+REMOTE=$(git -C memory rev-parse origin/main 2>/dev/null)
+if [ "$LOCAL" != "$REMOTE" ]; then
+  git -C memory pull origin main --quiet
+  echo "memory synced"
+fi
+```
+
+Run this in parallel with Neo4j queries. Don't wait for it unless Neo4j fails.
 
 ## Step 1: Get current user
 

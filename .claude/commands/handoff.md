@@ -2,6 +2,8 @@ End a session with a summary for the next person (or future you).
 
 Topic: $ARGUMENTS
 
+**Auto-saves.** No need to run `/save` after.
+
 ## What to do
 
 1. Get author name from `git config user.name`
@@ -10,6 +12,7 @@ Topic: $ARGUMENTS
 4. Create handoff file in memory/conversations/YYYY-MM/
 5. Update the conversation index
 6. **MUST** create Session node in Neo4j (links to Person and Project)
+7. **Auto-save**: Run the full `/save` flow (branch, commit, PR, merge)
 
 **CRITICAL: Step 6 is NOT optional.** Without the Neo4j Session node, the handoff won't appear in `/activity`. Always run the Cypher query below.
 
@@ -132,9 +135,8 @@ Updating memory/conversations/index.md...
 Recording session in knowledge graph...
   ✓ Session node created, linked to oz → infrastructure
 
-Run /save to commit and push.
+Saving...
+  ✓ Committed and merged
+
+Done. Team can see this on /activity.
 ```
-
-## Next
-
-Run `/save` to push your changes.
