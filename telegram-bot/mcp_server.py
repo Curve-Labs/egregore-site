@@ -57,8 +57,17 @@ def init_org_configs():
 
     logger.info(f"MCP orgs configured: {list(ORG_BY_KEY.keys())}")
 
-# Initialize on module load
-init_org_configs()
+# Lazy initialization - called on first request
+_initialized = False
+
+def ensure_initialized():
+    global _initialized
+    if not _initialized:
+        try:
+            init_org_configs()
+            _initialized = True
+        except Exception as e:
+            logger.error(f"MCP init failed: {e}")
 
 # =============================================================================
 # NEO4J DRIVERS (per-org)
@@ -339,6 +348,8 @@ async def handle_mcp_sse(request: Request) -> StreamingResponse:
 
     Client POSTs JSON-RPC requests, server responds with SSE stream.
     """
+    ensure_initialized()
+
     # Validate API key
     auth_header = request.headers.get("Authorization", "")
     api_key = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
@@ -385,6 +396,8 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
 
     Simpler alternative to SSE for clients that don't need streaming.
     """
+    ensure_initialized()
+
     # Validate API key
     auth_header = request.headers.get("Authorization", "")
     api_key = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
