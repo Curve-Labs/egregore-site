@@ -1465,10 +1465,10 @@ async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYP
 
 I've added you as a collaborator.
 
-Save both files I'm sending to a new folder, then:
+Download the zip I'm sending, then:
 
-1. Create a new folder: mkdir egregore && cd egregore
-2. Save both files (.mcp.json and CLAUDE.md) there
+1. Unzip it (creates 'egregore' folder)
+2. cd egregore
 3. Type: claude
 4. When prompted:
    • "Trust this folder?" → Yes, proceed
@@ -1481,6 +1481,7 @@ Claude will create everything else automatically."""
 
             # Generate .mcp.json with org-specific API key
             import io
+            import zipfile
             org_config = state["org_config"]
             mcp_api_key = org_config.get("mcp_api_key", "ek_default_key")
 
@@ -1497,17 +1498,6 @@ Claude will create everything else automatically."""
                 }
             }, indent=2)
 
-            # Send .mcp.json
-            mcp_file = io.BytesIO(mcp_json_content.encode('utf-8'))
-            mcp_file.name = ".mcp.json"
-
-            await context.bot.send_document(
-                chat_id=update.effective_chat.id,
-                document=mcp_file,
-                filename=".mcp.json",
-                caption="1/2 - MCP config (connects to Egregore)"
-            )
-
             # Generate minimal bootstrap CLAUDE.md
             bootstrap_claude_md = """# Egregore Bootstrap
 
@@ -1521,14 +1511,18 @@ When user says "set me up", "getting started", "new here", or similar:
 This is a minimal bootstrap file. The full configuration will replace it after setup.
 """
 
-            claude_file = io.BytesIO(bootstrap_claude_md.encode('utf-8'))
-            claude_file.name = "CLAUDE.md"
+            # Create zip with both files
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('egregore/.mcp.json', mcp_json_content)
+                zf.writestr('egregore/CLAUDE.md', bootstrap_claude_md)
+            zip_buffer.seek(0)
 
             await context.bot.send_document(
                 chat_id=update.effective_chat.id,
-                document=claude_file,
-                filename="CLAUDE.md",
-                caption="2/2 - Claude instructions (tells Claude how to set up)"
+                document=zip_buffer,
+                filename="egregore-setup.zip",
+                caption="Unzip, cd egregore, run 'claude', say 'set me up'"
             )
         else:
             await update.message.reply_text(
