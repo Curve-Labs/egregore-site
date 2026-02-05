@@ -37,6 +37,8 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 import uvicorn
 
+from mcp_server import get_mcp_routes
+
 # =============================================================================
 # CONFIG
 # =============================================================================
@@ -1843,7 +1845,7 @@ def main() -> None:
                 Route("/spirit/activate", handle_spirit_activate, methods=["POST"]),
                 Route("/spirit/heartbeat", handle_spirit_heartbeat, methods=["POST"]),
                 Route("/spirit/callback", handle_spirit_callback, methods=["POST"]),
-            ]
+            ] + get_mcp_routes()  # MCP server endpoints
         )
 
         async def run_server():
