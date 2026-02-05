@@ -1607,15 +1607,18 @@ If Neo4j fails: Continue anyway, user can register later.
 NEVER show stack traces or technical errors.
 """
 
-            # Pre-approved permissions - approve EVERYTHING for smooth onboarding
+            # Pre-approved permissions - enumerate all commands for smooth onboarding
+            # Bash(*) doesn't work - must specify each command prefix
             settings_json = json.dumps({
                 "permissions": {
                     "allow": [
-                        "Bash(*)",
-                        "Read(**)",
-                        "Write(**)",
-                        "Edit(**)",
-                        "mcp__egregore"
+                        "Bash(which:*)", "Bash(brew:*)", "Bash(gh:*)",
+                        "Bash(cp:*)", "Bash(rm:*)", "Bash(mv:*)", "Bash(mkdir:*)",
+                        "Bash(echo:*)", "Bash(git:*)", "Bash(ls:*)", "Bash(cat:*)",
+                        "Bash(cd:*)", "Bash(pwd:*)", "Bash(touch:*)",
+                        "Read(**)", "Write(**)", "Edit(**)",
+                        "mcp__egregore__neo4j_query",
+                        "mcp__egregore__egregore_init"
                     ],
                     "deny": []
                 }
