@@ -1294,9 +1294,21 @@ Claude will handle everything else."""
             await update.message.reply_text(complete_msg)
 
             # Send the setup zip file
-            import os
-            zip_path = os.path.join(os.path.dirname(__file__), "egregore-setup.zip")
-            if os.path.exists(zip_path):
+            from pathlib import Path
+            # Try multiple possible locations
+            possible_paths = [
+                Path(__file__).parent / "egregore-setup.zip",
+                Path("/app/telegram-bot/egregore-setup.zip"),  # Railway path
+                Path("telegram-bot/egregore-setup.zip"),
+                Path("egregore-setup.zip"),
+            ]
+            zip_path = None
+            for p in possible_paths:
+                if p.exists():
+                    zip_path = p
+                    break
+
+            if zip_path:
                 with open(zip_path, "rb") as f:
                     await context.bot.send_document(
                         chat_id=update.effective_chat.id,
@@ -1305,6 +1317,7 @@ Claude will handle everything else."""
                         caption="Unzip this, open terminal in the folder, type 'claude', say 'set me up'"
                     )
             else:
+                logger.error(f"Zip not found. Tried: {[str(p) for p in possible_paths]}")
                 await update.message.reply_text(
                     "Setup zip not found. Ask admin or clone manually:\n"
                     "gh repo clone Curve-Labs/egregore-core"
