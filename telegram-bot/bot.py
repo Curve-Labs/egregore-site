@@ -1345,7 +1345,10 @@ Download the setup file I'm sending, unzip it, then:
 
 1. Open terminal in that folder
 2. Type: claude
-3. Say: "set me up"
+3. When prompted:
+   • "Trust this folder?" → Yes, proceed
+   • "Use this API key?" → No (use your subscription)
+4. Say: "set me up"
 
 Claude will handle everything else."""
 
