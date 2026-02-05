@@ -1024,7 +1024,16 @@ async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # If in a group, DM the user
     if update.effective_chat.type in ["group", "supergroup"]:
         try:
-            welcome_msg = f"""Welcome to Egregore!
+            ascii_art = """
+███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+"""
+            welcome_msg = f"""{ascii_art}
+Welcome to Egregore!
 
 I'll help you get set up. What's your GitHub username?
 
@@ -1044,7 +1053,16 @@ I'll help you get set up. What's your GitHub username?
             )
     else:
         # Already in DM, start directly
-        welcome_msg = f"""Welcome to Egregore!
+        ascii_art = """
+███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+"""
+        welcome_msg = f"""{ascii_art}
+Welcome to Egregore!
 
 I'll help you get set up. What's your GitHub username?
 
@@ -1265,7 +1283,16 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     logger.info(f"New member {new_member.first_name} ({new_member.id}) joined {org_config['name']}")
 
     try:
-        welcome_msg = f"""Welcome to Egregore!
+        ascii_art = """
+███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+"""
+        welcome_msg = f"""{ascii_art}
+Welcome to Egregore!
 
 I'll help you get set up. What's your GitHub username?
 
