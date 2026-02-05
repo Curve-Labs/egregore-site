@@ -1470,6 +1470,8 @@ async def handle_spirit_activate(request: Request) -> JSONResponse:
     if not registration_token:
         return JSONResponse({"error": "Missing registration_token"}, status_code=400)
 
+    logger.info(f"Spirit activation attempt with token: {registration_token[:20]}...")
+
     # Find pending Spirit with this token (not expired)
     result = run_query("""
         MATCH (s:Spirit {registrationToken: $token, status: "pending"})
@@ -1477,8 +1479,16 @@ async def handle_spirit_activate(request: Request) -> JSONResponse:
         RETURN s.id AS id, s.name AS name, s.trustLevel AS trustLevel
     """, {"token": registration_token})
 
+    logger.info(f"Spirit query result: {result}")
+
     if not result:
-        return JSONResponse({"error": "Invalid or expired token"}, status_code=404)
+        # Debug: check if Spirit exists at all
+        debug_result = run_query("""
+            MATCH (s:Spirit {registrationToken: $token})
+            RETURN s.status AS status, s.tokenExpiresAt AS expires, datetime() AS now
+        """, {"token": registration_token})
+        logger.info(f"Spirit debug query: {debug_result}")
+        return JSONResponse({"error": "Invalid or expired token", "debug": debug_result}, status_code=404)
 
     spirit = result[0]
     spirit_id = spirit["id"]
