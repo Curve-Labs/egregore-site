@@ -1083,8 +1083,10 @@ I'll help you get set up. What's your GitHub username?
             await update.message.reply_text("Check your DMs! I've sent you onboarding instructions.")
         except Exception as e:
             logger.error(f"Failed to DM user {user.id}: {e}")
+            bot_username = context.bot.username
             await update.message.reply_text(
-                "I couldn't DM you. Please start a chat with me first, then try /onboard again."
+                f"Click here to start: t.me/{bot_username}\n\n"
+                "Then just click 'Start' — I'll take it from there."
             )
     else:
         # Already in DM, start directly
@@ -1341,6 +1343,12 @@ I'll help you get set up. What's your GitHub username?
         }
     except Exception as e:
         logger.error(f"Failed to DM new member {new_member.id}: {e}")
+        # Post in group with link to start chat
+        bot_username = context.bot.username
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Hey {new_member.first_name}! Click here to get set up: t.me/{bot_username}"
+        )
 
 
 async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
