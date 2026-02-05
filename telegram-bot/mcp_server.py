@@ -45,7 +45,17 @@ def init_org_configs():
             "neo4j_password": NEO4J_PASSWORD,
         }
 
-    # Test org
+    # Egregore org (new standalone org)
+    egregore_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
+    if egregore_uri:
+        ORG_BY_KEY["egregore"] = {
+            "name": "egregore",
+            "neo4j_uri": egregore_uri,
+            "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
+            "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
+        }
+
+    # Test org (legacy)
     testorg_uri = os.environ.get("TESTORG_NEO4J_URI", "")
     if testorg_uri:
         ORG_BY_KEY["testorg"] = {

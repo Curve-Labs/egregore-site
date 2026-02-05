@@ -86,6 +86,7 @@ ALLOWED_CHAT_IDS = [
 # =============================================================================
 
 TESTORG_CHANNEL_ID = int(os.environ.get("TESTORG_CHANNEL_ID", "0") or "0")
+EGREGORE_CHANNEL_ID = int(os.environ.get("EGREGORE_CHANNEL_ID", "0") or "0")
 
 ORG_CONFIG = {
     -1003081443167: {
@@ -97,6 +98,17 @@ ORG_CONFIG = {
     },
 }
 
+# Egregore org (new standalone org)
+if EGREGORE_CHANNEL_ID:
+    ORG_CONFIG[EGREGORE_CHANNEL_ID] = {
+        "name": "egregore",
+        "neo4j_uri": os.environ.get("EGREGORE_NEO4J_URI", ""),
+        "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
+        "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
+        "mcp_api_key": os.environ.get("EGREGORE_MCP_KEY", "ek_egregore_default"),
+    }
+
+# Test org (legacy)
 if TESTORG_CHANNEL_ID:
     ORG_CONFIG[TESTORG_CHANNEL_ID] = {
         "name": "testorg",
