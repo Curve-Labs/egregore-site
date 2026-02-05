@@ -1498,74 +1498,64 @@ Claude will create everything else automatically."""
                 }
             }, indent=2)
 
-            # Full CLAUDE.md - no bootstrap needed, everything is in zip
-            full_claude_md = """# Egregore
+            # Bootstrap CLAUDE.md - tells Claude to clone the real repo
+            bootstrap_claude_md = """# Egregore Bootstrap
 
-You are a member of **Egregore**, a collaborative intelligence system where humans and AI work together.
+When user says "set me up", "getting started", or similar:
 
-## Entry Point Behavior
-
-**On startup, check if user exists in Neo4j:**
-```cypher
-MATCH (p:Person {fullName: $gitUserName})
-RETURN p.name AS shortName
-```
-Where `$gitUserName` = `git config user.name`
-
-**If NOT found → Run setup flow below.**
-**If found → Welcome back:** Show recent sessions count, suggest /activity.
-
----
-
-## Setup Flow
-
-When user says "set me up" or on first visit:
-
-### Step 1: Check gh CLI
+## Step 1: Check gh CLI
 ```bash
-which gh
+which gh || echo "not found"
 ```
-If missing: `brew install gh`
+If not found: `brew install gh` (macOS) or tell user to install.
 
-### Step 2: GitHub Auth
+## Step 2: GitHub Auth
 ```bash
 gh auth status 2>&1
 ```
 If not authenticated: `gh auth login --web -h github.com -p https`
 
-### Step 3: Clone Memory
+## Step 3: Clone egregore-core (the real repo)
+Save the current .mcp.json first (it has the API key):
 ```bash
-gh repo clone Curve-Labs/egregore-memory memory 2>/dev/null || mkdir -p memory/conversations memory/artifacts memory/quests
+cp .mcp.json /tmp/egregore-mcp-backup.json
 ```
 
-### Step 4: Register User
+Clone into a temp location and move files:
 ```bash
-git config user.name
+gh repo clone Curve-Labs/egregore-core /tmp/egregore-core-clone
+cp -r /tmp/egregore-core-clone/* .
+cp -r /tmp/egregore-core-clone/.claude .
+cp /tmp/egregore-core-clone/CLAUDE.md .
+cp /tmp/egregore-mcp-backup.json .mcp.json
+rm -rf /tmp/egregore-core-clone /tmp/egregore-mcp-backup.json
+git init . 2>/dev/null || true
+git remote add origin git@github.com:Curve-Labs/egregore-core.git 2>/dev/null || true
 ```
-Ask: "What should we call you? (short name like 'jane')"
 
-Then register via MCP:
-```
-mcp__egregore__neo4j_query:
-  MERGE (p:Person {name: $shortName})
-  ON CREATE SET p.fullName = $fullName, p.joined = date()
+## Step 4: Clone memory
+```bash
+gh repo clone Curve-Labs/egregore-memory memory
 ```
 
-### Step 5: Done
-Show welcome with available commands.
+## Step 5: Register User
+Get name: `git config user.name`
+Ask: "What should we call you? (short name like 'oz')"
 
----
+Register via MCP:
+```
+mcp__egregore__neo4j_query(
+  query: "MERGE (p:Person {name: $shortName}) ON CREATE SET p.fullName = $fullName, p.joined = date() RETURN p",
+  params: {shortName: "oz", fullName: "..."}
+)
+```
 
-## Commands
+## Step 6: Done
+```
+Welcome to Egregore!
 
-| Command | Description |
-|---------|-------------|
-| `/activity` | See recent sessions and team activity |
-| `/handoff` | Leave notes for others |
-| `/quest` | List or create quests |
-| `/add` | Add artifact (source, thought, finding) |
-| `/save` | Commit and push |
-| `/pull` | Get latest |
+Commands: /activity, /handoff, /quest, /add, /save, /pull
+```
 """
 
             # Pre-approved permissions so setup doesn't prompt
@@ -1586,61 +1576,12 @@ Show welcome with available commands.
                 }
             }, indent=2)
 
-            # Command files - include in zip so no writes needed during setup
-            cmd_activity = """Fast view of what's happening.
-Topic: $ARGUMENTS
-
-1. Get user: `git config user.name`
-2. Query Neo4j via MCP for sessions, quests, team activity
-3. Display in table format"""
-
-            cmd_handoff = """Leave notes for others.
-Topic: $ARGUMENTS
-
-1. Summarize session
-2. Write to memory/conversations/YYYY-MM/DD-author-topic.md
-3. Create Session node in Neo4j
-4. Run /save"""
-
-            cmd_add = """Add an artifact.
-Arguments: $ARGUMENTS
-
-Types: source, thought, finding, decision
-Write to memory/artifacts/YYYY-MM-DD-title.md
-Create Artifact node in Neo4j"""
-
-            cmd_pull = """Pull latest.
-```bash
-git pull origin main --quiet
-git -C memory pull origin main --quiet
-```"""
-
-            cmd_save = """Save contributions.
-```bash
-git -C memory add -A
-git -C memory commit -m "Add: [description]"
-git -C memory push origin main
-```"""
-
-            cmd_quest = """Manage quests.
-Arguments: $ARGUMENTS
-
-- `/quest` - List active
-- `/quest [name]` - Show details
-- `/quest new` - Create new"""
-
-            # Create zip with all files - no writes needed during setup!
+            # Minimal zip - just bootstrap, real files come from egregore-core repo
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr('egregore/.mcp.json', mcp_json_content)
-                zf.writestr('egregore/CLAUDE.md', full_claude_md)
+                zf.writestr('egregore/CLAUDE.md', bootstrap_claude_md)
                 zf.writestr('egregore/.claude/settings.json', settings_json)
-                zf.writestr('egregore/.claude/commands/activity.md', cmd_activity)
-                zf.writestr('egregore/.claude/commands/handoff.md', cmd_handoff)
-                zf.writestr('egregore/.claude/commands/add.md', cmd_add)
-                zf.writestr('egregore/.claude/commands/pull.md', cmd_pull)
-                zf.writestr('egregore/.claude/commands/save.md', cmd_save)
-                zf.writestr('egregore/.claude/commands/quest.md', cmd_quest)
             zip_buffer.seek(0)
 
             await context.bot.send_document(
