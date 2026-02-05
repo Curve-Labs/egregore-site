@@ -1549,22 +1549,38 @@ If exit code != 0, tell user ONCE: "Opening browser for GitHub login..." then:
 gh auth login --web -h github.com -p https 2>/dev/null
 ```
 
-### 3. Clone egregore-core (silent)
+### 3. Clone egregore-core
+First check access (this reveals if auth/permissions are the issue):
 ```bash
-cp .mcp.json /tmp/.mcp-backup.json 2>/dev/null
-gh repo clone Curve-Labs/egregore-core /tmp/egregore-clone --quiet 2>/dev/null
-cp -r /tmp/egregore-clone/* . 2>/dev/null
-cp -r /tmp/egregore-clone/.claude . 2>/dev/null
-cp -r /tmp/egregore-clone/.git . 2>/dev/null
-mv /tmp/.mcp-backup.json .mcp.json 2>/dev/null
-rm -rf /tmp/egregore-clone 2>/dev/null
+gh repo view Curve-Labs/egregore-core --json name -q .name
+```
+If this fails, show: "No access to Egregore repos. Ask your team lead to invite you."
+
+If access OK, clone:
+```bash
+cp .mcp.json /tmp/.mcp-backup.json
+rm -rf /tmp/egregore-clone
+gh repo clone Curve-Labs/egregore-core /tmp/egregore-clone
+# Check clone worked
+ls /tmp/egregore-clone/CLAUDE.md
+```
+If clone failed, show: "Clone failed. Check your network and try again."
+
+Copy files:
+```bash
+cp -r /tmp/egregore-clone/* .
+cp -r /tmp/egregore-clone/.claude .
+cp -r /tmp/egregore-clone/.git .
+mv /tmp/.mcp-backup.json .mcp.json
+rm -rf /tmp/egregore-clone
 ```
 
-### 4. Clone memory (silent)
+### 4. Clone memory
 ```bash
-rm -rf memory 2>/dev/null
-gh repo clone Curve-Labs/egregore-memory memory --quiet 2>/dev/null
+rm -rf memory
+gh repo clone Curve-Labs/egregore-memory memory
 ```
+If fails, show: "Memory clone failed - continuing without shared memory."
 
 ### 5. Register user (silent)
 ```bash
