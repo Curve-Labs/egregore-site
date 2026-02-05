@@ -21,6 +21,7 @@ from typing import Optional
 from analytics import log_query_event, log_event
 import secrets
 import hashlib
+import uuid
 
 from dotenv import load_dotenv
 load_dotenv(override=False)
@@ -1471,7 +1472,6 @@ async def handle_spirit_init(request: Request) -> JSONResponse:
         return JSONResponse({"error": "Missing required fields"}, status_code=400)
 
     # Create Spirit node with registration token
-    import uuid
     reg_token = f"reg-{uuid.uuid4()}"
 
     result = run_query("""
@@ -1808,4 +1808,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-# Deploy trigger Thu Feb  5 17:35:16 CET 2026
