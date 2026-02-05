@@ -41,6 +41,13 @@ const categories = ['All', 'Research', 'Technical', 'Essay', 'Update'];
     const categoryFromUrl = urlParams.get('category');
     if (categoryFromUrl) {
       applyFilter(categoryFromUrl);
+      // Scroll to archive if coming from nav link (has hash or category param)
+      if (window.location.hash === '#archive') {
+        const archive = document.getElementById('archive');
+        if (archive) {
+          setTimeout(() => archive.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+      }
     }
 
     // Handle button clicks
