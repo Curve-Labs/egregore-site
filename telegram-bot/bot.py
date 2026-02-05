@@ -963,6 +963,37 @@ async def activity_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await handle_question(update, context, "What's been happening recently?")
 
 
+async def debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /debug command - show deployment info."""
+    if not is_allowed(update):
+        return
+
+    from pathlib import Path
+    import os
+
+    cwd = os.getcwd()
+    file_loc = Path(__file__).parent
+
+    # List files in likely locations
+    locations = {
+        "cwd": Path(cwd),
+        "__file__.parent": file_loc,
+        "/app": Path("/app"),
+        "/app/telegram-bot": Path("/app/telegram-bot"),
+    }
+
+    lines = [f"CWD: {cwd}", f"__file__: {__file__}", ""]
+
+    for name, path in locations.items():
+        if path.exists():
+            files = list(path.glob("*.zip")) + list(path.glob("*.py"))[:3]
+            lines.append(f"{name}: {[f.name for f in files]}")
+        else:
+            lines.append(f"{name}: (not found)")
+
+    await update.message.reply_text("\n".join(lines))
+
+
 async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /onboard command - manually trigger onboarding flow."""
     if not is_allowed(update):
@@ -1309,6 +1340,7 @@ Claude will handle everything else."""
                     break
 
             if zip_path:
+                logger.info(f"Found zip at: {zip_path}")
                 with open(zip_path, "rb") as f:
                     await context.bot.send_document(
                         chat_id=update.effective_chat.id,
@@ -1346,6 +1378,7 @@ def main() -> None:
 
     ptb_app.add_handler(CommandHandler("start", start_command))
     ptb_app.add_handler(CommandHandler("activity", activity_command))
+    ptb_app.add_handler(CommandHandler("debug", debug_command))
     ptb_app.add_handler(CommandHandler("onboard", onboard_command))
     ptb_app.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
     ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
