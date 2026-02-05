@@ -37,7 +37,16 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 import uvicorn
 
-from mcp_server import get_mcp_routes
+# MCP server - import safely
+try:
+    from mcp_server import get_mcp_routes
+    MCP_ENABLED = True
+except Exception as e:
+    import logging
+    logging.error(f"MCP server import failed: {e}")
+    MCP_ENABLED = False
+    def get_mcp_routes():
+        return []
 
 # =============================================================================
 # CONFIG
