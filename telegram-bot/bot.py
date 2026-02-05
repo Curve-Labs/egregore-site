@@ -60,6 +60,9 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 # Anthropic (for Haiku)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
+# Spirit adapter admin secret (required for /spirit/init)
+SPIRIT_ADMIN_SECRET = os.environ.get("SPIRIT_ADMIN_SECRET", "")
+
 # Security: Only respond to allowed chats/users
 # Channel: -1003081443167, Oz: 154132702, Ali: 952778083, Cem: 72463248, Pali: 515146069, Damla: 5549297057
 DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248, 515146069, 5549297057]
@@ -1446,9 +1449,10 @@ Claude will handle everything else."""
 # =============================================================================
 
 async def handle_spirit_init(request: Request) -> JSONResponse:
-    """TEMPORARY: Initialize a Spirit node in the bot's database.
+    """Initialize a Spirit node in the bot's database.
 
     POST /spirit/init
+    Headers: X-Admin-Secret: <SPIRIT_ADMIN_SECRET>
     {
         "spirit_id": "spirit-openclaw-cem-alter",
         "name": "Alter",
@@ -1457,6 +1461,14 @@ async def handle_spirit_init(request: Request) -> JSONResponse:
         "trust_level": "elevated"
     }
     """
+    # Require admin secret
+    if not SPIRIT_ADMIN_SECRET:
+        return JSONResponse({"error": "Spirit init not configured"}, status_code=503)
+
+    admin_secret = request.headers.get("X-Admin-Secret", "")
+    if not secrets.compare_digest(admin_secret, SPIRIT_ADMIN_SECRET):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
     try:
         data = await request.json()
     except Exception:
