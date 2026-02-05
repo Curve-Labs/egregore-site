@@ -118,21 +118,43 @@ logger.info(f"ALLOWED_CHAT_IDS: {ALLOWED_CHAT_IDS}")
 # =============================================================================
 
 neo4j_driver = None
+org_drivers = {}  # Cache of org-specific drivers
 
 def get_neo4j_driver():
-    """Get or create Neo4j driver."""
+    """Get or create default Neo4j driver."""
     global neo4j_driver
     if neo4j_driver is None and NEO4J_URI:
         neo4j_driver = GraphDatabase.driver(
             NEO4J_URI,
             auth=(NEO4J_USER, NEO4J_PASSWORD)
         )
-        logger.info("Neo4j driver initialized")
+        logger.info("Neo4j driver initialized (default)")
     return neo4j_driver
 
 
+def get_org_driver(org_config: dict):
+    """Get or create org-specific Neo4j driver."""
+    if not org_config:
+        return get_neo4j_driver()
+
+    org_name = org_config.get("name", "default")
+    uri = org_config.get("neo4j_uri")
+    user = org_config.get("neo4j_user", "neo4j")
+    password = org_config.get("neo4j_password")
+
+    if not uri or not password:
+        logger.warning(f"Neo4j not configured for org {org_name}")
+        return None
+
+    if org_name not in org_drivers:
+        org_drivers[org_name] = GraphDatabase.driver(uri, auth=(user, password))
+        logger.info(f"Neo4j driver initialized for org: {org_name}")
+
+    return org_drivers[org_name]
+
+
 def run_query(query: str, params: dict = None) -> list:
-    """Run a Cypher query and return results."""
+    """Run a Cypher query on default Neo4j."""
     driver = get_neo4j_driver()
     if not driver:
         logger.warning("Neo4j not configured")
@@ -144,6 +166,22 @@ def run_query(query: str, params: dict = None) -> list:
             return [dict(record) for record in result]
     except Exception as e:
         logger.error(f"Neo4j query failed: {e}")
+        return []
+
+
+def run_org_query(query: str, params: dict = None, org_config: dict = None) -> list:
+    """Run a Cypher query on org-specific Neo4j."""
+    driver = get_org_driver(org_config)
+    if not driver:
+        logger.warning("Neo4j not configured for org")
+        return []
+
+    try:
+        with driver.session() as session:
+            result = session.run(query, params or {})
+            return [dict(record) for record in result]
+    except Exception as e:
+        logger.error(f"Neo4j org query failed: {e}")
         return []
 
 
@@ -812,9 +850,21 @@ def is_allowed(update: Update) -> bool:
 async def handle_question(update: Update, context, question: str) -> None:
     """Main question handler - agent decides what to do."""
 
-    if not NEO4J_URI:
-        await update.message.reply_text("Knowledge graph not configured.")
-        return
+    # Get org config for this chat
+    chat_id = update.effective_chat.id
+    org_config = ORG_CONFIG.get(chat_id)
+    if not org_config:
+        # Fallback to default org
+        org_config = ORG_CONFIG.get(-1003081443167)
+
+    org_name = org_config.get("name", "default") if org_config else "default"
+    logger.info(f"handle_question: chat_id={chat_id}, org={org_name}")
+
+    # Check if Neo4j is configured for this org
+    if not org_config or not org_config.get("neo4j_uri"):
+        if not NEO4J_URI:
+            await update.message.reply_text("Knowledge graph not configured.")
+            return
 
     # Track user info for analytics
     user_id = None
@@ -872,12 +922,12 @@ async def handle_question(update: Update, context, question: str) -> None:
             await update.message.reply_text("I couldn't find that information.")
             return
 
-        # Run the query with timing
+        # Run the query with timing (org-specific Neo4j)
         cypher = QUERIES[query_name]["cypher"]
-        logger.info(f"Running query: {query_name} with params: {params}")
+        logger.info(f"Running query: {query_name} with params: {params} (org: {org_name})")
 
         neo4j_start = time.perf_counter()
-        results = run_query(cypher, params)
+        results = run_org_query(cypher, params, org_config)
         neo4j_latency = (time.perf_counter() - neo4j_start) * 1000
 
         if not results:
