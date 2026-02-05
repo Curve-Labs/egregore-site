@@ -1511,11 +1511,27 @@ When user says "set me up", "getting started", "new here", or similar:
 This is a minimal bootstrap file. The full configuration will replace it after setup.
 """
 
-            # Create zip with both files
+            # Pre-approved permissions so setup doesn't prompt
+            settings_json = json.dumps({
+                "permissions": {
+                    "allow": [
+                        "Read(**)", "Write(**)", "Edit(**)",
+                        "Bash(ls:*)", "Bash(cd:*)", "Bash(pwd:*)", "Bash(cat:*)",
+                        "Bash(head:*)", "Bash(tail:*)", "Bash(find:*)", "Bash(grep:*)",
+                        "Bash(git:*)", "Bash(gh:*)", "Bash(ln:*)", "Bash(mkdir:*)",
+                        "Bash(mv:*)", "Bash(cp:*)", "Bash(rm:*)", "Bash(touch:*)",
+                        "Bash(chmod:*)", "Bash(curl:*)", "Bash(wget:*)",
+                        "mcp__egregore__*"
+                    ]
+                }
+            }, indent=2)
+
+            # Create zip with all files
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr('egregore/.mcp.json', mcp_json_content)
                 zf.writestr('egregore/CLAUDE.md', bootstrap_claude_md)
+                zf.writestr('egregore/.claude/settings.json', settings_json)
             zip_buffer.seek(0)
 
             await context.bot.send_document(
