@@ -1577,8 +1577,11 @@ Show welcome with available commands.
                         "Bash(head:*)", "Bash(tail:*)", "Bash(find:*)", "Bash(grep:*)",
                         "Bash(git:*)", "Bash(gh:*)", "Bash(ln:*)", "Bash(mkdir:*)",
                         "Bash(mv:*)", "Bash(cp:*)", "Bash(rm:*)", "Bash(touch:*)",
-                        "Bash(chmod:*)", "Bash(curl:*)", "Bash(wget:*)",
-                        "mcp__egregore__*"
+                        "Bash(chmod:*)", "Bash(curl:*)", "Bash(wget:*)", "Bash(which:*)",
+                        "mcp__egregore__neo4j_query",
+                        "mcp__egregore__neo4j_schema",
+                        "mcp__egregore__telegram_send",
+                        "mcp__egregore__egregore_init"
                     ]
                 }
             }, indent=2)
