@@ -1498,17 +1498,74 @@ Claude will create everything else automatically."""
                 }
             }, indent=2)
 
-            # Generate minimal bootstrap CLAUDE.md
-            bootstrap_claude_md = """# Egregore Bootstrap
+            # Full CLAUDE.md - no bootstrap needed, everything is in zip
+            full_claude_md = """# Egregore
 
-When user says "set me up", "getting started", "new here", or similar:
+You are a member of **Egregore**, a collaborative intelligence system where humans and AI work together.
 
-1. Call the `mcp__egregore__egregore_init` tool to get all setup files
-2. Write each file from the response to the specified path
-3. Create the directories listed in the response
-4. Run the setup flow described in the full CLAUDE.md (one of the returned files)
+## Entry Point Behavior
 
-This is a minimal bootstrap file. The full configuration will replace it after setup.
+**On startup, check if user exists in Neo4j:**
+```cypher
+MATCH (p:Person {fullName: $gitUserName})
+RETURN p.name AS shortName
+```
+Where `$gitUserName` = `git config user.name`
+
+**If NOT found → Run setup flow below.**
+**If found → Welcome back:** Show recent sessions count, suggest /activity.
+
+---
+
+## Setup Flow
+
+When user says "set me up" or on first visit:
+
+### Step 1: Check gh CLI
+```bash
+which gh
+```
+If missing: `brew install gh`
+
+### Step 2: GitHub Auth
+```bash
+gh auth status 2>&1
+```
+If not authenticated: `gh auth login --web -h github.com -p https`
+
+### Step 3: Clone Memory
+```bash
+gh repo clone Curve-Labs/egregore-memory memory 2>/dev/null || mkdir -p memory/conversations memory/artifacts memory/quests
+```
+
+### Step 4: Register User
+```bash
+git config user.name
+```
+Ask: "What should we call you? (short name like 'jane')"
+
+Then register via MCP:
+```
+mcp__egregore__neo4j_query:
+  MERGE (p:Person {name: $shortName})
+  ON CREATE SET p.fullName = $fullName, p.joined = date()
+```
+
+### Step 5: Done
+Show welcome with available commands.
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/activity` | See recent sessions and team activity |
+| `/handoff` | Leave notes for others |
+| `/quest` | List or create quests |
+| `/add` | Add artifact (source, thought, finding) |
+| `/save` | Commit and push |
+| `/pull` | Get latest |
 """
 
             # Pre-approved permissions so setup doesn't prompt
@@ -1526,12 +1583,61 @@ This is a minimal bootstrap file. The full configuration will replace it after s
                 }
             }, indent=2)
 
-            # Create zip with all files
+            # Command files - include in zip so no writes needed during setup
+            cmd_activity = """Fast view of what's happening.
+Topic: $ARGUMENTS
+
+1. Get user: `git config user.name`
+2. Query Neo4j via MCP for sessions, quests, team activity
+3. Display in table format"""
+
+            cmd_handoff = """Leave notes for others.
+Topic: $ARGUMENTS
+
+1. Summarize session
+2. Write to memory/conversations/YYYY-MM/DD-author-topic.md
+3. Create Session node in Neo4j
+4. Run /save"""
+
+            cmd_add = """Add an artifact.
+Arguments: $ARGUMENTS
+
+Types: source, thought, finding, decision
+Write to memory/artifacts/YYYY-MM-DD-title.md
+Create Artifact node in Neo4j"""
+
+            cmd_pull = """Pull latest.
+```bash
+git pull origin main --quiet
+git -C memory pull origin main --quiet
+```"""
+
+            cmd_save = """Save contributions.
+```bash
+git -C memory add -A
+git -C memory commit -m "Add: [description]"
+git -C memory push origin main
+```"""
+
+            cmd_quest = """Manage quests.
+Arguments: $ARGUMENTS
+
+- `/quest` - List active
+- `/quest [name]` - Show details
+- `/quest new` - Create new"""
+
+            # Create zip with all files - no writes needed during setup!
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr('egregore/.mcp.json', mcp_json_content)
-                zf.writestr('egregore/CLAUDE.md', bootstrap_claude_md)
+                zf.writestr('egregore/CLAUDE.md', full_claude_md)
                 zf.writestr('egregore/.claude/settings.json', settings_json)
+                zf.writestr('egregore/.claude/commands/activity.md', cmd_activity)
+                zf.writestr('egregore/.claude/commands/handoff.md', cmd_handoff)
+                zf.writestr('egregore/.claude/commands/add.md', cmd_add)
+                zf.writestr('egregore/.claude/commands/pull.md', cmd_pull)
+                zf.writestr('egregore/.claude/commands/save.md', cmd_save)
+                zf.writestr('egregore/.claude/commands/quest.md', cmd_quest)
             zip_buffer.seek(0)
 
             await context.bot.send_document(
