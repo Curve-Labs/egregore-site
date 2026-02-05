@@ -941,6 +941,41 @@ async def handle_question(update: Update, context, question: str) -> None:
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command."""
+    user = update.effective_user
+
+    # In private chat, start onboarding flow directly
+    if update.effective_chat.type == "private":
+        # Determine org (use test org if available)
+        org_config = None
+        if TESTORG_CHANNEL_ID and TESTORG_CHANNEL_ID in ORG_CONFIG:
+            org_config = ORG_CONFIG[TESTORG_CHANNEL_ID]
+        else:
+            org_config = ORG_CONFIG.get(-1003081443167)
+
+        if org_config:
+            ascii_art = """
+███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+"""
+            welcome_msg = f"""{ascii_art}
+Welcome to Egregore!
+
+I'll help you get set up. What's your GitHub username?
+
+(Just type your username, like: janesmith)"""
+
+            await update.message.reply_text(welcome_msg)
+            onboarding_state[user.id] = {
+                "step": "awaiting_github",
+                "org_config": org_config,
+                "first_name": user.first_name
+            }
+            return
+
     if not is_allowed(update):
         await update.message.reply_text("This bot is private to Egregore.")
         return
