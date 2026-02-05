@@ -1487,8 +1487,16 @@ async def handle_spirit_activate(request: Request) -> JSONResponse:
             MATCH (s:Spirit {registrationToken: $token})
             RETURN s.status AS status, s.tokenExpiresAt AS expires, datetime() AS now
         """, {"token": registration_token})
-        logger.info(f"Spirit debug query: {debug_result}")
-        return JSONResponse({"error": "Invalid or expired token", "debug": debug_result}, status_code=404)
+        # Count ALL Spirits and ALL nodes
+        count_result = run_query("MATCH (s:Spirit) RETURN count(s) AS spirit_count")
+        all_labels = run_query("CALL db.labels() YIELD label RETURN collect(label) AS labels")
+        logger.info(f"Spirit debug query: {debug_result}, counts: {count_result}, labels: {all_labels}")
+        return JSONResponse({
+            "error": "Invalid or expired token",
+            "debug_token_match": debug_result,
+            "spirit_count": count_result,
+            "db_labels": all_labels
+        }, status_code=404)
 
     spirit = result[0]
     spirit_id = spirit["id"]
