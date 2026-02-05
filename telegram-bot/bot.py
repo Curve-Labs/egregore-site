@@ -18,7 +18,9 @@ import time
 from datetime import date
 from typing import Optional
 
-from analytics import log_query_event
+from analytics import log_query_event, log_event
+import secrets
+import hashlib
 
 from dotenv import load_dotenv
 load_dotenv(override=False)
@@ -1042,6 +1044,219 @@ async def handle_notify_request(request: Request) -> JSONResponse:
 
 
 # =============================================================================
+# SPIRIT ADAPTER ENDPOINTS
+# =============================================================================
+
+async def handle_spirit_activate(request: Request) -> JSONResponse:
+    """Activate a pending external Spirit.
+
+    POST /spirit/activate
+    {
+        "registration_token": "reg-...",
+        "platform": {"name": "openclaw", "version": "2026.2.2"},
+        "endpoint": "http://localhost:8765",
+        "capabilities": ["shell", "web", "fs"]
+    }
+
+    Returns API key (one-time) on success.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    registration_token = data.get("registration_token")
+    platform_info = data.get("platform", {})
+    endpoint = data.get("endpoint")
+    capabilities = data.get("capabilities", [])
+
+    if not registration_token:
+        return JSONResponse({"error": "Missing registration_token"}, status_code=400)
+
+    # Find pending Spirit with this token (not expired)
+    result = run_query("""
+        MATCH (s:Spirit {registrationToken: $token, status: "pending"})
+        WHERE s.tokenExpiresAt > datetime()
+        RETURN s.id AS id, s.name AS name, s.trustLevel AS trustLevel
+    """, {"token": registration_token})
+
+    if not result:
+        return JSONResponse({"error": "Invalid or expired token"}, status_code=404)
+
+    spirit = result[0]
+    spirit_id = spirit["id"]
+    spirit_name = spirit["name"]
+
+    # Generate API key: sk_egregore_[short_id]_[random]
+    short_id = spirit_id.replace("spirit-", "")[:15].replace("-", "_")
+    api_key = f"sk_egregore_{short_id}_{secrets.token_hex(12)}"
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+    # Activate the Spirit
+    run_query("""
+        MATCH (s:Spirit {registrationToken: $token})
+        SET s.status = "manifest",
+            s.apiKeyHash = $apiKeyHash,
+            s.endpoint = $endpoint,
+            s.platformVersion = $version,
+            s.capabilities = $capabilities,
+            s.activatedAt = datetime(),
+            s.lastHeartbeat = datetime()
+        REMOVE s.registrationToken, s.tokenExpiresAt
+    """, {
+        "token": registration_token,
+        "apiKeyHash": api_key_hash,
+        "endpoint": endpoint,
+        "version": platform_info.get("version", "unknown"),
+        "capabilities": capabilities
+    })
+
+    # Log the activation
+    log_event(
+        component="spirit",
+        operation="activate",
+        success=True,
+        metadata={
+            "spirit_id": spirit_id,
+            "spirit_name": spirit_name,
+            "platform": platform_info.get("name", "unknown"),
+            "platform_version": platform_info.get("version", "unknown"),
+            "capabilities": capabilities
+        }
+    )
+
+    logger.info(f"Spirit activated: {spirit_id} ({spirit_name})")
+
+    return JSONResponse({
+        "status": "activated",
+        "spirit_id": spirit_id,
+        "spirit_name": spirit_name,
+        "api_key": api_key  # One-time return - store this!
+    })
+
+
+async def handle_spirit_heartbeat(request: Request) -> JSONResponse:
+    """Heartbeat from an active Spirit.
+
+    POST /spirit/heartbeat
+    Headers: Authorization: Bearer sk_egregore_...
+    {
+        "status": "idle" | "working" | "completing",
+        "task_id": "..." (optional)
+    }
+    """
+    # Validate API key
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer sk_egregore_"):
+        return JSONResponse({"error": "Invalid authorization"}, status_code=401)
+
+    api_key = auth_header.replace("Bearer ", "")
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+    # Find Spirit by API key hash
+    result = run_query("""
+        MATCH (s:Spirit {apiKeyHash: $hash, status: "manifest"})
+        SET s.lastHeartbeat = datetime()
+        RETURN s.id AS id, s.name AS name
+    """, {"hash": api_key_hash})
+
+    if not result:
+        return JSONResponse({"error": "Spirit not found or not active"}, status_code=404)
+
+    spirit = result[0]
+
+    try:
+        data = await request.json()
+        status = data.get("status", "idle")
+    except Exception:
+        status = "idle"
+
+    logger.debug(f"Heartbeat from {spirit['name']}: {status}")
+
+    return JSONResponse({
+        "status": "ok",
+        "spirit_id": spirit["id"]
+    })
+
+
+async def handle_spirit_callback(request: Request) -> JSONResponse:
+    """Callback when a Spirit completes a task.
+
+    POST /spirit/callback
+    Headers: Authorization: Bearer sk_egregore_...
+    {
+        "task_id": "...",
+        "status": "fulfilled" | "failed" | "timeout",
+        "outputs": [...],
+        "essence": {"tokens_in": N, "tokens_out": N, "model": "...", "cost_usd": N}
+    }
+    """
+    # Validate API key
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer sk_egregore_"):
+        return JSONResponse({"error": "Invalid authorization"}, status_code=401)
+
+    api_key = auth_header.replace("Bearer ", "")
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+    # Find Spirit by API key hash
+    result = run_query("""
+        MATCH (s:Spirit {apiKeyHash: $hash, status: "manifest"})-[:INVOKED_BY]->(p:Person)
+        RETURN s.id AS spirit_id, s.name AS spirit_name, p.name AS vessel_name
+    """, {"hash": api_key_hash})
+
+    if not result:
+        return JSONResponse({"error": "Spirit not found or not active"}, status_code=404)
+
+    spirit_info = result[0]
+
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    task_id = data.get("task_id", "unknown")
+    status = data.get("status", "fulfilled")
+    outputs = data.get("outputs", [])
+    essence = data.get("essence", {})
+
+    # Log the task completion
+    log_event(
+        component="spirit",
+        operation=f"task:{status}",
+        tokens_in=essence.get("tokens_in", 0),
+        tokens_out=essence.get("tokens_out", 0),
+        model=essence.get("model", "unknown"),
+        success=(status == "fulfilled"),
+        user_name=spirit_info["vessel_name"],
+        metadata={
+            "spirit_id": spirit_info["spirit_id"],
+            "spirit_name": spirit_info["spirit_name"],
+            "task_id": task_id,
+            "outputs_count": len(outputs),
+            "cost_usd": essence.get("cost_usd", 0)
+        }
+    )
+
+    # Update Spirit heartbeat
+    run_query("""
+        MATCH (s:Spirit {id: $id})
+        SET s.lastHeartbeat = datetime()
+    """, {"id": spirit_info["spirit_id"]})
+
+    logger.info(f"Task callback from {spirit_info['spirit_name']}: {task_id} -> {status}")
+
+    # TODO: Process outputs (create artifacts, sessions, etc.) based on trust level
+    # For now, just acknowledge
+
+    return JSONResponse({
+        "status": "received",
+        "task_id": task_id,
+        "outputs_processed": len(outputs)
+    })
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -1071,7 +1286,7 @@ def main() -> None:
             """Health check endpoint."""
             return PlainTextResponse("ok")
 
-        # Single Starlette app with both endpoints
+        # Single Starlette app with all endpoints
         # Use token as webhook path for security (only Telegram knows it)
         webhook_path = f"/{BOT_TOKEN}"
         starlette_app = Starlette(
@@ -1079,6 +1294,10 @@ def main() -> None:
                 Route(webhook_path, handle_telegram_webhook, methods=["POST"]),
                 Route("/notify", handle_notify_request, methods=["POST"]),
                 Route("/health", health_check, methods=["GET"]),
+                # Spirit adapter endpoints
+                Route("/spirit/activate", handle_spirit_activate, methods=["POST"]),
+                Route("/spirit/heartbeat", handle_spirit_heartbeat, methods=["POST"]),
+                Route("/spirit/callback", handle_spirit_callback, methods=["POST"]),
             ]
         )
 
