@@ -27,7 +27,7 @@ import httpx
 from neo4j import GraphDatabase
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, ChatMemberHandler, filters, ContextTypes
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -46,10 +46,13 @@ BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 PORT = int(os.environ.get("PORT", 8443))
 
-# Neo4j Aura
+# Neo4j Aura (default/legacy - used if no org match)
 NEO4J_URI = os.environ.get("NEO4J_URI", "")
 NEO4J_USER = os.environ.get("NEO4J_USER", "")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
+
+# GitHub token for adding collaborators
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 # Anthropic (for Haiku)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -60,6 +63,43 @@ DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248, 515146069, 55
 ALLOWED_CHAT_IDS = [
     int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
 ] or DEFAULT_ALLOWED
+
+# =============================================================================
+# MULTI-ORG CONFIG
+# =============================================================================
+
+TESTORG_CHANNEL_ID = int(os.environ.get("TESTORG_CHANNEL_ID", "0") or "0")
+
+ORG_CONFIG = {
+    -1003081443167: {
+        "name": "curvelabs",
+        "neo4j_uri": os.environ.get("NEO4J_URI", ""),
+        "neo4j_user": os.environ.get("NEO4J_USER", "neo4j"),
+        "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
+    },
+}
+
+if TESTORG_CHANNEL_ID:
+    ORG_CONFIG[TESTORG_CHANNEL_ID] = {
+        "name": "testorg",
+        "neo4j_uri": os.environ.get("TESTORG_NEO4J_URI", ""),
+        "neo4j_user": os.environ.get("TESTORG_NEO4J_USER", "neo4j"),
+        "neo4j_password": os.environ.get("TESTORG_NEO4J_PASSWORD", ""),
+    }
+
+ONBOARDING_REPOS = ["Curve-Labs/egregore-core", "Curve-Labs/egregore-memory"]
+onboarding_state = {}
+
+def get_org_for_chat(chat_id: int, user_id: int = None) -> dict:
+    """Get org config for a chat."""
+    if chat_id in ORG_CONFIG:
+        return ORG_CONFIG[chat_id]
+    return {
+        "name": "default",
+        "neo4j_uri": NEO4J_URI,
+        "neo4j_user": NEO4J_USER,
+        "neo4j_password": NEO4J_PASSWORD,
+    }
 
 # Log startup config
 logger.info("=== Egregore Bot Starting ===")
@@ -928,6 +968,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not update.message or not update.message.text:
         return
 
+    # Check for onboarding DM first
+    if update.effective_chat.type == "private":
+        if await handle_onboarding_dm(update, context):
+            return
+
     if not is_allowed(update):
         return
 
@@ -1042,6 +1087,163 @@ async def handle_notify_request(request: Request) -> JSONResponse:
 
 
 # =============================================================================
+# NEW MEMBER ONBOARDING
+# =============================================================================
+
+async def add_github_collaborator(github_username: str, repo: str) -> bool:
+    """Add a user as collaborator to a GitHub repo."""
+    if not GITHUB_TOKEN:
+        logger.warning("No GITHUB_TOKEN configured")
+        return False
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.put(
+                f"https://api.github.com/repos/{repo}/collaborators/{github_username}",
+                headers={
+                    "Authorization": f"Bearer {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                },
+                json={"permission": "push"},
+                timeout=10
+            )
+            if resp.status_code in [201, 204]:
+                logger.info(f"Added {github_username} as collaborator to {repo}")
+                return True
+            else:
+                logger.error(f"Failed to add collaborator: {resp.status_code} {resp.text}")
+                return False
+        except Exception as e:
+            logger.error(f"GitHub API error: {e}")
+            return False
+
+
+async def create_person_node(name: str, github: str, telegram_id: int, org_config: dict) -> bool:
+    """Create a Person node in Neo4j for new member."""
+    try:
+        driver = get_neo4j_driver_for_org(org_config)
+        if not driver:
+            return False
+        with driver.session() as session:
+            session.run(
+                """MERGE (p:Person {telegramId: $tid})
+                   ON CREATE SET p.name = $name, p.github = $github, p.joined = date()
+                   ON MATCH SET p.github = $github""",
+                {"name": name.lower(), "github": github, "tid": telegram_id}
+            )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create Person node: {e}")
+        return False
+
+
+def get_neo4j_driver_for_org(org_config: dict):
+    """Get Neo4j driver for a specific org."""
+    uri = org_config.get("neo4j_uri", "")
+    if not uri:
+        return None
+    return GraphDatabase.driver(
+        uri,
+        auth=(org_config.get("neo4j_user", "neo4j"), org_config.get("neo4j_password", ""))
+    )
+
+
+async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle new members joining a group."""
+    if not update.chat_member:
+        return
+
+    old_status = update.chat_member.old_chat_member.status
+    new_status = update.chat_member.new_chat_member.status
+
+    if new_status not in ["member", "administrator"] or old_status in ["member", "administrator"]:
+        return
+
+    new_member = update.chat_member.new_chat_member.user
+    chat_id = update.effective_chat.id
+
+    if chat_id not in ORG_CONFIG:
+        return
+
+    org_config = ORG_CONFIG[chat_id]
+    logger.info(f"New member {new_member.first_name} ({new_member.id}) joined {org_config['name']}")
+
+    try:
+        welcome_msg = f"""Welcome to Egregore!
+
+I'll help you get set up. What's your GitHub username?
+
+(Just type your username, like: janesmith)"""
+
+        await context.bot.send_message(chat_id=new_member.id, text=welcome_msg)
+        onboarding_state[new_member.id] = {
+            "step": "awaiting_github",
+            "org_config": org_config,
+            "first_name": new_member.first_name
+        }
+    except Exception as e:
+        logger.error(f"Failed to DM new member {new_member.id}: {e}")
+
+
+async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Handle DM responses during onboarding. Returns True if handled."""
+    if not update.message or not update.effective_user:
+        return False
+
+    user_id = update.effective_user.id
+    if user_id not in onboarding_state:
+        return False
+
+    state = onboarding_state[user_id]
+    text = update.message.text.strip()
+
+    if state["step"] == "awaiting_github":
+        github_username = text.replace("@", "").strip()
+        await update.message.reply_text(f"Got it! Adding {github_username} to the Egregore repos...")
+
+        success = True
+        for repo in ONBOARDING_REPOS:
+            if not await add_github_collaborator(github_username, repo):
+                success = False
+
+        await create_person_node(
+            name=state["first_name"],
+            github=github_username,
+            telegram_id=user_id,
+            org_config=state["org_config"]
+        )
+
+        if success:
+            complete_msg = f"""You're all set!
+
+I've added you as a collaborator to egregore-core and egregore-memory.
+
+Next steps:
+
+1. Open terminal and run:
+   gh auth login
+   gh repo clone Curve-Labs/egregore-core
+   cd egregore-core
+   claude
+
+2. Say: "set me up"
+
+That's it! Questions? Just ask me here."""
+
+            await update.message.reply_text(complete_msg)
+        else:
+            await update.message.reply_text(
+                "There was an issue adding you to GitHub. Please check your username and try again."
+            )
+
+        del onboarding_state[user_id]
+        return True
+
+    return False
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -1054,6 +1256,7 @@ def main() -> None:
 
     ptb_app.add_handler(CommandHandler("start", start_command))
     ptb_app.add_handler(CommandHandler("activity", activity_command))
+    ptb_app.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
     ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     if WEBHOOK_URL:
