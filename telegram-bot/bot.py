@@ -1293,12 +1293,22 @@ Claude will handle everything else."""
 
             await update.message.reply_text(complete_msg)
 
-            # TODO: Send zip file here
-            # For now, send download instructions
-            await update.message.reply_text(
-                "Get the setup zip from: (ask admin for link)\n\n"
-                "Or if you have git: gh repo clone Curve-Labs/egregore-core"
-            )
+            # Send the setup zip file
+            import os
+            zip_path = os.path.join(os.path.dirname(__file__), "egregore-setup.zip")
+            if os.path.exists(zip_path):
+                with open(zip_path, "rb") as f:
+                    await context.bot.send_document(
+                        chat_id=update.effective_chat.id,
+                        document=f,
+                        filename="egregore-setup.zip",
+                        caption="Unzip this, open terminal in the folder, type 'claude', say 'set me up'"
+                    )
+            else:
+                await update.message.reply_text(
+                    "Setup zip not found. Ask admin or clone manually:\n"
+                    "gh repo clone Curve-Labs/egregore-core"
+                )
         else:
             await update.message.reply_text(
                 "There was an issue adding you to GitHub. Please check your username and try again."
