@@ -963,6 +963,66 @@ async def activity_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await handle_question(update, context, "What's been happening recently?")
 
 
+async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /onboard command - manually trigger onboarding flow."""
+    if not is_allowed(update):
+        return
+
+    user = update.effective_user
+    chat_id = update.effective_chat.id
+
+    # Determine which org to use
+    org_config = None
+    if chat_id in ORG_CONFIG:
+        org_config = ORG_CONFIG[chat_id]
+    elif update.effective_chat.type == "private":
+        # In DM, use test org if available, otherwise curvelabs
+        if TESTORG_CHANNEL_ID and TESTORG_CHANNEL_ID in ORG_CONFIG:
+            org_config = ORG_CONFIG[TESTORG_CHANNEL_ID]
+        else:
+            org_config = ORG_CONFIG.get(-1003081443167)
+
+    if not org_config:
+        await update.message.reply_text("No org configured for onboarding.")
+        return
+
+    # If in a group, DM the user
+    if update.effective_chat.type in ["group", "supergroup"]:
+        try:
+            welcome_msg = f"""Welcome to Egregore!
+
+I'll help you get set up. What's your GitHub username?
+
+(Just type your username, like: janesmith)"""
+
+            await context.bot.send_message(chat_id=user.id, text=welcome_msg)
+            onboarding_state[user.id] = {
+                "step": "awaiting_github",
+                "org_config": org_config,
+                "first_name": user.first_name
+            }
+            await update.message.reply_text("Check your DMs! I've sent you onboarding instructions.")
+        except Exception as e:
+            logger.error(f"Failed to DM user {user.id}: {e}")
+            await update.message.reply_text(
+                "I couldn't DM you. Please start a chat with me first, then try /onboard again."
+            )
+    else:
+        # Already in DM, start directly
+        welcome_msg = f"""Welcome to Egregore!
+
+I'll help you get set up. What's your GitHub username?
+
+(Just type your username, like: janesmith)"""
+
+        await update.message.reply_text(welcome_msg)
+        onboarding_state[user.id] = {
+            "step": "awaiting_github",
+            "org_config": org_config,
+            "first_name": user.first_name
+        }
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle any text message."""
     if not update.message or not update.message.text:
@@ -1217,21 +1277,24 @@ async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYP
         if success:
             complete_msg = f"""You're all set!
 
-I've added you as a collaborator to egregore-core and egregore-memory.
+I've added you as a collaborator.
 
-Next steps:
+Download the setup file I'm sending, unzip it, then:
 
-1. Open terminal and run:
-   gh auth login
-   gh repo clone Curve-Labs/egregore-core
-   cd egregore-core
-   claude
+1. Open terminal in that folder
+2. Type: claude
+3. Say: "set me up"
 
-2. Say: "set me up"
-
-That's it! Questions? Just ask me here."""
+Claude will handle everything else."""
 
             await update.message.reply_text(complete_msg)
+
+            # TODO: Send zip file here
+            # For now, send download instructions
+            await update.message.reply_text(
+                "Get the setup zip from: (ask admin for link)\n\n"
+                "Or if you have git: gh repo clone Curve-Labs/egregore-core"
+            )
         else:
             await update.message.reply_text(
                 "There was an issue adding you to GitHub. Please check your username and try again."
@@ -1256,6 +1319,7 @@ def main() -> None:
 
     ptb_app.add_handler(CommandHandler("start", start_command))
     ptb_app.add_handler(CommandHandler("activity", activity_command))
+    ptb_app.add_handler(CommandHandler("onboard", onboard_command))
     ptb_app.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
     ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
