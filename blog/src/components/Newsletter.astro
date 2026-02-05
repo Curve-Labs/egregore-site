@@ -9,7 +9,15 @@
     </p>
   </div>
 
-  <form class="newsletter-form" action="#" method="POST">
+  <form
+    class="newsletter-form"
+    name="newsletter"
+    method="POST"
+    data-netlify="true"
+    netlify-honeypot="bot-field"
+  >
+    <input type="hidden" name="form-name" value="newsletter" />
+    <p class="hidden"><input name="bot-field" /></p>
     <input
       type="email"
       name="email"
@@ -22,6 +30,42 @@
     </button>
   </form>
 </section>
+
+<script>
+  const form = document.querySelector('.newsletter-form');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form as HTMLFormElement);
+    const btn = form.querySelector('.newsletter-btn') as HTMLButtonElement;
+    const originalText = btn.textContent;
+
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    try {
+      const response = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(formData as any).toString()
+      });
+
+      if (response.ok) {
+        btn.textContent = '✓ Subscribed!';
+        (form.querySelector('.newsletter-input') as HTMLInputElement).value = '';
+      } else {
+        throw new Error('Failed');
+      }
+    } catch {
+      btn.textContent = 'Error - try again';
+      btn.disabled = false;
+    }
+
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 3000);
+  });
+</script>
 
 <style>
   .newsletter {
@@ -97,6 +141,10 @@
 
   .newsletter-btn:hover {
     background: var(--accent-soft);
+  }
+
+  .hidden {
+    display: none;
   }
 
   @media (max-width: 768px) {
