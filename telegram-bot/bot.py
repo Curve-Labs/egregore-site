@@ -1498,32 +1498,19 @@ Claude will create everything else automatically."""
                 }
             }, indent=2)
 
-            # Bootstrap CLAUDE.md - smooth, product-like onboarding
+            # Bootstrap CLAUDE.md - MCP-based onboarding (no GitHub needed)
             bootstrap_claude_md = """# Egregore Bootstrap
-
-## CRITICAL UX RULES - READ FIRST
-
-**This is a PRODUCT onboarding, not a CLI session.**
-
-1. **NEVER show command output** - suppress all bash output with `2>/dev/null` or `--quiet`
-2. **NEVER ask permission** - permissions are pre-approved, just execute
-3. **NEVER show logs or technical details** - users don't want to see git output
-4. **ONLY show clean progress messages** - like a web app loading screen
-5. **Handle errors gracefully** - if something fails, show friendly message and continue
-
----
 
 ## When user says "set me up"
 
-Show ONLY this during setup:
+**Everything comes from MCP. No GitHub, no cloning, no auth needed.**
 
+Show this progress (user sees ONLY these lines):
 ```
 Setting up Egregore...
 
-✓ Checking dependencies
-✓ Connecting to GitHub
-✓ Downloading Egregore
-✓ Setting up shared memory
+✓ Downloading configuration
+✓ Setting up workspace
 ✓ Registering you
 
 Welcome to Egregore, [name]!
@@ -1531,71 +1518,52 @@ Welcome to Egregore, [name]!
 
 ---
 
-## Behind the scenes (user sees NOTHING)
+## Steps (execute silently)
 
-Execute these silently. ALL output suppressed. NO prompts.
+### Step 1: Call egregore_init MCP tool
 
-### 1. Check gh CLI (silent)
-```bash
-which gh >/dev/null 2>&1 || brew install gh >/dev/null 2>&1
+Call the MCP tool:
+```
+mcp__egregore__egregore_init
 ```
 
-### 2. GitHub auth (only step that may need user)
+This returns a JSON with:
+- `files`: dict of {path: content} to write
+- `directories`: list of dirs to create
+- `instructions`: ignore this
+
+### Step 2: Write all files
+
+For each file in the response, write it using the Write tool.
+The files include CLAUDE.md, settings, and all commands.
+
+**IMPORTANT**: Preserve the .mcp.json that already exists (it has the API key).
+
+### Step 3: Create directories
+
+Create these directories if they don't exist:
+- memory/conversations
+- memory/artifacts
+- memory/quests
+
+### Step 4: Register user
+
+Get user's name:
 ```bash
-gh auth status >/dev/null 2>&1
-```
-If exit code != 0, tell user ONCE: "Opening browser for GitHub login..." then:
-```bash
-gh auth login --web -h github.com -p https 2>/dev/null
+git config user.name 2>/dev/null || echo ""
 ```
 
-### 3. Clone egregore-core
-First check access (this reveals if auth/permissions are the issue):
-```bash
-gh repo view Curve-Labs/egregore-core --json name -q .name
-```
-If this fails, show: "No access to Egregore repos. Ask your team lead to invite you."
+Ask ONCE: "What should we call you? (short name like 'oz')"
 
-If access OK, clone:
-```bash
-cp .mcp.json /tmp/.mcp-backup.json
-rm -rf /tmp/egregore-clone
-gh repo clone Curve-Labs/egregore-core /tmp/egregore-clone
-# Check clone worked
-ls /tmp/egregore-clone/CLAUDE.md
-```
-If clone failed, show: "Clone failed. Check your network and try again."
-
-Copy files:
-```bash
-cp -r /tmp/egregore-clone/* .
-cp -r /tmp/egregore-clone/.claude .
-cp -r /tmp/egregore-clone/.git .
-mv /tmp/.mcp-backup.json .mcp.json
-rm -rf /tmp/egregore-clone
-```
-
-### 4. Clone memory
-```bash
-rm -rf memory
-gh repo clone Curve-Labs/egregore-memory memory
-```
-If fails, show: "Memory clone failed - continuing without shared memory."
-
-### 5. Register user (silent)
-```bash
-FULLNAME=$(git config user.name 2>/dev/null)
-```
-Ask ONCE: "What should we call you? (short name like 'jane')"
-
-Then silently call MCP:
+Register in Neo4j:
 ```
 mcp__egregore__neo4j_query with:
   query: "MERGE (p:Person {name: $shortName}) ON CREATE SET p.fullName = $fullName, p.joined = date() RETURN p.name"
-  params: {shortName: "<user input>", fullName: "<from git config>"}
+  params: {shortName: "<user answer>", fullName: "<from git config or user answer>"}
 ```
 
-### 6. Done - show welcome
+### Step 5: Show welcome
+
 ```
 ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
 ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
@@ -1618,9 +1586,8 @@ Just start talking, or try a command.
 
 ## Error handling
 
-If GitHub clone fails: "Couldn't connect to GitHub. Run `gh auth login` and try again."
-If Neo4j fails: Continue anyway, user can register later.
-NEVER show stack traces or technical errors.
+If MCP call fails: "Setup failed. Check your internet connection and try again."
+If Neo4j fails: Continue anyway, show welcome. User can register later.
 """
 
             # Pre-approved permissions - enumerate all commands for smooth onboarding
