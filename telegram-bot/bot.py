@@ -1444,6 +1444,70 @@ Claude will handle everything else."""
 # SPIRIT ADAPTER ENDPOINTS
 # =============================================================================
 
+async def handle_spirit_init(request: Request) -> JSONResponse:
+    """TEMPORARY: Initialize a Spirit node in the bot's database.
+
+    POST /spirit/init
+    {
+        "spirit_id": "spirit-openclaw-cem-alter",
+        "name": "Alter",
+        "vessel": "cem",
+        "platform": "openclaw",
+        "trust_level": "elevated"
+    }
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    spirit_id = data.get("spirit_id")
+    name = data.get("name")
+    vessel = data.get("vessel")
+    platform = data.get("platform", "unknown")
+    trust_level = data.get("trust_level", "standard")
+
+    if not all([spirit_id, name, vessel]):
+        return JSONResponse({"error": "Missing required fields"}, status_code=400)
+
+    # Create Spirit node with registration token
+    import uuid
+    reg_token = f"reg-{uuid.uuid4()}"
+
+    result = run_query("""
+        MATCH (p:Person {name: $vessel})
+        CREATE (s:Spirit {
+            id: $spiritId,
+            name: $name,
+            platform: $platform,
+            status: "pending",
+            trustLevel: $trustLevel,
+            registrationToken: $regToken,
+            tokenExpiresAt: datetime() + duration('PT2H'),
+            created: datetime()
+        })
+        CREATE (s)-[:INVOKED_BY]->(p)
+        RETURN s.id AS id, s.registrationToken AS token, s.tokenExpiresAt AS expires
+    """, {
+        "spiritId": spirit_id,
+        "name": name,
+        "vessel": vessel,
+        "platform": platform,
+        "trustLevel": trust_level,
+        "regToken": reg_token
+    })
+
+    if not result:
+        return JSONResponse({"error": "Failed to create Spirit (vessel not found?)"}, status_code=404)
+
+    return JSONResponse({
+        "status": "created",
+        "spirit_id": result[0]["id"],
+        "registration_token": result[0]["token"],
+        "expires": str(result[0]["expires"])
+    })
+
+
 async def handle_spirit_activate(request: Request) -> JSONResponse:
     """Activate a pending external Spirit.
 
@@ -1713,6 +1777,7 @@ def main() -> None:
                 Route("/notify", handle_notify_request, methods=["POST"]),
                 Route("/health", health_check, methods=["GET"]),
                 # Spirit adapter endpoints
+                Route("/spirit/init", handle_spirit_init, methods=["POST"]),
                 Route("/spirit/activate", handle_spirit_activate, methods=["POST"]),
                 Route("/spirit/heartbeat", handle_spirit_heartbeat, methods=["POST"]),
                 Route("/spirit/callback", handle_spirit_callback, methods=["POST"]),
