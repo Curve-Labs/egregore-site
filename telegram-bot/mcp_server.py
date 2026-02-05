@@ -183,6 +183,15 @@ MCP_TOOLS = [
             },
             "required": ["recipient", "message"]
         }
+    },
+    {
+        "name": "egregore_init",
+        "description": "Initialize Egregore in a new directory. Returns all files needed for bootstrap (CLAUDE.md, commands, settings). Claude should write these files locally.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     }
 ]
 
@@ -267,10 +276,462 @@ async def handle_telegram_send(args: dict, org_config: dict) -> dict:
         return {"error": str(e)}
 
 
+async def handle_egregore_init(args: dict, org_config: dict) -> dict:
+    """Return all bootstrap files for Egregore initialization.
+
+    Claude should write these files locally after calling this tool.
+    """
+    org_name = org_config.get("name", "egregore")
+
+    # Core CLAUDE.md - simplified for bootstrap
+    claude_md = '''# Egregore
+
+You are a member of **Egregore**, a collaborative intelligence system where humans and AI work together.
+
+## What is Egregore?
+
+Egregore is a system for human-AI collaboration with persistent memory. It provides:
+
+- **Shared Memory** — Knowledge that persists across sessions and people
+- **Neo4j Graph** — Fast queries across sessions, artifacts, quests, and people
+- **Telegram Integration** — Team notifications and bot queries
+- **Git-backed Storage** — Everything versioned and auditable
+
+When you work here, sessions get logged. When you discover something important, you `/add` it. When you're done, you `/handoff` to leave notes for others.
+
+---
+
+## Entry Point Behavior
+
+**On every startup, check if user exists in Neo4j:**
+```cypher
+MATCH (p:Person {fullName: $gitUserName})
+RETURN p.name AS shortName
+```
+
+Where `$gitUserName` = result of `git config user.name`
+
+**If user NOT found → Auto-start setup.** Don't wait for "set me up". Just begin:
+```
+Welcome to Egregore! Let me get you set up...
+```
+Then run the full setup flow below.
+
+**If user found → Welcome back:**
+```cypher
+MATCH (s:Session)-[:BY]->(p:Person)
+WHERE s.date >= date() - duration('P2D')
+RETURN count(s) AS recent, collect(DISTINCT p.name) AS who
+```
+Then greet:
+```
+Welcome back, [shortName]. [X] sessions in the last 2 days.
+/activity to see what's happening.
+```
+
+---
+
+## Setup Flow
+
+When user says "set me up", "getting started", "new here", or similar:
+
+**Do everything automatically. Don't ask permission. Just show progress:**
+
+```
+Setting up Egregore...
+```
+
+### Step 1: Check Dependencies
+
+**Check what's installed:**
+```bash
+which gh brew 2>/dev/null
+```
+
+**If brew missing (macOS):**
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+**If gh missing:**
+```bash
+brew install gh
+```
+
+### Step 2: GitHub Auth (one interaction, if needed)
+
+```bash
+gh auth status 2>&1
+```
+
+If not authenticated, tell user ONCE:
+```
+Opening browser for GitHub login. Click "Authorize" and come back.
+```
+
+Then run:
+```bash
+gh auth login --web -h github.com -p https
+```
+
+Continue automatically after auth completes.
+
+### Step 3: Clone Memory (silent)
+
+Check if memory directory exists:
+```bash
+ls memory/conversations 2>/dev/null
+```
+
+If not, clone:
+```bash
+gh repo clone Curve-Labs/egregore-memory memory 2>/dev/null || true
+```
+
+### Step 4: Register User
+
+Get git info:
+```bash
+git config user.name
+```
+
+**Only question to ask:**
+```
+What should we call you? (short name, like 'jane')
+```
+
+Register in Neo4j using neo4j_query tool:
+```cypher
+MERGE (p:Person {name: $shortName})
+ON CREATE SET p.fullName = $fullName, p.joined = date()
+RETURN p.name, p.joined
+```
+
+### Step 5: Done
+
+```
+███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+
+Welcome, [name]!
+
+Commands:
+  /activity   — See what's happening
+  /handoff    — Leave notes for others
+  /quest      — View or create quests
+  /add        — Capture artifacts
+  /save       — Commit and push
+  /pull       — Get latest
+
+Ask me anything or try a command.
+```
+
+---
+
+## Commands
+
+Slash commands are in `.claude/commands/`. Available commands:
+
+| Command | Description |
+|---------|-------------|
+| `/activity` | See recent sessions, artifacts, and team activity |
+| `/handoff` | Create a session note, notify via Telegram |
+| `/quest` | List or create quests (ongoing explorations) |
+| `/add` | Add artifact (source, thought, finding, decision) |
+| `/save` | Git add, commit, push |
+| `/pull` | Git pull memory and current repo |
+
+---
+
+## Git Operations
+
+**Always use SSH for Egregore repos. Never HTTPS.**
+
+The `gh` CLI handles auth via HTTPS+OAuth, but for manual operations:
+```bash
+git clone git@github.com:Curve-Labs/egregore-core.git
+git clone git@github.com:Curve-Labs/egregore-memory.git
+```
+'''
+
+    # Settings with permissions
+    settings_json = '''{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(pwd:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(ln:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(touch:*)",
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "mcp__egregore__*"
+    ]
+  }
+}'''
+
+    # Commands
+    commands = {
+        "activity.md": '''Fast, personal view of what's happening — your projects, your sessions, team activity.
+
+Topic: $ARGUMENTS
+
+**Auto-syncs.** Pulls latest if behind before showing activity.
+
+## Execution
+
+1. Get current user from `git config user.name`
+2. Run Neo4j queries (all in parallel):
+
+```cypher
+// My projects
+MATCH (p:Person {name: $me})-[w:WORKS_ON]->(proj:Project)
+RETURN proj.name AS project, proj.domain AS domain, w.role AS role
+
+// My recent sessions
+MATCH (s:Session)-[:BY]->(p:Person {name: $me})
+RETURN s.date AS date, s.topic AS topic, s.summary AS summary
+ORDER BY s.date DESC LIMIT 5
+
+// Team activity (others, last 7 days)
+MATCH (s:Session)-[:BY]->(p:Person)
+WHERE p.name <> $me AND s.date >= date() - duration('P7D')
+RETURN s.date AS date, s.topic AS topic, p.name AS by
+ORDER BY s.date DESC LIMIT 5
+
+// Active quests
+MATCH (q:Quest {status: 'active'})-[:RELATES_TO]->(proj:Project)
+OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
+RETURN q.id AS quest, q.title AS title, collect(DISTINCT proj.name) AS projects, count(a) AS artifacts
+```
+
+3. Display in table format
+''',
+
+        "handoff.md": '''End a session with a summary for the next person (or future you).
+
+Topic: $ARGUMENTS
+
+**Auto-saves.** No need to run `/save` after.
+
+## What to do
+
+1. Get author name from `git config user.name`
+2. Summarize what was accomplished
+3. Note open questions and next steps
+4. Create handoff file in memory/conversations/YYYY-MM/
+5. **MUST** create Session node in Neo4j
+
+## Neo4j Session creation
+
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (s:Session {
+  id: $sessionId,
+  date: date($date),
+  topic: $topic,
+  summary: $summary,
+  filePath: $filePath
+})
+CREATE (s)-[:BY]->(p)
+RETURN s.id
+```
+
+## File naming
+
+`memory/conversations/YYYY-MM/DD-[author]-[topic].md`
+
+## Handoff template
+
+```markdown
+# Handoff: [Topic]
+
+**Date**: YYYY-MM-DD
+**Author**: [from git config user.name]
+
+## Session Summary
+
+[2-3 sentences on what was accomplished]
+
+## Key Decisions
+
+- **[Decision]**: [Rationale]
+
+## Open Threads
+
+- [ ] [Unfinished item with context]
+
+## Next Steps
+
+1. [Clear action with entry point]
+```
+
+Then run `/save` to commit and push.
+''',
+
+        "add.md": '''Ingest an artifact with minimal friction.
+
+Arguments: $ARGUMENTS (Optional: URL to fetch, or leave empty for interactive mode)
+
+## Usage
+
+- `/add` — Interactive mode, prompts for content
+- `/add [url]` — Fetch and ingest external source
+
+## Artifact types
+
+- `source` — External content (papers, articles, docs)
+- `thought` — Original thinking, hypotheses, intuitions
+- `finding` — Discoveries, what worked or didn't
+- `decision` — Choices made with rationale
+
+## File naming
+
+All artifacts go in `memory/artifacts/YYYY-MM-DD-[short-title].md`
+
+## Neo4j Artifact creation
+
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (a:Artifact {
+  id: $artifactId,
+  title: $title,
+  type: $type,
+  created: date(),
+  filePath: $filePath
+})
+CREATE (a)-[:CONTRIBUTED_BY]->(p)
+RETURN a.id
+```
+
+Then run `/save` to share.
+''',
+
+        "pull.md": '''Pull latest for current repo and shared memory.
+
+## Execution
+
+```bash
+# Current repo
+git pull origin main --quiet
+
+# Memory
+git -C memory pull origin main --quiet
+```
+
+## Output
+
+```
+Pulling...
+  current repo     ✓ up to date
+  memory           ↓ 2 commits → pulled
+```
+''',
+
+        "save.md": '''Save your contributions to Egregore.
+
+## What to do
+
+1. Check for uncommitted changes in memory/
+2. If changes exist:
+   - `git -C memory add -A`
+   - `git -C memory commit -m "Add: [description]"`
+   - `git -C memory push origin main`
+3. Report what was saved
+
+## Example
+
+```
+> /save
+
+Saving to Egregore...
+
+[memory]
+  Changes:
+    artifacts/2026-01-26-my-thought.md (new)
+
+  git add -A
+  git commit -m "Add: 1 artifact"
+  git push
+
+  ✓ Saved
+
+Done. Team sees your contribution on /activity.
+```
+''',
+
+        "quest.md": '''Manage quests — open-ended explorations that anyone can contribute to.
+
+Arguments: $ARGUMENTS (Optional: quest name, or subcommand)
+
+## Usage
+
+- `/quest` — List active quests
+- `/quest [name]` — Show quest details
+- `/quest new` — Create a new quest
+
+## Quest file location
+
+All quests live in `memory/quests/[slug].md`
+
+## Neo4j Quest creation
+
+```cypher
+MATCH (p:Person {name: $author})
+CREATE (q:Quest {
+  id: $slug,
+  title: $title,
+  status: 'active',
+  started: date(),
+  question: $question
+})
+CREATE (q)-[:STARTED_BY]->(p)
+RETURN q.id
+```
+
+Then run `/save` to share.
+'''
+    }
+
+    return {
+        "files": {
+            "CLAUDE.md": claude_md,
+            ".claude/settings.json": settings_json,
+            **{f".claude/commands/{name}": content for name, content in commands.items()}
+        },
+        "directories": [
+            "memory/conversations",
+            "memory/artifacts",
+            "memory/quests"
+        ],
+        "instructions": "Write each file to the specified path. Create directories first. Then run the setup flow in CLAUDE.md."
+    }
+
+
 TOOL_HANDLERS = {
     "neo4j_query": handle_neo4j_query,
     "neo4j_schema": handle_neo4j_schema,
     "telegram_send": handle_telegram_send,
+    "egregore_init": handle_egregore_init,
 }
 
 

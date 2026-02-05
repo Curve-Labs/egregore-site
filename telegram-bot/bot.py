@@ -93,6 +93,7 @@ ORG_CONFIG = {
         "neo4j_uri": os.environ.get("NEO4J_URI", ""),
         "neo4j_user": os.environ.get("NEO4J_USER", "neo4j"),
         "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
+        "mcp_api_key": os.environ.get("CURVELABS_MCP_KEY", "ek_curvelabs_default"),
     },
 }
 
@@ -102,6 +103,7 @@ if TESTORG_CHANNEL_ID:
         "neo4j_uri": os.environ.get("TESTORG_NEO4J_URI", ""),
         "neo4j_user": os.environ.get("TESTORG_NEO4J_USER", "neo4j"),
         "neo4j_password": os.environ.get("TESTORG_NEO4J_PASSWORD", ""),
+        "mcp_api_key": os.environ.get("TESTORG_MCP_KEY", "ek_testorg_default"),
     }
 
 ONBOARDING_REPOS = ["Curve-Labs/egregore-core", "Curve-Labs/egregore-memory"]
@@ -1451,49 +1453,71 @@ async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYP
 
 I've added you as a collaborator.
 
-Download the setup file I'm sending, unzip it, then:
+Save both files I'm sending to a new folder, then:
 
-1. Open terminal in that folder
-2. Type: claude
-3. When prompted:
+1. Create a new folder: mkdir egregore && cd egregore
+2. Save both files (.mcp.json and CLAUDE.md) there
+3. Type: claude
+4. When prompted:
    • "Trust this folder?" → Yes, proceed
    • "Use this API key?" → No (use your subscription)
-4. Say: "set me up"
+5. Say: "set me up"
 
-Claude will handle everything else."""
+Claude will create everything else automatically."""
 
             await update.message.reply_text(complete_msg)
 
-            # Send the setup zip file
-            from pathlib import Path
-            # Try multiple possible locations
-            possible_paths = [
-                Path(__file__).parent / "egregore-setup.zip",
-                Path("/app/telegram-bot/egregore-setup.zip"),  # Railway path
-                Path("telegram-bot/egregore-setup.zip"),
-                Path("egregore-setup.zip"),
-            ]
-            zip_path = None
-            for p in possible_paths:
-                if p.exists():
-                    zip_path = p
-                    break
+            # Generate .mcp.json with org-specific API key
+            import io
+            org_config = state["org_config"]
+            mcp_api_key = org_config.get("mcp_api_key", "ek_default_key")
 
-            if zip_path:
-                logger.info(f"Found zip at: {zip_path}")
-                with open(zip_path, "rb") as f:
-                    await context.bot.send_document(
-                        chat_id=update.effective_chat.id,
-                        document=f,
-                        filename="egregore-setup.zip",
-                        caption="Unzip this, open terminal in the folder, type 'claude', say 'set me up'"
-                    )
-            else:
-                logger.error(f"Zip not found. Tried: {[str(p) for p in possible_paths]}")
-                await update.message.reply_text(
-                    "Setup zip not found. Ask admin or clone manually:\n"
-                    "gh repo clone Curve-Labs/egregore-core"
-                )
+            mcp_json_content = json.dumps({
+                "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp.json",
+                "mcpServers": {
+                    "egregore": {
+                        "type": "http",
+                        "url": "https://curve-labs-core-production.up.railway.app/mcp",
+                        "headers": {
+                            "Authorization": f"Bearer {mcp_api_key}"
+                        }
+                    }
+                }
+            }, indent=2)
+
+            # Send .mcp.json
+            mcp_file = io.BytesIO(mcp_json_content.encode('utf-8'))
+            mcp_file.name = ".mcp.json"
+
+            await context.bot.send_document(
+                chat_id=update.effective_chat.id,
+                document=mcp_file,
+                filename=".mcp.json",
+                caption="1/2 - MCP config (connects to Egregore)"
+            )
+
+            # Generate minimal bootstrap CLAUDE.md
+            bootstrap_claude_md = """# Egregore Bootstrap
+
+When user says "set me up", "getting started", "new here", or similar:
+
+1. Call the `mcp__egregore__egregore_init` tool to get all setup files
+2. Write each file from the response to the specified path
+3. Create the directories listed in the response
+4. Run the setup flow described in the full CLAUDE.md (one of the returned files)
+
+This is a minimal bootstrap file. The full configuration will replace it after setup.
+"""
+
+            claude_file = io.BytesIO(bootstrap_claude_md.encode('utf-8'))
+            claude_file.name = "CLAUDE.md"
+
+            await context.bot.send_document(
+                chat_id=update.effective_chat.id,
+                document=claude_file,
+                filename="CLAUDE.md",
+                caption="2/2 - Claude instructions (tells Claude how to set up)"
+            )
         else:
             await update.message.reply_text(
                 "There was an issue adding you to GitHub. Please check your username and try again."
