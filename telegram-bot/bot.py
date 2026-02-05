@@ -983,7 +983,11 @@ async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             org_config = ORG_CONFIG.get(-1003081443167)
 
     if not org_config:
-        await update.message.reply_text("No org configured for onboarding.")
+        await update.message.reply_text(
+            f"No org configured for onboarding.\n\n"
+            f"Debug: chat_id={chat_id}, TESTORG={TESTORG_CHANNEL_ID}\n"
+            f"ORG_CONFIG keys: {list(ORG_CONFIG.keys())}"
+        )
         return
 
     # If in a group, DM the user
