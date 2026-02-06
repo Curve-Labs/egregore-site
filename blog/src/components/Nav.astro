@@ -10,6 +10,7 @@ const navItems = [
 <nav class="nav">
   <div class="nav-inner">
     <a href="/" class="logo">
+      <img src="/curve_labs_logo_white.png" alt="Curve Labs" class="logo-icon" />
       <span class="logo-text">Curve Labs</span>
     </a>
 
@@ -49,7 +50,15 @@ const navItems = [
   }
 
   .logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 24px;
+    height: 24px;
   }
 
   .logo-text {
