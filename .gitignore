@@ -12,6 +12,7 @@ memory
 # Personal secrets
 .env
 .env.local
+.neo4j-creds
 
 # User state
 .egregore-state.json
