@@ -139,11 +139,10 @@ async def org_register(body: OrgRegister, authorization: str = Header(...)):
     # Generate API key
     api_key = generate_api_key(slug)
 
-    # For now, new orgs share the default Neo4j instance
-    # with org-scoped data isolation
-    default_neo4j_host = os.environ.get("NEO4J_HOST", "")
-    default_neo4j_user = os.environ.get("NEO4J_USER", "neo4j")
-    default_neo4j_password = os.environ.get("NEO4J_PASSWORD", "")
+    # New orgs go to the shared egregore-core Neo4j instance (not CL's private one)
+    default_neo4j_host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    default_neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
+    default_neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
     default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
     new_org = {
