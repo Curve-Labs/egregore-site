@@ -45,6 +45,7 @@ rsync -av --delete \
   --exclude='node_modules' \
   --exclude='__pycache__' \
   --exclude='.claude/settings.local.json' \
+  --exclude='api' \
   --exclude='ascii-oracle' \
   --exclude='blog' \
   --exclude='telegram-bot' \
