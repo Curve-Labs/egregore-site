@@ -11,12 +11,14 @@ Topic: $ARGUMENTS
 3. Note open questions and next steps
 4. Create handoff file in memory/conversations/YYYY-MM/
 5. Update the conversation index
-6. **MUST** create Session node in Neo4j (links to Person and Project)
+6. **MUST** create Session node in Neo4j via `bash bin/graph.sh query "..."` (never MCP)
 7. **Auto-save**: Run the full `/save` flow (branch, commit, PR, merge)
 
 **CRITICAL: Step 6 is NOT optional.** Without the Neo4j Session node, the handoff won't appear in `/activity`. Always run the Cypher query below.
 
-## Neo4j Session creation
+## Neo4j Session creation (via bin/graph.sh)
+
+Run with `bash bin/graph.sh query "..." '{"param": "value"}'`
 
 ```cypher
 MATCH (p:Person {name: $author})
@@ -96,9 +98,7 @@ Team members: oz, ali, cem
 
 **Notification API**:
 ```bash
-curl -X POST https://curve-labs-core-production.up.railway.app/notify \
-  -H "Content-Type: application/json" \
-  --data-raw '{"recipient":"cem","message":"...","type":"handoff"}'
+bash bin/notify.sh send "cem" "message"
 ```
 
 **Message format**:

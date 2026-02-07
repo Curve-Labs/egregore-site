@@ -28,7 +28,9 @@ started_by: Oz
 ---
 ```
 
-## Neo4j Quest creation (on `/quest new`)
+## Neo4j Quest creation (via bin/graph.sh, on `/quest new`)
+
+Run with `bash bin/graph.sh query "..." '{"param": "value"}'`
 
 ```cypher
 MATCH (p:Person {name: $author})
@@ -48,7 +50,7 @@ CREATE (q)-[:RELATES_TO]->(proj)
 RETURN q.id
 ```
 
-## Neo4j status update (on `/quest pause` or `/quest complete`)
+## Neo4j status update (via bin/graph.sh, on `/quest pause` or `/quest complete`)
 
 ```cypher
 MATCH (q:Quest {id: $slug})
@@ -149,9 +151,7 @@ When creating a quest that involves specific people, notify them:
 
 **Notification API**:
 ```bash
-curl -X POST https://curve-labs-core-production.up.railway.app/notify \
-  -H "Content-Type: application/json" \
-  --data-raw '{"recipient":"cem","message":"...","type":"quest"}'
+bash bin/notify.sh send "cem" "message"
 ```
 
 **Message format**:

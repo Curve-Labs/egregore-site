@@ -1,70 +1,65 @@
-# Egregore
+```
+  ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+  ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+  █████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+  ██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+  ███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+  ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+```
 
-A living organization operated by humans and AI agents working together.
+A shared intelligence layer for organizations using Claude Code. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.
 
-## What is this?
+## Prerequisites
 
-Curve Labs runs on:
-- **Agents** — Claude Code instances that research, code, and collaborate
-- **Memory** — Shared knowledge that persists across sessions and people
-- **Skills** — Reusable capabilities (`skills/`)
-- **Commands** — Slash commands for common operations (`.claude/commands/`)
-- **MCPs** — External integrations (`mcp.json`)
+- [git](https://git-scm.com)
+- [jq](https://jqlang.github.io/jq/) — `brew install jq`
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — `npm install -g @anthropic-ai/claude-code`
 
-## Setup
+## Install
 
-**Option 1: Quick start**
-
-1. Create a folder and save the `CLAUDE.md` file there
-2. Open Claude Code in that folder
-3. Say `set me up`
-
-**Option 2: Git clone**
+Download the [latest zip](https://github.com/Curve-Labs/egregore-core/archive/refs/heads/main.zip), unzip, and run:
 
 ```bash
-git clone git@github.com:Curve-Labs/egregore.git
-cd egregore
-claude
+cd egregore-core && bash start.sh
 ```
 
-Say `set me up`
+That's it. The onboarding walks you through everything — GitHub auth, shared memory, knowledge graph connection.
 
-## Structure
+## What happens
 
-```
-egregore/        ← You are here (research workspace)
-├── CLAUDE.md           ← Agent identity and protocols
-├── memory/             ← Shared knowledge (symlink)
-├── skills/             ← Reusable capabilities
-├── .claude/
-│   ├── commands/       ← Slash commands
-│   └── settings.json   ← Permissions
-└── mcp.json            ← MCP server config
+1. **Authenticate** — Opens your browser for GitHub authorization (no tokens to copy)
+2. **Pick your org** — Choose a GitHub org or personal account
+3. **Fork + memory repo** — Creates your org's egregore fork and a shared memory repo
+4. **Connected** — Neo4j knowledge graph and Telegram notifications, ready to go
 
-curve-labs-memory/      ← Shared brain
-├── conversations/      ← Session logs and handoffs
-├── knowledge/          ← Decisions, findings, patterns
-├── people/             ← Team directory
-└── onboarding/         ← Getting started guides
+## After setup
 
-tristero/               ← Project: Coordination infrastructure
-lace/                   ← Project: Knowledge graph system
-```
-
-## Commands
+You're inside Claude Code with slash commands:
 
 | Command | What it does |
-|---------|--------------|
-| `/activity` | See what's happening |
-| `/handoff [topic]` | Leave notes for others |
-| `/reflect` | Save a decision or finding |
-| `/pull` | Get latest from team |
-| `/save` | Commit and push all repos |
-| `/setup [project]` | Set up a project |
+|---------|-------------|
+| `/activity` | See what's happening across your org |
+| `/handoff` | Leave notes for others (or future you) |
+| `/invite` | Invite someone to your org |
+| `/quest` | Start or contribute to an exploration |
+| `/ask` | AI-generated questions, routed to self or others |
+| `/save` | Commit and push your contributions |
 
-## Projects
+## Invite others
 
-- **LACE** — Living Autonomous Cognitive Entity. Knowledge graph system.
-- **Tristero** — Coordination infrastructure. Emergent ontologies + MCP.
+```
+/invite <github-username>
+```
 
-To work on a project: `cd ../tristero && claude`
+Adds them as collaborator and sends a zip to the Telegram group. They unzip, run `bash start.sh`, and they're in.
+
+## How it works
+
+Egregore gives your team a shared brain that persists across Claude Code sessions:
+
+- **Memory** — Git-based shared knowledge repo (conversations, decisions, patterns)
+- **Knowledge graph** — Neo4j for querying across sessions, people, and artifacts
+- **Notifications** — Telegram for async handoffs and questions
+- **Commands** — Slash commands for common workflows, no git knowledge needed
+
+Built by [Curve Labs](https://curvelabs.eu).

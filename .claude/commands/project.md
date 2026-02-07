@@ -34,8 +34,6 @@ Project: Tristero
 
 Domain: Polis — Coordination mechanisms, governance, emergent ontologies
 
-Repository: git@github.com:Curve-Labs/tristero.git
-
 Active Quests:
   → benchmark-eval (4 artifacts, Oz + Ali)
   → research-agent (1 artifact, Oz)

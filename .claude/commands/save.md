@@ -24,7 +24,9 @@ Save your contributions to Egregore. Uses branch + PR + auto-merge for clean con
    - Warn user: "You have code changes. Use /push and /pr for review."
    - Code changes require human review
 
-## Neo4j Sync Logic
+## Neo4j Sync Logic (via bin/graph.sh)
+
+Run each check with `bash bin/graph.sh query "..."`. Never use MCP.
 
 ```cypher
 // For each file in conversations/YYYY-MM/*.md, check if Session exists:

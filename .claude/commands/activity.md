@@ -6,10 +6,10 @@ Topic: $ARGUMENTS
 
 ## Execution rules
 
-**Neo4j-first.** All data comes from Neo4j. No filesystem access to sibling repos.
+**Neo4j-first.** All data comes from Neo4j via `bin/graph.sh`. No MCP. No filesystem access to sibling repos.
 - Smart sync: fetch, pull only if behind (runs in parallel with queries)
 - 1 Bash call: git config user.name
-- 6 Neo4j queries (run in parallel)
+- 6 Neo4j queries via `bash bin/graph.sh query "..."` (run in parallel)
 - File-based fallback only if Neo4j unavailable
 
 ## Step 0: Smart sync (parallel with Step 2)
@@ -44,7 +44,9 @@ git config user.name
 
 Map to Person node: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, "Ali" → ali
 
-## Step 2: Neo4j Queries (run all in parallel)
+## Step 2: Neo4j Queries (run all in parallel via bin/graph.sh)
+
+Execute each query with `bash bin/graph.sh query "..."`. Run all 6 in parallel Bash calls.
 
 ```cypher
 // Query 1: My projects
@@ -67,13 +69,13 @@ MATCH (q:Quest {status: 'active'})-[:RELATES_TO]->(proj:Project)
 OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
 RETURN q.id AS quest, q.title AS title, collect(DISTINCT proj.name) AS projects, count(a) AS artifacts
 
-// Query 5: Pending harvests for me
+// Query 5: Pending questions for me
 MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Person {name: $me})
 MATCH (qs)-[:ASKED_BY]->(asker:Person)
 RETURN qs.id AS setId, qs.topic AS topic, qs.created AS created, asker.name AS from
 ORDER BY qs.created DESC
 
-// Query 6: Harvest responses received (last 7 days)
+// Query 6: My answered questions (last 7 days)
 MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: $me})
 MATCH (qs)-[:ASKED_TO]->(target:Person)
 WHERE qs.created >= datetime() - duration('P7D')
@@ -100,16 +102,16 @@ ls -t memory/artifacts/*.md 2>/dev/null | head -10 | xargs -I{} basename {}
 │  EGREGORE ACTIVITY                                            oz · Feb 01  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  PENDING HARVESTS                                                           │
+│  PENDING FOR YOU                                                            │
 │  ┌───────────────────────────────────────────────────────────────────┐      │
-│  │ cem wants context about "evaluation criteria" (12 hours ago)      │      │
-│  │ ali wants context about "MCP transport" (2 days ago)              │      │
+│  │ 2 questions from cem about "evaluation criteria" (12 hours ago)   │      │
+│  │ 1 question from ali about "MCP transport" (2 days ago)            │      │
 │  └───────────────────────────────────────────────────────────────────┘      │
-│  Run /harvest to respond.                                                   │
+│  Run /ask to answer pending questions.                                      │
 │                                                                             │
-│  HARVEST RESPONSES                                                          │
+│  ANSWERS RECEIVED                                                           │
 │  ┌───────────────────────────────────────────────────────────────────┐      │
-│  │ oz responded to your harvest about "benchmark approach"           │      │
+│  │ oz answered your questions about "benchmark approach"             │      │
 │  └───────────────────────────────────────────────────────────────────┘      │
 │                                                                             │
 │  PROJECTS                                                                   │
@@ -152,11 +154,12 @@ ls -t memory/artifacts/*.md 2>/dev/null | head -10 | xargs -I{} basename {}
 │  (none yet — use /quest new to create one)                                  │
 ```
 
-**For PENDING HARVESTS and HARVEST RESPONSES**: Only show these sections if there are items. If both are empty, omit both sections entirely (no placeholder text).
+**For PENDING FOR YOU and ANSWERS RECEIVED**: Only show these sections if there are items. If both are empty, omit both sections entirely (no placeholder text).
 
 ## Rules
 
 - **No sibling directory access** — all data from Neo4j or memory/ symlink
+- **Use `bash bin/graph.sh query "..."` for all Neo4j queries** — never use MCP
 - Projects from Neo4j → show `cd ../[project] && claude`
 - Minimize tool calls — run Neo4j queries in parallel
-- File-based fallback only if Neo4j MCP unavailable
+- File-based fallback only if `bin/graph.sh` fails

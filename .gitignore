@@ -1,4 +1,4 @@
-# Local symlink to shared memory (created by /setup)
+# Memory symlink (each user creates their own)
 memory
 
 # Local MCP config (merged from mcp.shared.json + personal)
@@ -6,11 +6,12 @@ memory
 
 # OS files
 .DS_Store
-
-# Editor
 *.swp
 *~
 
-# environment variables
+# Personal secrets
 .env
 .env.local
+
+# User state
+.egregore-state.json

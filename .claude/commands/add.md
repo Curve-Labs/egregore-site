@@ -14,7 +14,7 @@ Arguments: $ARGUMENTS (Optional: URL to fetch, or leave empty for interactive mo
 3. Suggest relevant quests based on content
 4. Suggest topics
 5. Create artifact file with proper frontmatter
-6. Create Artifact node in Neo4j with relationships
+6. Create Artifact node in Neo4j via `bash bin/graph.sh query "..."` (never MCP)
 7. Confirm relations created
 
 ## Artifact types
@@ -47,7 +47,9 @@ topics: [evaluation, benchmarks, llm]
 [Content here]
 ```
 
-## Neo4j Artifact creation
+## Neo4j Artifact creation (via bin/graph.sh)
+
+Run with `bash bin/graph.sh query "..." '{"param": "value"}'`
 
 ```cypher
 MATCH (p:Person {name: $author})
