@@ -71,6 +71,11 @@ async def lookup_telegram_id(org: dict, name: str) -> str | None:
     return None
 
 
+def generate_bot_invite_link(org_slug: str, bot_username: str = "Egregore_clbot") -> str:
+    """Generate a Telegram invite link that auto-connects the bot to a group."""
+    return f"https://t.me/{bot_username}?startgroup=org_{org_slug}"
+
+
 async def _send_telegram(bot_token: str, chat_id: str, text: str) -> dict:
     """Send a Telegram message."""
     async with httpx.AsyncClient() as client:
