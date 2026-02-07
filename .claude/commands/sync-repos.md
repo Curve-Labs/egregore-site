@@ -27,6 +27,18 @@ if [ "$LOCAL" != "$REMOTE" ]; then
 fi
 ```
 
+**For curve-labs-core**: sync the `develop` branch instead of main:
+```bash
+# Sync develop (not main)
+git fetch origin --quiet
+git checkout develop --quiet && git pull origin develop --quiet && git checkout - --quiet
+# If on dev/* branch, rebase onto develop
+BRANCH=$(git branch --show-current)
+if [[ "$BRANCH" == dev/* ]]; then
+  git rebase develop --quiet || (git rebase --abort && git merge develop -m "Sync with develop")
+fi
+```
+
 Use absolute paths with `git -C` to avoid permission prompts.
 
 ## Output format

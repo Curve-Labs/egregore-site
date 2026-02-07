@@ -4,9 +4,10 @@ Description: $ARGUMENTS
 
 ## What to do
 
-1. Determine branch type (feature/bugfix) from description
-2. Create branch with date-prefixed name
-3. Switch to the new branch
+1. Fetch latest develop
+2. Determine branch type (feature/bugfix) from description
+3. Create branch from develop with date-prefixed name
+4. Switch to the new branch
 
 ## Naming convention
 
@@ -27,8 +28,9 @@ Convention: feature/YYYY-MM-DD-short-description
 
 This looks like a feature.
 
-  git checkout -b feature/2026-01-20-mcp-authentication
-  ✓ Created and switched to feature/2026-01-20-mcp-authentication
+  git fetch origin develop --quiet
+  git checkout -b feature/2026-01-20-mcp-authentication origin/develop
+  ✓ Created and switched to feature/2026-01-20-mcp-authentication (from develop)
 
 You're now on a feature branch. When ready:
 - /commit to save your work

@@ -29,11 +29,33 @@ Read the state file to find which steps are done. Resume from the first incomple
 
 ### Path 3: File exists, `onboarding_complete` is `true` → Returning user
 
-Check `memory/conversations/index.md` for recent activity. If there's a handoff or new session since the user's last visit, surface it:
+**OR** file does NOT exist but this is an established repo (commands, bin/ scripts exist) → treat as returning user.
 
-> Since your last session, [who] left a handoff about [topic]. Want to see it?
+**Step 1: Session setup (ONE Bash call)**
 
-If nothing new, just: "Welcome back. What are you working on?"
+```bash
+bash bin/session-start.sh
+```
+
+This syncs develop, creates (or rebases) a working branch `dev/{author}/{date}-session`, syncs memory, and outputs JSON:
+
+```json
+{
+  "branch": "dev/oz/2026-02-07-session",
+  "action": "created",
+  "develop_synced": true,
+  "memory_synced": true,
+  "commits_on_develop_since_main": 3
+}
+```
+
+**Step 2: Welcome based on action**
+
+- `"action": "created"` → New session. Check `memory/conversations/index.md` for recent activity. If there's a handoff since the user's last visit: "Since your last session, [who] left a handoff about [topic]. Want to see it?"
+- `"action": "resumed"` or `"rebased"` → "Resuming session on {branch}. Synced with develop."
+- If `commits_on_develop_since_main` > 0, mention: "{N} changes on develop since last release."
+
+If nothing notable: "Welcome back. What are you working on?"
 
 Never dump a command menu. Teach commands in context when the user actually needs them.
 
@@ -336,6 +358,27 @@ Only say this once per session. Never repeat it.
 - `knowledge/patterns/` — emergent patterns worth naming
 
 Org config lives in `egregore.json` (committed). Personal tokens live in `.env` (gitignored). Always use HTTPS for git operations — `github-auth.sh` sets up credential storage automatically.
+
+## Git Workflow
+
+Egregore uses a `develop` branch model. Users never interact with git directly — commands handle everything.
+
+```
+main ← stable, released (maintainer controls via /release)
+  │
+  develop ← integration branch (PRs land here)
+    │
+    dev/{author}/{date}-session ← working branches (created on launch)
+```
+
+- **On launch**: `bin/session-start.sh` syncs develop and creates a working branch
+- **`/save`**: pushes working branch, creates PR to develop. Markdown-only PRs auto-merge; code changes need maintainer review
+- **`/handoff`**: same as /save + handoff file + Neo4j session + notifications
+- **`/release`** (maintainer only): merges develop → main, tags, syncs public repo
+- **`/pull`**: syncs develop, rebases working branch
+- **Memory repo**: stays on main (separate repo, auto-merge unchanged)
+
+**Never push directly to main or develop.** All changes flow through PRs.
 
 ## Working Conventions
 
