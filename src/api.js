@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
-const GITHUB_CLIENT_ID = "Ov23lieKKe55MBVYItGg";
+const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
 const GITHUB_SCOPE = "repo,read:org";
 
 export function getGitHubAuthUrl() {
