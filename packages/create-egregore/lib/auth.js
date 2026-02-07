@@ -5,7 +5,7 @@
 
 const https = require("node:https");
 
-const CLIENT_ID = "Ov23lieKKe55MBVYItGg";
+const CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
 const SCOPE = "repo,read:org";
 
 function post(url, body) {

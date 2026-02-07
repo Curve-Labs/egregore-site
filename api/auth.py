@@ -10,7 +10,7 @@ from fastapi import HTTPException, Header
 logger = logging.getLogger(__name__)
 
 # GitHub OAuth App
-GITHUB_CLIENT_ID = "Ov23lieKKe55MBVYItGg"
+GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb"
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
 
 
