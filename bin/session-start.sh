@@ -139,21 +139,28 @@ if [ -L "$SCRIPT_DIR/memory" ] && [ -d "$SCRIPT_DIR/memory/.git" ]; then
   MEMORY_SYNCED="true"
 fi
 
-# --- Output JSON ---
-jq -n \
-  --arg branch "$BRANCH" \
-  --arg action "$ACTION" \
-  --arg author "$AUTHOR" \
-  --argjson develop_synced "$DEVELOP_SYNCED" \
-  --argjson memory_synced "$MEMORY_SYNCED" \
-  --argjson commits_ahead "$COMMITS_AHEAD" \
-  --argjson onboarding_complete true \
-  '{
-    onboarding_complete: $onboarding_complete,
-    author: $author,
-    branch: $branch,
-    action: $action,
-    develop_synced: $develop_synced,
-    memory_synced: $memory_synced,
-    commits_on_develop_since_main: $commits_ahead
-  }'
+# --- Output greeting for Claude to display ---
+cat << 'GREETING'
+
+  ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+  ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+  █████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+  ██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+  ███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+  ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+
+GREETING
+
+# Status line
+if [ "$ACTION" = "created" ]; then
+  echo "  New session started."
+elif [ "$ACTION" = "resumed" ] || [ "$ACTION" = "rebased" ]; then
+  echo "  Session resumed."
+fi
+
+echo "  Branch: $BRANCH"
+echo "  Develop: synced"
+[ "$MEMORY_SYNCED" = "true" ] && echo "  Memory: synced"
+[ "$COMMITS_AHEAD" -gt 0 ] && echo "  $COMMITS_AHEAD changes on develop since last release."
+echo ""
+echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"

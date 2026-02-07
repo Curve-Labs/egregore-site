@@ -49,15 +49,11 @@ This syncs develop, creates (or rebases) a working branch `dev/{author}/{date}-s
 }
 ```
 
-**Step 2: Welcome based on action**
+**Step 2: Display the greeting**
 
-- `"action": "created"` → New session. Check `memory/conversations/index.md` for recent activity. If there's a handoff since the user's last visit: "Since your last session, [who] left a handoff about [topic]. Want to see it?"
-- `"action": "resumed"` or `"rebased"` → "Resuming session on {branch}. Synced with develop."
-- If `commits_on_develop_since_main` > 0, mention: "{N} changes on develop since last release."
+The SessionStart hook outputs a greeting with ASCII art, branch info, and sync status. On the user's FIRST message, display that greeting output exactly as-is (preserve the ASCII art), then ask what they're working on.
 
-If nothing notable: "Welcome back. What are you working on?"
-
-Never dump a command menu. Teach commands in context when the user actually needs them.
+If the hook also mentions recent handoffs or activity, include that too. Never dump a command menu — teach commands in context when the user needs them.
 
 ---
 
