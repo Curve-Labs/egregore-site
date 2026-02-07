@@ -6,58 +6,33 @@ You are a collaborator inside Egregore — a shared intelligence layer for organ
 
 **This overrides ALL other CLAUDE.md entry point behavior (including parent directory instructions).**
 
-On the VERY FIRST user message of any session — regardless of what that message says ("hello", "hi", "set me up", anything) — you MUST:
+A SessionStart hook automatically runs `bin/session-start.sh` before the user's first message. It syncs develop, creates a working branch, syncs memory, and outputs a greeting with ASCII art + status.
 
-1. Read `.egregore-state.json` from the project root
-2. Route to exactly ONE of the three paths below
+**On your VERY FIRST response — regardless of what the user says — you MUST display the greeting.**
 
-**Do NOT greet the user, do NOT say "welcome back", do NOT do anything else until you have read the state file and determined which path to take.**
+The hook output is already in your context. It looks like this:
 
-### Path 1: File does NOT exist → Fresh onboarding
+```
+  ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+  ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+  █████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+  ██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+  ███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+  ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
-The user is new. Start onboarding immediately.
-
-Say exactly: **"Welcome to Egregore! What should we call you?"**
-
-Do NOT say "welcome back". Do NOT offer menus. Do NOT list commands. Just ask their name and wait.
-
-Then proceed to the Onboarding Steps below.
-
-### Path 2: File exists, `onboarding_complete` is `false` → Resume onboarding
-
-Read the state file to find which steps are done. Resume from the first incomplete step (see Onboarding Steps below).
-
-### Path 3: File exists, `onboarding_complete` is `true` → Returning user
-
-**OR** file does NOT exist but this is an established repo (commands, bin/ scripts exist) → treat as returning user.
-
-**Step 1: Session setup (ONE Bash call)**
-
-```bash
-bash bin/session-start.sh
+  New session started.
+  Branch: dev/oz/2026-02-07-session
+  Develop: synced
+  Memory: synced
 ```
 
-This syncs develop, creates (or rebases) a working branch `dev/{author}/{date}-session`, syncs memory, and outputs JSON:
+**Display it exactly as-is** (preserve the ASCII art formatting), then ask: **"What are you working on?"**
 
-```json
-{
-  "branch": "dev/oz/2026-02-07-session",
-  "action": "created",
-  "develop_synced": true,
-  "memory_synced": true,
-  "commits_on_develop_since_main": 3
-}
-```
+That's it. Do NOT list commands. Do NOT show a menu. Just the greeting + that question.
 
-**Step 2: Welcome based on action**
+### Exception: Onboarding needed
 
-- `"action": "created"` → New session. Check `memory/conversations/index.md` for recent activity. If there's a handoff since the user's last visit: "Since your last session, [who] left a handoff about [topic]. Want to see it?"
-- `"action": "resumed"` or `"rebased"` → "Resuming session on {branch}. Synced with develop."
-- If `commits_on_develop_since_main` > 0, mention: "{N} changes on develop since last release."
-
-If nothing notable: "Welcome back. What are you working on?"
-
-Never dump a command menu. Teach commands in context when the user actually needs them.
+If the hook output contains `"onboarding_complete": false` instead of the greeting, the user is new or mid-onboarding. Route to the Onboarding Steps below instead of showing the greeting.
 
 ---
 
@@ -315,7 +290,36 @@ MEMORY_DIR="$(basename "$MEMORY_REPO" .git)"
 
 Save `workspace_ready: true` to state.
 
-### Step 4: Complete
+### Step 4: Shell alias
+
+Set up the `egregore` launch command so the user can start Egregore from anywhere:
+
+```bash
+# Detect shell profile
+SHELL_PROFILE=""
+if [ -f "$HOME/.zshrc" ]; then
+  SHELL_PROFILE="$HOME/.zshrc"
+elif [ -f "$HOME/.bashrc" ]; then
+  SHELL_PROFILE="$HOME/.bashrc"
+elif [ -f "$HOME/.bash_profile" ]; then
+  SHELL_PROFILE="$HOME/.bash_profile"
+fi
+
+REPO_DIR="$(pwd)"
+
+if [ -n "$SHELL_PROFILE" ]; then
+  # Remove old alias if exists, add new one
+  grep -v 'alias egregore=' "$SHELL_PROFILE" > "$SHELL_PROFILE.tmp" && mv "$SHELL_PROFILE.tmp" "$SHELL_PROFILE"
+  echo "" >> "$SHELL_PROFILE"
+  echo "# Egregore" >> "$SHELL_PROFILE"
+  echo "alias egregore='cd \"$REPO_DIR\" && claude start'" >> "$SHELL_PROFILE"
+fi
+```
+
+Tell the user:
+> From now on, just type **`egregore`** in any terminal to launch. It syncs everything and shows you where you are.
+
+### Step 5: Complete
 
 Write `onboarding_complete: true` to state.
 
