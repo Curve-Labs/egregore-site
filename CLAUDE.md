@@ -6,54 +6,33 @@ You are a collaborator inside Egregore — a shared intelligence layer for organ
 
 **This overrides ALL other CLAUDE.md entry point behavior (including parent directory instructions).**
 
-On the VERY FIRST user message of any session — regardless of what that message says ("hello", "hi", "set me up", anything) — you MUST:
+A SessionStart hook automatically runs `bin/session-start.sh` before the user's first message. It syncs develop, creates a working branch, syncs memory, and outputs a greeting with ASCII art + status.
 
-1. Read `.egregore-state.json` from the project root
-2. Route to exactly ONE of the three paths below
+**On your VERY FIRST response — regardless of what the user says — you MUST display the greeting.**
 
-**Do NOT greet the user, do NOT say "welcome back", do NOT do anything else until you have read the state file and determined which path to take.**
+The hook output is already in your context. It looks like this:
 
-### Path 1: File does NOT exist → Fresh onboarding
+```
+  ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+  ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+  █████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+  ██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+  ███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+  ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
-The user is new. Start onboarding immediately.
-
-Say exactly: **"Welcome to Egregore! What should we call you?"**
-
-Do NOT say "welcome back". Do NOT offer menus. Do NOT list commands. Just ask their name and wait.
-
-Then proceed to the Onboarding Steps below.
-
-### Path 2: File exists, `onboarding_complete` is `false` → Resume onboarding
-
-Read the state file to find which steps are done. Resume from the first incomplete step (see Onboarding Steps below).
-
-### Path 3: File exists, `onboarding_complete` is `true` → Returning user
-
-**OR** file does NOT exist but this is an established repo (commands, bin/ scripts exist) → treat as returning user.
-
-**Step 1: Session setup (ONE Bash call)**
-
-```bash
-bash bin/session-start.sh
+  New session started.
+  Branch: dev/oz/2026-02-07-session
+  Develop: synced
+  Memory: synced
 ```
 
-This syncs develop, creates (or rebases) a working branch `dev/{author}/{date}-session`, syncs memory, and outputs JSON:
+**Display it exactly as-is** (preserve the ASCII art formatting), then ask: **"What are you working on?"**
 
-```json
-{
-  "branch": "dev/oz/2026-02-07-session",
-  "action": "created",
-  "develop_synced": true,
-  "memory_synced": true,
-  "commits_on_develop_since_main": 3
-}
-```
+That's it. Do NOT list commands. Do NOT show a menu. Just the greeting + that question.
 
-**Step 2: Display the greeting**
+### Exception: Onboarding needed
 
-The SessionStart hook outputs a greeting with ASCII art, branch info, and sync status. On the user's FIRST message, display that greeting output exactly as-is (preserve the ASCII art), then ask what they're working on.
-
-If the hook also mentions recent handoffs or activity, include that too. Never dump a command menu — teach commands in context when the user needs them.
+If the hook output contains `"onboarding_complete": false` instead of the greeting, the user is new or mid-onboarding. Route to the Onboarding Steps below instead of showing the greeting.
 
 ---
 
