@@ -78,9 +78,6 @@ if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
   ) 2>/dev/null || true
 fi
 
-# --- Ensure egregore shell function exists (comment out old alias if needed) ---
-"$SCRIPT_DIR/bin/ensure-shell-function.sh" 2>/dev/null || true
-
 # --- Fetch all remotes in parallel ---
 git fetch origin --quiet 2>/dev/null &
 FETCH_PID=$!
