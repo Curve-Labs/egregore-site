@@ -25,9 +25,9 @@ if grep -q "$SCRIPT_DIR" "$PROFILE" 2>/dev/null; then
   exit 0
 fi
 
-# Any egregore alias already exists? Use directory name instead.
+# Any egregore alias already exists? Use egregore-{dirname} instead.
 if grep -q "alias.*egregore" "$PROFILE" 2>/dev/null; then
-  ALIAS_NAME="$DIR_NAME"
+  ALIAS_NAME="egregore-${DIR_NAME}"
 else
   ALIAS_NAME="egregore"
 fi
