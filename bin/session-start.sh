@@ -79,64 +79,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
 fi
 
 # --- Ensure egregore shell function exists (comment out old alias if needed) ---
-(
-  PROFILE="$HOME/.zshrc"
-  if [ -f "$PROFILE" ]; then
-    # Comment out old alias — aliases override functions in zsh
-    if grep -q '^alias egregore=' "$PROFILE" 2>/dev/null; then
-      sed 's/^alias egregore=/#& # replaced by egregore function/' "$PROFILE" > "$PROFILE.tmp" \
-        && mv "$PROFILE.tmp" "$PROFILE"
-    fi
-
-    # Install egregore() function if not present
-    if ! grep -q 'egregore()' "$PROFILE" 2>/dev/null; then
-      cat >> "$PROFILE" << 'SHELLFUNC'
-
-# Egregore
-egregore() {
-  local registry="$HOME/.egregore/instances.json"
-  if [ ! -f "$registry" ] || [ ! -s "$registry" ]; then
-    echo "No Egregore instances found. Run: npx create-egregore"
-    return 1
-  fi
-  local -a names paths
-  local i=0
-  while IFS=$'\t' read -r slug name epath; do
-    if [ -d "$epath" ]; then
-      names[$i]="$name"
-      paths[$i]="$epath"
-      i=$((i + 1))
-    fi
-  done < <(jq -r '.[] | [.slug, .name, .path] | @tsv' "$registry" 2>/dev/null)
-  local count=$i
-  if [ "$count" -eq 0 ]; then
-    echo "No Egregore instances found. Run: npx create-egregore"
-    return 1
-  fi
-  if [ "$count" -eq 1 ]; then
-    cd "${paths[0]}" && claude start
-    return
-  fi
-  echo ""
-  echo "  Which Egregore?"
-  echo ""
-  for ((j=0; j<count; j++)); do
-    echo "  $((j + 1)). ${names[$j]}"
-  done
-  echo ""
-  local choice
-  printf "  Pick [1-%d]: " "$count"
-  read -r choice
-  if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
-    echo "  Invalid choice."
-    return 1
-  fi
-  cd "${paths[$((choice - 1))]}" && claude start
-}
-SHELLFUNC
-    fi
-  fi
-) 2>/dev/null || true
+"$SCRIPT_DIR/bin/ensure-shell-function.sh" 2>/dev/null || true
 
 # --- Fetch all remotes in parallel ---
 git fetch origin --quiet 2>/dev/null &
