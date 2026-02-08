@@ -53,9 +53,10 @@ MATCH (a:Artifact {id: $fileId}) RETURN a.id
 // For each file in quests/*.md (not index.md, not _template.md):
 MATCH (q:Quest {id: $slug}) RETURN q.id
 // If null, parse frontmatter and create Quest node
+// If exists, sync priority from frontmatter: SET q.priority = coalesce($priority, 0)
 ```
 
-Parse frontmatter for: author, date, topic/title, project, quests (for artifacts).
+Parse frontmatter for: author, date, topic/title, project, quests (for artifacts), priority (for quests, default 0).
 
 This ensures files and graph stay in sync even if earlier commands skipped Neo4j.
 

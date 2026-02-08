@@ -34,9 +34,9 @@ Q2 — Team (7 days):
 MATCH (s:Session)-[:BY]->(p:Person) WHERE p.name <> '$me' AND s.date >= date() - duration('P7D') RETURN s.date AS date, s.topic AS topic, p.name AS by ORDER BY s.date DESC LIMIT 5
 ```
 
-Q3 — Active quests:
+Q3 — Active quests (scored by recency + priority + contributors + artifacts):
 ```
-MATCH (q:Quest {status: 'active'}) OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) RETURN q.id AS quest, count(a) AS artifacts ORDER BY count(a) DESC
+MATCH (q:Quest {status: 'active'}) OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person) WHERE p.name IS NOT NULL AND p.name <> 'external' WITH q, count(DISTINCT a) AS artifacts, count(DISTINCT p) AS contributors, CASE WHEN count(a) > 0 THEN duration.inDays(max(a.created), date()).days ELSE duration.inDays(q.started, date()).days END AS daysSince, coalesce(q.priority, 0) AS priority RETURN q.id AS quest, artifacts, daysSince, round((toFloat(artifacts) + toFloat(contributors)*1.5 + toFloat(priority)*5.0 + 30.0/(1.0+toFloat(daysSince)*0.5)) * 100)/100 AS score ORDER BY score DESC
 ```
 
 Q4 — Pending questions for me:
@@ -114,11 +114,11 @@ Output the box directly — nothing before it.
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ⚑ QUESTS (15 active)                                                │
-│    game-engine-multiagent          3 artifacts                       │
-│    evaluation-benchmarks           2 artifacts                       │
-│    grants                          2 artifacts                       │
-│    nlnet-commons-fund              2 artifacts                       │
-│    emergent-ontology-benchmarks    2 artifacts                       │
+│    grants                          2 artifacts · 4d ago              │
+│    egregore-reliability            2 artifacts · 6d ago              │
+│    evaluation-benchmarks           2 artifacts · 8d ago              │
+│    nlnet-commons-fund              2 artifacts · 10d ago             │
+│    game-engine-multiagent          3 artifacts · 14d ago             │
 │                                                                      │
 │  → OPEN PRs                                                          │
 │    #18  Add MCP config (cem)                                         │
@@ -150,7 +150,7 @@ Show numbered items first, then other handoffs below with a blank line between t
 Separated by a blank line between the two sub-sections.
 
 **Group 4 — Quests & PRs** (only if items exist)
-- `⚑ QUESTS (N active)` — top 5 by artifact count. Format: quest-id left, N artifacts right.
+- `⚑ QUESTS (N active)` — top 5 by activity score (recency + priority + contributors + artifacts). Format: quest-id left, `N artifacts · Nd ago` right.
 - `→ OPEN PRs` — format: `#NN  Title (author)`
 Separated by a blank line between the two sub-sections. Omit either if empty.
 
