@@ -23,7 +23,8 @@ async function install(data, ui, targetDir) {
   const { fork_url, memory_url, github_token, org_name, github_org, slug } = data;
   const base = targetDir || process.cwd();
 
-  const egregoreDir = path.join(base, "egregore");
+  const dirSlug = (github_org || slug || "egregore").toLowerCase();
+  const egregoreDir = path.join(base, `egregore-${dirSlug}`);
   const memoryDirName = memory_url
     .split("/")
     .pop()
@@ -73,17 +74,18 @@ async function install(data, ui, targetDir) {
   fs.writeFileSync(envPath, envContent, { mode: 0o600 });
   ui.success("Credentials saved");
 
-  // 5. Shell alias
-  ui.step(5, totalSteps, "Setting up launch command...");
-  setupAlias(egregoreDir, ui);
+  // 5. Register instance + shell function
+  ui.step(5, totalSteps, "Registering instance...");
+  registerInstance(dirSlug, org_name, egregoreDir);
+  installShellFunction(ui);
 
   // Done
   console.log("");
   ui.success(`Egregore is ready for ${ui.bold(org_name)}`);
   console.log("");
   ui.info(`Your workspace:`);
-  ui.info(`  ${ui.cyan("./egregore/")}         — Your Egregore instance`);
-  ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}  — Shared knowledge`);
+  ui.info(`  ${ui.cyan(`./egregore-${dirSlug}/`)}  — Your Egregore instance`);
+  ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
   console.log("");
   ui.info(`Next: type ${ui.bold("egregore")} in any terminal to start.`);
   console.log("");
@@ -103,7 +105,81 @@ function configureGitCredentials(token) {
   }
 }
 
-function setupAlias(egregoreDir, ui) {
+function registerInstance(slug, name, egregoreDir) {
+  const registryDir = path.join(os.homedir(), ".egregore");
+  const registryFile = path.join(registryDir, "instances.json");
+
+  if (!fs.existsSync(registryDir)) {
+    fs.mkdirSync(registryDir, { recursive: true });
+  }
+
+  let instances = [];
+  if (fs.existsSync(registryFile)) {
+    try {
+      instances = JSON.parse(fs.readFileSync(registryFile, "utf-8"));
+    } catch {
+      instances = [];
+    }
+  }
+
+  const entry = { slug, name, path: egregoreDir };
+  const idx = instances.findIndex((i) => i.slug === slug);
+  if (idx >= 0) {
+    instances[idx] = entry;
+  } else {
+    instances.push(entry);
+  }
+
+  fs.writeFileSync(registryFile, JSON.stringify(instances, null, 2) + "\n");
+}
+
+const SHELL_FUNCTION = [
+  "",
+  "# Egregore",
+  "egregore() {",
+  '  local registry="$HOME/.egregore/instances.json"',
+  '  if [ ! -f "$registry" ] || [ ! -s "$registry" ]; then',
+  '    echo "No Egregore instances found. Run: npx create-egregore"',
+  "    return 1",
+  "  fi",
+  "  local -a names paths",
+  "  local i=0",
+  "  while IFS=$'\\t' read -r slug name epath; do",
+  '    if [ -d "$epath" ]; then',
+  '      names[$i]="$name"',
+  '      paths[$i]="$epath"',
+  "      i=$((i + 1))",
+  "    fi",
+  "  done < <(jq -r '.[] | [.slug, .name, .path] | @tsv' \"$registry\" 2>/dev/null)",
+  "  local count=$i",
+  '  if [ "$count" -eq 0 ]; then',
+  '    echo "No Egregore instances found. Run: npx create-egregore"',
+  "    return 1",
+  "  fi",
+  '  if [ "$count" -eq 1 ]; then',
+  '    cd "${paths[0]}" && claude start',
+  "    return",
+  "  fi",
+  '  echo ""',
+  '  echo "  Which Egregore?"',
+  '  echo ""',
+  "  for ((j=0; j<count; j++)); do",
+  '    echo "  $((j + 1)). ${names[$j]}"',
+  "  done",
+  '  echo ""',
+  "  local choice",
+  '  printf "  Pick [1-%d]: " "$count"',
+  "  read -r choice",
+  '  if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then',
+  '    echo "  Invalid choice."',
+  "    return 1",
+  "  fi",
+  '  cd "${paths[$((choice - 1))]}" && claude start',
+  "}",
+  "",
+].join("\n");
+
+function installShellFunction(ui) {
   const profiles = [
     path.join(os.homedir(), ".zshrc"),
     path.join(os.homedir(), ".bashrc"),
@@ -112,22 +188,26 @@ function setupAlias(egregoreDir, ui) {
 
   const profile = profiles.find((p) => fs.existsSync(p));
   if (!profile) {
-    ui.warn("No shell profile found — add this to your shell config:");
-    ui.info(`  alias egregore='cd "${egregoreDir}" && claude start'`);
+    ui.warn("No shell profile found — add the egregore function manually.");
     return;
   }
 
   const existing = fs.readFileSync(profile, "utf-8");
-  // Remove old alias
+
+  // Already installed
+  if (existing.includes("egregore()")) {
+    ui.success(`${ui.dim("egregore")} command already installed`);
+    return;
+  }
+
+  // Remove old alias if present (migration)
   const cleaned = existing
     .split("\n")
     .filter((line) => !line.includes("alias egregore=") && !line.match(/^# Egregore$/))
     .join("\n");
 
-  const aliasBlock = `\n# Egregore\nalias egregore='cd "${egregoreDir}" && claude start'\n`;
-  fs.writeFileSync(profile, cleaned + aliasBlock);
-
-  ui.success(`Added ${ui.dim("egregore")} alias to ${path.basename(profile)}`);
+  fs.writeFileSync(profile, cleaned + SHELL_FUNCTION);
+  ui.success(`Installed ${ui.dim("egregore")} command in ${path.basename(profile)}`);
 }
 
 module.exports = { install };

@@ -290,34 +290,18 @@ MEMORY_DIR="$(basename "$MEMORY_REPO" .git)"
 
 Save `workspace_ready: true` to state.
 
-### Step 4: Shell alias
+### Step 4: Shell command
 
-Set up the `egregore` launch command so the user can start Egregore from anywhere:
+The `egregore` shell command is automatically installed by `bin/session-start.sh` (runs on every launch). It registers the current instance in `~/.egregore/instances.json` and writes a shell function to the user's profile if not already present.
 
-```bash
-# Detect shell profile
-SHELL_PROFILE=""
-if [ -f "$HOME/.zshrc" ]; then
-  SHELL_PROFILE="$HOME/.zshrc"
-elif [ -f "$HOME/.bashrc" ]; then
-  SHELL_PROFILE="$HOME/.bashrc"
-elif [ -f "$HOME/.bash_profile" ]; then
-  SHELL_PROFILE="$HOME/.bash_profile"
-fi
+**No manual setup needed.** The session-start hook handles everything.
 
-REPO_DIR="$(pwd)"
-
-if [ -n "$SHELL_PROFILE" ]; then
-  # Remove old alias if exists, add new one
-  grep -v 'alias egregore=' "$SHELL_PROFILE" > "$SHELL_PROFILE.tmp" && mv "$SHELL_PROFILE.tmp" "$SHELL_PROFILE"
-  echo "" >> "$SHELL_PROFILE"
-  echo "# Egregore" >> "$SHELL_PROFILE"
-  echo "alias egregore='cd \"$REPO_DIR\" && claude start'" >> "$SHELL_PROFILE"
-fi
-```
+The shell function supports multiple Egregore instances:
+- 1 instance → launches directly
+- 2+ instances → shows a numbered picker
 
 Tell the user:
-> From now on, just type **`egregore`** in any terminal to launch. It syncs everything and shows you where you are.
+> From now on, just type **`egregore`** in any terminal to launch. If you have multiple orgs, it'll ask which one.
 
 ### Step 5: Complete
 
