@@ -18,19 +18,17 @@ done
 if [ -z "$PROFILE" ]; then exit 0; fi
 
 ALIAS_CMD="cd \"$SCRIPT_DIR\" && claude start"
-DIR_NAME="$(basename "$SCRIPT_DIR")"
 
 # Already have an alias pointing to this directory? Done.
 if grep -q "$SCRIPT_DIR" "$PROFILE" 2>/dev/null; then
   exit 0
 fi
 
-# Any egregore alias already exists? Use egregore-{dirname} instead.
-if grep -q "alias.*egregore" "$PROFILE" 2>/dev/null; then
-  ALIAS_NAME="egregore-${DIR_NAME}"
-else
-  ALIAS_NAME="egregore"
-fi
+# Find next available number: egregore0, egregore1, egregore2...
+N=0
+while grep -q "^alias egregore${N}=" "$PROFILE" 2>/dev/null; do
+  N=$((N + 1))
+done
 
 echo "" >> "$PROFILE"
-echo "alias ${ALIAS_NAME}='${ALIAS_CMD}'" >> "$PROFILE"
+echo "alias egregore${N}='${ALIAS_CMD}'" >> "$PROFILE"
