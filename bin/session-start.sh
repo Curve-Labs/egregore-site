@@ -63,7 +63,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
 
   if [ -n "$INST_SLUG" ] && [ -n "$INST_NAME" ]; then
     mkdir -p "$REGISTRY_DIR"
-    [ ! -f "$REGISTRY" ] && echo "[]" > "$REGISTRY"
+    [ -f "$REGISTRY" ] || echo "[]" > "$REGISTRY"
 
     # Check if this path is already registered
     ALREADY=$(jq --arg p "$SCRIPT_DIR" '[.[] | select(.path == $p)] | length' "$REGISTRY" 2>/dev/null || echo "0")
