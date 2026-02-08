@@ -53,6 +53,21 @@ Release to main?
 ```bash
 git checkout main && git pull origin main --quiet
 git merge develop --no-ff -m "Release: $(date +%Y-%m-%d)"
+```
+
+**If merge conflicts occur** (non-zero exit code): abort and return to develop:
+```bash
+git merge --abort
+git checkout develop
+```
+Tell the user:
+> Merge conflict between main and develop. This usually means a hotfix was applied directly to main.
+> Resolve by: `git checkout develop && git merge main`, fix conflicts, then retry `/release`.
+
+Stop here — do NOT push, tag, or sync.
+
+**If merge succeeds**, push:
+```bash
 git push origin main
 ```
 

@@ -27,9 +27,20 @@ Save your contributions to Egregore. Pushes working branch, creates PR to develo
      git checkout -b dev/$AUTHOR/$(date +%Y-%m-%d)-session origin/develop
      ```
    - Commit all changes to working branch
-   - Push working branch: `git push -u origin $BRANCH`
-   - Create PR to develop: `gh pr create --base develop --title "..." --body "..."`
-   - Detect if markdown-only or has code:
+   - Push working branch:
+     ```bash
+     git push -u origin $BRANCH
+     ```
+   - **If push fails**: stop here. Do NOT proceed. Tell the user:
+     > Push failed. Your commits are safe on your working branch. Check your network and try `/save` again.
+   - Create PR to develop:
+     ```bash
+     gh pr create --base develop --title "..." --body "..."
+     ```
+   - **If PR creation fails**: stop here. The branch was pushed, so tell the user:
+     > PR creation failed, but your branch `{BRANCH}` was pushed.
+     > Your commits are safe. Try again with `/save` or create the PR manually.
+   - **If PR succeeds**, detect if markdown-only or has code:
      ```bash
      NON_MD=$(git diff develop --name-only | grep -v '\.md$' | head -1)
      ```
