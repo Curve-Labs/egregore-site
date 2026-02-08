@@ -170,8 +170,8 @@ Run these steps in order. Write `.egregore-state.json` after each step to checkp
    ```bash
    git clone "https://github.com/$GITHUB_ORG/$GITHUB_ORG-memory.git" "../$GITHUB_ORG-memory"
    cd "../$GITHUB_ORG-memory"
-   mkdir -p people conversations knowledge/decisions knowledge/patterns
-   touch people/.gitkeep conversations/.gitkeep knowledge/decisions/.gitkeep knowledge/patterns/.gitkeep
+   mkdir -p people handoffs knowledge/decisions knowledge/patterns
+   touch people/.gitkeep handoffs/.gitkeep knowledge/decisions/.gitkeep knowledge/patterns/.gitkeep
    git add -A && git commit -m "Initialize memory structure" && git push
    cd -
    ```
@@ -357,7 +357,7 @@ Only say this once per session. Never repeat it.
 `memory/` is a symlink to the memory repo defined in `egregore.json`. It contains:
 
 - `people/` — who's involved, their interests and roles
-- `conversations/` — session logs and `index.md` for recent activity
+- `handoffs/` — session handoffs and `index.md` for recent activity
 - `knowledge/decisions/` — decisions that affect the org
 - `knowledge/patterns/` — emergent patterns worth naming
 
@@ -388,7 +388,7 @@ main ← stable, released (maintainer controls via /release)
 
 - Check `memory/knowledge/` before starting unfamiliar work
 - Document significant decisions in `memory/knowledge/decisions/`
-- After substantial sessions, log to `memory/conversations/` and update `index.md`
+- After substantial sessions, log to `memory/handoffs/` and update `index.md`
 - Use `/handoff` when leaving work for others to pick up
 - Use `/save` to commit and push contributions
 

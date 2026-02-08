@@ -51,21 +51,21 @@ Analyze the conversation context to produce:
 
 ## Step 3: Create handoff file
 
-File path: `memory/conversations/YYYY-MM/DD-[author]-[topic-slug].md`
+File path: `memory/handoffs/YYYY-MM/DD-[author]-[topic-slug].md`
 
-Example: `memory/conversations/2026-02/07-cem-defensibility-architecture.md`
+Example: `memory/handoffs/2026-02/07-cem-defensibility-architecture.md`
 
 Generate slug from topic: lowercase, hyphens, no special chars, max 50 chars.
 
 Ensure the directory exists:
 ```bash
-mkdir -p memory/conversations/YYYY-MM
+mkdir -p memory/handoffs/YYYY-MM
 ```
 
 Write the file using Bash (memory is outside project, avoids permission issues):
 
 ```bash
-cat > "memory/conversations/YYYY-MM/DD-author-topic-slug.md" << 'HANDOFFEOF'
+cat > "memory/handoffs/YYYY-MM/DD-author-topic-slug.md" << 'HANDOFFEOF'
 # Handoff: [Topic]
 
 **Date**: YYYY-MM-DD
@@ -114,7 +114,7 @@ Show progress:
 
 ## Step 4: Update conversation index
 
-Prepend to `memory/conversations/index.md`:
+Prepend to `memory/handoffs/index.md`:
 
 ```markdown
 - **YYYY-MM-DD** — [author]: [topic] ([handoff to recipient] | [handoff])
@@ -160,7 +160,7 @@ Where:
 - `$date` = `YYYY-MM-DD`
 - `$topic` = the topic string
 - `$summary` = 1-2 sentence summary
-- `$filePath` = `conversations/YYYY-MM/DD-author-topic-slug.md`
+- `$filePath` = `handoffs/YYYY-MM/DD-author-topic-slug.md`
 - `$project` = project name if identified (can be empty string if none)
 - `$recipient` = recipient short name if specified (can be empty string if none)
 
@@ -240,7 +240,7 @@ Session included 2 artifacts:
   - Decision: Defensibility architecture framework
   - Finding: Harvest flywheel as training surface
 
-Entry point: memory/conversations/2026-02/07-cem-defensibility-architecture.md
+Entry point: memory/handoffs/2026-02/07-cem-defensibility-architecture.md
 ```
 
 Show progress:
@@ -353,7 +353,7 @@ Same boundary rules apply — 4 line patterns only, no sub-boxes, 72-char outer 
 │  ◉ Finding: Harvest flywheel as training surface                     │
 ├──────────────────────────────────────────────────────────────────────┤
 │  → memory/knowledge/decisions/2026-02-07-defensibility-...           │
-│  → memory/conversations/2026-02/07-cem-defensibility-...             │
+│  → memory/handoffs/2026-02/07-cem-defensibility-...             │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -399,7 +399,7 @@ Creating handoff...
 Summarizing session...
 
   [1/5] ✓ Conversation file
-        → memory/conversations/2026-02/07-cem-defensibility-architecture.md
+        → memory/handoffs/2026-02/07-cem-defensibility-architecture.md
 
   [2/5] ✓ Index updated
 
@@ -439,7 +439,7 @@ Creating handoff...
 Summarizing session...
 
   [1/4] ✓ Conversation file
-        → memory/conversations/2026-02/07-oz-mcp-auth-flow.md
+        → memory/handoffs/2026-02/07-oz-mcp-auth-flow.md
 
   [2/4] ✓ Index updated
 
