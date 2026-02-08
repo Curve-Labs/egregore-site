@@ -75,10 +75,10 @@ async function install(data, ui, targetDir) {
   fs.writeFileSync(envPath, envLines.join("\n") + "\n", { mode: 0o600 });
   ui.success("Credentials saved");
 
-  // 5. Register instance + shell function
+  // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(dirSlug, org_name, egregoreDir);
-  installShellFunction(ui);
+  installShellAlias(egregoreDir, ui);
 
   // Done
   console.log("");
@@ -135,86 +135,18 @@ function registerInstance(slug, name, egregoreDir) {
   fs.writeFileSync(registryFile, JSON.stringify(instances, null, 2) + "\n");
 }
 
-const SHELL_FUNCTION = [
-  "",
-  "# Egregore",
-  "egregore() {",
-  '  local registry="$HOME/.egregore/instances.json"',
-  '  if [ ! -f "$registry" ] || [ ! -s "$registry" ]; then',
-  '    echo "No Egregore instances found. Run: npx create-egregore"',
-  "    return 1",
-  "  fi",
-  "  local -a names paths",
-  "  local i=0",
-  "  while IFS=$'\\t' read -r slug name epath; do",
-  '    if [ -d "$epath" ]; then',
-  '      names[$i]="$name"',
-  '      paths[$i]="$epath"',
-  "      i=$((i + 1))",
-  "    fi",
-  "  done < <(jq -r '.[] | [.slug, .name, .path] | @tsv' \"$registry\" 2>/dev/null)",
-  "  local count=$i",
-  '  if [ "$count" -eq 0 ]; then',
-  '    echo "No Egregore instances found. Run: npx create-egregore"',
-  "    return 1",
-  "  fi",
-  '  if [ "$count" -eq 1 ]; then',
-  '    cd "${paths[0]}" && claude start',
-  "    return",
-  "  fi",
-  '  echo ""',
-  '  echo "  Which Egregore?"',
-  '  echo ""',
-  "  for ((j=0; j<count; j++)); do",
-  '    echo "  $((j + 1)). ${names[$j]}"',
-  "  done",
-  '  echo ""',
-  "  local choice",
-  '  printf "  Pick [1-%d]: " "$count"',
-  "  read -r choice",
-  '  if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then',
-  '    echo "  Invalid choice."',
-  "    return 1",
-  "  fi",
-  '  cd "${paths[$((choice - 1))]}" && claude start',
-  "}",
-  "",
-].join("\n");
-
-function installShellFunction(ui) {
-  const profiles = [
-    path.join(os.homedir(), ".zshrc"),
-    path.join(os.homedir(), ".bashrc"),
-    path.join(os.homedir(), ".bash_profile"),
-  ];
-
-  const profile = profiles.find((p) => fs.existsSync(p));
-  if (!profile) {
-    ui.warn("No shell profile found — add the egregore function manually.");
+function installShellAlias(egregoreDir, ui) {
+  const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
+  if (!fs.existsSync(script)) {
+    ui.warn("Shell alias script not found — add alias manually.");
     return;
   }
-
-  let existing = fs.readFileSync(profile, "utf-8");
-
-  // Comment out old alias — in zsh, aliases take precedence over functions
-  if (existing.includes("alias egregore=")) {
-    existing = existing.replace(
-      /^(alias egregore=.*)$/gm,
-      "# $1  # replaced by egregore() function"
-    );
-    fs.writeFileSync(profile, existing);
-    ui.warn("Old egregore alias commented out (aliases override functions in zsh)");
+  try {
+    execSync(`bash "${script}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 });
+    ui.success(`Installed ${ui.dim("egregore")} command`);
+  } catch {
+    ui.warn("Could not install shell alias — add it manually.");
   }
-
-  // Already installed
-  if (existing.includes("egregore()")) {
-    ui.success(`${ui.dim("egregore")} command already installed`);
-    return;
-  }
-
-  // Append the shell function
-  fs.appendFileSync(profile, SHELL_FUNCTION);
-  ui.success(`Installed ${ui.dim("egregore")} command in ${path.basename(profile)}`);
 }
 
 module.exports = { install };
