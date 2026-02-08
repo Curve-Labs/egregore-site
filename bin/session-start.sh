@@ -54,6 +54,28 @@ if [ -f "$ENV_FILE" ] && ! grep -q '^EGREGORE_API_KEY=' "$ENV_FILE" 2>/dev/null;
   fi
 fi
 
+# --- Self-register in instance registry (for pre-registry installs) ---
+if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
+  REGISTRY_DIR="$HOME/.egregore"
+  REGISTRY="$REGISTRY_DIR/instances.json"
+  INST_SLUG=$(jq -r '.github_org // empty' "$CONFIG" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d '- ')
+  INST_NAME=$(jq -r '.org_name // empty' "$CONFIG" 2>/dev/null)
+
+  if [ -n "$INST_SLUG" ] && [ -n "$INST_NAME" ]; then
+    mkdir -p "$REGISTRY_DIR"
+    [ ! -f "$REGISTRY" ] && echo "[]" > "$REGISTRY"
+
+    # Check if this path is already registered
+    ALREADY=$(jq --arg p "$SCRIPT_DIR" '[.[] | select(.path == $p)] | length' "$REGISTRY" 2>/dev/null || echo "0")
+    if [ "$ALREADY" = "0" ]; then
+      ENTRY=$(jq -n --arg s "$INST_SLUG" --arg n "$INST_NAME" --arg p "$SCRIPT_DIR" \
+        '{slug: $s, name: $n, path: $p}')
+      jq --argjson e "$ENTRY" '. + [$e]' "$REGISTRY" > "$REGISTRY.tmp" \
+        && mv "$REGISTRY.tmp" "$REGISTRY"
+    fi
+  fi
+fi
+
 # --- Fetch all remotes in parallel ---
 git fetch origin --quiet 2>/dev/null &
 FETCH_PID=$!
