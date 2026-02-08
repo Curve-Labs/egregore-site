@@ -74,3 +74,14 @@ class SetupOrgsResponse(BaseModel):
     user: UserInfo
     orgs: list[OrgInfo]
     personal: PersonalInfo
+
+
+class OrgInvite(BaseModel):
+    """Invite a GitHub user to an org's Egregore."""
+    github_org: str
+    github_username: str
+
+
+class OrgAcceptInvite(BaseModel):
+    """Accept an invite — invitee provides their token + invite token."""
+    invite_token: str

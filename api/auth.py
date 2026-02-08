@@ -68,7 +68,7 @@ async def validate_api_key(authorization: str = Header(...)) -> dict:
     slug = get_org_slug(key)
     org = ORG_CONFIGS.get(slug)
 
-    if not org or org.get("api_key") != key:
+    if not org or not secrets.compare_digest(org.get("api_key", ""), key):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     return {**org, "slug": slug}

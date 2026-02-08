@@ -3,7 +3,7 @@
  * Zero dependencies — uses node:child_process, node:fs, node:path, node:os.
  */
 
-const { execSync } = require("node:child_process");
+const { execSync, execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
@@ -20,7 +20,7 @@ function run(cmd, opts = {}) {
  * @param {string} targetDir - where to install (default: cwd)
  */
 async function install(data, ui, targetDir) {
-  const { fork_url, memory_url, github_token, org_name, github_org, slug } = data;
+  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key } = data;
   const base = targetDir || process.cwd();
 
   const dirSlug = (github_org || slug || "egregore").toLowerCase();
@@ -42,7 +42,7 @@ async function install(data, ui, targetDir) {
     ui.warn("egregore/ already exists — pulling latest");
     run("git pull", { cwd: egregoreDir });
   } else {
-    run(`git clone "${fork_url}" "${egregoreDir}"`);
+    execFileSync("git", ["clone", fork_url, egregoreDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
   }
   ui.success("Cloned egregore");
 
@@ -52,7 +52,7 @@ async function install(data, ui, targetDir) {
     ui.warn(`${memoryDirName}/ already exists — pulling latest`);
     run("git pull", { cwd: memoryDir });
   } else {
-    run(`git clone "${memory_url}" "${memoryDir}"`);
+    execFileSync("git", ["clone", memory_url, memoryDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
   }
   ui.success("Cloned memory");
 
@@ -67,11 +67,12 @@ async function install(data, ui, targetDir) {
   }
   ui.success("Linked");
 
-  // 4. Write .env
+  // 4. Write .env (secrets only — never committed to git)
   ui.step(4, totalSteps, "Writing credentials...");
   const envPath = path.join(egregoreDir, ".env");
-  const envContent = `GITHUB_TOKEN=${github_token}\n`;
-  fs.writeFileSync(envPath, envContent, { mode: 0o600 });
+  const envLines = [`GITHUB_TOKEN=${github_token}`];
+  if (api_key) envLines.push(`EGREGORE_API_KEY=${api_key}`);
+  fs.writeFileSync(envPath, envLines.join("\n") + "\n", { mode: 0o600 });
   ui.success("Credentials saved");
 
   // 5. Register instance + shell function
@@ -93,7 +94,7 @@ async function install(data, ui, targetDir) {
 
 function configureGitCredentials(token) {
   try {
-    run("git config --global credential.helper store");
+    run("git config credential.helper store");
     const credentialInput = `protocol=https\nhost=github.com\nusername=x-access-token\npassword=${token}\n`;
     execSync("git credential-store store", {
       input: credentialInput,
@@ -200,14 +201,14 @@ function installShellFunction(ui) {
     return;
   }
 
-  // Remove old alias if present (migration)
-  const cleaned = existing
-    .split("\n")
-    .filter((line) => !line.includes("alias egregore=") && !line.match(/^# Egregore$/))
-    .join("\n");
-
-  fs.writeFileSync(profile, cleaned + SHELL_FUNCTION);
+  // Append the shell function (never rewrite the file — avoids profile corruption)
+  fs.appendFileSync(profile, SHELL_FUNCTION);
   ui.success(`Installed ${ui.dim("egregore")} command in ${path.basename(profile)}`);
+
+  // If old alias exists, warn but don't remove — let the function take precedence
+  if (existing.includes("alias egregore=")) {
+    ui.warn("Old egregore alias found — the new function takes precedence. You can remove the alias manually.");
+  }
 }
 
 module.exports = { install };

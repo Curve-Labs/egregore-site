@@ -1,7 +1,6 @@
 {
   "org_name": "Curve Labs",
   "github_org": "Curve-Labs",
-  "memory_repo": "curve-labs-memory",
-  "api_url": "https://egregore-production-55f2.up.railway.app",
-  "api_key": "ek_curvelabs_6c3c26da5f709551255362e16c61ab81"
+  "memory_repo": "https://github.com/Curve-Labs/curve-labs-memory.git",
+  "api_url": "https://egregore-production-55f2.up.railway.app"
 }

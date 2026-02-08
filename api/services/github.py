@@ -38,7 +38,7 @@ async def list_orgs(token: str) -> list[dict]:
     for org in resp.json():
         orgs.append({
             "login": org["login"],
-            "name": org.get("description") or org["login"],
+            "name": org["login"],
             "avatar_url": org.get("avatar_url", ""),
         })
     return orgs
@@ -159,16 +159,17 @@ async def init_memory_structure(token: str, owner: str, repo: str) -> None:
 async def update_egregore_json(
     token: str, owner: str, repo: str,
     org_name: str, github_org: str, memory_repo: str,
-    api_url: str, api_key: str,
+    api_url: str,
 ) -> None:
-    """Update egregore.json in the fork with org-specific config."""
+    """Update egregore.json in the fork with org-specific config.
+    NOTE: api_key is NOT written here — it goes in .env (gitignored), not committed files.
+    """
     import json
     config = {
         "org_name": org_name,
         "github_org": github_org,
         "memory_repo": memory_repo,
         "api_url": api_url,
-        "api_key": api_key,
     }
     await update_file(
         token, owner, repo,
@@ -202,3 +203,64 @@ async def get_file_content(token: str, owner: str, repo: str, path: str) -> str 
     import json
     data = resp.json()
     return base64.b64decode(data["content"]).decode()
+
+
+async def invite_to_org(token: str, org: str, username: str) -> dict:
+    """Send a GitHub org invitation. Requires admin:org scope + org owner/admin role.
+    Returns {"status": "invited"} or {"status": "failed", "reason": "..."}."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.put(
+            f"{API_BASE}/orgs/{org}/memberships/{username}",
+            headers=_headers(token),
+            json={"role": "member"},
+            timeout=15.0,
+        )
+    if resp.status_code in (200, 201):
+        state = resp.json().get("state", "pending")
+        return {"status": "invited", "state": state}
+    elif resp.status_code == 404:
+        return {"status": "failed", "reason": f"User '{username}' not found on GitHub"}
+    elif resp.status_code == 403:
+        return {"status": "failed", "reason": "Insufficient permissions. You need org admin rights."}
+    elif resp.status_code == 422:
+        return {"status": "already_member"}
+    else:
+        return {"status": "failed", "reason": f"GitHub API error: {resp.status_code}"}
+
+
+async def check_org_membership(token: str, org: str, username: str) -> str:
+    """Check a user's org membership state. Returns 'active', 'pending', or 'none'."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{API_BASE}/orgs/{org}/memberships/{username}",
+            headers=_headers(token),
+            timeout=10.0,
+        )
+    if resp.status_code == 200:
+        return resp.json().get("state", "active")
+    return "none"
+
+
+async def add_repo_collaborator(token: str, owner: str, repo: str, username: str) -> bool:
+    """Add a user as a collaborator to a repo. Returns True if successful."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.put(
+            f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
+            headers=_headers(token),
+            json={"permission": "push"},
+            timeout=10.0,
+        )
+    return resp.status_code in (200, 201, 204)
+
+
+async def accept_org_invitation(token: str, org: str) -> bool:
+    """Accept a pending org invitation on behalf of the authenticated user.
+    Uses PATCH /user/memberships/orgs/{org} with state=active."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(
+            f"{API_BASE}/user/memberships/orgs/{org}",
+            headers=_headers(token),
+            json={"state": "active"},
+            timeout=10.0,
+        )
+    return resp.status_code == 200

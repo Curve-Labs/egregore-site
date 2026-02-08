@@ -33,6 +33,28 @@ def claim_token(token: str) -> dict | None:
     return entry["data"]
 
 
+def peek_token(token: str) -> dict | None:
+    """Read a token's data WITHOUT consuming it. Returns data or None."""
+    _cleanup()
+    entry = _tokens.get(token)
+    if not entry:
+        return None
+    if time.time() > entry["expires"]:
+        return None
+    return entry["data"]
+
+
+def create_invite_token(data: dict, ttl: int = 604800) -> str:
+    """Create an invite token (7-day TTL by default). Returns 'inv_xxxx' string."""
+    token_id = f"inv_{secrets.token_hex(12)}"
+    _tokens[token_id] = {
+        "data": data,
+        "expires": time.time() + ttl,
+    }
+    _cleanup()
+    return token_id
+
+
 def _cleanup():
     """Remove expired tokens."""
     now = time.time()

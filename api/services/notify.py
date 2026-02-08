@@ -76,6 +76,36 @@ def generate_bot_invite_link(org_slug: str, bot_username: str = "Egregore_clbot"
     return f"https://t.me/{bot_username}?startgroup=org_{org_slug}"
 
 
+async def create_group_invite_link(org: dict) -> str | None:
+    """Generate a one-time Telegram group invite link for an org's chat.
+
+    Uses createChatInviteLink Bot API. Returns the invite link string or None.
+    """
+    bot_token = org.get("telegram_bot_token", "")
+    chat_id = org.get("telegram_chat_id", "")
+
+    if not bot_token or not chat_id:
+        return None
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.telegram.org/bot{bot_token}/createChatInviteLink",
+                json={
+                    "chat_id": chat_id,
+                    "member_limit": 1,
+                    "name": "Egregore invite",
+                },
+                timeout=10.0,
+            )
+        data = response.json()
+        if data.get("ok"):
+            return data["result"]["invite_link"]
+        return None
+    except Exception:
+        return None
+
+
 async def _send_telegram(bot_token: str, chat_id: str, text: str) -> dict:
     """Send a Telegram message."""
     async with httpx.AsyncClient() as client:

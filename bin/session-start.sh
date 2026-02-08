@@ -37,6 +37,30 @@ if [ "$ONBOARDING_COMPLETE" != "true" ]; then
   exit 0
 fi
 
+# --- Auto-provision EGREGORE_API_KEY if missing ---
+ENV_FILE="$SCRIPT_DIR/.env"
+CONFIG="$SCRIPT_DIR/egregore.json"
+
+if [ -f "$ENV_FILE" ] && ! grep -q '^EGREGORE_API_KEY=' "$ENV_FILE" 2>/dev/null; then
+  GITHUB_TOKEN=$(grep '^GITHUB_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
+  API_URL=$(jq -r '.api_url // empty' "$CONFIG" 2>/dev/null)
+  GITHUB_ORG=$(jq -r '.github_org // empty' "$CONFIG" 2>/dev/null)
+
+  if [ -n "$GITHUB_TOKEN" ] && [ -n "$API_URL" ] && [ -n "$GITHUB_ORG" ]; then
+    SLUG=$(echo "$GITHUB_ORG" | tr '[:upper:]' '[:lower:]' | tr -d '- ')
+    KEY_RESPONSE=$(curl -s -X GET "${API_URL}/api/org/${SLUG}/key" \
+      -H "Authorization: Bearer $GITHUB_TOKEN" \
+      --max-time 10 2>/dev/null || echo "")
+
+    if [ -n "$KEY_RESPONSE" ]; then
+      FETCHED_KEY=$(echo "$KEY_RESPONSE" | jq -r '.api_key // empty' 2>/dev/null)
+      if [ -n "$FETCHED_KEY" ] && [ "$FETCHED_KEY" != "null" ]; then
+        echo "EGREGORE_API_KEY=$FETCHED_KEY" >> "$ENV_FILE"
+      fi
+    fi
+  fi
+fi
+
 # --- Fetch all remotes in parallel ---
 git fetch origin --quiet 2>/dev/null &
 FETCH_PID=$!

@@ -10,6 +10,7 @@ Deploy to Railway alongside telegram-bot.
 import os
 import json
 import logging
+import secrets
 
 from dotenv import load_dotenv
 load_dotenv(override=False)
@@ -24,11 +25,12 @@ from .auth import (
 from .models import (
     GraphQuery, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
+    OrgInvite, OrgAcceptInvite,
 )
 from .services.graph import execute_query, get_schema, test_connection
-from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link
+from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
 from .services import github as gh
-from .services.tokens import create_token, claim_token
+from .services.tokens import create_token, claim_token, create_invite_token, peek_token
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,11 +41,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS: Only allow browser requests from known origins.
+# CLI tools (bin/graph.sh, bin/notify.sh, create-egregore) use curl, not browsers.
+_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore.xyz").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -112,6 +117,75 @@ async def notify_test(org: dict = Depends(validate_api_key)):
     if result["status"] != "ok":
         raise HTTPException(status_code=503, detail=result.get("detail"))
     return result
+
+
+# =============================================================================
+# KEY RETRIEVAL (for existing users after updates)
+# =============================================================================
+
+
+@app.get("/api/org/{slug}/key")
+async def org_get_key(slug: str, authorization: str = Header(...)):
+    """Return the org's API key if the caller is a verified member.
+
+    Used by session-start.sh to auto-provision EGREGORE_API_KEY for existing
+    users who pull an update but don't have the key in .env yet.
+    Auth: GitHub token (not API key — they don't have one yet).
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    org = ORG_CONFIGS.get(slug)
+    if not org:
+        raise HTTPException(status_code=404, detail="Org not found")
+
+    github_org = org.get("github_org", "")
+    if not github_org:
+        raise HTTPException(status_code=500, detail="Org has no github_org configured")
+
+    # Verify caller is a member of the GitHub org (or owner of personal account)
+    async with httpx.AsyncClient() as client:
+        # Check org membership
+        resp = await client.get(
+            f"https://api.github.com/orgs/{github_org}/members",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+
+        if resp.status_code == 200:
+            # Get the caller's username
+            user_resp = await client.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"token {github_token}"},
+                timeout=10.0,
+            )
+            if user_resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+            username = user_resp.json().get("login", "")
+            members = [m["login"] for m in resp.json()]
+            if username not in members:
+                raise HTTPException(status_code=403, detail="Not a member of this org")
+        elif resp.status_code == 404:
+            # Might be a personal account — check if they own the repo
+            user_resp = await client.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"token {github_token}"},
+                timeout=10.0,
+            )
+            if user_resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+            username = user_resp.json().get("login", "")
+            if username.lower() != github_org.lower():
+                raise HTTPException(status_code=403, detail="Not authorized for this org")
+        else:
+            raise HTTPException(status_code=401, detail="Could not verify org membership")
+
+    return {"api_key": org["api_key"], "org_slug": slug}
 
 
 # =============================================================================
@@ -227,25 +301,33 @@ async def setup_orgs(authorization: str = Header(...)):
 
     orgs = await gh.list_orgs(token)
 
-    # Check each org for egregore-core fork
+    # Check each org for egregore-core fork + membership status
     org_results = []
     for org in orgs:
         has_egregore = await gh.repo_exists(token, org["login"], "egregore-core")
         role = await gh.get_org_membership(token, org["login"])
+        # Check if user already has memory repo access (= already a member)
+        is_member = False
+        if has_egregore:
+            is_member = await gh.repo_exists(token, org["login"], f"{org['login']}-memory")
         org_results.append({
             "login": org["login"],
             "name": org["name"],
             "has_egregore": has_egregore,
+            "is_member": is_member,
             "role": role or "member",
             "avatar_url": org.get("avatar_url", ""),
         })
 
     personal_has = await gh.repo_exists(token, user["login"], "egregore-core")
+    personal_member = False
+    if personal_has:
+        personal_member = await gh.repo_exists(token, user["login"], f"{user['login']}-memory")
 
     return {
         "user": user,
         "orgs": org_results,
-        "personal": {"login": user["login"], "has_egregore": personal_has},
+        "personal": {"login": user["login"], "has_egregore": personal_has, "is_member": personal_member},
     }
 
 
@@ -316,7 +398,7 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         await gh.update_egregore_json(
             token, owner, "egregore-core",
             body.org_name, owner, memory_repo_name,
-            api_url, api_key,
+            api_url,
         )
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json in fork: {e}")
@@ -411,9 +493,8 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
 
     fork_url = f"https://github.com/{owner}/egregore-core.git"
     api_url = config.get("api_url", "")
-    api_key = config.get("api_key", "")
 
-    # Add person to Neo4j if we have a matching org config
+    # Look up org's API key from server config (not from egregore.json — secrets don't go in git)
     slug = owner.lower().replace("-", "").replace(" ", "")
     org_config = ORG_CONFIGS.get(slug)
     if org_config:
@@ -427,6 +508,7 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
         except Exception:
             pass
 
+    api_key = org_config.get("api_key", "") if org_config else ""
     setup_token = create_token({
         "fork_url": fork_url,
         "memory_url": memory_url,
@@ -455,16 +537,160 @@ async def org_claim(token: str):
     return data
 
 
+@app.get("/api/org/install/{token}")
+async def org_install_script(token: str):
+    """Return a bash install script for users without Node.js.
+
+    Usage: curl -fsSL https://egregore.xyz/api/org/install/st_xxx | bash
+    """
+    from fastapi.responses import PlainTextResponse
+
+    # Peek to validate token exists (don't consume — the script will claim it)
+    data = peek_token(token)
+    if not data:
+        return PlainTextResponse("echo 'Error: Token expired or invalid.'; exit 1", status_code=404)
+
+    api_url = os.environ.get("EGREGORE_API_URL", "https://egregore-production-55f2.up.railway.app")
+
+    script = f"""#!/bin/bash
+set -euo pipefail
+
+echo ""
+echo "  Installing Egregore..."
+echo ""
+
+# Check for git
+if ! command -v git &>/dev/null; then
+  echo "  Error: git is required. Install it first."
+  exit 1
+fi
+
+# Check for curl or wget
+if ! command -v curl &>/dev/null; then
+  echo "  Error: curl is required."
+  exit 1
+fi
+
+# Check for jq (optional but helpful)
+HAS_JQ=false
+if command -v jq &>/dev/null; then
+  HAS_JQ=true
+fi
+
+# Claim the setup token
+echo "  [1/5] Claiming setup token..."
+RESPONSE=$(curl -fsSL "{api_url}/api/org/claim/{token}")
+
+if [ -z "$RESPONSE" ]; then
+  echo "  Error: Token expired or already used."
+  exit 1
+fi
+
+# Parse JSON response (with or without jq)
+if $HAS_JQ; then
+  FORK_URL=$(echo "$RESPONSE" | jq -r '.fork_url')
+  MEMORY_URL=$(echo "$RESPONSE" | jq -r '.memory_url')
+  GITHUB_TOKEN=$(echo "$RESPONSE" | jq -r '.github_token')
+  ORG_NAME=$(echo "$RESPONSE" | jq -r '.org_name')
+  GITHUB_ORG=$(echo "$RESPONSE" | jq -r '.github_org')
+  API_KEY=$(echo "$RESPONSE" | jq -r '.api_key')
+  API_URL=$(echo "$RESPONSE" | jq -r '.api_url')
+  SLUG=$(echo "$RESPONSE" | jq -r '.slug')
+else
+  # Fallback: extract with grep/sed (works for simple JSON)
+  extract() {{ echo "$RESPONSE" | grep -o "\\"$1\\":\\"[^\\"]*\\"" | head -1 | sed 's/.*:"//;s/"$//'; }}
+  FORK_URL=$(extract fork_url)
+  MEMORY_URL=$(extract memory_url)
+  GITHUB_TOKEN=$(extract github_token)
+  ORG_NAME=$(extract org_name)
+  GITHUB_ORG=$(extract github_org)
+  API_KEY=$(extract api_key)
+  API_URL=$(extract api_url)
+  SLUG=$(extract slug)
+fi
+
+DIR_SLUG=$(echo "$GITHUB_ORG" | tr '[:upper:]' '[:lower:]')
+EGREGORE_DIR="./egregore-$DIR_SLUG"
+MEMORY_DIR_NAME=$(basename "$MEMORY_URL" .git)
+MEMORY_DIR="./$MEMORY_DIR_NAME"
+
+# Configure git credentials for HTTPS cloning
+git config credential.helper store 2>/dev/null || true
+printf 'protocol=https\\nhost=github.com\\nusername=x-access-token\\npassword=%s\\n' "$GITHUB_TOKEN" | git credential-store store 2>/dev/null || true
+
+# Clone fork
+echo "  [2/5] Cloning egregore..."
+if [ -d "$EGREGORE_DIR" ]; then
+  echo "         Already exists — pulling latest"
+  git -C "$EGREGORE_DIR" pull -q
+else
+  git clone -q "$FORK_URL" "$EGREGORE_DIR"
+fi
+
+# Clone memory
+echo "  [3/5] Cloning shared memory..."
+if [ -d "$MEMORY_DIR" ]; then
+  echo "         Already exists — pulling latest"
+  git -C "$MEMORY_DIR" pull -q
+else
+  git clone -q "$MEMORY_URL" "$MEMORY_DIR"
+fi
+
+# Symlink
+echo "  [4/5] Linking memory..."
+if [ ! -L "$EGREGORE_DIR/memory" ]; then
+  ln -s "../$MEMORY_DIR_NAME" "$EGREGORE_DIR/memory"
+fi
+
+# Write .env (secrets only — never committed to git)
+echo "  [5/5] Writing credentials..."
+cat > "$EGREGORE_DIR/.env" << ENVEOF
+GITHUB_TOKEN=$GITHUB_TOKEN
+EGREGORE_API_KEY=$API_KEY
+ENVEOF
+chmod 600 "$EGREGORE_DIR/.env"
+
+# Register instance
+mkdir -p "$HOME/.egregore"
+REGISTRY="$HOME/.egregore/instances.json"
+if [ ! -f "$REGISTRY" ]; then
+  echo "[]" > "$REGISTRY"
+fi
+if $HAS_JQ; then
+  ENTRY=$(jq -n --arg s "$SLUG" --arg n "$ORG_NAME" --arg p "$(cd "$EGREGORE_DIR" && pwd)" \\
+    '{{slug: $s, name: $n, path: $p}}')
+  jq --argjson e "$ENTRY" '(map(select(.slug != ($e.slug)))) + [$e]' "$REGISTRY" > "$REGISTRY.tmp" \\
+    && mv "$REGISTRY.tmp" "$REGISTRY"
+fi
+
+echo ""
+echo "  Egregore is ready for $ORG_NAME"
+echo ""
+echo "  Your workspace:"
+echo "    $EGREGORE_DIR/   — Your Egregore instance"
+echo "    $MEMORY_DIR/     — Shared knowledge"
+echo ""
+echo "  Next: cd $EGREGORE_DIR && claude start"
+echo ""
+"""
+    return PlainTextResponse(script, media_type="text/plain")
+
+
 @app.post("/api/org/telegram")
 async def org_telegram(body: OrgTelegram, authorization: str = Header(None)):
     """Bot reports its chat_id after being added to a group."""
-    # Authenticate with bot secret or API key
+    # Authenticate: accept bot token or dedicated bot secret
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     bot_secret = os.environ.get("TELEGRAM_BOT_SECRET", "")
     if authorization:
         auth_value = authorization.replace("Bearer ", "").strip()
-        if bot_secret and auth_value != bot_secret:
-            raise HTTPException(status_code=401, detail="Invalid bot secret")
-    elif bot_secret:
+        valid = (
+            (bot_secret and secrets.compare_digest(auth_value, bot_secret))
+            or (bot_token and secrets.compare_digest(auth_value, bot_token))
+        )
+        if not valid:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    elif bot_secret or bot_token:
         raise HTTPException(status_code=401, detail="Missing authorization")
 
     slug = body.org_slug
@@ -484,7 +710,7 @@ async def org_telegram(body: OrgTelegram, authorization: str = Header(None)):
     except Exception as e:
         logger.warning(f"Failed to persist telegram_chat_id: {e}")
 
-    return {"status": "connected", "org_slug": slug}
+    return {"status": "connected", "org_slug": slug, "org_name": org.get("org_name", slug)}
 
 
 @app.get("/api/org/telegram/status/{slug}")
@@ -498,10 +724,212 @@ async def org_telegram_status(slug: str):
     return {"connected": connected, "org_slug": slug}
 
 
+@app.post("/api/org/telegram/invite-link")
+async def org_telegram_invite_link(org: dict = Depends(validate_api_key)):
+    """Generate a one-time Telegram group invite link for the org."""
+    link = await create_group_invite_link(org)
+    if not link:
+        raise HTTPException(status_code=400, detail="Telegram not configured or bot lacks permission")
+    return {"invite_link": link}
+
+
 @app.get("/api/auth/github/client-id")
 async def github_client_id():
     """Return the GitHub OAuth client ID for the web flow."""
     return {"client_id": GITHUB_CLIENT_ID}
+
+
+# =============================================================================
+# INVITE FLOW
+# =============================================================================
+
+
+@app.post("/api/org/invite")
+async def org_invite(body: OrgInvite, authorization: str = Header(...)):
+    """Invite a GitHub user to an org's Egregore.
+
+    The inviter must be an admin of the GitHub org.
+    Sends a GitHub org invitation + creates an Egregore invite link.
+    """
+    token = authorization.replace("Bearer ", "").strip()
+
+    try:
+        inviter = await gh.get_user(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    owner = body.github_org
+
+    # Verify the fork exists (org has Egregore)
+    if not await gh.repo_exists(token, owner, "egregore-core"):
+        raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner}")
+
+    # Verify inviter is an admin
+    role = await gh.get_org_membership(token, owner)
+    if role not in ("admin",):
+        raise HTTPException(
+            status_code=403,
+            detail="Only org admins can invite. Ask an admin to send the invite.",
+        )
+
+    # Try to send GitHub org invitation
+    github_result = await gh.invite_to_org(token, owner, body.github_username)
+
+    # Read org config for the invite token
+    config_raw = await gh.get_file_content(token, owner, "egregore-core", "egregore.json")
+    org_name = owner
+    slug = owner.lower().replace("-", "").replace(" ", "")
+    if config_raw:
+        config = json.loads(config_raw)
+        org_name = config.get("org_name", owner)
+
+        # Also add them as collaborator on the memory repo
+        memory_repo = config.get("memory_repo", f"{owner}-memory")
+        if "/" in memory_repo:
+            memory_repo_name = memory_repo.split("/")[-1].replace(".git", "")
+        else:
+            memory_repo_name = memory_repo
+        await gh.add_repo_collaborator(token, owner, memory_repo_name, body.github_username)
+
+    # Create invite token (7-day TTL)
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    invite_token = create_invite_token({
+        "github_org": owner,
+        "org_name": org_name,
+        "invited_username": body.github_username,
+        "invited_by": inviter["login"],
+        "slug": slug,
+    })
+
+    invite_url = f"{site_url}/join?invite={invite_token}"
+
+    logger.info(f"Invite created: {inviter['login']} invited {body.github_username} to {owner}")
+
+    return {
+        "invite_url": invite_url,
+        "invite_token": invite_token,
+        "github_invite": github_result,
+        "org_name": org_name,
+        "invited_username": body.github_username,
+    }
+
+
+@app.get("/api/org/invite/{token}")
+async def org_invite_info(token: str):
+    """Get invite details without consuming the token. For the website to show invite info."""
+    data = peek_token(token)
+    if not data:
+        raise HTTPException(status_code=404, detail="Invite expired or invalid")
+    return {
+        "org_name": data.get("org_name", ""),
+        "github_org": data.get("github_org", ""),
+        "invited_by": data.get("invited_by", ""),
+        "invited_username": data.get("invited_username", ""),
+    }
+
+
+@app.post("/api/org/invite/{invite_token}/accept")
+async def org_invite_accept(invite_token: str, authorization: str = Header(...)):
+    """Accept an invite. Invitee authenticates, we verify org membership and set them up."""
+    token = authorization.replace("Bearer ", "").strip()
+
+    # Validate invite token (peek, don't consume yet)
+    invite_data = peek_token(invite_token)
+    if not invite_data:
+        raise HTTPException(status_code=404, detail="Invite expired or invalid")
+
+    try:
+        user = await gh.get_user(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    owner = invite_data["github_org"]
+    slug = invite_data.get("slug", owner.lower().replace("-", "").replace(" ", ""))
+
+    # Check org membership — auto-accept if pending
+    membership = await gh.check_org_membership(token, owner, user["login"])
+
+    if membership == "pending":
+        # Auto-accept the GitHub org invitation on behalf of the user
+        accepted = await gh.accept_org_invitation(token, owner)
+        if accepted:
+            membership = "active"
+        else:
+            return {
+                "status": "error",
+                "message": "Could not accept the org invitation. Try again or accept it manually on GitHub.",
+                "github_org": owner,
+            }
+
+    if membership == "none":
+        # GitHub org invite hasn't arrived yet (race condition) — retry shortly
+        return {
+            "status": "pending_github",
+            "message": "The org invitation hasn't arrived yet. Try again in a moment.",
+            "github_org": owner,
+        }
+
+    # Membership is active — proceed with Egregore join
+    # Read egregore.json from fork
+    config_raw = await gh.get_file_content(token, owner, "egregore-core", "egregore.json")
+    if not config_raw:
+        raise HTTPException(status_code=404, detail="egregore.json not found in fork")
+
+    config = json.loads(config_raw)
+    memory_repo = config.get("memory_repo", f"{owner}-memory")
+    if memory_repo.startswith("http"):
+        memory_url = memory_repo
+    else:
+        memory_url = f"https://github.com/{owner}/{memory_repo}.git"
+
+    fork_url = f"https://github.com/{owner}/egregore-core.git"
+    api_url = config.get("api_url", "")
+
+    # Add person to Neo4j
+    org_config = ORG_CONFIGS.get(slug)
+    if org_config:
+        try:
+            await execute_query(org_config, """
+                MERGE (p:Person {name: $name})
+                WITH p
+                MATCH (o:Org {id: $_org})
+                MERGE (p)-[:MEMBER_OF]->(o)
+            """, {"name": user["login"]})
+        except Exception:
+            pass
+
+    # Consume the invite token now
+    claim_token(invite_token)
+
+    # Get API key from server config (not from egregore.json — secrets don't go in git)
+    api_key = org_config.get("api_key", "") if org_config else ""
+
+    # Generate setup token for npx installer
+    setup_token = create_token({
+        "fork_url": fork_url,
+        "memory_url": memory_url,
+        "api_key": api_key,
+        "api_url": api_url,
+        "org_name": config.get("org_name", owner),
+        "github_org": owner,
+        "github_token": token,
+        "slug": slug,
+    })
+
+    # Generate Telegram group invite link for the new member
+    telegram_group_link = None
+    if org_config:
+        telegram_group_link = await create_group_invite_link(org_config)
+
+    return {
+        "status": "accepted",
+        "setup_token": setup_token,
+        "fork_url": fork_url,
+        "memory_url": memory_url,
+        "org_slug": slug,
+        "org_name": config.get("org_name", owner),
+        "telegram_group_link": telegram_group_link,
+    }
 
 
 # =============================================================================

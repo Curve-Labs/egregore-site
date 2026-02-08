@@ -6,7 +6,7 @@
 const https = require("node:https");
 
 const CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
-const SCOPE = "repo,read:org";
+const SCOPE = "repo,admin:org";
 
 function post(url, body) {
   return new Promise((resolve, reject) => {
@@ -46,24 +46,24 @@ function sleep(ms) {
 }
 
 function openBrowser(url) {
-  const { exec } = require("node:child_process");
-  const cmd =
-    process.platform === "darwin"
-      ? `open "${url}"`
-      : process.platform === "win32"
-        ? `start "${url}"`
-        : `xdg-open "${url}"`;
-  exec(cmd, () => {});
+  const { execFile } = require("node:child_process");
+  if (process.platform === "darwin") {
+    execFile("open", [url], () => {});
+  } else if (process.platform === "win32") {
+    execFile("cmd", ["/c", "start", "", url], () => {});
+  } else {
+    execFile("xdg-open", [url], () => {});
+  }
 }
 
 function copyToClipboard(text) {
-  const { exec } = require("node:child_process");
-  if (process.platform === "darwin") {
-    exec(`printf '%s' '${text}' | pbcopy`, () => {});
-    return true;
-  }
+  const { execSync } = require("node:child_process");
   try {
-    exec(`printf '%s' '${text}' | xclip -selection clipboard`, () => {});
+    if (process.platform === "darwin") {
+      execSync("pbcopy", { input: text, stdio: ["pipe", "ignore", "ignore"] });
+      return true;
+    }
+    execSync("xclip -selection clipboard", { input: text, stdio: ["pipe", "ignore", "ignore"] });
     return true;
   } catch {
     return false;
