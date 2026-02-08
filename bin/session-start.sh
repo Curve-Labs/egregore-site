@@ -10,14 +10,7 @@ DATE=$(date +%Y-%m-%d)
 
 # --- Determine author short name ---
 FULLNAME=$(git config user.name 2>/dev/null || echo "")
-case "$FULLNAME" in
-  *Oguzhan*|*ozzi*) AUTHOR="oz" ;;
-  *Cem*)            AUTHOR="cem" ;;
-  *Ali*)            AUTHOR="ali" ;;
-  *Pali*)           AUTHOR="pali" ;;
-  *Damla*)          AUTHOR="damla" ;;
-  *)                AUTHOR=$(echo "$FULLNAME" | tr '[:upper:]' '[:lower:]' | cut -d' ' -f1) ;;
-esac
+AUTHOR=$(echo "$FULLNAME" | tr '[:upper:]' '[:lower:]' | cut -d' ' -f1)
 
 if [ -z "$AUTHOR" ]; then
   echo '{"error": "git user.name not set. Run: git config user.name \"Your Name\""}'
@@ -188,22 +181,3 @@ echo "  Develop: synced"
 [ "$COMMITS_AHEAD" -gt 0 ] && echo "  $COMMITS_AHEAD changes on develop since last release."
 echo ""
 echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"
-
-# --- Ensure 'egregore' shell alias exists ---
-SHELL_PROFILE=""
-if [ -f "$HOME/.zshrc" ]; then
-  SHELL_PROFILE="$HOME/.zshrc"
-elif [ -f "$HOME/.bashrc" ]; then
-  SHELL_PROFILE="$HOME/.bashrc"
-elif [ -f "$HOME/.bash_profile" ]; then
-  SHELL_PROFILE="$HOME/.bash_profile"
-fi
-
-if [ -n "$SHELL_PROFILE" ]; then
-  if ! grep -q 'alias egregore=' "$SHELL_PROFILE" 2>/dev/null; then
-    echo "" >> "$SHELL_PROFILE"
-    echo "# Egregore" >> "$SHELL_PROFILE"
-    echo "alias egregore='cd \"$SCRIPT_DIR\" && claude start'" >> "$SHELL_PROFILE"
-    echo "  [Installed 'egregore' command — type it from any terminal next time]"
-  fi
-fi
