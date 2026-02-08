@@ -114,7 +114,6 @@ async def _send_telegram(bot_token: str, chat_id: str, text: str) -> dict:
             json={
                 "chat_id": chat_id,
                 "text": text,
-                "parse_mode": "Markdown",
             },
             timeout=10.0,
         )
