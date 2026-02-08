@@ -125,7 +125,7 @@ Output the box directly — nothing before it.
 │    #17  Save command improvements (oz)                               │
 │                                                                      │
 ├──────────────────────────────────────────────────────────────────────┤
-│  /reflect capture an insight · /quest explore · /ask a question      │
+│  /ask a question · /quest to see more · /reflect for insights        │
 │  Type a number to act, or keep working.                              │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -155,7 +155,7 @@ Separated by a blank line between the two sub-sections.
 Separated by a blank line between the two sub-sections. Omit either if empty.
 
 **Footer** (always shown, separated by `├────┤`)
-- Command hints: `/reflect capture an insight · /quest explore · /ask a question`
+- Command hints: `/ask a question · /quest to see more · /reflect for insights`
 - If numbered items exist: `Type a number to act, or keep working.`
 
 ## Date formatting
