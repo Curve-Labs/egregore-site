@@ -78,6 +78,15 @@ if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
   ) 2>/dev/null || true
 fi
 
+# --- Clean up old alias (aliases override functions in zsh) ---
+(
+  PROFILE="$HOME/.zshrc"
+  if [ -f "$PROFILE" ] && grep -q '^alias egregore=' "$PROFILE" 2>/dev/null; then
+    sed 's/^alias egregore=/#& # replaced by egregore function/' "$PROFILE" > "$PROFILE.tmp" \
+      && mv "$PROFILE.tmp" "$PROFILE"
+  fi
+) 2>/dev/null || true
+
 # --- Fetch all remotes in parallel ---
 git fetch origin --quiet 2>/dev/null &
 FETCH_PID=$!
