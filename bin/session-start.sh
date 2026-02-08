@@ -40,7 +40,7 @@ if [ -f "$ENV_FILE" ] && ! grep -q '^EGREGORE_API_KEY=' "$ENV_FILE" 2>/dev/null;
   GITHUB_ORG=$(jq -r '.github_org // empty' "$CONFIG" 2>/dev/null)
 
   if [ -n "$GITHUB_TOKEN" ] && [ -n "$API_URL" ] && [ -n "$GITHUB_ORG" ]; then
-    SLUG=$(echo "$GITHUB_ORG" | tr '[:upper:]' '[:lower:]' | tr -d '- ')
+    SLUG=$(echo "$GITHUB_ORG" | tr '[:upper:]' '[:lower:]' | tr -d '-' | tr -d ' ')
     KEY_RESPONSE=$(curl -s -X GET "${API_URL}/api/org/${SLUG}/key" \
       -H "Authorization: Bearer $GITHUB_TOKEN" \
       --max-time 10 2>/dev/null || echo "")
@@ -60,7 +60,7 @@ if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
   (
     REGISTRY_DIR="$HOME/.egregore"
     REGISTRY="$REGISTRY_DIR/instances.json"
-    INST_SLUG=$(jq -r '.github_org // empty' "$CONFIG" | tr '[:upper:]' '[:lower:]' | tr -d '- ')
+    INST_SLUG=$(jq -r '.github_org // empty' "$CONFIG" | tr '[:upper:]' '[:lower:]' | tr -d '-' | tr -d ' ')
     INST_NAME=$(jq -r '.org_name // empty' "$CONFIG")
 
     if [ -n "$INST_SLUG" ] && [ -n "$INST_NAME" ]; then
