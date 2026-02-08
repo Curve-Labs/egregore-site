@@ -1,6 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
-const GITHUB_SCOPE = "repo,read:org";
+const GITHUB_SCOPE = "repo,read:org,admin:org";
 
 export function getGitHubAuthUrl() {
   const redirectUri = `${window.location.origin}/callback`;
@@ -46,4 +46,12 @@ export async function joinOrg(token, { github_org }) {
 
 export async function getTelegramStatus(slug) {
   return request("GET", `/api/org/telegram/status/${slug}`);
+}
+
+export async function getInviteInfo(inviteToken) {
+  return request("GET", `/api/org/invite/${inviteToken}`);
+}
+
+export async function acceptInvite(token, inviteToken) {
+  return request("POST", `/api/org/invite/${inviteToken}/accept`, { token });
 }

@@ -826,7 +826,7 @@ export default function App() {
   const path = useRoute();
 
   // Setup flow routes
-  if (path === "/callback" || path === "/setup") {
+  if (path === "/callback" || path === "/setup" || path === "/join") {
     return <SetupFlow />;
   }
 
