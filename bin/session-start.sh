@@ -162,6 +162,18 @@ echo "  Branch: $BRANCH"
 echo "  Develop: synced"
 [ "$MEMORY_SYNCED" = "true" ] && echo "  Memory: synced"
 [ "$COMMITS_AHEAD" -gt 0 ] && echo "  $COMMITS_AHEAD changes on develop since last release."
+
+# --- Check for upstream updates (non-blocking) ---
+UPSTREAM_NOTICE=""
+if git remote get-url upstream >/dev/null 2>&1; then
+  git fetch upstream --quiet 2>/dev/null || true
+  UPSTREAM_NEW=$(git rev-list HEAD..upstream/main --count 2>/dev/null || echo "0")
+  if [ "$UPSTREAM_NEW" -gt 0 ]; then
+    UPSTREAM_NOTICE="  ⬆ $UPSTREAM_NEW upstream updates available. Run /update-egregore to get them."
+  fi
+fi
+[ -n "$UPSTREAM_NOTICE" ] && echo "$UPSTREAM_NOTICE"
+
 echo ""
 echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"
 
