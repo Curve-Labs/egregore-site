@@ -1,0 +1,22 @@
+{
+  "name": "create-egregore",
+  "version": "0.1.1",
+  "description": "Set up Egregore for your team in one command",
+  "license": "MIT",
+  "bin": {
+    "create-egregore": "./bin/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
+  "keywords": [
+    "egregore",
+    "claude",
+    "ai",
+    "collaboration"
+  ]
+}
