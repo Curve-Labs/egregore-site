@@ -5,6 +5,9 @@ Save your contributions to Egregore. Pushes working branch, creates PR to develo
 1. **Sync to Neo4j first** (CRITICAL):
    - Scan memory/conversations/ for files without Session nodes
    - Scan memory/artifacts/ for files without Artifact nodes
+   - Scan memory/knowledge/decisions/ for files without Artifact nodes
+   - Scan memory/knowledge/findings/ for files without Artifact nodes
+   - Scan memory/knowledge/patterns/ for files without Artifact nodes
    - Scan memory/quests/ for files without Quest nodes
    - Create missing nodes automatically
    - Report: "Synced 2 sessions, 1 artifact to graph"
@@ -51,6 +54,14 @@ MATCH (a:Artifact {id: $fileId}) RETURN a.id
 // If null, parse frontmatter and create Artifact node (include topics)
 // If exists, sync topics from frontmatter:
 //   MATCH (a:Artifact {id: $fileId}) SET a.topics = $topics RETURN a.id
+
+// For each file in knowledge/{decisions,findings,patterns}/*.md:
+MATCH (a:Artifact {id: $fileId}) RETURN a.id
+// If null, parse frontmatter and create Artifact node:
+//   id = filename without extension
+//   type = directory name singularized (decisions → decision, findings → finding, patterns → pattern)
+//   filePath = knowledge/{category}s/{filename}
+//   title, author, date from frontmatter
 
 // For each file in quests/*.md (not index.md, not _template.md):
 MATCH (q:Quest {id: $slug}) RETURN q.id
