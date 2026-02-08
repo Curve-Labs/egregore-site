@@ -1,4 +1,4 @@
-Activity dashboard. Display it immediately — no preamble, no narration.
+Activity dashboard. Display it immediately — no preamble, no narration. Output the box and nothing else.
 
 Topic: $ARGUMENTS
 
@@ -54,83 +54,132 @@ Q6 — Handoffs to me (7 days):
 MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$me'}) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name, s.filePath ORDER BY s.date DESC LIMIT 3
 ```
 
+## Box dimensions (CRITICAL)
+
+Outer frame: exactly **72** characters wide.
+- Top/bottom: `┌` + 70× `─` + `┐` = 72
+- Content: `│` + 70 chars (pad with spaces) + `│` = 72
+- Separator: `├` + 70× `─` + `┤` = 72
+
+Sub-boxes: exactly **66** characters wide, indented 2 spaces from outer content edge.
+- Top/bottom: `│  ┌` + 64× `─` + `┐  │` = 72
+- Content: `│  │` + 1 space + 63 chars text (pad with spaces) + `│  │` = 72
+
+**Every single line must be exactly 72 characters.** Pad short content with trailing spaces before the right border. This is the most important rendering rule.
+
 ## Layout
 
-**Full-width, single-column, stacked sections. No column split.** ~72 chars outer width.
+After fetching data, output the box directly — nothing before it. The box structure is:
 
-Number action items sequentially across sections. Then output the box — nothing before it, nothing between data and box.
+1. **Header** — org name + dashboard title left, user + date right
+2. **Insight** — 1-2 lines synthesized from the data: what's the org focused on, what themes are converging, what needs attention. Written by you as Egregore — warm, concise, connective. Not a template.
+3. **● ACTION ITEMS** — numbered. Combines: pending questions (Q4), directed handoffs (Q6), answered questions (Q5). This is the inbox. Only show if items exist.
+4. **◦ YOUR SESSIONS** — always show (limit 5)
+5. **◦ TEAM** — always show (limit 5, 7 days)
+6. **⚑ QUESTS (N active)** — top 5 by artifacts. Only if quests exist.
+7. **→ OPEN PRs** — only if PRs exist
+8. **Footer** — command hints + numbered item prompt if applicable
+
+Example with all sections:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  {ORG} EGREGORE ✦ ACTIVITY DASHBOARD                   {me} · Feb 08  │
+│  CURVE LABS EGREGORE ✦ ACTIVITY DASHBOARD              cem · Feb 08   │
 ├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  ● ACTION ITEMS                                                        │
-│  [1] 2 questions from oz about "MCP transport" (3h ago)                │
-│  [2] ⇌ Handoff from ali: blog styling (yesterday)                     │
-│                                                                        │
-│  ✓ ANSWERS RECEIVED                                                    │
-│  [3] oz answered "evaluation criteria"                                 │
-│                                                                        │
-│  ◦ YOUR SESSIONS                                                       │
-│  Feb 08  Slash command rewrites                                        │
-│  Feb 08  TUI design system + new commands landed                       │
-│  Feb 05  Form factor research                                          │
-│                                                                        │
-│  ◦ TEAM                                                                │
-│  Feb 07  oz: Infra fix after egregore-core sync                        │
-│  Feb 07  ali: Main Page Styling & Animation                            │
-│  Feb 06  pali: Quest system exploration                                │
-│                                                                        │
-│  ⚑ QUESTS (15 active)                                                  │
-│  game-engine-multiagent          3 artifacts                           │
-│  evaluation-benchmarks           2 artifacts                           │
-│  egregore-reliability            2 artifacts                           │
-│  grants                          2 artifacts                           │
-│  nlnet-commons-fund              2 artifacts                           │
-│                                                                        │
-│  → OPEN PRs                                                            │
-│  #18  Add MCP config (cem)                                             │
-│  #17  Save command improvements (oz)                                   │
-│                                                                        │
-│  Type a number to act, or keep working.                                │
+│                                                                      │
+│  Launch prep is converging — blog styling, command UX, and           │
+│  defensibility all moved forward. Game engine quest leads.           │
+│                                                                      │
+│  ● ACTION ITEMS                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ [1] ⇌ Handoff from oz: Infra fix (yesterday)                 │  │
+│  │ [2] 2 questions from ali about "blog layout" (3h ago)         │  │
+│  │ [3] oz answered "evaluation criteria"                         │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ◦ YOUR SESSIONS                                                     │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ Today      Slash command rewrites                              │  │
+│  │ Today      TUI design system + new commands landed             │  │
+│  │ Yesterday  Defensibility Architecture                          │  │
+│  │ Feb 05     Form factor research                                │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ◦ TEAM                                                              │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ Yesterday  ali: Main Page Styling & Animation                  │  │
+│  │ Yesterday  oz: Develop branch workflow                         │  │
+│  │ Feb 06     pali: Main page animation handoff                   │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ⚑ QUESTS (15 active)                                                │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ game-engine-multiagent        3 artifacts                      │  │
+│  │ evaluation-benchmarks         2 artifacts                      │  │
+│  │ grants                        2 artifacts                      │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  → OPEN PRs                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ #18  Add MCP config (cem)                                      │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  /reflect · /quest · /ask                                            │
+│  Type a number to act, or keep working.                              │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Section rules
 
-Empty sections are omitted entirely — no headers, no placeholders.
+Empty sections are omitted entirely — no headers, no sub-boxes.
 
-| Section | When | Format |
-|---------|------|--------|
-| ● ACTION ITEMS | Pending questions or handoffs exist | `[N] description (time_ago)` |
-| ✓ ANSWERS RECEIVED | Answered question sets exist | `[N] name answered "topic"` |
-| ◦ YOUR SESSIONS | Always (limit 5) | `Mon DD  Topic text` |
-| ◦ TEAM | Always (limit 5, 7 days) | `Mon DD  name: Topic text` |
-| ⚑ QUESTS (N active) | Quests exist | Top 5 by artifacts. `quest-id` left, `N artifacts` right |
-| → OPEN PRs | PRs exist | `#NN  Title (author)` |
-| Footer | Numbered items exist | `Type a number to act, or keep working.` |
+| Section | When | Notes |
+|---------|------|-------|
+| Insight | Always | 1-2 lines. Synthesize themes from sessions + team + quests. |
+| ● ACTION ITEMS | Handoffs, questions, or answers exist | Single numbered list combining all three types. Handoffs first, then pending questions, then answers. |
+| ◦ YOUR SESSIONS | Always (limit 5) | Format: `{date}  Topic` |
+| ◦ TEAM | Always (limit 5, 7 days) | Format: `{date}  name: Topic` |
+| ⚑ QUESTS (N active) | Quests exist | Top 5 by artifact count |
+| → OPEN PRs | PRs exist | Format: `#NN  Title (author)` |
+| Footer commands | Always | `/reflect · /quest · /ask` |
+| Footer prompt | Numbered items exist | `Type a number to act, or keep working.` |
 
-**Time ago**: <1h `Nm ago`, 1-23h `Nh ago`, 1d `yesterday`, 2-6d `Nd ago`, 7d+ `Mon DD`
+## Action item formats
+
+- Handoff: `[N] ⇌ Handoff from {name}: {topic} ({time_ago})`
+- Pending questions: `[N] {count} questions from {name} about "{topic}" ({time_ago})`
+- Answered: `[N] ✓ {name} answered "{topic}"`
+
+## Date formatting
+
+- Today's date → `Today    ` (padded to 9 chars)
+- Yesterday → `Yesterday`
+- Older → `Mon DD   ` (padded to 9 chars)
+
+2-space gap after date before topic text.
+
+## Time ago (action items only)
+
+<1h `Nm ago`, 1-23h `Nh ago`, 1d `yesterday`, 2-6d `Nd ago`, 7d+ `Mon DD`
 
 ## Interactive follow-up
 
-If numbered items exist, use AskUserQuestion after the box. One option per item plus "Skip — just looking".
+If numbered items exist, use AskUserQuestion after the box. One option per numbered item plus "Skip — just looking".
 
-- Pending questions → load QuestionSet, start /ask answer flow
 - Handoff → read s.filePath and display
-- Answered questions → load and display answers
+- Pending questions → load QuestionSet, start /ask answer flow
+- Answered questions → load QuestionSet and display answers
 
 Zero numbered items → no AskUserQuestion.
 
 ## Argument filtering
 
 - `/activity quests` — show all quests with full artifact counts
-- `/activity @name` — show only that person's sessions (replace $me in Q1/Q2, skip action items)
+- `/activity @name` — filter to that person's sessions (replace $me in Q1/Q2, skip action items)
 
 ## Fallback
 
-If Neo4j fails, use `memory/` files. Add `(offline)` to header. No action items in fallback.
+If Neo4j fails, use `memory/` files. Add `(offline)` after ✦ in header. No action items.
 
 ## Rules
 
@@ -139,4 +188,4 @@ If Neo4j fails, use `memory/` files. Add `(offline)` to header. No action items 
 - `gh pr list --base develop --state open --json number,title,author` for PRs
 - Org name from `jq -r '.org_name' egregore.json` — truncate at 20 chars
 - Run all queries in parallel
-- `Mon DD` date format everywhere
+- **Pad every line to exactly 72 chars** — this prevents broken right borders
