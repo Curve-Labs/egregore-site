@@ -59,6 +59,21 @@ Q7 — All recent handoffs (7 days):
 MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name AS from, target.name AS to, s.filePath ORDER BY s.date DESC LIMIT 5
 ```
 
+Q8 — Orphan ratio + topic clusters (14 days):
+```
+MATCH (a:Artifact) WHERE a.created >= date() - duration('P14D') WITH count(a) AS totalRecent MATCH (orphan:Artifact) WHERE orphan.created >= date() - duration('P14D') AND NOT (orphan)-[:PART_OF]->(:Quest) WITH totalRecent, collect(orphan) AS orphans, count(orphan) AS orphanCount WITH totalRecent, orphanCount, orphans, CASE WHEN totalRecent > 0 THEN toFloat(orphanCount) / toFloat(totalRecent) ELSE 0.0 END AS orphanRatio UNWIND orphans AS o UNWIND o.topics AS topic WITH orphanRatio, orphanCount, totalRecent, topic, count(DISTINCT o) AS topicCount ORDER BY topicCount DESC RETURN orphanRatio, orphanCount, totalRecent, collect({topic: topic, count: topicCount})[..5] AS topClusters
+```
+
+Q9 — Stale high-priority quests (only if Q8 orphanRatio > 0.4):
+```
+MATCH (q:Quest {status: 'active'}) WHERE q.priority >= 2 OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) WITH q, CASE WHEN count(a) > 0 THEN duration.inDays(max(a.created), date()).days ELSE duration.inDays(q.started, date()).days END AS daysSince WHERE daysSince >= 10 RETURN q.id AS quest, q.priority AS priority, daysSince
+```
+
+Q10 — Quest topic coverage (only if Q8 orphanRatio > 0.4):
+```
+MATCH (q:Quest {status: 'active'}) WHERE q.topics IS NOT NULL RETURN q.id AS quest, q.topics AS topics
+```
+
 ## Boundary handling (CRITICAL)
 
 **No sub-boxes. No inner `┌─┐`/`└─┘` borders.** Sub-boxes break because the model can't count character widths precisely enough.
@@ -125,6 +140,7 @@ Output the box directly — nothing before it.
 │    #17  Save command improvements (oz)                               │
 │                                                                      │
 ├──────────────────────────────────────────────────────────────────────┤
+│  8 artifacts unlinked to quests — /quest suggest                     │
 │  /ask a question · /quest to see more · /reflect for insights        │
 │  Type a number to act, or keep working.                              │
 └──────────────────────────────────────────────────────────────────────┘
@@ -155,6 +171,7 @@ Separated by a blank line between the two sub-sections.
 Separated by a blank line between the two sub-sections. Omit either if empty.
 
 **Footer** (always shown, separated by `├────┤`)
+- If Q8 orphanCount > 0: `N artifacts unlinked to quests — /quest suggest` (shown before command hints)
 - Command hints: `/ask a question · /quest to see more · /reflect for insights`
 - If numbered items exist: `Type a number to act, or keep working.`
 
@@ -179,6 +196,102 @@ If numbered items exist, use AskUserQuestion after the box. One option per numbe
 - Answered questions → load QuestionSet and display answers
 
 Zero numbered items → no AskUserQuestion.
+
+## Quest sensemaking (after dashboard)
+
+After displaying the dashboard and handling any numbered action items, check if quest structure has drifted. This runs **once per day** — check the cooldown first.
+
+### Cooldown check
+
+```cypher
+OPTIONAL MATCH (sc:SensemakingCheck)
+RETURN sc.lastRun AS lastRun, sc.skippedUntil AS skippedUntil
+```
+
+**Skip sensemaking entirely if:**
+- `lastRun = date()` — already ran today
+- `skippedUntil >= date()` — user chose "skip" within the last 7 days
+
+### Trigger thresholds
+
+Use Q8 results (already fetched). Any of these fires → show sensemaking dialogue:
+
+| Condition | Threshold |
+|-----------|-----------|
+| Orphan ratio | > 40% of artifacts in last 14d have no quest |
+| Stale priority | Q9 returns any results (priority >= 2, no artifacts in 10+ days) |
+| Topic gap | 3+ orphaned artifacts share a topic not covered by any active quest (compare Q8 topClusters vs Q10 quest topics) |
+
+If no thresholds crossed, silently update cooldown and move on:
+
+```cypher
+MERGE (sc:SensemakingCheck) SET sc.lastRun = date()
+```
+
+### Sensemaking dialogue
+
+When drift is detected, compose a `⚑ Quest check-in` observation below the dashboard. Use Q8/Q9/Q10 metrics to generate 2-3 natural language questions about what's shifted.
+
+Available data:
+- orphanCount / totalRecent / orphanRatio (from Q8)
+- topClusters: [{topic, count}] (from Q8) — what orphaned artifacts cluster around
+- staleQuests: [{quest, priority, daysSince}] (from Q9)
+- questTopicSets: [{quest, topics}] (from Q10) — what existing quests cover
+
+Use AskUserQuestion with options derived from the analysis:
+- "Create new quests for [top cluster topics]"
+- "Link orphaned artifacts to existing quests"
+- "Pause/reprioritize stale quests" (only if Q9 returned results)
+- "Skip — structure is fine"
+
+### Acting on responses
+
+| User says | System does |
+|-----------|-------------|
+| "Create quests" | Run `/quest new` flow with pre-filled title/slug from cluster topics |
+| "Link artifacts" | Run topic overlap query (see below), show batch suggestions, link on confirm |
+| "Pause/reprioritize" | Run quest status/priority update for each stale quest |
+| "Skip" | Set `skippedUntil = date() + 7d` on SensemakingCheck |
+
+**Topic overlap query** (for "link artifacts" — frequency filter excludes generic topics appearing in >30% of all artifacts):
+
+```cypher
+MATCH (all:Artifact) WHERE all.topics IS NOT NULL
+WITH count(all) AS totalArtifacts
+MATCH (all:Artifact) WHERE all.topics IS NOT NULL
+UNWIND all.topics AS t
+WITH totalArtifacts, t, count(DISTINCT all) AS freq
+WHERE toFloat(freq) / toFloat(totalArtifacts) <= 0.3
+WITH collect(t) AS discriminatingTopics
+
+MATCH (a:Artifact)
+WHERE NOT (a)-[:PART_OF]->(:Quest)
+  AND a.topics IS NOT NULL
+WITH a, discriminatingTopics,
+     [t IN a.topics WHERE t IN discriminatingTopics] AS filteredTopics
+MATCH (q:Quest {status: 'active'})
+WHERE q.topics IS NOT NULL
+WITH a, q, [t IN filteredTopics WHERE t IN q.topics] AS shared
+WHERE size(shared) >= 2
+RETURN a.id AS artifact, a.title AS artifactTitle,
+       q.id AS quest, q.title AS questTitle,
+       shared AS sharedTopics, size(shared) AS overlap
+ORDER BY overlap DESC
+```
+
+Present as: "I'd link these — look right?" User confirms → batch-create PART_OF relationships and update markdown frontmatter.
+
+### After acting (always)
+
+```cypher
+MERGE (sc:SensemakingCheck) SET sc.lastRun = date()
+```
+
+If user chose "Skip — structure is fine":
+
+```cypher
+MERGE (sc:SensemakingCheck) SET sc.lastRun = date(), sc.skippedUntil = date() + duration('P7D')
+```
 
 ## Argument filtering
 

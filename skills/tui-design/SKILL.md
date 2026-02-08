@@ -35,41 +35,22 @@ Used within all TUI boxes to prefix items by category:
 
 ## 2. Box Drawing Rules
 
-### Outer Frame
-```
-┌─────────────────────────────────────────────────┐
-│  HEADER TEXT                        user · date  │
-├─────────────────────────────────────────────────┤
-│                                                  │
-│  Content here                                    │
-│                                                  │
-└─────────────────────────────────────────────────┘
-```
+### Line Patterns (CRITICAL)
+
+LLMs cannot count character widths. Do NOT draw boxes freehand. Instead, produce exactly 4 line patterns. All commands use 72-char outer width (N = 70 fill characters).
+
+1. **Top**: `┌` + 70×`─` + `┐`
+2. **Separator**: `├` + 70×`─` + `┤`
+3. **Content**: `│` + 2 spaces + text + pad to 68 text chars + `│`
+4. **Bottom**: `└` + 70×`─` + `┘`
 
 Characters: `┌` top-left, `─` horizontal, `┐` top-right, `│` vertical, `├` left-tee, `┤` right-tee, `└` bottom-left, `┘` bottom-right.
 
-### Header Separator
+**Separator lines are always identical** — copy-paste the same 72-char string every time. Content lines have ONLY the outer `│` as borders. Pad every content line with trailing spaces so the closing `│` lands at position 72.
 
-Always use `├───┤` between the header row and content:
-```
-│  ◎ REFLECTION                                    │
-├─────────────────────────────────────────────────┤
-│                                                  │
-```
+**Header separator**: always use `├───┤` between header row and content.
 
-### Sub-Boxes (One Level Deep)
-
-Sub-boxes group related items inside the outer frame. Max one level deep — never nest sub-boxes inside sub-boxes.
-
-```
-│  ┌───────────────────────────────────────────┐  │
-│  │ Sub-box title                              │  │
-│  │  Item 1                                    │  │
-│  │  Item 2                                    │  │
-│  └───────────────────────────────────────────┘  │
-```
-
-Sub-boxes are indented 2 spaces from the outer frame's `│`. Content inside sub-boxes is indented 1 space from the sub-box `│`.
+**Section dividers**: use `├───┤` between logical groups. No sub-boxes — never use `┌─┐`/`└─┘` inside the outer frame. LLMs cannot reliably align nested borders.
 
 ### Layout
 
@@ -155,7 +136,7 @@ Numbers in brackets. Use section markers after the bracket for typed items.
 
 ## 7. Anti-Patterns
 
-- **Never nest sub-boxes** inside sub-boxes (max 1 level deep)
+- **Avoid sub-boxes entirely** — use `├───┤` flat dividers instead (LLMs can't count widths for nested borders)
 - **Never use tables** with `│` column separator AND sub-boxes in the same section (pick one)
 - **Never show empty section headers** — omit the entire section
 - **Never use raw file paths** in TUI output — use `→` pointer with shortened path

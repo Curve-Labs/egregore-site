@@ -48,7 +48,9 @@ MATCH (s:Session {id: $fileId}) RETURN s.id
 
 // For each file in artifacts/*.md:
 MATCH (a:Artifact {id: $fileId}) RETURN a.id
-// If null, parse frontmatter and create Artifact node
+// If null, parse frontmatter and create Artifact node (include topics)
+// If exists, sync topics from frontmatter:
+//   MATCH (a:Artifact {id: $fileId}) SET a.topics = $topics RETURN a.id
 
 // For each file in quests/*.md (not index.md, not _template.md):
 MATCH (q:Quest {id: $slug}) RETURN q.id
@@ -56,7 +58,31 @@ MATCH (q:Quest {id: $slug}) RETURN q.id
 // If exists, sync priority from frontmatter: SET q.priority = coalesce($priority, 0)
 ```
 
-Parse frontmatter for: author, date, topic/title, project, quests (for artifacts), priority (for quests, default 0).
+Parse frontmatter for: author, date, topic/title, project, quests (for artifacts), topics (for artifacts), priority (for quests, default 0).
+
+### Topic sync on artifacts
+
+When syncing artifact files, parse `topics` from frontmatter (YAML list) and SET on the node:
+
+```cypher
+MATCH (a:Artifact {id: $artifactId})
+SET a.topics = $topics
+```
+
+### Quest topic derivation
+
+After all artifact syncing is complete, derive quest topic signatures from their linked artifacts:
+
+```cypher
+MATCH (q:Quest {status: 'active'})
+OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
+WHERE a.topics IS NOT NULL
+UNWIND a.topics AS topic
+WITH q, collect(DISTINCT topic) AS derivedTopics
+SET q.topics = derivedTopics
+```
+
+Run this as the final step of Neo4j sync, after all artifact and quest nodes are synced.
 
 This ensures files and graph stay in sync even if earlier commands skipped Neo4j.
 

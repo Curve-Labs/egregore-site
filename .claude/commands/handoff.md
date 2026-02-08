@@ -254,114 +254,118 @@ Show progress:
 
 ~72 char width. Sigil: `⇌ HANDOFF SENT`.
 
+### Boundary handling (CRITICAL)
+
+**No sub-boxes. No inner `┌─┐`/`└─┘` borders.** Sub-boxes break because the model can't count character widths precisely enough.
+
+Only **4 line patterns** exist:
+
+1. **Top**: `┌` + 70×`─` + `┐` (72 chars)
+2. **Separator**: `├` + 70×`─` + `┤` (72 chars)
+3. **Content**: `│` + 2 spaces + text + pad spaces to 68 chars + `│` (72 chars)
+4. **Bottom**: `└` + 70×`─` + `┘` (72 chars)
+
+The separator lines are ALWAYS identical — copy-paste the same 72-char string. Content lines have ONLY the outer frame `│` as borders. Pad every content line with trailing spaces so the closing `│` is at position 72.
+
+### Content priority
+
+The session summary is the primary content — what was actually handed off. The progress checklist is already shown incrementally during execution; repeating it wastes space. Collapse progress to a single status line.
+
 ### With recipient and artifacts:
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  ⇌ HANDOFF SENT                                       author · date   │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Topic: Defensibility architecture                                     │
-│  To: Oz                                                                │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Progress                                                         │  │
-│  │  [1/5] ✓ Conversation file                                       │  │
-│  │  [2/5] ✓ Index updated                                           │  │
-│  │  [3/5] ✓ Session -> knowledge graph                              │  │
-│  │  [4/5] ✓ Pushed + PR created                                     │  │
-│  │  [5/5] ✓ Oz notified                                             │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Session Artifacts                                                │  │
-│  │  ◉ Decision: Defensibility architecture framework                │  │
-│  │  ◉ Finding: Harvest flywheel as training surface                 │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  Team sees this on /activity.                                          │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⇌ HANDOFF SENT                                     cem · Feb 07     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Topic: Defensibility architecture                                   │
+│  To: Oz                                                              │
+│                                                                      │
+│  Analyzed five-layer moat framework for Egregore. Server-side        │
+│  intelligence is the biggest gap and biggest opportunity.             │
+│  Defined pricing tiers and go-to-market sequence.                    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  ◉ Decision: Defensibility architecture framework                    │
+│  ◉ Finding: Harvest flywheel as training surface                     │
+├──────────────────────────────────────────────────────────────────────┤
+│  ✓ Saved · graphed · pushed · Oz notified                            │
+│  Team sees this on /activity.                                        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Without recipient, no artifacts:
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  ⇌ HANDOFF SENT                                       author · date   │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Topic: MCP auth flow                                                  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Progress                                                         │  │
-│  │  [1/4] ✓ Conversation file                                       │  │
-│  │  [2/4] ✓ Index updated                                           │  │
-│  │  [3/4] ✓ Session -> knowledge graph                              │  │
-│  │  [4/4] ✓ Pushed + PR created                                     │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  Team sees this on /activity.                                          │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⇌ HANDOFF SENT                                      oz · Feb 07     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Topic: MCP auth flow                                                │
+│                                                                      │
+│  Implemented OAuth device flow for MCP authentication.               │
+│  Token refresh works end-to-end. Needs error handling                │
+│  for expired sessions.                                               │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  ✓ Saved · graphed · pushed                                          │
+│  Team sees this on /activity.                                        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### TUI rules
 
-- Header row: `⇌ HANDOFF SENT` left, `author · Mon DD` right
+- Header row: `⇌ HANDOFF SENT` left, `author · Mon DD` right — both inside the 72-char frame
 - `├───┤` separator between header and content
 - Topic always shown
 - "To:" line only if recipient specified
-- Progress sub-box: `[N/M] ✓ Step description` — 5 steps with recipient, 4 without
-- Session Artifacts sub-box: only if artifacts found from Neo4j query
-- `◉` for artifacts (type capitalized + title)
-- Omit Session Artifacts sub-box entirely if no artifacts found today
-- Footer line: "Team sees this on /activity."
+- **Session summary** — 2-3 sentences from Step 2, wrapped at ~60 chars. This is the primary content.
+- Artifacts section (between `├───┤` dividers): `◉` for each artifact. Omit entirely if no artifacts.
+- **Status line** — single line collapsing all progress: `✓ Saved · graphed · pushed` (add `· {Recipient} notified` if recipient)
+- Footer: "Team sees this on /activity."
 - Truncate topic at 45 chars with `...` if needed
+- **No sub-boxes** — only outer frame `│` borders and `├────┤` separators
 
 ## Receiver View (for /activity integration)
 
-When a recipient reads a handoff directed at them (e.g., from an `/activity` action item), display this format:
+When a recipient reads a handoff directed at them (e.g., from an `/activity` action item), display this format.
+
+Same boundary rules apply — 4 line patterns only, no sub-boxes, 72-char outer width.
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  ⇌ HANDOFF FROM CEM                                           date    │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Topic: Defensibility architecture                                     │
-│  Date: 2026-02-07                                                      │
-│                                                                        │
-│  Summary:                                                              │
-│  Analyzed Egregore defensibility — five-layer moat from                │
-│  convenience to network effects. Server-side intelligence              │
-│  is the biggest gap and biggest opportunity.                           │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Open Threads                                                     │  │
-│  │  ○ API proxy architecture — before or after org #2?              │  │
-│  │  ○ Person node schema — org-scoped vs platform-level             │  │
-│  │  ○ First premium agent design                                    │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Session Artifacts                                                │  │
-│  │  ◉ Decision: Defensibility architecture framework                │  │
-│  │  ◉ Finding: Harvest flywheel as training surface                 │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  Start here:                                                           │
-│  → memory/knowledge/decisions/2026-02-07-defensibility-...             │
-│  → memory/conversations/2026-02/07-cem-defensibility-...               │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⇌ HANDOFF FROM CEM                                     Feb 07       │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Topic: Defensibility architecture                                   │
+│                                                                      │
+│  Analyzed Egregore defensibility — five-layer moat from              │
+│  convenience to network effects. Server-side intelligence            │
+│  is the biggest gap and biggest opportunity.                         │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  OPEN THREADS                                                        │
+│  ○ API proxy architecture — before or after org #2?                  │
+│  ○ Person node schema — org-scoped vs platform-level                 │
+│  ○ First premium agent design                                        │
+├──────────────────────────────────────────────────────────────────────┤
+│  ◉ Decision: Defensibility architecture framework                    │
+│  ◉ Finding: Harvest flywheel as training surface                     │
+├──────────────────────────────────────────────────────────────────────┤
+│  → memory/knowledge/decisions/2026-02-07-defensibility-...           │
+│  → memory/conversations/2026-02/07-cem-defensibility-...             │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Receiver TUI rules
 
-- Header: `⇌ HANDOFF FROM [AUTHOR uppercase]` left, date right
-- Summary: wrap at ~60 chars, indented
-- Open Threads sub-box: `○` for each thread (only if threads exist)
-- Session Artifacts sub-box: `◉` for each artifact (only if artifacts exist)
+- Header: `⇌ HANDOFF FROM [AUTHOR uppercase]` left, `Mon DD` right
+- Summary: wrap at ~60 chars — the primary content
+- Open Threads section (between `├───┤` dividers): `○` for each thread. Omit entirely if none.
+- Artifacts section: `◉` for each artifact. Omit entirely if none.
 - Entry points: `→` for file paths, shortened to last 2-3 segments with `...` if needed
-- Omit empty sub-boxes entirely
+- Omit empty sections entirely
+- **No sub-boxes** — only outer frame `│` borders and `├────┤` separators
 
 ### When /activity shows handoffs
 
@@ -405,30 +409,24 @@ Summarizing session...
 
   [5/5] ✓ Oz notified
 
-┌────────────────────────────────────────────────────────────────────────┐
-│  ⇌ HANDOFF SENT                                       cem · Feb 07    │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Topic: Defensibility architecture                                     │
-│  To: Oz                                                                │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Progress                                                         │  │
-│  │  [1/5] ✓ Conversation file                                       │  │
-│  │  [2/5] ✓ Index updated                                           │  │
-│  │  [3/5] ✓ Session -> knowledge graph                              │  │
-│  │  [4/5] ✓ Pushed + PR created                                     │  │
-│  │  [5/5] ✓ Oz notified                                             │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Session Artifacts                                                │  │
-│  │  ◉ Decision: Defensibility architecture framework                │  │
-│  │  ◉ Finding: Harvest flywheel as training surface                 │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  Team sees this on /activity.                                          │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⇌ HANDOFF SENT                                     cem · Feb 07     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Topic: Defensibility architecture                                   │
+│  To: Oz                                                              │
+│                                                                      │
+│  Analyzed five-layer moat framework for Egregore. Server-side        │
+│  intelligence is the biggest gap and biggest opportunity.             │
+│  Defined pricing tiers and go-to-market sequence.                    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  ◉ Decision: Defensibility architecture framework                    │
+│  ◉ Finding: Harvest flywheel as training surface                     │
+├──────────────────────────────────────────────────────────────────────┤
+│  ✓ Saved · graphed · pushed · Oz notified                            │
+│  Team sees this on /activity.                                        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Full example: no recipient
@@ -449,20 +447,18 @@ Summarizing session...
 
   [4/4] ✓ Pushed + PR created
 
-┌────────────────────────────────────────────────────────────────────────┐
-│  ⇌ HANDOFF SENT                                        oz · Feb 07    │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Topic: MCP auth flow                                                  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Progress                                                         │  │
-│  │  [1/4] ✓ Conversation file                                       │  │
-│  │  [2/4] ✓ Index updated                                           │  │
-│  │  [3/4] ✓ Session -> knowledge graph                              │  │
-│  │  [4/4] ✓ Pushed + PR created                                     │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  Team sees this on /activity.                                          │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⇌ HANDOFF SENT                                      oz · Feb 07     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Topic: MCP auth flow                                                │
+│                                                                      │
+│  Implemented OAuth device flow for MCP authentication.               │
+│  Token refresh works end-to-end. Needs error handling                │
+│  for expired sessions.                                               │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  ✓ Saved · graphed · pushed                                          │
+│  Team sees this on /activity.                                        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
