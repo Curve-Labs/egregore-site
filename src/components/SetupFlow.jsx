@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, setupOrg, joinOrg, getTelegramStatus } from "../api";
+import { exchangeCode, getOrgs, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl } from "../api";
 
 const C = {
   parchment: "#F4F1EA",
@@ -31,6 +31,75 @@ const CheckIcon = () => (
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
+
+const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
+
+function InstallCommand({ setupToken, label = "Install" }) {
+  const [method, setMethod] = useState("npx"); // npx or curl
+  const [copied, setCopied] = useState(false);
+
+  const npxCmd = `npx create-egregore --token ${setupToken}`;
+  const curlCmd = `curl -fsSL ${API_URL}/api/org/install/${setupToken} | bash`;
+  const cmd = method === "npx" ? npxCmd : curlCmd;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(cmd);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+        <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, margin: 0 }}>
+          {label}
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {["npx", "curl"].map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMethod(m); setCopied(false); }}
+              style={{
+                ...font.mono, fontSize: "0.6rem", background: "none", border: "none",
+                color: method === m ? C.crimson : C.muted,
+                cursor: "pointer", padding: 0,
+                borderBottom: method === m ? `1px solid ${C.crimson}` : "1px solid transparent",
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: "0.75rem",
+        background: C.ink, padding: "1rem 1.25rem", borderRadius: 0,
+      }}>
+        <code style={{ ...font.mono, fontSize: "0.75rem", color: C.parchment, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {cmd}
+        </code>
+        <button
+          onClick={handleCopy}
+          style={{
+            background: "none", border: `1px solid rgba(244,241,234,0.2)`,
+            color: C.parchment, padding: "0.4rem 0.6rem", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: "0.4rem",
+            ...font.mono, fontSize: "0.65rem",
+            transition: "border-color 0.2s",
+          }}
+        >
+          {copied ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
+        </button>
+      </div>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginTop: "0.5rem" }}>
+        {method === "npx"
+          ? "Paste in your terminal. Takes ~5 seconds."
+          : "No Node.js needed. Paste in your terminal."
+        }
+      </p>
+    </div>
+  );
+}
 
 // ─── Stages ─────────────────────────────────────────────────────
 
@@ -105,6 +174,7 @@ function OrgPicker({ token, user, onPick }) {
             name={org.name || org.login}
             login={org.login}
             hasEgregore={org.has_egregore}
+            isMember={org.is_member}
             onClick={() => onPick({ ...org, is_personal: false })}
           />
         ))}
@@ -112,6 +182,7 @@ function OrgPicker({ token, user, onPick }) {
           name={`${orgs.user.login} (personal)`}
           login={orgs.user.login}
           hasEgregore={orgs.personal.has_egregore}
+          isMember={orgs.personal.is_member}
           onClick={() => onPick({ login: orgs.user.login, has_egregore: orgs.personal.has_egregore, is_personal: true })}
         />
       </div>
@@ -119,8 +190,10 @@ function OrgPicker({ token, user, onPick }) {
   );
 }
 
-function OrgButton({ name, login, hasEgregore, onClick }) {
+function OrgButton({ name, login, hasEgregore, isMember, onClick }) {
   const [hovered, setHovered] = useState(false);
+  const label = isMember ? "Reinstall" : hasEgregore ? "Join" : "Set up";
+  const color = isMember ? C.muted : hasEgregore ? "#2d8a4e" : C.crimson;
   return (
     <button
       onClick={onClick}
@@ -138,11 +211,11 @@ function OrgButton({ name, login, hasEgregore, onClick }) {
       <span style={{ ...font.serif, fontSize: "1.05rem", color: C.ink }}>{name}</span>
       <span style={{
         ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "1px",
-        color: hasEgregore ? "#2d8a4e" : C.crimson,
-        border: `1px solid ${hasEgregore ? "#2d8a4e" : C.crimson}`,
+        color,
+        border: `1px solid ${color}`,
         padding: "0.2rem 0.6rem",
       }}>
-        {hasEgregore ? "Join" : "Set up"}
+        {label}
       </span>
     </button>
   );
@@ -152,7 +225,6 @@ function SetupProgress({ token, user, org }) {
   const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [telegramConnected, setTelegramConnected] = useState(false);
 
   useEffect(() => {
@@ -180,13 +252,6 @@ function SetupProgress({ token, user, org }) {
     }, 3000);
     return () => clearInterval(id);
   }, [result?.org_slug]);
-
-  const handleCopy = () => {
-    const cmd = `npx create-egregore --token ${result.setup_token}`;
-    navigator.clipboard.writeText(cmd);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   if (status === "working") {
     return (
@@ -224,34 +289,7 @@ function SetupProgress({ token, user, org }) {
       </div>
 
       {/* Step 1: Install command */}
-      <div style={{ marginBottom: "2.5rem" }}>
-        <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
-          Step 1 — Install
-        </p>
-        <div style={{
-          display: "flex", alignItems: "center", gap: "0.75rem",
-          background: C.ink, padding: "1rem 1.25rem", borderRadius: 0,
-        }}>
-          <code style={{ ...font.mono, fontSize: "0.8rem", color: C.parchment, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            npx create-egregore --token {result.setup_token}
-          </code>
-          <button
-            onClick={handleCopy}
-            style={{
-              background: "none", border: `1px solid rgba(244,241,234,0.2)`,
-              color: C.parchment, padding: "0.4rem 0.6rem", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: "0.4rem",
-              ...font.mono, fontSize: "0.65rem",
-              transition: "border-color 0.2s",
-            }}
-          >
-            {copied ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
-          </button>
-        </div>
-        <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginTop: "0.5rem" }}>
-          Paste in your terminal. Takes ~5 seconds.
-        </p>
-      </div>
+      <InstallCommand setupToken={result.setup_token} label="Step 1 — Install" />
 
       {/* Step 2: Telegram (optional) */}
       {result.telegram_invite_link && (
@@ -307,6 +345,190 @@ function Spinner() {
   );
 }
 
+// ─── Invite Flow Components ─────────────────────────────────────
+
+function InviteLanding({ inviteToken, onAuth }) {
+  const [info, setInfo] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getInviteInfo(inviteToken)
+      .then(setInfo)
+      .catch((err) => setError(err.message));
+  }, [inviteToken]);
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+        <p style={{ ...font.serif, fontSize: "1.3rem", marginBottom: "1rem" }}>Invite not found</p>
+        <p style={{ ...font.mono, fontSize: "0.8rem", color: C.muted, marginBottom: "2rem" }}>
+          This invite may have expired or already been used.
+        </p>
+        <a href="/" style={{ ...font.mono, fontSize: "0.8rem", color: C.crimson }}>Go to egregore.org</a>
+      </div>
+    );
+  }
+
+  if (!info) {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem" }}>
+        <Spinner />
+        <p style={{ ...font.mono, fontSize: "0.8rem", color: C.muted, marginTop: "1rem" }}>Loading invite...</p>
+      </div>
+    );
+  }
+
+  // Store invite token in sessionStorage so we can recover it after OAuth redirect
+  sessionStorage.setItem("egregore_invite", inviteToken);
+
+  const authUrl = getGitHubAuthUrl();
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem", textAlign: "center" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem" }}>
+        You've been invited
+      </p>
+      <h2 style={{ ...font.serif, fontSize: "1.8rem", fontWeight: 400, marginBottom: "0.5rem" }}>
+        Join {info.org_name}
+      </h2>
+      <p style={{ ...font.mono, fontSize: "0.8rem", color: C.muted, marginBottom: "2.5rem" }}>
+        Invited by {info.invited_by}
+      </p>
+
+      <a
+        href={authUrl}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "0.5rem",
+          ...font.mono, fontSize: "0.85rem",
+          background: C.ink, color: C.parchment,
+          padding: "0.85rem 2rem", textDecoration: "none",
+          border: "none", cursor: "pointer",
+          transition: "opacity 0.2s",
+        }}
+      >
+        <GitHubIcon /> Join with GitHub
+      </a>
+
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginTop: "1.5rem" }}>
+        You'll authorize with GitHub, then get a one-line install command.
+      </p>
+    </div>
+  );
+}
+
+function InviteAccept({ token, user, inviteToken }) {
+  const [status, setStatus] = useState("working"); // working, done, pending_github, error
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const doAccept = () => {
+    setStatus("working");
+    setError(null);
+    acceptInvite(token, inviteToken)
+      .then((data) => {
+        if (data.status === "pending_github") {
+          setStatus("pending_github");
+          setResult(data);
+        } else {
+          setResult(data);
+          setStatus("done");
+        }
+      })
+      .catch((err) => { setError(err.message); setStatus("error"); });
+  };
+
+  useEffect(() => { doAccept(); }, []);
+
+  if (status === "working") {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+        <Spinner />
+        <p style={{ ...font.serif, fontSize: "1.2rem", marginTop: "1.5rem" }}>
+          Joining...
+        </p>
+        <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
+          Verifying access and setting up your account
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "pending_github") {
+    // Auto-retry after a short delay — the invite may just need a moment to propagate
+    setTimeout(doAccept, 3000);
+    return (
+      <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+        <Spinner />
+        <p style={{ ...font.serif, fontSize: "1.2rem", marginTop: "1.5rem" }}>
+          Setting up your access...
+        </p>
+        <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
+          Waiting for GitHub to process the invitation
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+        <p style={{ ...font.mono, fontSize: "0.85rem", color: C.crimson, marginBottom: "1rem" }}>{error}</p>
+        <button onClick={doAccept} style={{ ...font.mono, fontSize: "0.8rem", color: C.ink, background: "none", border: `1px solid ${C.warmGray}`, padding: "0.5rem 1rem", cursor: "pointer" }}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  // Success — show install command
+  return (
+    <div style={{ maxWidth: 560, margin: "0 auto", padding: "2rem" }}>
+      <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#2d8a4e", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+        </div>
+        <h2 style={{ ...font.serif, fontSize: "1.8rem", fontWeight: 400, marginBottom: "0.5rem" }}>
+          Welcome to {result.org_name}
+        </h2>
+      </div>
+
+      <InstallCommand setupToken={result.setup_token} />
+
+      {/* Telegram group link */}
+      {result.telegram_group_link && (
+        <div style={{ marginBottom: "2.5rem" }}>
+          <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+            Telegram
+          </p>
+          <a
+            href={result.telegram_group_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...font.mono, fontSize: "0.8rem",
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              color: C.crimson, textDecoration: "none",
+              border: `1px solid ${C.crimson}`, padding: "0.65rem 1.25rem",
+              transition: "all 0.2s",
+            }}
+          >
+            Join the Telegram group
+          </a>
+        </div>
+      )}
+
+      <div style={{ borderTop: `1px solid ${C.warmGray}`, paddingTop: "1.5rem" }}>
+        <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+          After install
+        </p>
+        <p style={{ ...font.serif, fontSize: "1rem", color: "#5a5650", lineHeight: 1.7 }}>
+          Type <code style={{ ...font.mono, fontSize: "0.85rem", color: C.crimson }}>egregore</code> in any terminal to launch.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Setup Flow ────────────────────────────────────────────
 
 export default function SetupFlow() {
@@ -315,17 +537,50 @@ export default function SetupFlow() {
   const [selectedOrg, setSelectedOrg] = useState(null);
 
   const isCallback = window.location.pathname === "/callback";
+  const isJoin = window.location.pathname === "/join";
+  const params = new URLSearchParams(window.location.search);
+  const inviteToken = params.get("invite") || sessionStorage.getItem("egregore_invite");
 
-  // Callback stage
-  if (isCallback && !githubToken) {
+  // Invite flow: /join?invite=inv_xxx
+  if (isJoin && inviteToken && !githubToken) {
     return (
       <SetupLayout>
-        <OAuthCallback onAuth={(token, user) => { setGithubToken(token); setUser(user); }} />
+        <InviteLanding inviteToken={inviteToken} />
       </SetupLayout>
     );
   }
 
-  // Org picker
+  // Callback from OAuth — check if this is an invite flow returning
+  if (isCallback && !githubToken) {
+    return (
+      <SetupLayout>
+        <OAuthCallback onAuth={(token, user) => {
+          setGithubToken(token);
+          setUser(user);
+          // If returning from invite flow, redirect to /join
+          const savedInvite = sessionStorage.getItem("egregore_invite");
+          if (savedInvite) {
+            window.history.replaceState({}, "", `/join?invite=${savedInvite}`);
+          } else {
+            window.history.replaceState({}, "", "/setup");
+          }
+        }} />
+      </SetupLayout>
+    );
+  }
+
+  // Invite accept (after OAuth callback returns)
+  if (githubToken && inviteToken) {
+    // Clear the stored invite token
+    sessionStorage.removeItem("egregore_invite");
+    return (
+      <SetupLayout>
+        <InviteAccept token={githubToken} user={user} inviteToken={inviteToken} />
+      </SetupLayout>
+    );
+  }
+
+  // Org picker (regular setup flow)
   if (githubToken && !selectedOrg) {
     return (
       <SetupLayout>
@@ -373,7 +628,7 @@ function SetupLayout({ children }) {
         {children}
       </div>
       <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "2rem" }}>
-        Terminal alternative: <code>npx create-egregore</code>
+        Terminal: <code>npx create-egregore</code> or <code>curl</code> (no Node.js needed)
       </p>
     </div>
   );
