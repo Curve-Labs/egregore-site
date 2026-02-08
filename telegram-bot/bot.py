@@ -74,18 +74,19 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # Spirit adapter admin secret (required for /spirit/init)
 SPIRIT_ADMIN_SECRET = os.environ.get("SPIRIT_ADMIN_SECRET", "")
 
-# Security: Only respond to allowed chats/users
-# Channel: -1003081443167, Oz: 154132702, Ali: 952778083, Cem: 72463248, Pali: 515146069, Damla: 5549297057
-DEFAULT_ALLOWED = [-1003081443167, 154132702, 952778083, 72463248, 515146069, 5549297057]
+# Egregore API (for dynamic org registration)
+EGREGORE_API_URL = os.environ.get("EGREGORE_API_URL", "")
+
+# Security: Allowed chats/users — loaded dynamically from Neo4j + ORG_CONFIG at startup.
+# Env override still works for manual additions.
 ALLOWED_CHAT_IDS = [
     int(x) for x in os.environ.get("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
-] or DEFAULT_ALLOWED
+]
 
 # =============================================================================
 # MULTI-ORG CONFIG
 # =============================================================================
 
-TESTORG_CHANNEL_ID = int(os.environ.get("TESTORG_CHANNEL_ID", "0") or "0")
 EGREGORE_CHANNEL_ID = int(os.environ.get("EGREGORE_CHANNEL_ID", "0") or "0")
 
 ORG_CONFIG = {
@@ -108,18 +109,106 @@ if EGREGORE_CHANNEL_ID:
         "mcp_api_key": os.environ.get("EGREGORE_MCP_KEY", "ek_egregore_default"),
     }
 
-# Test org (legacy)
-if TESTORG_CHANNEL_ID:
-    ORG_CONFIG[TESTORG_CHANNEL_ID] = {
-        "name": "testorg",
-        "neo4j_uri": os.environ.get("TESTORG_NEO4J_URI", ""),
-        "neo4j_user": os.environ.get("TESTORG_NEO4J_USER", "neo4j"),
-        "neo4j_password": os.environ.get("TESTORG_NEO4J_PASSWORD", ""),
-        "mcp_api_key": os.environ.get("TESTORG_MCP_KEY", "ek_testorg_default"),
-    }
 
-ONBOARDING_REPOS = ["Curve-Labs/egregore-core", "Curve-Labs/egregore-memory"]
-onboarding_state = {}
+def load_dynamic_orgs():
+    """Load org configs + allowed users from Neo4j on startup.
+
+    Populates ORG_CONFIG with orgs that have telegram_chat_id set.
+    Populates ALLOWED_CHAT_IDS with user telegram IDs from Person nodes.
+    """
+    shared_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
+    shared_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
+    shared_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
+
+    if not shared_uri or not shared_password:
+        # Fall back to default Neo4j if shared not configured
+        if NEO4J_URI and NEO4J_PASSWORD:
+            shared_uri = NEO4J_URI
+            shared_user = NEO4J_USER
+            shared_password = NEO4J_PASSWORD
+        else:
+            logger.info("No Neo4j configured — skipping dynamic loading")
+            return
+
+    try:
+        driver = GraphDatabase.driver(shared_uri, auth=(shared_user, shared_password))
+        with driver.session() as session:
+            # Load orgs with telegram groups
+            result = session.run(
+                "MATCH (o:Org) WHERE o.telegram_chat_id IS NOT NULL "
+                "RETURN o.id AS id, o.name AS name, o.telegram_chat_id AS chat_id, o.api_key AS api_key"
+            )
+            org_count = 0
+            for record in result:
+                chat_id = int(record["chat_id"])
+                if chat_id in ORG_CONFIG:
+                    continue  # Don't overwrite static config
+                ORG_CONFIG[chat_id] = {
+                    "name": record["id"] or record["name"],
+                    "neo4j_uri": shared_uri,
+                    "neo4j_user": shared_user,
+                    "neo4j_password": shared_password,
+                    "mcp_api_key": record.get("api_key", ""),
+                }
+                if chat_id not in ALLOWED_CHAT_IDS:
+                    ALLOWED_CHAT_IDS.append(chat_id)
+                org_count += 1
+
+            # Load allowed user IDs from Person nodes
+            people = session.run(
+                "MATCH (p:Person) WHERE p.telegramId IS NOT NULL RETURN p.telegramId AS tid"
+            )
+            user_count = 0
+            for record in people:
+                tid = int(record["tid"])
+                if tid not in ALLOWED_CHAT_IDS:
+                    ALLOWED_CHAT_IDS.append(tid)
+                    user_count += 1
+
+            # Also add all org chat_ids from static ORG_CONFIG
+            for cid in ORG_CONFIG:
+                if cid not in ALLOWED_CHAT_IDS:
+                    ALLOWED_CHAT_IDS.append(cid)
+
+            logger.info(f"Loaded {org_count} org(s), {user_count} user(s) from Neo4j")
+        driver.close()
+    except Exception as e:
+        logger.error(f"Failed to load dynamic orgs: {e}")
+
+
+async def register_group(slug: str, chat_id: int) -> dict | None:
+    """Register a Telegram group with the API. Returns response dict or None."""
+    if not EGREGORE_API_URL:
+        logger.warning("EGREGORE_API_URL not set — cannot register group")
+        return None
+
+    headers = {"Content-Type": "application/json"}
+    if BOT_TOKEN:
+        headers["Authorization"] = f"Bearer {BOT_TOKEN}"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{EGREGORE_API_URL}/api/org/telegram",
+                json={"org_slug": slug, "chat_id": str(chat_id)},
+                headers=headers,
+                timeout=10.0,
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            logger.info(f"Registered group {chat_id} for org {slug}")
+            return data
+        else:
+            logger.error(f"Failed to register group: {resp.status_code} {resp.text}")
+            return None
+    except Exception as e:
+        logger.error(f"Failed to register group: {e}")
+        return None
+
+
+# Load dynamic orgs at import time (after static config)
+load_dynamic_orgs()
+
 
 def get_org_for_chat(chat_id: int, user_id: int = None) -> dict:
     """Get org config for a chat."""
@@ -221,19 +310,10 @@ def lookup_person_by_telegram_id(telegram_id: int) -> Optional[str]:
     return None
 
 
-# Known Telegram IDs -> Person names (for auto-registration)
-KNOWN_TELEGRAM_IDS = {
-    154132702: "oz",
-    952778083: "ali",
-    72463248: "cem",
-    515146069: "pali",
-    5549297057: "damla",
-}
-
-
 def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optional[str]:
     """Auto-register a Telegram ID to a Person node if we can match them.
 
+    Matches by first name against Person nodes in Neo4j.
     Returns the person's name if registered, None otherwise.
     """
     # First check if already registered
@@ -241,26 +321,12 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optio
     if existing:
         return existing
 
-    # Check known IDs mapping
-    if telegram_id in KNOWN_TELEGRAM_IDS:
-        name = KNOWN_TELEGRAM_IDS[telegram_id]
-        results = run_query(
-            """MATCH (p:Person {name: $name})
-               SET p.telegramId = $tid
-               RETURN p.name AS name""",
-            {"name": name, "tid": telegram_id}
-        )
-        if results:
-            logger.info(f"Auto-registered {name} with Telegram ID {telegram_id}")
-            return results[0].get("name")
-
     # Try matching by first name (lowercase)
     if first_name:
         name_lower = first_name.lower().strip()
-        # Check if there's a Person with this name
         results = run_query(
             """MATCH (p:Person)
-               WHERE p.name = $name OR toLower(p.fullName) STARTS WITH $name
+               WHERE (p.name = $name OR toLower(p.fullName) STARTS WITH $name)
                AND p.telegramId IS NULL
                SET p.telegramId = $tid
                RETURN p.name AS name""",
@@ -869,7 +935,7 @@ def is_allowed(update: Update) -> bool:
     """Check if chat/user is allowed."""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id if update.effective_user else None
-    return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS
+    return chat_id in ALLOWED_CHAT_IDS or user_id in ALLOWED_CHAT_IDS or chat_id in ORG_CONFIG
 
 
 async def handle_question(update: Update, context, question: str) -> None:
@@ -1021,41 +1087,57 @@ async def handle_question(update: Update, context, question: str) -> None:
 # =============================================================================
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /start command."""
+    """Handle /start command.
+
+    In groups: check for startgroup deep link payload (org_SLUG) to register the group.
+    In private: start onboarding flow.
+    """
     user = update.effective_user
+    chat_type = update.effective_chat.type
 
-    # In private chat, start onboarding flow directly
-    if update.effective_chat.type == "private":
-        # Determine org (use test org if available)
-        org_config = None
-        if TESTORG_CHANNEL_ID and TESTORG_CHANNEL_ID in ORG_CONFIG:
-            org_config = ORG_CONFIG[TESTORG_CHANNEL_ID]
-        else:
-            org_config = ORG_CONFIG.get(-1003081443167)
+    # Handle startgroup deep link in group chats: /start org_SLUG
+    if chat_type in ("group", "supergroup") and context.args:
+        payload = context.args[0]
+        if payload.startswith("org_"):
+            slug = payload[4:]  # Strip "org_" prefix
+            chat_id = update.effective_chat.id
+            logger.info(f"Group registration: slug={slug}, chat_id={chat_id}")
 
-        if org_config:
-            ascii_art = """
-███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
-██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
-█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
-██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
-███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
-"""
-            welcome_msg = f"""{ascii_art}
-Welcome to Egregore!
+            result = await register_group(slug, chat_id)
+            if result:
+                org_name = result.get("org_name", slug)
+                # Add to local config
+                shared_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
+                shared_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
+                shared_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
+                ORG_CONFIG[chat_id] = {
+                    "name": slug,
+                    "neo4j_uri": shared_uri,
+                    "neo4j_user": shared_user,
+                    "neo4j_password": shared_password,
+                }
+                if chat_id not in ALLOWED_CHAT_IDS:
+                    ALLOWED_CHAT_IDS.append(chat_id)
 
-I'll help you get set up. What's your GitHub username?
-
-(Just type your username, like: janesmith)"""
-
-            await update.message.reply_text(welcome_msg)
-            onboarding_state[user.id] = {
-                "step": "awaiting_github",
-                "org_config": org_config,
-                "first_name": user.first_name
-            }
+                await update.message.reply_text(
+                    f"Connected to {org_name}! Notifications will appear here.\n\n"
+                    "Ask me anything — I can search the knowledge graph, show activity, and more."
+                )
+            else:
+                await update.message.reply_text(
+                    "Couldn't connect this group. Make sure the org exists in Egregore."
+                )
             return
+
+    # In private chat, point to website
+    if chat_type == "private":
+        site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+        await update.message.reply_text(
+            "Welcome to Egregore!\n\n"
+            f"Get set up here: {site_url}/setup\n\n"
+            "Already set up? Ask me anything about your org's work."
+        )
+        return
 
     if not is_allowed(update):
         await update.message.reply_text("This bot is private to Egregore.")
@@ -1111,87 +1193,9 @@ async def debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /onboard command - manually trigger onboarding flow."""
-    if not is_allowed(update):
-        return
-
-    user = update.effective_user
-    chat_id = update.effective_chat.id
-
-    # Determine which org to use
-    org_config = None
-    if chat_id in ORG_CONFIG:
-        org_config = ORG_CONFIG[chat_id]
-    elif update.effective_chat.type == "private":
-        # In DM, use test org if available, otherwise curvelabs
-        if TESTORG_CHANNEL_ID and TESTORG_CHANNEL_ID in ORG_CONFIG:
-            org_config = ORG_CONFIG[TESTORG_CHANNEL_ID]
-        else:
-            org_config = ORG_CONFIG.get(-1003081443167)
-
-    if not org_config:
-        await update.message.reply_text(
-            f"No org configured for onboarding.\n\n"
-            f"Debug: chat_id={chat_id}, TESTORG={TESTORG_CHANNEL_ID}\n"
-            f"ORG_CONFIG keys: {list(ORG_CONFIG.keys())}"
-        )
-        return
-
-    # If in a group, DM the user
-    if update.effective_chat.type in ["group", "supergroup"]:
-        try:
-            ascii_art = """
-███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
-██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
-█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
-██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
-███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
-"""
-            welcome_msg = f"""{ascii_art}
-Welcome to Egregore!
-
-I'll help you get set up. What's your GitHub username?
-
-(Just type your username, like: janesmith)"""
-
-            await context.bot.send_message(chat_id=user.id, text=welcome_msg)
-            onboarding_state[user.id] = {
-                "step": "awaiting_github",
-                "org_config": org_config,
-                "first_name": user.first_name
-            }
-            await update.message.reply_text("Check your DMs! I've sent you onboarding instructions.")
-        except Exception as e:
-            logger.error(f"Failed to DM user {user.id}: {e}")
-            bot_username = context.bot.username
-            await update.message.reply_text(
-                f"Click here to start: t.me/{bot_username}\n\n"
-                "Then just click 'Start' — I'll take it from there."
-            )
-    else:
-        # Already in DM, start directly
-        ascii_art = """
-███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
-██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
-█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
-██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
-███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
-"""
-        welcome_msg = f"""{ascii_art}
-Welcome to Egregore!
-
-I'll help you get set up. What's your GitHub username?
-
-(Just type your username, like: janesmith)"""
-
-        await update.message.reply_text(welcome_msg)
-        onboarding_state[user.id] = {
-            "step": "awaiting_github",
-            "org_config": org_config,
-            "first_name": user.first_name
-        }
+    """Handle /onboard command — redirect to website."""
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    await update.message.reply_text(f"Get set up here: {site_url}/setup")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1321,67 +1325,8 @@ async def handle_notify_request(request: Request) -> JSONResponse:
 # NEW MEMBER ONBOARDING
 # =============================================================================
 
-async def add_github_collaborator(github_username: str, repo: str) -> bool:
-    """Add a user as collaborator to a GitHub repo."""
-    if not GITHUB_TOKEN:
-        logger.warning("No GITHUB_TOKEN configured")
-        return False
-
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.put(
-                f"https://api.github.com/repos/{repo}/collaborators/{github_username}",
-                headers={
-                    "Authorization": f"Bearer {GITHUB_TOKEN}",
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28"
-                },
-                json={"permission": "push"},
-                timeout=10
-            )
-            if resp.status_code in [201, 204]:
-                logger.info(f"Added {github_username} as collaborator to {repo}")
-                return True
-            else:
-                logger.error(f"Failed to add collaborator: {resp.status_code} {resp.text}")
-                return False
-        except Exception as e:
-            logger.error(f"GitHub API error: {e}")
-            return False
-
-
-async def create_person_node(name: str, github: str, telegram_id: int, org_config: dict) -> bool:
-    """Create a Person node in Neo4j for new member."""
-    try:
-        driver = get_neo4j_driver_for_org(org_config)
-        if not driver:
-            return False
-        with driver.session() as session:
-            session.run(
-                """MERGE (p:Person {telegramId: $tid})
-                   ON CREATE SET p.name = $name, p.github = $github, p.joined = date()
-                   ON MATCH SET p.github = $github""",
-                {"name": name.lower(), "github": github, "tid": telegram_id}
-            )
-        return True
-    except Exception as e:
-        logger.error(f"Failed to create Person node: {e}")
-        return False
-
-
-def get_neo4j_driver_for_org(org_config: dict):
-    """Get Neo4j driver for a specific org."""
-    uri = org_config.get("neo4j_uri", "")
-    if not uri:
-        return None
-    return GraphDatabase.driver(
-        uri,
-        auth=(org_config.get("neo4j_user", "neo4j"), org_config.get("neo4j_password", ""))
-    )
-
-
 async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle new members joining a group."""
+    """Handle new members joining a group — welcome them with setup link."""
     if not update.chat_member:
         return
 
@@ -1400,235 +1345,15 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     org_config = ORG_CONFIG[chat_id]
     logger.info(f"New member {new_member.first_name} ({new_member.id}) joined {org_config['name']}")
 
-    try:
-        ascii_art = """
-███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
-██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
-█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
-██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
-███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
-"""
-        welcome_msg = f"""{ascii_art}
-Welcome to Egregore!
-
-I'll help you get set up. What's your GitHub username?
-
-(Just type your username, like: janesmith)"""
-
-        await context.bot.send_message(chat_id=new_member.id, text=welcome_msg)
-        onboarding_state[new_member.id] = {
-            "step": "awaiting_github",
-            "org_config": org_config,
-            "first_name": new_member.first_name
-        }
-    except Exception as e:
-        logger.error(f"Failed to DM new member {new_member.id}: {e}")
-        # Post in group with link to start chat
-        bot_username = context.bot.username
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"Hey {new_member.first_name}! Click here to get set up: t.me/{bot_username}"
-        )
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Welcome {new_member.first_name}! Get set up here: {site_url}/setup",
+    )
 
 
 async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Handle DM responses during onboarding. Returns True if handled."""
-    if not update.message or not update.effective_user:
-        return False
-
-    user_id = update.effective_user.id
-    if user_id not in onboarding_state:
-        return False
-
-    state = onboarding_state[user_id]
-    text = update.message.text.strip()
-
-    if state["step"] == "awaiting_github":
-        github_username = text.replace("@", "").strip()
-        await update.message.reply_text(f"Got it! Adding {github_username} to the Egregore repos...")
-
-        success = True
-        for repo in ONBOARDING_REPOS:
-            if not await add_github_collaborator(github_username, repo):
-                success = False
-
-        await create_person_node(
-            name=state["first_name"],
-            github=github_username,
-            telegram_id=user_id,
-            org_config=state["org_config"]
-        )
-
-        if success:
-            complete_msg = f"""You're all set!
-
-I've added you as a collaborator.
-
-Download the zip I'm sending, then:
-
-1. Unzip it (creates 'egregore' folder)
-2. cd egregore
-3. Type: claude
-4. When prompted:
-   • "Trust this folder?" → Yes, proceed
-   • "Use this API key?" → No (use your subscription)
-5. Say: "set me up"
-
-Claude will create everything else automatically."""
-
-            await update.message.reply_text(complete_msg)
-
-            # Generate .mcp.json with org-specific API key
-            import io
-            import zipfile
-            org_config = state["org_config"]
-            mcp_api_key = org_config.get("mcp_api_key", "ek_default_key")
-
-            mcp_json_content = json.dumps({
-                "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp.json",
-                "mcpServers": {
-                    "egregore": {
-                        "type": "http",
-                        "url": "https://curve-labs-core-production.up.railway.app/mcp",
-                        "headers": {
-                            "Authorization": f"Bearer {mcp_api_key}"
-                        }
-                    }
-                }
-            }, indent=2)
-
-            # Bootstrap CLAUDE.md - MCP-based onboarding (no GitHub needed)
-            bootstrap_claude_md = """# Egregore Bootstrap
-
-## When user says "set me up"
-
-**Everything comes from MCP. No GitHub, no cloning, no auth needed.**
-
-Show this progress (user sees ONLY these lines):
-```
-Setting up Egregore...
-
-✓ Downloading configuration
-✓ Setting up workspace
-✓ Registering you
-
-Welcome to Egregore, [name]!
-```
-
----
-
-## Steps (execute silently)
-
-### Step 1: Call egregore_init MCP tool
-
-Call the MCP tool:
-```
-mcp__egregore__egregore_init
-```
-
-This returns a JSON with:
-- `files`: dict of {path: content} to write
-- `directories`: list of dirs to create
-- `instructions`: ignore this
-
-### Step 2: Write all files
-
-For each file in the response, write it using the Write tool.
-The files include CLAUDE.md, settings, and all commands.
-
-**IMPORTANT**: Preserve the .mcp.json that already exists (it has the API key).
-
-### Step 3: Create directories
-
-Create these directories if they don't exist:
-- memory/conversations
-- memory/artifacts
-- memory/quests
-
-### Step 4: Register user
-
-Get user's name:
-```bash
-git config user.name 2>/dev/null || echo ""
-```
-
-Ask ONCE: "What should we call you? (short name like 'oz')"
-
-Register in Neo4j:
-```
-mcp__egregore__neo4j_query with:
-  query: "MERGE (p:Person {name: $shortName}) ON CREATE SET p.fullName = $fullName, p.joined = date() RETURN p.name"
-  params: {shortName: "<user answer>", fullName: "<from git config or user answer>"}
-```
-
-### Step 5: Show welcome
-
-```
-███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
-██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
-█████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
-██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
-███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
-
-Welcome, [name]!
-
-/activity  — See what's happening
-/handoff   — Leave notes for others
-/quest     — Explore open questions
-/add       — Capture thoughts & findings
-
-Just start talking, or try a command.
-```
-
----
-
-## Error handling
-
-If MCP call fails: "Setup failed. Check your internet connection and try again."
-If Neo4j fails: Continue anyway, show welcome. User can register later.
-"""
-
-            # Pre-approved permissions - enumerate all commands for smooth onboarding
-            # Bash(*) doesn't work - must specify each command prefix
-            settings_json = json.dumps({
-                "permissions": {
-                    "allow": [
-                        "Bash(which:*)", "Bash(brew:*)", "Bash(gh:*)",
-                        "Bash(cp:*)", "Bash(rm:*)", "Bash(mv:*)", "Bash(mkdir:*)",
-                        "Bash(echo:*)", "Bash(git:*)", "Bash(ls:*)", "Bash(cat:*)",
-                        "Bash(cd:*)", "Bash(pwd:*)", "Bash(touch:*)",
-                        "Read(**)", "Write(**)", "Edit(**)",
-                        "mcp__egregore__neo4j_query",
-                        "mcp__egregore__egregore_init"
-                    ],
-                    "deny": []
-                }
-            }, indent=2)
-
-            # Minimal zip - just bootstrap, real files come from egregore-core repo
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.writestr('egregore/.mcp.json', mcp_json_content)
-                zf.writestr('egregore/CLAUDE.md', bootstrap_claude_md)
-                zf.writestr('egregore/.claude/settings.json', settings_json)
-            zip_buffer.seek(0)
-
-            await context.bot.send_document(
-                chat_id=update.effective_chat.id,
-                document=zip_buffer,
-                filename="egregore-setup.zip",
-                caption="Unzip, cd egregore, run 'claude', say 'set me up'"
-            )
-        else:
-            await update.message.reply_text(
-                "There was an issue adding you to GitHub. Please check your username and try again."
-            )
-
-        del onboarding_state[user_id]
-        return True
-
+    """Legacy DM handler — no longer used for onboarding. Returns False."""
     return False
 
 
@@ -1746,21 +1471,8 @@ async def handle_spirit_activate(request: Request) -> JSONResponse:
     logger.info(f"Spirit query result: {result}")
 
     if not result:
-        # Debug: check if Spirit exists at all
-        debug_result = run_query("""
-            MATCH (s:Spirit {registrationToken: $token})
-            RETURN s.status AS status, s.tokenExpiresAt AS expires, datetime() AS now
-        """, {"token": registration_token})
-        # Count ALL Spirits and ALL nodes
-        count_result = run_query("MATCH (s:Spirit) RETURN count(s) AS spirit_count")
-        all_labels = run_query("CALL db.labels() YIELD label RETURN collect(label) AS labels")
-        logger.info(f"Spirit debug query: {debug_result}, counts: {count_result}, labels: {all_labels}")
-        return JSONResponse({
-            "error": "Invalid or expired token",
-            "debug_token_match": debug_result,
-            "spirit_count": count_result,
-            "db_labels": all_labels
-        }, status_code=404)
+        logger.info(f"Spirit activation failed: no matching pending Spirit for token {registration_token[:20]}...")
+        return JSONResponse({"error": "Invalid or expired token"}, status_code=404)
 
     spirit = result[0]
     spirit_id = spirit["id"]

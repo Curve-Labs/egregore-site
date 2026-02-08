@@ -42,9 +42,21 @@ rsync -av --delete \
   --exclude='.egregore-state.json' \
   --exclude='egregore.json' \
   --exclude='.mcp.json' \
+  --exclude='mcp.json' \
+  --exclude='mcp.shared.*.json' \
   --exclude='node_modules' \
   --exclude='__pycache__' \
   --exclude='.claude/settings.local.json' \
+  --exclude='.playwright-mcp' \
+  --exclude='api' \
+  --exclude='ascii-oracle' \
+  --exclude='blog' \
+  --exclude='telegram-bot' \
+  --exclude='tests' \
+  --exclude='data' \
+  --exclude='packages' \
+  --exclude='Dockerfile' \
+  --exclude='TELEGRAM_BOT_PLAN.md' \
   "$(git rev-parse --show-toplevel)/" \
   "$CORE_DIR/"
 ```
@@ -121,8 +133,8 @@ Current diff between repos:
 
 ## Rules
 
-- **Never sync**: `.git/`, `memory/`, `.env`, `.egregore-state.json`, `egregore.json`, `.mcp.json`, `node_modules/`, `__pycache__/`, `.claude/settings.local.json`
-- **Always sync everything else** — commands, bin scripts, CLAUDE.md, README.md, settings.json, egregore.json, start scripts, application code, etc.
+- **Never sync**: `.git/`, `memory/`, `.env`, `.egregore-state.json`, `egregore.json`, `.mcp.json`, `mcp.json`, `mcp.shared.*.json`, `node_modules/`, `__pycache__/`, `.claude/settings.local.json`, `.playwright-mcp/`, `api/`, `ascii-oracle/`, `blog/`, `telegram-bot/`, `tests/`, `data/`, `packages/`, `Dockerfile`, `TELEGRAM_BOT_PLAN.md`
+- **Always sync everything else** — commands, bin scripts, CLAUDE.md, README.md, settings.json, start scripts, `.env.example`, etc.
 - The `--delete` flag ensures files removed from curve-labs-core are also removed from egregore-core
 - Always show the diff before committing
 - Commit message includes the date for traceability

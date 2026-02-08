@@ -55,15 +55,6 @@ def init_org_configs():
             "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
         }
 
-    # Test org (legacy)
-    testorg_uri = os.environ.get("TESTORG_NEO4J_URI", "")
-    if testorg_uri:
-        ORG_BY_KEY["testorg"] = {
-            "name": "testorg",
-            "neo4j_uri": testorg_uri,
-            "neo4j_user": os.environ.get("TESTORG_NEO4J_USER", "neo4j"),
-            "neo4j_password": os.environ.get("TESTORG_NEO4J_PASSWORD", ""),
-        }
 
     logger.info(f"MCP orgs configured: {list(ORG_BY_KEY.keys())}")
 
