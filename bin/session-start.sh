@@ -50,11 +50,19 @@ else
   MEM_FETCH_PID=""
 fi
 
+# Ensure upstream remote exists (for update checks)
+if ! git remote get-url upstream >/dev/null 2>&1; then
+  git remote add upstream https://github.com/Curve-Labs/egregore-core.git 2>/dev/null || true
+fi
+git fetch upstream --quiet 2>/dev/null &
+UPSTREAM_FETCH_PID=$!
+
 # Wait for fetches
 wait $FETCH_PID 2>/dev/null || true
 if [ -n "$MEM_FETCH_PID" ]; then
   wait $MEM_FETCH_PID 2>/dev/null || true
 fi
+wait $UPSTREAM_FETCH_PID 2>/dev/null || true
 
 # --- Ensure develop branch exists locally ---
 if ! git show-ref --verify --quiet refs/heads/develop 2>/dev/null; then
