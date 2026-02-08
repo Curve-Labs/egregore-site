@@ -3,7 +3,7 @@ Save your contributions to Egregore. Pushes working branch, creates PR to develo
 ## What to do
 
 1. **Sync to Neo4j first** (CRITICAL):
-   - Scan memory/conversations/ for files without Session nodes
+   - Scan memory/handoffs/ for files without Session nodes
    - Scan memory/artifacts/ for files without Artifact nodes
    - Scan memory/knowledge/decisions/ for files without Artifact nodes
    - Scan memory/knowledge/findings/ for files without Artifact nodes
@@ -45,7 +45,7 @@ Save your contributions to Egregore. Pushes working branch, creates PR to develo
 Run each check with `bash bin/graph.sh query "..."`. Never use MCP.
 
 ```cypher
-// For each file in conversations/YYYY-MM/*.md, check if Session exists:
+// For each file in handoffs/YYYY-MM/*.md, check if Session exists:
 MATCH (s:Session {id: $fileId}) RETURN s.id
 // If null, parse frontmatter and create Session node
 
@@ -105,14 +105,14 @@ This ensures files and graph stay in sync even if earlier commands skipped Neo4j
 Saving to Egregore...
 
 [sync] Checking Neo4j...
-  conversations/2026-02/07-oz-infra-fix.md → missing Session
+  handoffs/2026-02/07-oz-infra-fix.md → missing Session
   ✓ Created Session node for oz
   Synced: 1 session
 
 [memory]
   Changes:
-    conversations/2026-02/07-oz-infra-fix.md (new)
-    conversations/index.md (modified)
+    handoffs/2026-02/07-oz-infra-fix.md (new)
+    handoffs/index.md (modified)
 
   Creating contribution...
     git checkout -b contrib/2026-02-07-oz-infra-fix
