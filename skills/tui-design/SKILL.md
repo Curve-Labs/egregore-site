@@ -71,33 +71,13 @@ Sub-boxes group related items inside the outer frame. Max one level deep — nev
 
 Sub-boxes are indented 2 spaces from the outer frame's `│`. Content inside sub-boxes is indented 1 space from the sub-box `│`.
 
-### Column Split (for `/activity` only)
+### Layout
 
-Full-width sections first, then columns:
-```
-├──────────────────────────────┬───────────────────────────────┤
-│  LEFT COLUMN HEADER          │  RIGHT COLUMN HEADER           │
-│                              │                                │
-│  Left content                │  Right content                 │
-│                              │                                │
-├──────────────────────────────┼───────────────────────────────┤
-│  LEFT SECTION 2              │  RIGHT SECTION 2               │
-│                              │                                │
-├──────────────────────────────┴───────────────────────────────┤
-```
-
-Column boundary characters:
-- `┬` where top split meets horizontal line
-- `┼` where row boundary crosses column separator
-- `┴` where columns close back to full-width
-- `│` vertical separator between columns
-
-Each column's sub-boxes have their own `┌─┐` / `└─┘` that do NOT cross the column boundary.
+All commands use full-width, single-column, stacked sections. No column splits — they cause truncation and render poorly. Content flows top-to-bottom with section headers separating groups.
 
 ## 3. Width Standards
 
-- **Single-column commands** (`/reflect`, `/ask`, `/handoff`): ~72 characters wide
-- **Column layout** (`/activity`): ~78 characters wide
+- **All commands**: ~72 characters outer width
 - All content lines must have matching left and right `│` borders
 
 ## 4. Content Formatting
@@ -167,7 +147,7 @@ Numbers in brackets. Use section markers after the bracket for typed items.
 | No sessions yet | Show Projects section instead (first-timer experience) |
 | Neo4j down | File-based fallback, simpler layout, no columns |
 | Single action item | Still show action items box |
-| No team activity | Left column expands to full width (YOUR SESSIONS only) |
+| No team activity | Omit TEAM section |
 | Very long org name | Truncate at 20 chars in activity header |
 | No quests | Omit quests section |
 | No PRs | Omit PRs section |
