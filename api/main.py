@@ -120,6 +120,75 @@ async def notify_test(org: dict = Depends(validate_api_key)):
 
 
 # =============================================================================
+# KEY RETRIEVAL (for existing users after updates)
+# =============================================================================
+
+
+@app.get("/api/org/{slug}/key")
+async def org_get_key(slug: str, authorization: str = Header(...)):
+    """Return the org's API key if the caller is a verified member.
+
+    Used by session-start.sh to auto-provision EGREGORE_API_KEY for existing
+    users who pull an update but don't have the key in .env yet.
+    Auth: GitHub token (not API key — they don't have one yet).
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    org = ORG_CONFIGS.get(slug)
+    if not org:
+        raise HTTPException(status_code=404, detail="Org not found")
+
+    github_org = org.get("github_org", "")
+    if not github_org:
+        raise HTTPException(status_code=500, detail="Org has no github_org configured")
+
+    # Verify caller is a member of the GitHub org (or owner of personal account)
+    async with httpx.AsyncClient() as client:
+        # Check org membership
+        resp = await client.get(
+            f"https://api.github.com/orgs/{github_org}/members",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+
+        if resp.status_code == 200:
+            # Get the caller's username
+            user_resp = await client.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"token {github_token}"},
+                timeout=10.0,
+            )
+            if user_resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+            username = user_resp.json().get("login", "")
+            members = [m["login"] for m in resp.json()]
+            if username not in members:
+                raise HTTPException(status_code=403, detail="Not a member of this org")
+        elif resp.status_code == 404:
+            # Might be a personal account — check if they own the repo
+            user_resp = await client.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"token {github_token}"},
+                timeout=10.0,
+            )
+            if user_resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+            username = user_resp.json().get("login", "")
+            if username.lower() != github_org.lower():
+                raise HTTPException(status_code=403, detail="Not authorized for this org")
+        else:
+            raise HTTPException(status_code=401, detail="Could not verify org membership")
+
+    return {"api_key": org["api_key"], "org_slug": slug}
+
+
+# =============================================================================
 # ORG MANAGEMENT (legacy)
 # =============================================================================
 
