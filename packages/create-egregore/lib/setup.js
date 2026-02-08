@@ -124,7 +124,8 @@ function registerInstance(slug, name, egregoreDir) {
   }
 
   const entry = { slug, name, path: egregoreDir };
-  const idx = instances.findIndex((i) => i.slug === slug);
+  // Dedup by path (not slug) so multiple instances from the same org can coexist
+  const idx = instances.findIndex((i) => i.path === egregoreDir);
   if (idx >= 0) {
     instances[idx] = entry;
   } else {
@@ -193,7 +194,17 @@ function installShellFunction(ui) {
     return;
   }
 
-  const existing = fs.readFileSync(profile, "utf-8");
+  let existing = fs.readFileSync(profile, "utf-8");
+
+  // Comment out old alias — in zsh, aliases take precedence over functions
+  if (existing.includes("alias egregore=")) {
+    existing = existing.replace(
+      /^(alias egregore=.*)$/gm,
+      "# $1  # replaced by egregore() function"
+    );
+    fs.writeFileSync(profile, existing);
+    ui.warn("Old egregore alias commented out (aliases override functions in zsh)");
+  }
 
   // Already installed
   if (existing.includes("egregore()")) {
@@ -201,14 +212,9 @@ function installShellFunction(ui) {
     return;
   }
 
-  // Append the shell function (never rewrite the file — avoids profile corruption)
+  // Append the shell function
   fs.appendFileSync(profile, SHELL_FUNCTION);
   ui.success(`Installed ${ui.dim("egregore")} command in ${path.basename(profile)}`);
-
-  // If old alias exists, warn but don't remove — let the function take precedence
-  if (existing.includes("alias egregore=")) {
-    ui.warn("Old egregore alias found — the new function takes precedence. You can remove the alias manually.");
-  }
 }
 
 module.exports = { install };
