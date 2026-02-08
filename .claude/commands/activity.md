@@ -22,7 +22,7 @@ echo "---PRS---"; gh pr list --base develop --state open --json number,title,aut
 
 Map git username → short name: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, "Cem F" → cem, "Ali" → ali, etc.
 
-**Calls 2–7 — Neo4j queries via `bash bin/graph.sh query "..."`:**
+**Calls 2–8 — Neo4j queries via `bash bin/graph.sh query "..."`:**
 
 Q1 — My sessions:
 ```
@@ -49,118 +49,126 @@ Q5 — Answered questions (7 days):
 MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$me'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC
 ```
 
-Q6 — Handoffs to me (7 days):
+Q6 — Handoffs directed to me (7 days):
 ```
-MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$me'}) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name, s.filePath ORDER BY s.date DESC LIMIT 3
+MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$me'}) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name, s.filePath ORDER BY s.date DESC LIMIT 5
 ```
 
-## Box dimensions (CRITICAL)
+Q7 — All recent handoffs (7 days):
+```
+MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name AS from, target.name AS to, s.filePath ORDER BY s.date DESC LIMIT 5
+```
 
-Outer frame: exactly **72** characters wide.
-- Top/bottom: `┌` + 70× `─` + `┐` = 72
-- Content: `│` + 70 chars (pad with spaces) + `│` = 72
-- Separator: `├` + 70× `─` + `┤` = 72
+## Boundary handling (CRITICAL)
 
-Sub-boxes: exactly **66** characters wide, indented 2 spaces from outer content edge.
-- Top/bottom: `│  ┌` + 64× `─` + `┐  │` = 72
-- Content: `│  │` + 1 space + 63 chars text (pad with spaces) + `│  │` = 72
+**No sub-boxes. No inner `┌─┐`/`└─┘` borders.** Sub-boxes break because the model can't count character widths precisely enough.
 
-**Every single line must be exactly 72 characters.** Pad short content with trailing spaces before the right border. This is the most important rendering rule.
+Instead, use a single outer frame with `├────┤` separators between logical groups:
+
+Only **4 line patterns** exist:
+
+1. **Top**: `┌` + 70×`─` + `┐` (72 chars)
+2. **Separator**: `├` + 70×`─` + `┤` (72 chars)
+3. **Content**: `│` + 2 spaces + text + pad spaces to 68 chars + `│` (72 chars)
+4. **Bottom**: `└` + 70×`─` + `┘` (72 chars)
+
+The separator lines are ALWAYS identical — copy-paste the same 72-char string. Content lines have ONLY the outer frame `│` as borders. Pad every content line with trailing spaces so the closing `│` is at position 72.
 
 ## Layout
 
-After fetching data, output the box directly — nothing before it. The box structure is:
-
-1. **Header** — org name + dashboard title left, user + date right
-2. **Insight** — 1-2 lines synthesized from the data: what's the org focused on, what themes are converging, what needs attention. Written by you as Egregore — warm, concise, connective. Not a template.
-3. **● ACTION ITEMS** — numbered. Combines: pending questions (Q4), directed handoffs (Q6), answered questions (Q5). This is the inbox. Only show if items exist.
-4. **◦ YOUR SESSIONS** — always show (limit 5)
-5. **◦ TEAM** — always show (limit 5, 7 days)
-6. **⚑ QUESTS (N active)** — top 5 by artifacts. Only if quests exist.
-7. **→ OPEN PRs** — only if PRs exist
-8. **Footer** — command hints + numbered item prompt if applicable
-
-Example with all sections:
+Output the box directly — nothing before it.
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  CURVE LABS EGREGORE ✦ ACTIVITY DASHBOARD              cem · Feb 08   │
-├────────────────────────────────────────────────────────────────────────┤
+┌──────────────────────────────────────────────────────────────────────┐
+│  CURVE LABS EGREGORE ✦ ACTIVITY DASHBOARD            cem · Feb 08   │
+├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  Launch prep is converging — blog styling, command UX, and           │
 │  defensibility all moved forward. Game engine quest leads.           │
 │                                                                      │
-│  ● ACTION ITEMS                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ [1] ⇌ Handoff from oz: Infra fix (yesterday)                 │  │
-│  │ [2] 2 questions from ali about "blog layout" (3h ago)         │  │
-│  │ [3] oz answered "evaluation criteria"                         │  │
-│  └────────────────────────────────────────────────────────────────┘  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ⇌ HANDOFFS & ASKS                                                   │
+│    [1] oz → you: Infra fix after sync (yesterday)                    │
+│    [2] ali asks about "blog layout" (3h ago)                         │
+│    [3] ✓ oz answered "evaluation criteria"                           │
+│                                                                      │
+│    pali → ali: Main page animation (Feb 06)                          │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ◦ YOUR SESSIONS                                                     │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ Today      Slash command rewrites                              │  │
-│  │ Today      TUI design system + new commands landed             │  │
-│  │ Yesterday  Defensibility Architecture                          │  │
-│  │ Feb 05     Form factor research                                │  │
-│  └────────────────────────────────────────────────────────────────┘  │
+│    Today      New commands ready for testing                         │
+│    Today      TUI design system + new commands landed                │
+│    Today      Slash command rewrites                                 │
+│    Yesterday  Defensibility Architecture                             │
+│    Yesterday  Launch strategy documents                              │
 │                                                                      │
 │  ◦ TEAM                                                              │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ Yesterday  ali: Main Page Styling & Animation                  │  │
-│  │ Yesterday  oz: Develop branch workflow                         │  │
-│  │ Feb 06     pali: Main page animation handoff                   │  │
-│  └────────────────────────────────────────────────────────────────┘  │
+│    Yesterday  ali: Main Page Styling & Animation                     │
+│    Yesterday  oz: Develop branch workflow + auto-greeting UX         │
+│    Yesterday  oz: Infra fix after egregore-core sync                 │
+│    Feb 06     ali: Blog Styling Updates                              │
+│    Feb 06     pali: Main page animation handoff to Ali               │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ⚑ QUESTS (15 active)                                                │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ game-engine-multiagent        3 artifacts                      │  │
-│  │ evaluation-benchmarks         2 artifacts                      │  │
-│  │ grants                        2 artifacts                      │  │
-│  └────────────────────────────────────────────────────────────────┘  │
+│    game-engine-multiagent          3 artifacts                       │
+│    evaluation-benchmarks           2 artifacts                       │
+│    grants                          2 artifacts                       │
+│    nlnet-commons-fund              2 artifacts                       │
+│    emergent-ontology-benchmarks    2 artifacts                       │
 │                                                                      │
 │  → OPEN PRs                                                          │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ #18  Add MCP config (cem)                                      │  │
-│  └────────────────────────────────────────────────────────────────┘  │
+│    #18  Add MCP config (cem)                                         │
+│    #17  Save command improvements (oz)                               │
 │                                                                      │
-│  /reflect · /quest · /ask                                            │
+├──────────────────────────────────────────────────────────────────────┤
+│  /reflect capture an insight · /quest explore · /ask a question      │
 │  Type a number to act, or keep working.                              │
-└────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-## Section rules
+## Section groups (separated by `├────┤`)
 
-Empty sections are omitted entirely — no headers, no sub-boxes.
+**Group 1 — Insight** (always shown)
+1-2 lines synthesized from the data. Written by you as Egregore — what is the org focused on? What themes are converging? What needs attention? Warm, concise, connective. Not a template.
 
-| Section | When | Notes |
-|---------|------|-------|
-| Insight | Always | 1-2 lines. Synthesize themes from sessions + team + quests. |
-| ● ACTION ITEMS | Handoffs, questions, or answers exist | Single numbered list combining all three types. Handoffs first, then pending questions, then answers. |
-| ◦ YOUR SESSIONS | Always (limit 5) | Format: `{date}  Topic` |
-| ◦ TEAM | Always (limit 5, 7 days) | Format: `{date}  name: Topic` |
-| ⚑ QUESTS (N active) | Quests exist | Top 5 by artifact count |
-| → OPEN PRs | PRs exist | Format: `#NN  Title (author)` |
-| Footer commands | Always | `/reflect · /quest · /ask` |
-| Footer prompt | Numbered items exist | `Type a number to act, or keep working.` |
+**Group 2 — Handoffs & Asks** (only if items exist from Q4, Q5, Q6, or Q7)
+Combines all handoff and question activity into one inbox section:
+- Handoffs directed at current user → numbered `[N]`, format: `[N] {from} → you: {topic} ({time_ago})`
+- Pending questions for current user → numbered `[N]`, format: `[N] {from} asks about "{topic}" ({time_ago})`
+- Answered questions → numbered `[N]`, format: `[N] ✓ {name} answered "{topic}"`
+- Other handoffs (not directed at user) → NOT numbered, format: `{from} → {to}: {topic} ({time_ago})`
 
-## Action item formats
+Show numbered items first, then other handoffs below with a blank line between them.
 
-- Handoff: `[N] ⇌ Handoff from {name}: {topic} ({time_ago})`
-- Pending questions: `[N] {count} questions from {name} about "{topic}" ({time_ago})`
-- Answered: `[N] ✓ {name} answered "{topic}"`
+**Group 3 — Sessions** (always shown)
+- `◦ YOUR SESSIONS` — limit 5. Format: `{date}  Topic`
+- `◦ TEAM` — limit 5, 7 days. Format: `{date}  name: Topic`
+Separated by a blank line between the two sub-sections.
+
+**Group 4 — Quests & PRs** (only if items exist)
+- `⚑ QUESTS (N active)` — top 5 by artifact count. Format: quest-id left, N artifacts right.
+- `→ OPEN PRs` — format: `#NN  Title (author)`
+Separated by a blank line between the two sub-sections. Omit either if empty.
+
+**Footer** (always shown, separated by `├────┤`)
+- Command hints: `/reflect capture an insight · /quest explore · /ask a question`
+- If numbered items exist: `Type a number to act, or keep working.`
 
 ## Date formatting
 
-- Today's date → `Today    ` (padded to 9 chars)
-- Yesterday → `Yesterday`
-- Older → `Mon DD   ` (padded to 9 chars)
+- Today's date → `Today    ` (pad to 9 chars with spaces)
+- Yesterday → `Yesterday` (already 9 chars)
+- Older → `Mon DD   ` (pad to 9 chars with spaces)
 
-2-space gap after date before topic text.
+2-space gap after date column before topic text.
 
-## Time ago (action items only)
+## Time ago (action items in Handoffs & Asks)
 
-<1h `Nm ago`, 1-23h `Nh ago`, 1d `yesterday`, 2-6d `Nd ago`, 7d+ `Mon DD`
+<1h `Nm ago` · 1-23h `Nh ago` · 1d `yesterday` · 2-6d `Nd ago` · 7d+ `Mon DD`
 
 ## Interactive follow-up
 
@@ -175,11 +183,11 @@ Zero numbered items → no AskUserQuestion.
 ## Argument filtering
 
 - `/activity quests` — show all quests with full artifact counts
-- `/activity @name` — filter to that person's sessions (replace $me in Q1/Q2, skip action items)
+- `/activity @name` — filter to that person's sessions (replace $me in Q1/Q2, skip handoffs & asks)
 
 ## Fallback
 
-If Neo4j fails, use `memory/` files. Add `(offline)` after ✦ in header. No action items.
+If Neo4j fails, use `memory/` files. Add `(offline)` after ✦ in header. No handoffs & asks in fallback.
 
 ## Rules
 
@@ -188,4 +196,5 @@ If Neo4j fails, use `memory/` files. Add `(offline)` after ✦ in header. No act
 - `gh pr list --base develop --state open --json number,title,author` for PRs
 - Org name from `jq -r '.org_name' egregore.json` — truncate at 20 chars
 - Run all queries in parallel
-- **Pad every line to exactly 72 chars** — this prevents broken right borders
+- **No sub-boxes** — only outer frame `│` borders and `├────┤` separators
+- Pad every content line with trailing spaces so closing `│` aligns
