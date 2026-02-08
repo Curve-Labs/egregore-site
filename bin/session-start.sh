@@ -55,25 +55,27 @@ if [ -f "$ENV_FILE" ] && ! grep -q '^EGREGORE_API_KEY=' "$ENV_FILE" 2>/dev/null;
 fi
 
 # --- Self-register in instance registry (for pre-registry installs) ---
+# Wrapped in subshell — registration is optional, must not block session start
 if command -v jq &>/dev/null && [ -f "$CONFIG" ]; then
-  REGISTRY_DIR="$HOME/.egregore"
-  REGISTRY="$REGISTRY_DIR/instances.json"
-  INST_SLUG=$(jq -r '.github_org // empty' "$CONFIG" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d '- ')
-  INST_NAME=$(jq -r '.org_name // empty' "$CONFIG" 2>/dev/null)
+  (
+    REGISTRY_DIR="$HOME/.egregore"
+    REGISTRY="$REGISTRY_DIR/instances.json"
+    INST_SLUG=$(jq -r '.github_org // empty' "$CONFIG" | tr '[:upper:]' '[:lower:]' | tr -d '- ')
+    INST_NAME=$(jq -r '.org_name // empty' "$CONFIG")
 
-  if [ -n "$INST_SLUG" ] && [ -n "$INST_NAME" ]; then
-    mkdir -p "$REGISTRY_DIR"
-    [ -f "$REGISTRY" ] || echo "[]" > "$REGISTRY"
+    if [ -n "$INST_SLUG" ] && [ -n "$INST_NAME" ]; then
+      mkdir -p "$REGISTRY_DIR"
+      if [ ! -f "$REGISTRY" ]; then echo "[]" > "$REGISTRY"; fi
 
-    # Check if this path is already registered
-    ALREADY=$(jq --arg p "$SCRIPT_DIR" '[.[] | select(.path == $p)] | length' "$REGISTRY" 2>/dev/null || echo "0")
-    if [ "$ALREADY" = "0" ]; then
-      ENTRY=$(jq -n --arg s "$INST_SLUG" --arg n "$INST_NAME" --arg p "$SCRIPT_DIR" \
-        '{slug: $s, name: $n, path: $p}')
-      jq --argjson e "$ENTRY" '. + [$e]' "$REGISTRY" > "$REGISTRY.tmp" \
-        && mv "$REGISTRY.tmp" "$REGISTRY"
+      ALREADY=$(jq --arg p "$SCRIPT_DIR" '[.[] | select(.path == $p)] | length' "$REGISTRY")
+      if [ "$ALREADY" = "0" ]; then
+        ENTRY=$(jq -n --arg s "$INST_SLUG" --arg n "$INST_NAME" --arg p "$SCRIPT_DIR" \
+          '{slug: $s, name: $n, path: $p}')
+        jq --argjson e "$ENTRY" '. + [$e]' "$REGISTRY" > "$REGISTRY.tmp" \
+          && mv "$REGISTRY.tmp" "$REGISTRY"
+      fi
     fi
-  fi
+  ) 2>/dev/null || true
 fi
 
 # --- Fetch all remotes in parallel ---
@@ -199,7 +201,7 @@ fi
 
 echo "  Branch: $BRANCH"
 echo "  Develop: synced"
-[ "$MEMORY_SYNCED" = "true" ] && echo "  Memory: synced"
-[ "$COMMITS_AHEAD" -gt 0 ] && echo "  $COMMITS_AHEAD changes on develop since last release."
+if [ "$MEMORY_SYNCED" = "true" ]; then echo "  Memory: synced"; fi
+if [ "$COMMITS_AHEAD" -gt 0 ] 2>/dev/null; then echo "  $COMMITS_AHEAD changes on develop since last release."; fi
 echo ""
 echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"
