@@ -38,7 +38,7 @@ function InstallCommand({ setupToken, label = "Install" }) {
   const [method, setMethod] = useState("npx"); // npx or curl
   const [copied, setCopied] = useState(false);
 
-  const npxCmd = `npx create-egregore --token ${setupToken}`;
+  const npxCmd = `npx create-egregore@latest --token ${setupToken}`;
   const curlCmd = `curl -fsSL ${API_URL}/api/org/install/${setupToken} | bash`;
   const cmd = method === "npx" ? npxCmd : curlCmd;
 

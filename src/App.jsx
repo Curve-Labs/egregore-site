@@ -211,7 +211,7 @@ const SummoningHero = () => {
         </a>
 
         <div style={{ ...font.mono, fontSize: "0.6rem", color: C.warmGray, marginTop: "1rem", letterSpacing: "1px" }}>
-          Or: <code style={{ color: C.muted }}>npx create-egregore</code>
+          Or: <code style={{ color: C.muted }}>npx create-egregore@latest</code>
         </div>
       </div>
     </section>
@@ -810,7 +810,7 @@ const Footer = () => (
         </a>
       </div>
       <p style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.35)", marginBottom: "3rem" }}>
-        Or: <code>npx create-egregore</code>
+        Or: <code>npx create-egregore@latest</code>
       </p>
       <div style={{ ...font.mono, fontSize: "0.6rem", color: "rgba(244,241,234,0.25)", borderTop: "1px solid rgba(244,241,234,0.1)", paddingTop: "2rem", display: "flex", justifyContent: "space-between" }}>
         <span>Egregore</span>
