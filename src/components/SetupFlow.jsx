@@ -175,7 +175,7 @@ function OrgPicker({ token, user, onPick }) {
             login={org.login}
             hasEgregore={org.has_egregore}
             isMember={org.is_member}
-            onClick={() => onPick({ ...org, is_personal: false })}
+            onClick={() => onPick({ ...org, is_personal: false, instances: org.instances || [] })}
           />
         ))}
         <OrgButton
@@ -183,7 +183,12 @@ function OrgPicker({ token, user, onPick }) {
           login={orgs.user.login}
           hasEgregore={orgs.personal.has_egregore}
           isMember={orgs.personal.is_member}
-          onClick={() => onPick({ login: orgs.user.login, has_egregore: orgs.personal.has_egregore, is_personal: true })}
+          onClick={() => onPick({
+            login: orgs.user.login,
+            has_egregore: orgs.personal.has_egregore,
+            is_personal: true,
+            instances: orgs.personal.instances || [],
+          })}
         />
       </div>
     </div>
@@ -216,6 +221,76 @@ function OrgButton({ name, login, hasEgregore, isMember, onClick }) {
         padding: "0.2rem 0.6rem",
       }}>
         {label}
+      </span>
+    </button>
+  );
+}
+
+function InstancePicker({ org, onJoin, onNew }) {
+  const instances = org.instances || [];
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem", textAlign: "center" }}>
+        {org.name || org.login}
+      </p>
+      <p style={{ ...font.serif, fontSize: "1.1rem", textAlign: "center", marginBottom: "2rem", color: C.muted }}>
+        Which instance do you want to join?
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+        {instances.map((inst) => (
+          <InstanceButton key={inst.repo_name} instance={inst} onClick={() => onJoin(inst)} />
+        ))}
+      </div>
+
+      <div style={{ textAlign: "center" }}>
+        <button
+          onClick={onNew}
+          style={{
+            ...font.mono, fontSize: "0.75rem", color: C.crimson,
+            background: "none", border: `1px solid ${C.crimson}`,
+            padding: "0.6rem 1.5rem", cursor: "pointer",
+          }}
+        >
+          + Create new instance
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InstanceButton({ instance, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  const { repo_name, org_name, repos } = instance;
+  const repoList = repos && repos.length > 0 ? repos.join(", ") : "no managed repos";
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex", flexDirection: "column", gap: "0.3rem",
+        width: "100%", padding: "1rem 1.5rem",
+        background: hovered ? "rgba(122,15,27,0.04)" : "transparent",
+        border: `1px solid ${hovered ? C.crimson : C.warmGray}`,
+        cursor: "pointer", transition: "all 0.2s", textAlign: "left",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+        <span style={{ ...font.serif, fontSize: "1.05rem", color: C.ink }}>
+          {org_name || repo_name}
+        </span>
+        <span style={{
+          ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "1px",
+          color: "#2d8a4e", border: `1px solid #2d8a4e`, padding: "0.2rem 0.6rem",
+        }}>
+          Join
+        </span>
+      </div>
+      <span style={{ ...font.mono, fontSize: "0.65rem", color: C.muted }}>
+        {repo_name} · {repoList}
       </span>
     </button>
   );
@@ -368,7 +443,7 @@ function RepoPicker({ token, org, onPick }) {
   );
 }
 
-function SetupProgress({ token, user, org, repos = [] }) {
+function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
   const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -376,7 +451,7 @@ function SetupProgress({ token, user, org, repos = [] }) {
 
   useEffect(() => {
     const action = org.has_egregore
-      ? joinOrg(token, { github_org: org.login })
+      ? joinOrg(token, { github_org: org.login, repo_name: joinRepoName || "egregore-core" })
       : setupOrg(token, {
           github_org: org.login,
           org_name: org.name || org.login,
@@ -684,6 +759,8 @@ export default function SetupFlow() {
   const [user, setUser] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [selectedRepos, setSelectedRepos] = useState(null); // null = not picked yet, [] = skipped
+  const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
+  const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
 
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
@@ -738,8 +815,35 @@ export default function SetupFlow() {
     );
   }
 
-  // Repo picker (for new setup, not join)
-  if (githubToken && selectedOrg && !selectedOrg.has_egregore && selectedRepos === null) {
+  // Instance picker (org has existing instances — let user join one or create new)
+  if (githubToken && selectedOrg && selectedOrg.has_egregore && !joinInstance && !creatingNew) {
+    return (
+      <SetupLayout>
+        <InstancePicker
+          org={selectedOrg}
+          onJoin={(inst) => setJoinInstance(inst)}
+          onNew={() => setCreatingNew(true)}
+        />
+      </SetupLayout>
+    );
+  }
+
+  // Joining a specific instance
+  if (githubToken && selectedOrg && joinInstance) {
+    return (
+      <SetupLayout>
+        <SetupProgress
+          token={githubToken}
+          user={user}
+          org={{ ...selectedOrg, has_egregore: true }}
+          joinRepoName={joinInstance.repo_name}
+        />
+      </SetupLayout>
+    );
+  }
+
+  // Repo picker (for new setup or creating new instance in existing org)
+  if (githubToken && selectedOrg && selectedRepos === null) {
     return (
       <SetupLayout>
         <RepoPicker token={githubToken} org={selectedOrg} onPick={setSelectedRepos} />
