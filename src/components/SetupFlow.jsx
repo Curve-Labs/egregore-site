@@ -520,11 +520,11 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
       {/* Step 1: Install command */}
       <InstallCommand setupToken={result.setup_token} label="Step 1 — Install" />
 
-      {/* Step 2: Telegram (optional) */}
-      {result.telegram_invite_link && (
+      {/* Step 2: Telegram — setup flow (add bot) or join flow (join group) */}
+      {(result.telegram_invite_link || result.telegram_group_link) && (
         <div style={{ marginBottom: "2.5rem" }}>
           <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
-            Step 2 — Connect Telegram {telegramConnected ? "" : "(optional)"}
+            Step 2 — {result.telegram_group_link ? "Join Telegram" : `Connect Telegram ${telegramConnected ? "" : "(optional)"}`}
           </p>
           {telegramConnected ? (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem" }}>
@@ -532,7 +532,7 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
             </div>
           ) : (
             <a
-              href={result.telegram_invite_link}
+              href={result.telegram_group_link || result.telegram_invite_link}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -543,7 +543,7 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
                 transition: "all 0.2s",
               }}
             >
-              Add bot to your group
+              {result.telegram_group_link ? "Join the Telegram group" : "Add bot to your group"}
             </a>
           )}
         </div>
