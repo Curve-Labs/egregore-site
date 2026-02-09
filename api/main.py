@@ -301,12 +301,12 @@ async def setup_orgs(authorization: str = Header(...)):
 
     orgs = await gh.list_orgs(token)
 
-    # Check each org for egregore-core fork + membership status
+    # Check each org for egregore instances + membership status
     org_results = []
     for org in orgs:
-        has_egregore = await gh.repo_exists(token, org["login"], "egregore-core")
+        instances = await gh.list_egregore_instances(token, org["login"])
+        has_egregore = len(instances) > 0
         role = await gh.get_org_membership(token, org["login"])
-        # Check if user already has memory repo access (= already a member)
         is_member = False
         if has_egregore:
             is_member = await gh.repo_exists(token, org["login"], f"{org['login']}-memory")
@@ -317,9 +317,11 @@ async def setup_orgs(authorization: str = Header(...)):
             "is_member": is_member,
             "role": role or "member",
             "avatar_url": org.get("avatar_url", ""),
+            "instances": instances,
         })
 
-    personal_has = await gh.repo_exists(token, user["login"], "egregore-core")
+    personal_instances = await gh.list_egregore_instances(token, user["login"])
+    personal_has = len(personal_instances) > 0
     personal_member = False
     if personal_has:
         personal_member = await gh.repo_exists(token, user["login"], f"{user['login']}-memory")
@@ -327,7 +329,12 @@ async def setup_orgs(authorization: str = Header(...)):
     return {
         "user": user,
         "orgs": org_results,
-        "personal": {"login": user["login"], "has_egregore": personal_has, "is_member": personal_member},
+        "personal": {
+            "login": user["login"],
+            "has_egregore": personal_has,
+            "is_member": personal_member,
+            "instances": personal_instances,
+        },
     }
 
 
