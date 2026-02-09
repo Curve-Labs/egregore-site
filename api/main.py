@@ -43,7 +43,7 @@ app = FastAPI(
 
 # CORS: Only allow browser requests from known origins.
 # CLI tools (bin/graph.sh, bin/notify.sh, create-egregore) use curl, not browsers.
-_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore.xyz").split(",")
+_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore-core.netlify.app").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -574,7 +574,7 @@ async def org_claim(token: str):
 async def org_install_script(token: str):
     """Return a bash install script for users without Node.js.
 
-    Usage: curl -fsSL https://egregore.xyz/api/org/install/st_xxx | bash
+    Usage: curl -fsSL https://egregore-core.netlify.app/api/org/install/st_xxx | bash
     """
     from fastapi.responses import PlainTextResponse
 
@@ -854,7 +854,7 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         await gh.add_repo_collaborator(token, owner, memory_repo_name, body.github_username)
 
     # Create invite token (7-day TTL)
-    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     invite_token = create_invite_token({
         "github_org": owner,
         "org_name": org_name,

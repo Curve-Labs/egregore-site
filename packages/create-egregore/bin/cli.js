@@ -38,7 +38,7 @@ function showHelp() {
   ui.info("  npx create-egregore                          Interactive setup");
   ui.info("");
   ui.info("Options:");
-  ui.info("  --token <token>   Setup token from egregore.dev");
+  ui.info("  --token <token>   Setup token from egregore-core.netlify.app");
   ui.info("  --api <url>       API URL override");
   ui.info("  -h, --help        Show this help");
   ui.info("");
@@ -76,7 +76,7 @@ async function tokenFlow(api, token) {
     ui.error(err.message);
     ui.info("");
     ui.info("The token may have expired or already been used.");
-    ui.info("Visit egregore.dev to get a new one, or run without --token:");
+    ui.info("Visit egregore-core.netlify.app to get a new one, or run without --token:");
     ui.info("  npx create-egregore");
     process.exit(1);
   }
