@@ -67,10 +67,10 @@ async function main() {
 
 async function tokenFlow(api, token) {
   const s = ui.spinner("Claiming setup token...");
+  let data;
   try {
-    const data = await api.claimToken(token);
+    data = await api.claimToken(token);
     s.stop(`Claimed — setting up ${ui.bold(data.org_name)}`);
-    await install(data, ui);
   } catch (err) {
     s.fail("Token claim failed");
     ui.error(err.message);
@@ -78,6 +78,13 @@ async function tokenFlow(api, token) {
     ui.info("The token may have expired or already been used.");
     ui.info("Visit egregore-core.netlify.app to get a new one, or run without --token:");
     ui.info("  npx create-egregore");
+    process.exit(1);
+  }
+
+  try {
+    await install(data, ui);
+  } catch (err) {
+    ui.error(`Install failed: ${err.message}`);
     process.exit(1);
   }
 }

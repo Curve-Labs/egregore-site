@@ -56,14 +56,19 @@ async function install(data, ui, targetDir) {
   }
   ui.success("Cloned memory");
 
-  // 3. Symlink
+  // 3. Symlink (use junction on Windows — no admin required)
   ui.step(3, totalSteps, "Linking memory...");
   const symlinkTarget = path.join(egregoreDir, "memory");
   if (fs.existsSync(symlinkTarget)) {
     ui.warn("memory/ symlink already exists");
   } else {
-    const relPath = path.relative(egregoreDir, memoryDir);
-    fs.symlinkSync(relPath, symlinkTarget);
+    if (process.platform === "win32") {
+      // Junctions require absolute paths on Windows
+      fs.symlinkSync(path.resolve(memoryDir), symlinkTarget, "junction");
+    } else {
+      const relPath = path.relative(egregoreDir, memoryDir);
+      fs.symlinkSync(relPath, symlinkTarget);
+    }
   }
   ui.success("Linked");
 
