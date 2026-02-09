@@ -35,11 +35,12 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective.
 
 **Handoffs & Asks** (skip if all empty):
-- Handoffs to me → `[N] {from} → you: {topic} ({when})`
+- Handoffs to me (status=pending or null) → `[N] {from} → you: {topic} ({when})`
+- Handoffs to me (status=read) → unnumbered `    ○ {from} → you: {topic} (read)`
 - Pending questions → `[N] {from} asks about "{topic}" ({when})`
 - Answered questions → `[N] ✓ {name} answered "{topic}"`
 - Other handoffs → unnumbered `{from} → {to}: {topic} ({when})`
-- Numbered items first, blank line, then others.
+- Numbered items first, blank line, then read handoffs + others.
 
 **Sessions**:
 - `◦ YOUR SESSIONS` — top 5. Format: `{date}  {topic}`
@@ -93,7 +94,7 @@ Minimum 2 options. "Other" is automatic.
 
 | Selection | Action |
 |-----------|--------|
-| Handoff | Read filePath from data. Display content + entry points. |
+| Handoff | Read filePath from data. Display content + entry points. **Immediately** mark as read: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'read' RETURN s.id"`. After displaying content, ask via AskUserQuestion: header "Handoff", question "What next?", options: "Start working on this" (marks `handoffStatus = 'done'` via `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'done' RETURN s.id"`), "Keep it open" (stays `read`, no action needed). |
 | Questions | Load QuestionSet, present via AskUserQuestion. |
 | Work stream | Read most recent handoff from cluster. Show Open Threads / Next Steps. Mention relevant knowledge artifacts. |
 | PR | `gh pr view #N --json title,body,additions,deletions,files`. Summarize. |
