@@ -10,7 +10,7 @@ Run ONE command to get all dashboard data:
 bash bin/activity-data.sh
 ```
 
-Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `todos`, `todos_count`, `knowledge_gap`, `orphans`, `prs`, `disk`.
+Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `prs`, `disk`.
 
 If the command fails, fall back to reading `memory/` files. Add `(offline)` after ✦ in header.
 
@@ -35,21 +35,11 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective.
 
 **Handoffs & Asks** (skip if all empty):
-- Handoffs to me (status=pending or null) → `[N] {from} → you: {topic} ({when})`
-- Handoffs to me (status=read) → unnumbered `    ○ {from} → you: {topic} (read)`
+- Handoffs to me → `[N] {from} → you: {topic} ({when})`
 - Pending questions → `[N] {from} asks about "{topic}" ({when})`
 - Answered questions → `[N] ✓ {name} answered "{topic}"`
 - Other handoffs → unnumbered `{from} → {to}: {topic} ({when})`
-- Numbered items first, blank line, then read handoffs + others.
-
-**Your Todos** (skip if no open todos):
-- Query from data: `todos` field (see activity-data.sh)
-- `□ YOUR TODOS (N open)` header
-- Top 3-5 by priority then recency
-- Exclamation mark prefix for priority >= 2
-- Show quest link arrow if linked to a quest
-- Overflow: `+ N more — /todo to see all`
-- Omit section entirely if no open todos
+- Numbered items first, blank line, then others.
 
 **Sessions**:
 - `◦ YOUR SESSIONS` — top 5. Format: `{date}  {topic}`
@@ -64,7 +54,6 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Footer** (separated by `├────┤`):
 - If orphans.orphanCount > 0: `{N} artifacts unlinked to quests — /quest suggest`
 - If knowledge_gap.gapCount > 0: `{N} sessions without captured insights — /reflect to extract`
-- If todos exist: `/todo to manage · /ask a question · /quest to see more`
 - Else: `/ask a question · /quest to see more · /reflect for insights`
 - Always end with: `What's your focus?`
 
@@ -104,7 +93,7 @@ Minimum 2 options. "Other" is automatic.
 
 | Selection | Action |
 |-----------|--------|
-| Handoff | Read filePath from data. Display content + entry points. **Immediately** mark as read: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'read' RETURN s.id"`. After displaying content, ask via AskUserQuestion: header "Handoff", question "What next?", options: "Start working on this" (marks `handoffStatus = 'done'` via `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'done' RETURN s.id"`), "Keep it open" (stays `read`, no action needed). |
+| Handoff | Read filePath from data. Display content + entry points. |
 | Questions | Load QuestionSet, present via AskUserQuestion. |
 | Work stream | Read most recent handoff from cluster. Show Open Threads / Next Steps. Mention relevant knowledge artifacts. |
 | PR | `gh pr view #N --json title,body,additions,deletions,files`. Summarize. |
