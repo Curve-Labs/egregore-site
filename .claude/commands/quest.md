@@ -129,6 +129,10 @@ Artifacts (4):
   → 2026-01-27 [source] Benchmarking LLM Reasoning
   → 2026-01-27 [finding] HELM adaptable with modifications (Ali)
 
+Todos:
+  □ cem: fix retry logic in graph.sh (2d ago)
+  □ oz: investigate connection pooling (today)
+
 Contributors: Oz, Ali
 
 Entry points:
@@ -185,6 +189,23 @@ Hey Cem, oz started a quest you're involved in: {title}
 
 "{question}"
 ```
+
+## Linked Todos (in detail view)
+
+When showing quest details (`/quest [name]`), query linked todos:
+
+```bash
+bash bin/graph.sh query "MATCH (t:Todo {status: 'open'})-[:PART_OF]->(q:Quest {id: '$questSlug'}) MATCH (t)-[:BY]->(p:Person) RETURN t.text AS text, p.name AS by, t.created AS created ORDER BY t.created DESC"
+```
+
+Display after Threads section, before Artifacts:
+```
+Todos:
+  □ cem: fix retry logic in graph.sh (2d ago)
+  □ oz: investigate connection pooling (today)
+```
+
+Omit the Todos section entirely if no todos are linked to the quest.
 
 ## Next
 

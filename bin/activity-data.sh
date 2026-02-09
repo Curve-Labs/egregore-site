@@ -50,6 +50,12 @@ bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'}) WHERE
 # Q7: All handoffs (7 days)
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS from, target.name AS to, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q7.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q7.json" &
 
+# Q_todos: Open todos for current user
+bash "$GS" query "MATCH (t:Todo {status: 'open'})-[:BY]->(p:Person {name: '$ME'}) OPTIONAL MATCH (t)-[:PART_OF]->(q:Quest) RETURN t.id AS id, t.text AS text, t.priority AS priority, t.created AS created, q.id AS quest ORDER BY t.priority DESC, t.created DESC LIMIT 5" > "$TMPDIR/qtodos.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qtodos.json" &
+
+# Q_todos_count: Total open todo count
+bash "$GS" query "MATCH (t:Todo {status: 'open'})-[:BY]->(p:Person {name: '$ME'}) RETURN count(t) AS openCount" > "$TMPDIR/qtodos_count.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qtodos_count.json" &
+
 # Q_gap: Knowledge gap count (sessions without artifacts)
 bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P14D') OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p) WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day}) AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D') WITH s, count(a) AS artifactCount WHERE artifactCount = 0 RETURN count(s) AS gapCount" > "$TMPDIR/qgap.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qgap.json" &
 
@@ -97,7 +103,7 @@ bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - durati
 wait
 
 # --- Validate JSON files ---
-for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans; do
+for f in q1 q2 q3 q4 q5 q6 q7 qtodos qtodos_count qgap qorphans; do
   jq . "$TMPDIR/$f.json" >/dev/null 2>&1 || echo "$EMPTY" > "$TMPDIR/$f.json"
 done
 
@@ -119,6 +125,8 @@ jq -n \
   --slurpfile answered_questions "$TMPDIR/q5.json" \
   --slurpfile handoffs_to_me "$TMPDIR/q6.json" \
   --slurpfile all_handoffs "$TMPDIR/q7.json" \
+  --slurpfile todos "$TMPDIR/qtodos.json" \
+  --slurpfile todos_count "$TMPDIR/qtodos_count.json" \
   --slurpfile knowledge_gap "$TMPDIR/qgap.json" \
   --slurpfile orphans "$TMPDIR/qorphans.json" \
   --argjson prs "$PRS" \
@@ -135,6 +143,8 @@ jq -n \
     answered_questions: $answered_questions[0],
     handoffs_to_me: $handoffs_to_me[0],
     all_handoffs: $all_handoffs[0],
+    todos: $todos[0],
+    todos_count: $todos_count[0],
     knowledge_gap: $knowledge_gap[0],
     orphans: $orphans[0],
     prs: $prs,

@@ -10,7 +10,7 @@ Run ONE command to get all dashboard data:
 bash bin/activity-data.sh
 ```
 
-Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `prs`, `disk`.
+Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `todos`, `todos_count`, `knowledge_gap`, `orphans`, `prs`, `disk`.
 
 If the command fails, fall back to reading `memory/` files. Add `(offline)` after ✦ in header.
 
@@ -41,6 +41,15 @@ Content rows: `│  {text padded with trailing spaces}  │`
 - Other handoffs → unnumbered `{from} → {to}: {topic} ({when})`
 - Numbered items first, blank line, then others.
 
+**Your Todos** (skip if no open todos):
+- Query from data: `todos` field (see activity-data.sh)
+- `□ YOUR TODOS (N open)` header
+- Top 3-5 by priority then recency
+- `!` prefix for priority >= 2
+- Show quest link with `→` if linked
+- Overflow: `+ N more — /todo to see all`
+- Omit section entirely if no open todos
+
 **Sessions**:
 - `◦ YOUR SESSIONS` — top 5. Format: `{date}  {topic}`
 - `◦ TEAM` — top 5. Format: `{date}  {name}: {topic}`
@@ -54,6 +63,7 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Footer** (separated by `├────┤`):
 - If orphans.orphanCount > 0: `{N} artifacts unlinked to quests — /quest suggest`
 - If knowledge_gap.gapCount > 0: `{N} sessions without captured insights — /reflect to extract`
+- If todos exist: `/todo to manage · /ask a question · /quest to see more`
 - Else: `/ask a question · /quest to see more · /reflect for insights`
 - Always end with: `What's your focus?`
 
