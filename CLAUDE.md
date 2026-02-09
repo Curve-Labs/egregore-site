@@ -310,7 +310,7 @@ MEMORY_DIR="$(basename "$MEMORY_REPO" .git)"
 
 Save `workspace_ready: true` to state.
 
-### Step 4: Shell command
+### Step 4: Shell alias
 
 Set up the launch command so the user can start Egregore from anywhere:
 
@@ -369,23 +369,24 @@ Org config lives in `egregore.json` (committed, non-secret). Personal tokens (`G
 
 ## Git Workflow
 
-Users work directly on `develop`. No manual branch management — `/save` handles everything.
+Egregore uses a `develop` branch model. Users never interact with git directly — commands handle everything.
 
 ```
 main ← stable, released (maintainer controls via /release)
   │
-  develop ← where everyone works
+  develop ← integration branch (PRs land here)
     │
-    save/{author}/{date}-{summary} ← created by /save, deleted after merge
+    dev/{author}/{date}-session ← working branches (created on launch)
 ```
 
-- **On launch**: `bin/session-start.sh` syncs develop, stays on develop
-- **Working**: commit freely on develop (local only)
-- **`/save`**: creates a branch from your commits, pushes, creates PR to develop, resets develop to clean. Markdown-only PRs auto-merge; code changes need review
+- **On launch**: `bin/session-start.sh` syncs develop and creates a working branch
+- **`/save`**: pushes working branch, creates PR to develop. Markdown-only PRs auto-merge; code changes need maintainer review
 - **`/handoff`**: same as /save + handoff file + Neo4j session + notifications
 - **`/release`** (maintainer only): merges develop → main, tags, syncs public repo
-- **`/pull`**: pulls latest develop
-- **Memory repo**: stays on main (separate repo, auto-merge)
+- **`/pull`**: syncs develop, rebases working branch
+- **Memory repo**: stays on main (separate repo, auto-merge unchanged)
+
+**Never push directly to main or develop.** All changes flow through PRs.
 
 ## Working Conventions
 
