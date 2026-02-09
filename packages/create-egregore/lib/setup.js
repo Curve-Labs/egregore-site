@@ -78,7 +78,7 @@ async function install(data, ui, targetDir) {
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(dirSlug, org_name, egregoreDir);
-  const aliasName = installShellAlias(egregoreDir, ui);
+  const aliasName = await installShellAlias(egregoreDir, ui);
 
   // 6+. Clone managed repos (if any)
   const clonedRepos = [];
@@ -155,15 +155,24 @@ function registerInstance(slug, name, egregoreDir) {
   fs.writeFileSync(registryFile, JSON.stringify(instances, null, 2) + "\n");
 }
 
-function installShellAlias(egregoreDir, ui) {
+async function installShellAlias(egregoreDir, ui) {
   const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
   if (!fs.existsSync(script)) {
     ui.warn("Shell alias script not found — add alias manually.");
     return "egregore";
   }
   try {
-    const output = execSync(`bash "${script}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
-    const aliasName = output || "egregore";
+    // Get recommended name
+    const suggested = execSync(`bash "${script}" suggest`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
+    const defaultName = suggested || "egregore";
+
+    // Ask user what they want to call it
+    const answer = await ui.prompt(`Shell command name [${defaultName}]:`);
+    const chosenName = answer || defaultName;
+
+    // Install with chosen name
+    const output = execSync(`bash "${script}" install "${chosenName}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
+    const aliasName = output || chosenName;
     ui.success(`Installed ${ui.dim(aliasName)} command`);
     return aliasName;
   } catch {
