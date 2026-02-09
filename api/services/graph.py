@@ -69,15 +69,23 @@ def inject_org_scope(statement: str, org_slug: str) -> str:
       (s:Session)              → (s:Session {org: $_org})
       CREATE (s:Session)       → CREATE (s:Session {org: $_org})
 
-    Skips system calls (CALL ...) and nodes that already have org:.
+    Skips: system calls (CALL ...), nodes that already have org:,
+    and system-level labels (Org) that are global.
     """
     if statement.strip().upper().startswith("CALL"):
         return statement
+
+    # System labels that should NOT be org-scoped
+    SYSTEM_LABELS = {"Org"}
 
     # 1. Add org to patterns WITH properties: (var:Label {props})
     def add_org_to_props(match):
         full = match.group(0)
         if "org:" in full or "org :" in full:
+            return full
+        # Extract label and skip system labels
+        label_match = re.search(r':([A-Z]\w*)', full)
+        if label_match and label_match.group(1) in SYSTEM_LABELS:
             return full
         return full.rstrip("}") + ", org: $_org}"
 
@@ -88,6 +96,8 @@ def inject_org_scope(statement: str, org_slug: str) -> str:
     def add_org_to_bare(match):
         var = match.group(1)
         label = match.group(2)
+        if label in SYSTEM_LABELS:
+            return match.group(0)
         return f"({var}:{label} {{org: $_org}})"
 
     result = re.sub(
