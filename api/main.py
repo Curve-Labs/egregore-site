@@ -724,8 +724,7 @@ if $HAS_JQ; then
 fi
 
 # Install egregore alias (uses script from cloned repo)
-ALIAS_OUTPUT=$(bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null || echo "egregore:")
-ALIAS_NAME="${ALIAS_OUTPUT%%:*}"
+ALIAS_NAME=$(bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null | cut -d: -f1 || echo "egregore")
 
 echo ""
 echo "  Egregore is ready for $ORG_NAME"
