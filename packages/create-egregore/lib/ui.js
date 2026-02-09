@@ -111,7 +111,33 @@ async function choose(question, options) {
   }
 }
 
+// Prompt with multi-select (comma-separated numbers, or Enter to skip)
+async function multiSelect(question, options) {
+  if (options.length === 0) return [];
+  console.log(`\n  ${question}\n`);
+  for (let i = 0; i < options.length; i++) {
+    const { name, language, description } = options[i];
+    const lang = language ? `${DIM}(${language})${RESET} ` : "";
+    const desc = description ? `${DIM}— ${description}${RESET}` : "";
+    console.log(`  ${BOLD}${i + 1}.${RESET} ${name} ${lang}${desc}`);
+  }
+  console.log(`\n  ${DIM}Enter numbers (e.g. 1,3,5), 'all', or press Enter to skip${RESET}`);
+
+  const answer = await prompt("Repos:");
+  if (!answer) return [];
+  if (answer.toLowerCase() === "all") return options.map((o) => o.name);
+
+  const selected = [];
+  for (const part of answer.split(",")) {
+    const n = parseInt(part.trim(), 10);
+    if (n >= 1 && n <= options.length) {
+      selected.push(options[n - 1].name);
+    }
+  }
+  return selected;
+}
+
 module.exports = {
   banner, info, success, warn, error, step, dim, bold, cyan,
-  spinner, prompt, choose,
+  spinner, prompt, choose, multiSelect,
 };

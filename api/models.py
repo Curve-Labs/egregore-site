@@ -31,11 +31,14 @@ class OrgSetup(BaseModel):
     org_name: str
     is_personal: bool = False
     telegram_chat_id: Optional[str] = None
+    repos: list[str] = []
+    instance_name: Optional[str] = None
 
 
 class OrgJoin(BaseModel):
     """Joiner: join an existing org."""
     github_org: str
+    repo_name: str = "egregore-core"
 
 
 class OrgTelegram(BaseModel):
@@ -80,6 +83,7 @@ class OrgInvite(BaseModel):
     """Invite a GitHub user to an org's Egregore."""
     github_org: str
     github_username: str
+    repo_name: str = "egregore-core"
 
 
 class OrgAcceptInvite(BaseModel):

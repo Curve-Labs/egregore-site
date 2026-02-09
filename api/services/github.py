@@ -86,11 +86,47 @@ async def fork_repo(token: str, target_org: str | None = None) -> dict:
     return resp.json()
 
 
+async def generate_from_template(
+    token: str, owner: str, repo_name: str, private: bool = False,
+) -> dict:
+    """Generate a repo from the egregore-core template.
+
+    Uses POST /repos/{template_owner}/{template_repo}/generate.
+    Requires egregore-core to be marked as a template repo on GitHub.
+    """
+    body = {
+        "owner": owner,
+        "name": repo_name,
+        "private": private,
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{API_BASE}/repos/{UPSTREAM_OWNER}/{UPSTREAM_REPO}/generate",
+            headers=_headers(token),
+            json=body,
+            timeout=30.0,
+        )
+    if resp.status_code not in (200, 201):
+        raise ValueError(f"Template generation failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
+
 async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
     """Poll until fork is ready."""
     import asyncio
     for _ in range(timeout // 2):
         if await repo_exists(token, owner, UPSTREAM_REPO):
+            return True
+        await asyncio.sleep(2)
+    return False
+
+
+async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 30) -> bool:
+    """Poll until a repo is ready (generic replacement for wait_for_fork)."""
+    import asyncio
+    for _ in range(timeout // 2):
+        if await repo_exists(token, owner, repo_name):
             return True
         await asyncio.sleep(2)
     return False
@@ -156,10 +192,61 @@ async def init_memory_structure(token: str, owner: str, repo: str) -> None:
             pass  # Directory may already exist
 
 
+async def list_org_repos(token: str, org: str) -> list[dict]:
+    """List repos for an org (or personal account), filtering out egregore/memory repos.
+
+    Returns [{name, description, language, private}].
+    Falls back to /users/{org}/repos for personal accounts.
+    """
+    repos: list[dict] = []
+    page = 1
+    while True:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{API_BASE}/orgs/{org}/repos",
+                headers=_headers(token),
+                params={"per_page": 100, "sort": "updated", "page": page},
+                timeout=15.0,
+            )
+        if resp.status_code == 404:
+            # Not an org — try as personal account
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{API_BASE}/users/{org}/repos",
+                    headers=_headers(token),
+                    params={"per_page": 100, "sort": "updated", "page": page},
+                    timeout=15.0,
+                )
+        if resp.status_code != 200:
+            break
+        batch = resp.json()
+        if not batch:
+            break
+        for r in batch:
+            name = r.get("name", "")
+            # Filter out memory repos and egregore repos
+            if name.endswith("-memory"):
+                continue
+            if name.startswith("egregore"):
+                continue
+            repos.append({
+                "name": name,
+                "description": r.get("description") or "",
+                "language": r.get("language") or "",
+                "private": r.get("private", False),
+            })
+        if len(batch) < 100:
+            break
+        page += 1
+    return repos
+
+
 async def update_egregore_json(
     token: str, owner: str, repo: str,
     org_name: str, github_org: str, memory_repo: str,
     api_url: str,
+    slug: str = "",
+    repos: list[str] | None = None,
 ) -> None:
     """Update egregore.json in the fork with org-specific config.
     NOTE: api_key is NOT written here — it goes in .env (gitignored), not committed files.
@@ -171,6 +258,10 @@ async def update_egregore_json(
         "memory_repo": memory_repo,
         "api_url": api_url,
     }
+    if slug:
+        config["slug"] = slug
+    if repos is not None:
+        config["repos"] = repos
     await update_file(
         token, owner, repo,
         "egregore.json",

@@ -20,7 +20,7 @@ function run(cmd, opts = {}) {
  * @param {string} targetDir - where to install (default: cwd)
  */
 async function install(data, ui, targetDir) {
-  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key } = data;
+  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [] } = data;
   const base = targetDir || process.cwd();
 
   const dirSlug = (github_org || slug || "egregore").toLowerCase();
@@ -31,7 +31,7 @@ async function install(data, ui, targetDir) {
     .replace(/\.git$/, "");
   const memoryDir = path.join(base, memoryDirName);
 
-  const totalSteps = 5;
+  const totalSteps = 5 + repos.length;
 
   // Configure git credential helper for HTTPS cloning
   configureGitCredentials(github_token);
@@ -80,6 +80,23 @@ async function install(data, ui, targetDir) {
   registerInstance(dirSlug, org_name, egregoreDir);
   installShellAlias(egregoreDir, ui);
 
+  // 6+. Clone managed repos (if any)
+  const clonedRepos = [];
+  for (let i = 0; i < repos.length; i++) {
+    const repoName = repos[i];
+    ui.step(6 + i, totalSteps, `Cloning ${repoName}...`);
+    const repoDir = path.join(base, repoName);
+    if (fs.existsSync(repoDir)) {
+      ui.warn(`${repoName}/ already exists — pulling latest`);
+      run("git pull", { cwd: repoDir });
+    } else {
+      const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
+      execFileSync("git", ["clone", repoUrl, repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    }
+    clonedRepos.push(repoName);
+    ui.success(`Cloned ${repoName}`);
+  }
+
   // Done
   console.log("");
   ui.success(`Egregore is ready for ${ui.bold(org_name)}`);
@@ -87,6 +104,9 @@ async function install(data, ui, targetDir) {
   ui.info(`Your workspace:`);
   ui.info(`  ${ui.cyan(`./egregore-${dirSlug}/`)}  — Your Egregore instance`);
   ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
+  for (const repoName of clonedRepos) {
+    ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
+  }
   console.log("");
   ui.info(`Next: type ${ui.bold("egregore")} in any terminal to start.`);
   console.log("");

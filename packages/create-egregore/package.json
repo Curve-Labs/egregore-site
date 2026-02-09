@@ -1,6 +1,6 @@
 {
   "name": "create-egregore",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "description": "Set up Egregore for your team in one command",
   "license": "MIT",
   "bin": {
