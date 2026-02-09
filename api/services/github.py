@@ -316,7 +316,7 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
             break
         for r in batch:
             name = r.get("name", "")
-            if name.startswith("egregore") and not name.endswith("-memory"):
+            if name.startswith("egregore") and not name.endswith("-memory") and name != "egregore-site":
                 egregore_repos.append(name)
         if len(batch) < 100:
             break
@@ -325,28 +325,20 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
     for repo_name in egregore_repos:
         config_raw = await get_file_content(token, org, repo_name, "egregore.json")
         if not config_raw:
-            instances.append({
-                "repo_name": repo_name,
-                "slug": "",
-                "org_name": "",
-                "repos": [],
-            })
-            continue
+            continue  # No config → not a configured instance
         try:
             config = _json.loads(config_raw)
+            org_name = config.get("org_name", "")
+            if not org_name:
+                continue  # Empty org_name → template or unconfigured repo
             instances.append({
                 "repo_name": repo_name,
                 "slug": config.get("slug", ""),
-                "org_name": config.get("org_name", ""),
+                "org_name": org_name,
                 "repos": config.get("repos", []),
             })
         except _json.JSONDecodeError:
-            instances.append({
-                "repo_name": repo_name,
-                "slug": "",
-                "org_name": "",
-                "repos": [],
-            })
+            continue
 
     return instances
 
