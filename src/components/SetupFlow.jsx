@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl } from "../api";
 
 const C = {
   parchment: "#F4F1EA",
@@ -221,7 +221,154 @@ function OrgButton({ name, login, hasEgregore, isMember, onClick }) {
   );
 }
 
-function SetupProgress({ token, user, org }) {
+function RepoPicker({ token, org, onPick }) {
+  const [repos, setRepos] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(new Set());
+
+  useEffect(() => {
+    getOrgRepos(token, org.login)
+      .then((data) => { setRepos(data.repos || []); setLoading(false); })
+      .catch(() => { setRepos([]); setLoading(false); });
+  }, [token, org.login]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "3rem" }}>
+        <Spinner />
+        <p style={{ ...font.mono, fontSize: "0.8rem", color: C.muted, marginTop: "1rem" }}>Loading repos...</p>
+      </div>
+    );
+  }
+
+  if (repos.length === 0) {
+    // No repos to pick — skip straight to setup
+    return (
+      <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem", textAlign: "center" }}>
+        <p style={{ ...font.serif, fontSize: "1.1rem", color: C.muted, marginBottom: "2rem" }}>
+          No repos found — setting up collaboration-only mode.
+        </p>
+        <button
+          onClick={() => onPick([])}
+          style={{
+            ...font.mono, fontSize: "0.8rem",
+            background: C.ink, color: C.parchment,
+            border: "none", padding: "0.75rem 2rem", cursor: "pointer",
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    );
+  }
+
+  const toggle = (name) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === repos.length) setSelected(new Set());
+    else setSelected(new Set(repos.map((r) => r.name)));
+  };
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem", textAlign: "center" }}>
+        Setting up {org.name || org.login}
+      </p>
+      <p style={{ ...font.serif, fontSize: "1.1rem", textAlign: "center", marginBottom: "0.5rem" }}>
+        Which repos should Egregore manage?
+      </p>
+      <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, textAlign: "center", marginBottom: "2rem" }}>
+        Select repos for shared context. You can add more later.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.5rem" }}>
+        {repos.map((repo) => {
+          const isSelected = selected.has(repo.name);
+          return (
+            <button
+              key={repo.name}
+              onClick={() => toggle(repo.name)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.75rem",
+                width: "100%", padding: "0.75rem 1rem",
+                background: isSelected ? "rgba(122,15,27,0.04)" : "transparent",
+                border: `1px solid ${isSelected ? C.crimson : C.warmGray}`,
+                cursor: "pointer", transition: "all 0.2s", textAlign: "left",
+              }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                border: `1.5px solid ${isSelected ? C.crimson : C.warmGray}`,
+                background: isSelected ? C.crimson : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {isSelected && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ ...font.mono, fontSize: "0.85rem", color: C.ink }}>{repo.name}</span>
+                {repo.language && (
+                  <span style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginLeft: "0.5rem" }}>
+                    {repo.language}
+                  </span>
+                )}
+                {repo.description && (
+                  <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, margin: "0.2rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {repo.description}
+                  </p>
+                )}
+              </div>
+              {repo.private && (
+                <span style={{ ...font.mono, fontSize: "0.55rem", color: C.muted, border: `1px solid ${C.warmGray}`, padding: "0.1rem 0.4rem" }}>
+                  private
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button
+          onClick={toggleAll}
+          style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        >
+          {selected.size === repos.length ? "Deselect all" : "Select all"}
+        </button>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            onClick={() => onPick([])}
+            style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, background: "none", border: `1px solid ${C.warmGray}`, padding: "0.6rem 1.25rem", cursor: "pointer" }}
+          >
+            Skip
+          </button>
+          <button
+            onClick={() => onPick([...selected])}
+            style={{
+              ...font.mono, fontSize: "0.75rem",
+              background: C.ink, color: C.parchment,
+              border: "none", padding: "0.6rem 1.25rem", cursor: "pointer",
+            }}
+          >
+            Continue{selected.size > 0 ? ` (${selected.size})` : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetupProgress({ token, user, org, repos = [] }) {
   const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -234,6 +381,7 @@ function SetupProgress({ token, user, org }) {
           github_org: org.login,
           org_name: org.name || org.login,
           is_personal: org.is_personal || false,
+          repos,
         });
 
     action
@@ -261,7 +409,7 @@ function SetupProgress({ token, user, org }) {
           {org.has_egregore ? "Joining" : "Setting up Egregore for"} {org.name || org.login}...
         </p>
         <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
-          {org.has_egregore ? "Verifying access" : "Forking repo, creating memory, bootstrapping graph"}
+          {org.has_egregore ? "Verifying access" : "Creating repo, setting up memory, bootstrapping graph"}
         </p>
       </div>
     );
@@ -535,6 +683,7 @@ export default function SetupFlow() {
   const [githubToken, setGithubToken] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [selectedRepos, setSelectedRepos] = useState(null); // null = not picked yet, [] = skipped
 
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
@@ -589,11 +738,20 @@ export default function SetupFlow() {
     );
   }
 
+  // Repo picker (for new setup, not join)
+  if (githubToken && selectedOrg && !selectedOrg.has_egregore && selectedRepos === null) {
+    return (
+      <SetupLayout>
+        <RepoPicker token={githubToken} org={selectedOrg} onPick={setSelectedRepos} />
+      </SetupLayout>
+    );
+  }
+
   // Setup in progress / complete
   if (githubToken && selectedOrg) {
     return (
       <SetupLayout>
-        <SetupProgress token={githubToken} user={user} org={selectedOrg} />
+        <SetupProgress token={githubToken} user={user} org={selectedOrg} repos={selectedRepos || []} />
       </SetupLayout>
     );
   }

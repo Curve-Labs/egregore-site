@@ -30,17 +30,20 @@ export async function getOrgs(token) {
   return request("GET", "/api/org/setup/orgs", { token });
 }
 
-export async function setupOrg(token, { github_org, org_name, is_personal }) {
-  return request("POST", "/api/org/setup", {
-    token,
-    body: { github_org, org_name, is_personal },
-  });
+export async function getOrgRepos(token, org) {
+  return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
 }
 
-export async function joinOrg(token, { github_org }) {
+export async function setupOrg(token, { github_org, org_name, is_personal, repos = [], instance_name }) {
+  const body = { github_org, org_name, is_personal, repos };
+  if (instance_name) body.instance_name = instance_name;
+  return request("POST", "/api/org/setup", { token, body });
+}
+
+export async function joinOrg(token, { github_org, repo_name = "egregore-core" }) {
   return request("POST", "/api/org/join", {
     token,
-    body: { github_org },
+    body: { github_org, repo_name },
   });
 }
 
