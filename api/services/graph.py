@@ -62,42 +62,37 @@ async def test_connection(org: dict) -> dict:
 
 
 def inject_org_scope(statement: str, org_slug: str) -> str:
-    """Inject org property into MATCH and CREATE clauses.
+    """Inject org property into ALL labeled node patterns.
 
     Transforms:
-      MATCH (p:Person {name: $name}) → MATCH (p:Person {name: $name, org: $_org})
-      CREATE (s:Session {id: $id})   → CREATE (s:Session {id: $id, org: $_org})
+      (p:Person {name: $name}) → (p:Person {name: $name, org: $_org})
+      (s:Session)              → (s:Session {org: $_org})
+      CREATE (s:Session)       → CREATE (s:Session {org: $_org})
 
     Skips system calls (CALL ...) and nodes that already have org:.
     """
     if statement.strip().upper().startswith("CALL"):
         return statement
 
-    # For MATCH: add org filter to node patterns with properties
-    # For CREATE: add org property to new nodes
-    def add_org_to_pattern(match):
+    # 1. Add org to patterns WITH properties: (var:Label {props})
+    def add_org_to_props(match):
         full = match.group(0)
-        # Skip if already has org:
         if "org:" in full or "org :" in full:
             return full
-        # Find the closing } and insert org before it
         return full.rstrip("}") + ", org: $_org}"
 
-    # Match node patterns like (var:Label {props})
-    pattern = r'\([a-zA-Z_]\w*:[A-Z]\w*\s*\{[^}]*\}'
-    result = re.sub(pattern, add_org_to_pattern, statement)
+    pattern_with_props = r'\([a-zA-Z_]\w*:[A-Z]\w*\s*\{[^}]*\}'
+    result = re.sub(pattern_with_props, add_org_to_props, statement)
 
-    # For CREATE with node patterns that have NO properties: (var:Label)
-    # Add {org: $_org}
-    def add_org_to_bare_create(match):
-        keyword = match.group(1)
-        var = match.group(2)
-        label = match.group(3)
-        return f"{keyword}({var}:{label} {{org: $_org}}"
+    # 2. Add {org: $_org} to bare patterns: (var:Label) → (var:Label {org: $_org})
+    def add_org_to_bare(match):
+        var = match.group(1)
+        label = match.group(2)
+        return f"({var}:{label} {{org: $_org}})"
 
     result = re.sub(
-        r'(CREATE\s*)\(([a-zA-Z_]\w*):([A-Z]\w*)\)(?!\s*\{)',
-        add_org_to_bare_create,
+        r'\(([a-zA-Z_]\w*):([A-Z]\w*)\)(?!\s*\{)',
+        add_org_to_bare,
         result,
     )
 

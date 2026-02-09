@@ -156,28 +156,74 @@ function registerInstance(slug, name, egregoreDir) {
 }
 
 async function installShellAlias(egregoreDir, ui) {
-  const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
-  if (!fs.existsSync(script)) {
-    ui.warn("Shell alias script not found — add alias manually.");
-    return { aliasName: "egregore", profileFile: ".zshrc" };
-  }
   try {
-    // Get recommended name
-    const suggested = execSync(`bash "${script}" suggest`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
-    const defaultName = suggested || "egregore";
+    // Detect shell profile
+    const shell = path.basename(process.env.SHELL || "");
+    let profile;
+    if (shell === "zsh" && fs.existsSync(path.join(os.homedir(), ".zshrc"))) {
+      profile = path.join(os.homedir(), ".zshrc");
+    } else if (shell === "fish") {
+      profile = path.join(os.homedir(), ".config", "fish", "config.fish");
+    } else {
+      for (const f of [".bash_profile", ".bashrc", ".profile"]) {
+        const p = path.join(os.homedir(), f);
+        if (fs.existsSync(p)) { profile = p; break; }
+      }
+    }
+    if (!profile) {
+      profile = path.join(os.homedir(), `.${shell || "bash"}rc`);
+    }
 
-    // Ask user what they want to call it
+    const profileFile = path.basename(profile);
+    const aliasCmd = `cd "${egregoreDir}" && claude start`;
+    const profileContent = fs.existsSync(profile) ? fs.readFileSync(profile, "utf-8") : "";
+
+    // Check if this directory already has an alias
+    let existing = "";
+    if (profileContent.includes(egregoreDir)) {
+      const match = profileContent.match(new RegExp(`^alias ([^=]+)='[^']*${egregoreDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, "m"));
+      if (match) existing = match[1];
+    }
+
+    // Recommend a name
+    let defaultName;
+    if (existing) {
+      defaultName = existing;
+    } else if (!profileContent.match(/^alias egregore=/m)) {
+      defaultName = "egregore";
+    } else {
+      // Read slug from egregore.json in the cloned repo
+      const configPath = path.join(egregoreDir, "egregore.json");
+      let slug = "";
+      if (fs.existsSync(configPath)) {
+        try { slug = JSON.parse(fs.readFileSync(configPath, "utf-8")).slug || ""; } catch {}
+      }
+      defaultName = slug ? `egregore-${slug}` : "egregore-2";
+    }
+
+    // Ask user
     console.log("");
     ui.info(`This instance will be launched with a shell command.`);
     const answer = await ui.prompt(`Command name (Enter for ${ui.bold(defaultName)}):`);
-    const chosenName = answer || defaultName;
+    const aliasName = answer || defaultName;
 
-    // Install with chosen name — output is "name:/path/to/profile"
-    const output = execSync(`bash "${script}" install "${chosenName}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
-    const [aliasName, profilePath] = (output || chosenName).split(":");
-    const profileFile = profilePath ? path.basename(profilePath) : ".zshrc";
-    ui.success(`Installed ${ui.dim(aliasName)} command`);
-    return { aliasName, profilePath, profileFile };
+    // Remove old alias for this directory
+    let lines = profileContent.split("\n");
+    lines = lines.filter((l) => !l.includes(egregoreDir));
+    // Remove old alias with same name
+    const isFish = profileFile.includes("fish");
+    const aliasPattern = isFish ? `alias ${aliasName} ` : `alias ${aliasName}=`;
+    lines = lines.filter((l) => !l.startsWith(aliasPattern));
+
+    // Write new alias
+    const aliasLine = isFish
+      ? `alias ${aliasName} '${aliasCmd}'`
+      : `alias ${aliasName}='${aliasCmd}'`;
+    lines.push("", aliasLine);
+    fs.writeFileSync(profile, lines.join("\n"));
+
+    ui.success(`Added ${ui.dim(aliasName)} to ${profileFile}`);
+    return { aliasName, profileFile };
   } catch {
     ui.warn("Could not install shell alias — add it manually.");
     return { aliasName: "egregore", profileFile: ".zshrc" };
