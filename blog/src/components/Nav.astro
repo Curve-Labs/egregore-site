@@ -10,6 +10,7 @@ const navItems = [
 <nav class="nav">
   <div class="nav-inner">
     <a href="/" class="logo">
+      <img src="/curve_labs_logo_white.png" alt="Curve Labs" class="logo-icon" />
       <span class="logo-text">Curve Labs</span>
     </a>
 
@@ -24,9 +25,7 @@ const navItems = [
       ))}
     </ul>
 
-    <a href="/rss.xml" class="rss-link" title="RSS Feed">
-      <span class="nav-num">[RSS]</span>
-    </a>
+    <div class="nav-spacer"></div>
   </div>
 </nav>
 
@@ -41,22 +40,33 @@ const navItems = [
   }
 
   .nav-inner {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: var(--space-md) var(--space-lg);
+    padding: 0 24px;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-xl);
   }
 
   .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     text-decoration: none;
   }
 
+  .logo-icon {
+    height: 32px;
+    width: auto;
+  }
+
   .logo-text {
-    font-family: var(--font-gothic);
-    font-size: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: var(--text);
     transition: color var(--transition-fast);
   }
@@ -68,44 +78,36 @@ const navItems = [
   .nav-links {
     display: flex;
     list-style: none;
-    gap: var(--space-lg);
+    gap: 40px;
   }
 
   .nav-link {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 4px;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-soft);
+    color: #A1A1AA;
     text-decoration: none;
     transition: color var(--transition-fast);
   }
 
   .nav-link:hover {
-    color: var(--accent);
+    color: white;
   }
 
   .nav-num {
-    color: var(--text-muted);
+    color: #A1A1AA;
   }
 
   .nav-link:hover .nav-num {
-    color: var(--accent-soft);
+    color: white;
   }
 
-  .rss-link {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-  }
-
-  .rss-link:hover {
-    color: var(--accent);
+  .nav-spacer {
+    width: 128px;
   }
 
   @media (max-width: 768px) {

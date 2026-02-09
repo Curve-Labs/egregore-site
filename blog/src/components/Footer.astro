@@ -1,10 +1,7 @@
 ---
-const currentYear = new Date().getFullYear();
-
 const links = [
   { label: 'Main Site', href: 'https://curvelabs.eu' },
   { label: 'GitHub', href: 'https://github.com/Curve-Labs' },
-  { label: 'RSS', href: '/rss.xml' },
 ];
 ---
 
@@ -24,10 +21,7 @@ const links = [
     </nav>
 
     <div class="footer-copy">
-      <span class="copyright">© {currentYear} Curve Labs</span>
-      <span class="built-with">
-        Built with <a href="https://astro.build" class="astro-link">Astro</a>
-      </span>
+      <span class="copyright">© 2020 CL Cybernetix GmbH.</span>
     </div>
   </div>
 </footer>
@@ -93,10 +87,6 @@ const links = [
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-muted);
-  }
-
-  .astro-link {
-    color: var(--accent);
   }
 
   @media (max-width: 768px) {
