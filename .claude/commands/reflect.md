@@ -4,13 +4,14 @@ Topic: $ARGUMENTS
 
 **Auto-saves.** No need to run `/save` after.
 
-## Three Modes
+## Four Modes
 
-| Invocation | Mode | AskUserQuestion calls |
+| Invocation | Mode | Behavior |
 |---|---|---|
-| `/reflect` | **Deep** — full Socratic flow | 2-3 |
-| `/reflect [content]` | **Quick** — rapid capture, auto-classify | 0-1 |
-| `/reflect about [topic]` | **Focused** — deep but pre-seeded | 1-2 |
+| `/reflect` | **Deep** | Dynamic graph exploration → synthesis → deepening → capture |
+| `/reflect [content]` | **Quick** | Auto-classify → relation detection → capture. No exploration. |
+| `/reflect about [topic]` | **Focused** | Exploration seeded with topic → synthesis → capture |
+| `/reflect decision: [content]` | **Override** | Category override, no exploration |
 
 **Mode detection:**
 - No arguments → Deep mode
@@ -22,199 +23,220 @@ Topic: $ARGUMENTS
 
 **Neo4j-first.** All queries via `bash bin/graph.sh query "..."`. No MCP. No direct curl to Neo4j.
 
-- 1 Bash call: `git config user.name`
-- 5-6 Neo4j queries for context gathering (run in parallel)
-- 0-3 AskUserQuestion calls depending on mode
-- 1-3 Neo4j queries for Artifact creation + relation detection
-- Auto-save via `/save` flow
-- Progress shown incrementally
+## Schema Reference
 
-## Step 0: Identity + Context (parallel, all modes)
+The organizational knowledge graph contains:
 
-### Get current user
+**Nodes:**
+- **Person** `{name}` — team members
+- **Session** `{id, topic, date, summary, filePath}` — work sessions
+  Relationships: `-[:BY]-> Person`, `-[:HANDED_TO]-> Person`
+- **Artifact** `{id, title, type, topics, created, filePath}` — captured insights
+  Types: decision, finding, pattern
+  Relationships: `-[:CONTRIBUTED_BY]-> Person`, `-[:PART_OF]-> Quest`, `-[:RELATES_TO]-> Artifact`
+- **Quest** `{id, title, status, priority, topics, started}` — organizational goals
+  Status: active, paused, completed. Priority: 0-3 (3=critical)
+
+Query via: `bash bin/graph.sh query "CYPHER" '{"param": "value"}'`
+Parameter syntax: `$paramName` in Cypher, matching JSON keys.
+
+## Synthesis Rubric
+
+You are the voice of the organization's collective intelligence.
+
+You have seen every session, every artifact, every decision, every handoff. You know who's working on what, who's not working on anything, what's been decided and what's been silently overwritten.
+
+Speak to the user as a peer who sees the whole board.
+
+Name the thing that's forming. Surface the contradiction they haven't noticed. Show them the shape of their org that they can feel but can't see.
+
+Be specific. Use names, dates, decisions, topics. Never generic. Never a list. Never "consider" or "you might want to." Just say what you see.
+
+The highest-value observations are ones that are IMPOSSIBLE without both personal and organizational context:
+- Decisions that have silently evolved or been overwritten
+- Topics converging across people who haven't talked
+- Knowledge that only lives in one person's head
+- Priorities that have drifted from stated goals
+- The unnamed thing that keeps appearing
+
+Start with the most surprising thing. If nothing is surprising, say so — "Your org is aligned and on track" is a valid observation.
+
+**NEVER SURFACE:**
+- Knowledge gaps where you don't have the session summary
+- Patterns based on fewer than 2 data points
+- Observations that only require one person's data (Claude Code /insights can do those — we need to exceed that)
+
+## Step 0: Identity
 
 ```bash
 git config user.name
 ```
 
-Map to Person node: "Oguzhan Yayla" -> oz, "Cem Dagdelen" -> cem, "Ali" -> ali
+Map to Person node: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, "Ali" → ali
 
-### Context queries (run ALL in parallel)
+## Step 1: Graph Exploration (Deep + Focused modes only)
 
-Execute each with `bash bin/graph.sh query "..." '{"param": "value"}'`.
+Query the graph dynamically. Decide what to query based on the schema and what you find.
 
-**Q1 — Recent sessions (7 days):**
+**Seed queries** — run ALL in parallel as the first round:
+
+**Broad census (14 days):**
 ```cypher
-MATCH (s:Session)-[:BY]->(p:Person {name: $me})
-WHERE s.date >= date() - duration('P7D')
-RETURN s.topic AS topic, s.date AS date, s.summary AS summary
-ORDER BY s.date DESC LIMIT 5
+MATCH (a:Artifact)
+WHERE a.created >= datetime() - duration('P14D')
+OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
+OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
+RETURN a.id AS id, a.title AS title, a.type AS type,
+       a.topics AS topics, a.created AS created,
+       p.name AS author, q.id AS quest
 ```
 
-**Q2 — Active quests I'm involved in:**
+**Quest health:**
 ```cypher
 MATCH (q:Quest {status: 'active'})
 OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
-OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person {name: $me})
-WITH q, count(DISTINCT a) AS myArtifacts
-RETURN q.id AS quest, q.title AS title, myArtifacts
-ORDER BY myArtifacts DESC
+OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
+WITH q, count(DISTINCT a) AS artifacts,
+     collect(DISTINCT p.name) AS contributors,
+     CASE WHEN count(a) > 0
+       THEN duration.inDays(max(a.created), date()).days
+       ELSE duration.inDays(q.started, date()).days END AS daysSince,
+     coalesce(q.priority, 0) AS priority
+RETURN q.id AS quest, q.title AS title, artifacts, contributors,
+       daysSince, priority, q.topics AS topics
+ORDER BY priority DESC, daysSince ASC
 ```
 
-**Q3 — Recent artifacts by me (14 days):**
+**Contribution map (7 days):**
 ```cypher
-MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person {name: $me})
-WHERE a.created >= datetime() - duration('P14D')
-OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
-RETURN a.title AS title, a.type AS type, a.topics AS topics, a.created AS created, q.id AS quest
-ORDER BY a.created DESC LIMIT 10
+MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person)
+WHERE a.created >= datetime() - duration('P7D') AND a.topics IS NOT NULL
+UNWIND a.topics AS topic
+WITH p.name AS person, topic, count(DISTINCT a) AS count
+RETURN person, collect({topic: topic, count: count}) AS topicCounts
 ```
 
-**Q4 — Knowledge gaps (sessions without corresponding artifacts):**
-```cypher
-MATCH (s:Session)-[:BY]->(p:Person {name: $me})
-WHERE s.date >= date() - duration('P14D')
-OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p)
-WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day})
-  AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D')
-WITH s, count(a) AS artifactCount
-WHERE artifactCount = 0
-RETURN s.topic AS topic, s.date AS date
-ORDER BY s.date DESC
-```
-
-**Q5 — Recent decisions (30 days):**
+**Decision trajectory:**
 ```cypher
 MATCH (a:Artifact {type: 'decision'})
-WHERE a.created >= datetime() - duration('P30D')
-RETURN a.title AS title, a.topics AS topics, a.filePath AS path
-ORDER BY a.created DESC LIMIT 10
+WHERE a.topics IS NOT NULL
+UNWIND a.topics AS topic
+WITH topic, a ORDER BY a.created
+OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
+WITH topic, collect({title: a.title, author: p.name, created: a.created}) AS decisions
+WHERE size(decisions) >= 2
+RETURN topic, decisions
 ```
 
-**Q6 — Topic deep-dive (Focused mode only):**
-Only run this when mode is Focused. Query everything the graph knows about the given topic:
+**Handoffs waiting for me:**
+```cypher
+MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: $me})
+WHERE s.date >= date() - duration('P7D')
+MATCH (s)-[:BY]->(author:Person)
+RETURN s.topic AS topic, s.date AS date, author.name AS from
+ORDER BY s.date DESC LIMIT 5
+```
+
+**For Focused mode**, also run this topic-scoped query:
 ```cypher
 MATCH (a:Artifact)
-WHERE a.title CONTAINS $topic OR $topic IN a.topics
+WHERE (a.topics IS NOT NULL AND $topic IN a.topics) OR a.title CONTAINS $topic
 OPTIONAL MATCH (a)-[:PART_OF]->(q:Quest)
 OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person)
-RETURN a.title AS title, a.type AS type, a.topics AS topics, a.created AS created, q.id AS quest, p.name AS author
-ORDER BY a.created DESC LIMIT 10
+RETURN a.title AS title, a.type AS type, a.topics AS topics,
+       a.created AS created, q.id AS quest, p.name AS author
+ORDER BY a.created DESC LIMIT 15
 ```
 
-If Neo4j is unavailable, skip context gathering and proceed to Quick mode behavior (auto-classify with no context).
+**After the seed round**, compose 1-2 additional targeted queries to follow threads you find interesting. Max 3 query rounds total (seed + 2 follow-ups). All queries via `bash bin/graph.sh query "..."`.
 
-## Step 1: Context-Aware Opening (Deep + Focused modes only)
+**If Neo4j is unavailable**: Skip exploration entirely. Fall through to direct capture: "Graph offline — what's on your mind?"
 
-Synthesize query results into 1-3 sentences demonstrating graph awareness, then ask an opening question via AskUserQuestion.
+**If seed queries return thin data** (< 3 artifacts total, or single author): Fall through to direct capture: "Not much in the graph yet. What's on your mind?"
 
-### Opportunity detection
+## Step 2: Synthesis
 
-Analyze Q1-Q5 results (and Q6 for Focused mode) to identify which opportunity type to surface. Check in this priority order:
+Apply the synthesis rubric to the exploration results. Produce 1-3 observations as a brief paragraph — not a list, not bullet points. The voice is the egregore speaking.
 
-| Opportunity | Signal | Example opening |
-|---|---|---|
-| **Knowledge gap** | Q4 returns sessions without artifacts | "You had a session on MCP auth 3 days ago but nothing was captured. Did anything come out of that?" |
-| **Pattern emergence** | Q3 shows 3+ artifacts sharing topics | "Three recent artifacts touch [pricing, positioning, defensibility]. What ties these together?" |
-| **Decision tension** | Q5 shows decisions with overlapping topics | "The business model decision says X, but the go-to-market decision implies Y. Has your thinking evolved?" |
-| **Quest momentum** | Q2 shows quest with lots of recent artifacts | "You've added 4 artifacts to the grants quest this week. What's crystallizing?" |
-| **Fresh territory** | Q1 shows session topic not in any quest/artifact | "Your session on 'game engine multiagent' doesn't connect to anything else. New direction?" |
+**Example outputs:**
 
-If no clear opportunity, fall back to a general opening based on the most recent session.
+> Something is forming that doesn't have a name yet.
+>
+> You and Oz have both been circling "agent autonomy" from different angles — you as product, Oz as infra. 4 artifacts between you, no quest, no conversation about it.
+>
+> Also: your pricing decisions are drifting. The five-tier model from Feb 3 doesn't survive the usage-gating decision from today, but Oz's GTM work assumes it does.
 
-### AskUserQuestion options
+Or:
 
-Options must be drawn from **actual graph data** — specific session topics, quest names, artifact themes. Never generic options like "A decision" or "Something I learned".
+> You're carrying the strategy alone.
+>
+> 7 artifacts on pricing, defensibility, and go-to-market in 2 weeks, all yours. Oz has been on infra, Ali on blog styling. The grants quest (priority 3) hasn't moved in 12 days. Is this the shape you want your org to be?
 
-Example (knowledge gap detected):
+Then **AskUserQuestion** with observations as options + "Something else":
+
 ```
-question: "You had a session on MCP auth 3 days ago but nothing was captured. What came out of it?"
 header: "Reflect on"
 options:
-  - label: "MCP auth session"
-    description: "Capture what came out of the Feb 06 session"
-  - label: "Pricing evolution"
-    description: "3 recent artifacts touch pricing — tie them together"
+  - label: "The unnamed thing"
+    description: "What is agent autonomy to this org?"
+  - label: "Pricing drift"
+    description: "Reconcile the evolving decisions"
   - label: "Something else"
     description: "Reflect on a different topic"
 ```
 
-**Skip to Step 2** with the user's response.
+Options reference specific data — names, topics, decisions. Never generic.
 
-**Quick mode**: Skip Step 1 entirely. The user's content IS the reflection.
+## Step 3: Deepening
 
-## Step 2: Deepening (Deep + Focused modes only)
+User picks an observation. Ask ONE freeform follow-up — plain text, not AskUserQuestion. At this point you want the user to think, not pick from options.
 
-Based on Step 1 response, generate 1-2 follow-up questions that dig deeper. Style depends on what the user focused on:
+The follow-up names the specific tension and asks a direct question:
 
-| User focused on | Follow-up style |
-|---|---|
-| A session | "What was the key takeaway? What changed your thinking?" |
-| A decision tension | "Which framing is more accurate now? What resolved it?" |
-| A pattern | "Is this prescriptive (do this) or descriptive (this happens)?" |
-| A quest | "What's the next move? What's still unclear?" |
-| Fresh territory | "Is this a new quest or a one-off exploration?" |
+- "What should we call it? Is this a quest — something to deliberately pursue — or a principle that shapes everything?"
+- "The five-tier model from Feb 3 doesn't survive today's usage-gating decision. Is it dead, or are they compatible?"
+- "Is carrying strategy alone intentional, or should others be looped in?"
 
-Use AskUserQuestion with options drawn from the user's response + graph context.
+**Skip deepening if** the user's response from Step 2 is already rich (>50 chars of freeform substance).
 
-**Max 3 total AskUserQuestion rounds** (Step 1 + Step 2 combined). Skip to Step 3 if:
-- User's response is already rich (>50 characters of freeform text)
-- User selected "Something else" and provided detailed text
-- 3 rounds already used
+**Max 2 interaction rounds total**: AskUserQuestion (Step 2) + freeform deepening (Step 3).
 
-## Step 3: Auto-Classification
+## Step 4: Cross-Observation Synthesis
+
+If the system surfaced multiple observations and the user explored one, check whether the user's reflection *connects back* to the other observations.
+
+Example: user explores "the unnamed thing" and says "it's a design principle — agent autonomy." The system notices this resolves the pricing drift too:
+
+> Naming this also clarifies your pricing drift — usage-based gating IS the autonomy principle applied to pricing. Want to capture that connection too?
+
+This is optional — only fire if the connection is genuine. Don't force it.
+
+## Step 5: Auto-Classification
 
 Determine artifact type(s) from the conversation. **The user never picks a category.**
 
-### Classification signals (priority order)
+**Classification signals** (priority order):
+1. **Category override**: `decision: ...` prefix in arguments
+2. **Language cues**: "we decided" → decision, "I found" → finding, "I keep seeing" → pattern
+3. **Structural cues**: Binary choice with rationale → decision, generalization → pattern
+4. **Default**: Finding (least prescriptive)
 
-1. **Category override**: If arguments matched `[category]: [content]`, use that category directly
-2. **Language cues**: "we decided" / "the choice is" → decision. "I found" / "turns out" / "discovered" → finding. "I keep seeing" / "every time" / "the pattern is" → pattern
-3. **Structural cues**: Binary choice with rationale → decision. Before/after comparison → finding. Generalization from examples → pattern
-4. **Graph context**: Topic matches existing findings → finding. Recurring theme across sessions → pattern. New territory → thought (classify as finding)
+Multi-artifact: One reflection can produce up to 3 artifacts.
 
-**Default**: When ambiguous, classify as **finding** (least prescriptive). Never ask the user to classify.
-
-### Multi-artifact detection
-
-One reflection can produce up to 3 artifacts. Look for:
-- A decision AND the underlying finding that supports it
-- A pattern AND a specific finding that exemplifies it
-- Multiple distinct insights in one response
-
-### Extract from content
-
-For each artifact, extract:
-- **Title** — short descriptive title (for filename and Neo4j)
-- **Content** — the insight itself
-- **Context** — what led to it (auto-populate from session context if not explicit)
-- **Rationale** — why it matters
-- **Topics** — 2-4 topic tags derived from content + graph context
-
-### Present proposal
-
-Show proposed artifacts as plain text (NOT AskUserQuestion):
-
+Present proposal as plain text:
 ```
-Based on what you've shared:
+  ◉ Pattern: "Agent autonomy as design principle"
+    → relates to: egregore-reliability, individual-tier
 
-  1. Decision: "Gate by usage patterns, not Claude tier"
-     → pricing-strategy quest
-
-  2. Pattern: "Agents as individual PMF"
-     → individual-tier · egregore-reliability
+  ◉ Finding: "Usage gating = autonomy principle applied to pricing"
+    → relates to: 2026-02-09-gate-by-usage-patterns
 
 Adjust? (y/edit/skip)
 ```
 
-Wait for user response:
-- **y** or empty → proceed with all artifacts
-- **edit** → user modifies, then proceed
-- **skip** → abort without saving
+## Step 6: Relation Detection
 
-## Step 4: Relation Detection
-
-For each artifact, run targeted Cypher queries in parallel to find:
+For each artifact, run targeted Cypher queries in parallel:
 
 **Quest links (topic overlap):**
 ```cypher
@@ -236,9 +258,9 @@ RETURN a.id AS artifact, a.title AS title, a.type AS type, shared AS sharedTopic
 ORDER BY size(shared) DESC LIMIT 3
 ```
 
-Present relation suggestions alongside Step 3's proposal. If no relations found, skip silently.
+Present relation suggestions alongside Step 5's proposal. If no relations found, skip silently.
 
-## Step 5: Create files
+## Step 7: Create Files
 
 For each artifact, generate slug from title: lowercase, hyphens, no special chars, max 50 chars.
 
@@ -283,7 +305,7 @@ Show progress:
   [1/3] ✓ Writing knowledge/{category}s/{date}-{slug}.md
 ```
 
-## Step 6: Neo4j Artifact creation
+## Step 8: Neo4j Artifact Creation
 
 For each artifact, run via `bash bin/graph.sh query "..." '{"param": "value"}'`:
 
@@ -340,7 +362,7 @@ Show progress:
   [2/3] ✓ Indexed in knowledge graph
 ```
 
-## Step 7: Auto-save
+## Step 9: Auto-save
 
 Run the full `/save` flow:
 
@@ -354,53 +376,33 @@ Show progress:
   [3/3] ✓ Auto-saved
 ```
 
-## Step 8: Confirmation TUI
+## Step 10: TUI Confirmation
 
 Display the confirmation box. ~72 char width. Sigil: `◎ REFLECTION`.
 
 ### Boundary handling (CRITICAL)
 
-**No sub-boxes. No inner `┌─┐`/`└─┘` borders.** Sub-boxes break because the model can't count character widths precisely enough.
-
-Only **4 line patterns** exist:
+**No sub-boxes. No inner `┌─┐`/`└─┘` borders.** Only **4 line patterns**:
 
 1. **Top**: `┌` + 70×`─` + `┐` (72 chars)
 2. **Separator**: `├` + 70×`─` + `┤` (72 chars)
 3. **Content**: `│` + 2 spaces + text + pad spaces to 68 chars + `│` (72 chars)
 4. **Bottom**: `└` + 70×`─` + `┘` (72 chars)
 
-The separator lines are ALWAYS identical — copy-paste the same 72-char string. Content lines have ONLY the outer frame `│` as borders. Pad every content line with trailing spaces so the closing `│` is at position 72.
-
-### Multi-artifact confirmation:
+### Example:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  ◎ REFLECTION                                        cem · Feb 08   │
+│  ◎ REFLECTION                                        cem · Feb 09   │
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  2 insights captured:                                                │
 │                                                                      │
-│  ◉ Decision: Gate by usage patterns, not Claude tier                 │
-│    → pricing-strategy                                                │
+│  ◉ Pattern: Agent autonomy as design principle                       │
+│    → egregore-reliability · individual-tier                          │
 │                                                                      │
-│  ◉ Pattern: Agents as individual PMF                                 │
-│    → individual-tier · egregore-reliability                          │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  ✓ Saved · graphed · pushed                                          │
-│  Visible in /activity.                                               │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Single artifact confirmation:
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  ◎ REFLECTION                                        cem · Feb 08   │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ◉ Finding: Neo4j HTTP API faster than Bolt for small...             │
-│    → benchmark-eval                                                  │
+│  ◉ Finding: Usage gating = autonomy applied to pricing               │
+│    → 2026-02-09-gate-by-usage-patterns                               │
 │                                                                      │
 ├──────────────────────────────────────────────────────────────────────┤
 │  ✓ Saved · graphed · pushed                                          │
@@ -421,18 +423,31 @@ The separator lines are ALWAYS identical — copy-paste the same 72-char string.
 - Truncate artifact titles at 45 chars with `...` if needed
 - **No sub-boxes** — only outer frame `│` borders and `├────┤` separators
 
-## Quick Mode Flow
+## Quick Mode Flow (unchanged from v2)
 
 When arguments are provided (not starting with "about "):
 
-1. **Step 0**: Run identity + 2 parallel Neo4j queries (Q2 for quests, Q5 for recent decisions) — lighter context
+1. **Step 0**: Run identity + 2 parallel Neo4j queries (quest health, recent decisions) — lighter context
 2. **Auto-classify**: Apply classification signals to the provided content. If arguments match `[category]: [content]`, use category override
-3. **Step 4**: Run relation detection queries
-4. **Present proposal**: Same format as Step 3 — show proposed artifact(s) with `y/edit/skip`
+3. **Relation detection**: Run Step 6 queries
+4. **Present proposal**: Same format as Step 5 — show proposed artifact(s) with `y/edit/skip`
 5. **If genuinely ambiguous** (equal signals for 2+ categories): 1 AskUserQuestion max
-6. **Steps 5-8**: Create file, Neo4j, auto-save, TUI — identical to deep mode
+6. **Steps 7-10**: Create file, Neo4j, auto-save, TUI — identical to deep mode
 
 Quick mode should complete with 0-1 AskUserQuestion calls total.
+
+## Fallback Cascade
+
+| Condition | Behavior |
+|---|---|
+| Neo4j down | "Graph offline — what's on your mind?" → direct capture |
+| Thin data (< 3 artifacts, single author) | "Not much in the graph yet. What's on your mind?" → direct capture |
+| LLM synthesis produces nothing surprising | "Your org is aligned and on track. What's on your mind?" → direct capture |
+| User says "skip" at any point | Save what's captured, or exit if nothing yet |
+| User says "something else" | "What's on your mind?" → direct capture from freeform |
+| Memory symlink missing | "Run /setup first — memory not linked" |
+| Empty content | Don't create anything: "Nothing to reflect on yet" |
+| File already exists at path | Append timestamp to slug to avoid collision |
 
 ## Backwards Compatibility
 
@@ -445,169 +460,8 @@ Quick mode should complete with 0-1 AskUserQuestion calls total.
 ## Edge cases
 
 | Scenario | Handling |
-|----------|----------|
-| Neo4j unavailable | Skip context gathering and relation linking. Still create file. Show warning: "Graph offline — file saved, will sync on next /save" |
+|---|---|
+| Neo4j unavailable | Skip exploration and relation linking. Still create file. Show warning: "Graph offline — file saved, will sync on next /save" |
 | No quests/projects | Skip relation step silently |
-| All context queries empty | Fall back to: "What's on your mind? I'll capture it." (simple prompt, no graph-aware opening) |
-| Quick mode, genuinely ambiguous | Ask 1 clarifying AskUserQuestion max |
 | User says "skip" at any prompt | Save what you have so far, or abort if nothing captured yet |
-| Empty content | Don't create anything, tell user "Nothing to reflect on yet" |
-| File already exists at path | Append timestamp to slug to avoid collision |
-| Memory symlink missing | Error: "Run /setup first — memory not linked" |
 | User says "edit" at proposal | Let them modify titles, categories, or quest links in freeform text, then re-parse |
-
-## Full interactive example (Deep mode)
-
-```
-> /reflect
-
-You had a session on individual tier strategy 2 days ago but nothing
-was captured. And three recent artifacts touch pricing, positioning,
-and defensibility — there might be a pattern forming.
-
-What's on your mind?
-  1. Individual tier session — capture what came out of it
-  2. Pricing/positioning pattern — what ties recent work together
-  3. Something else
-
-> 2
-
-Three artifacts touch this: the pricing doc, the competitive analysis,
-and the defensibility framework. What's the thread?
-
-> The real insight is that agents ARE the individual PMF. We don't need
-> dashboards or analytics for individuals — the Claude Code agent with
-> graph access is the product. And we should gate by usage patterns,
-> not by which Claude tier someone has.
-
-Based on what you've shared:
-
-  1. Decision: "Gate by usage patterns, not Claude tier"
-     → pricing-strategy
-
-  2. Pattern: "Agents as individual PMF"
-     → individual-tier · egregore-reliability
-
-Adjust? (y/edit/skip)
-> y
-
-Creating reflection...
-
-  [1/3] ✓ Writing knowledge/decisions/2026-02-08-gate-by-usage-patterns.md
-        ✓ Writing knowledge/patterns/2026-02-08-agents-as-individual-pmf.md
-  [2/3] ✓ Indexed in knowledge graph
-  [3/3] ✓ Auto-saved
-
-┌──────────────────────────────────────────────────────────────────────┐
-│  ◎ REFLECTION                                        cem · Feb 08   │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  2 insights captured:                                                │
-│                                                                      │
-│  ◉ Decision: Gate by usage patterns, not Claude tier                 │
-│    → pricing-strategy                                                │
-│                                                                      │
-│  ◉ Pattern: Agents as individual PMF                                 │
-│    → individual-tier · egregore-reliability                          │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  ✓ Saved · graphed · pushed                                          │
-│  Visible in /activity.                                               │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-## Quick mode example
-
-```
-> /reflect Neo4j HTTP API is faster than Bolt for small queries
-
-  ◉ Finding: "Neo4j HTTP API faster than Bolt for small queries"
-    → benchmark-eval
-
-Adjust? (y/edit/skip)
-> y
-
-Creating reflection...
-
-  [1/3] ✓ Writing knowledge/findings/2026-02-08-neo4j-http-api-faster...
-  [2/3] ✓ Indexed in knowledge graph
-  [3/3] ✓ Auto-saved
-
-┌──────────────────────────────────────────────────────────────────────┐
-│  ◎ REFLECTION                                        cem · Feb 08   │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ◉ Finding: Neo4j HTTP API faster than Bolt for small...             │
-│    → benchmark-eval                                                  │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  ✓ Saved · graphed · pushed                                          │
-│  Visible in /activity.                                               │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-## Quick mode with category override
-
-```
-> /reflect decision: use stdio for MCP
-
-  ◉ Decision: "Use stdio for MCP"
-
-Adjust? (y/edit/skip)
-> y
-
-Creating reflection...
-
-  [1/3] ✓ Writing knowledge/decisions/2026-02-08-use-stdio-for-mcp.md
-  [2/3] ✓ Indexed in knowledge graph
-  [3/3] ✓ Auto-saved
-
-┌──────────────────────────────────────────────────────────────────────┐
-│  ◎ REFLECTION                                        cem · Feb 08   │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ◉ Decision: Use stdio for MCP                                       │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  ✓ Saved · graphed · pushed                                          │
-│  Visible in /activity.                                               │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-## Focused mode example
-
-```
-> /reflect about pricing
-
-Here's what the graph knows about pricing:
-
-  ◉ Decision: Five-tier pricing model (Feb 07)
-  ◉ Decision: $9/mo annual for individual tier (Feb 08)
-  ◉ Finding: Competitive analysis — Obsidian/Notion gaps (Feb 08)
-  → pricing-strategy quest (3 artifacts)
-
-Has your thinking on pricing evolved since these?
-
-  1. Pricing model has changed — update needed
-  2. New competitive insight to capture
-  3. Something else about pricing
-
-> 1
-
-What shifted? The tier structure, the price points, or the gating logic?
-
-> The gating logic. We realized we should gate by usage patterns,
-> not by Claude tier. Heavy graph users get prompted to upgrade
-> regardless of whether they're on Claude Free or Pro.
-
-Based on what you've shared:
-
-  1. Decision: "Gate by usage patterns, not Claude tier"
-     → pricing-strategy
-     ↔ relates to: 2026-02-08-individual-tier-pricing
-
-Adjust? (y/edit/skip)
-> y
-
-...
-```
