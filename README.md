@@ -1,6 +1,6 @@
 # egregore-site
 
-The web frontend for [Egregore](https://egregore.xyz) — setup, invite, and onboarding flows.
+The web frontend for [Egregore](https://egregore-core.netlify.app) — setup, invite, and onboarding flows.
 
 ## Stack
 
@@ -29,7 +29,7 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ## Deploy
 
-Deployed to production via Vercel (or any static host). Build:
+Deployed to production via Netlify. Build:
 
 ```bash
 npm run build
