@@ -281,6 +281,76 @@ async def check_collaborator(token: str, owner: str, repo: str, username: str) -
     return resp.status_code == 204
 
 
+async def list_egregore_instances(token: str, org: str) -> list[dict]:
+    """Find all egregore instances in an org by listing repos starting with 'egregore'.
+
+    For each, reads egregore.json to get config.
+    Returns [{repo_name, slug, org_name, repos}].
+    """
+    import json as _json
+
+    instances: list[dict] = []
+    page = 1
+    egregore_repos: list[str] = []
+
+    while True:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{API_BASE}/orgs/{org}/repos",
+                headers=_headers(token),
+                params={"per_page": 100, "sort": "updated", "page": page},
+                timeout=15.0,
+            )
+        if resp.status_code == 404:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{API_BASE}/users/{org}/repos",
+                    headers=_headers(token),
+                    params={"per_page": 100, "sort": "updated", "page": page},
+                    timeout=15.0,
+                )
+        if resp.status_code != 200:
+            break
+        batch = resp.json()
+        if not batch:
+            break
+        for r in batch:
+            name = r.get("name", "")
+            if name.startswith("egregore") and not name.endswith("-memory"):
+                egregore_repos.append(name)
+        if len(batch) < 100:
+            break
+        page += 1
+
+    for repo_name in egregore_repos:
+        config_raw = await get_file_content(token, org, repo_name, "egregore.json")
+        if not config_raw:
+            instances.append({
+                "repo_name": repo_name,
+                "slug": "",
+                "org_name": "",
+                "repos": [],
+            })
+            continue
+        try:
+            config = _json.loads(config_raw)
+            instances.append({
+                "repo_name": repo_name,
+                "slug": config.get("slug", ""),
+                "org_name": config.get("org_name", ""),
+                "repos": config.get("repos", []),
+            })
+        except _json.JSONDecodeError:
+            instances.append({
+                "repo_name": repo_name,
+                "slug": "",
+                "org_name": "",
+                "repos": [],
+            })
+
+    return instances
+
+
 async def get_file_content(token: str, owner: str, repo: str, path: str) -> str | None:
     """Get file content from a repo."""
     async with httpx.AsyncClient() as client:
