@@ -175,6 +175,7 @@ function OrgPicker({ token, user, onPick }) {
             login={org.login}
             hasEgregore={org.has_egregore}
             isMember={org.is_member}
+            instanceCount={(org.instances || []).length}
             onClick={() => onPick({ ...org, is_personal: false, instances: org.instances || [] })}
           />
         ))}
@@ -183,6 +184,7 @@ function OrgPicker({ token, user, onPick }) {
           login={orgs.user.login}
           hasEgregore={orgs.personal.has_egregore}
           isMember={orgs.personal.is_member}
+          instanceCount={(orgs.personal.instances || []).length}
           onClick={() => onPick({
             login: orgs.user.login,
             has_egregore: orgs.personal.has_egregore,
@@ -195,10 +197,12 @@ function OrgPicker({ token, user, onPick }) {
   );
 }
 
-function OrgButton({ name, login, hasEgregore, isMember, onClick }) {
+function OrgButton({ name, login, hasEgregore, isMember, instanceCount, onClick }) {
   const [hovered, setHovered] = useState(false);
-  const label = isMember ? "Reinstall" : hasEgregore ? "Join" : "Set up";
-  const color = isMember ? C.muted : hasEgregore ? "#2d8a4e" : C.crimson;
+  const label = hasEgregore
+    ? (instanceCount > 1 ? `${instanceCount} instances` : instanceCount === 1 ? "1 instance" : "Join")
+    : "Set up";
+  const color = hasEgregore ? "#2d8a4e" : C.crimson;
   return (
     <button
       onClick={onClick}
@@ -263,7 +267,7 @@ function InstancePicker({ org, onJoin, onNew }) {
 function InstanceButton({ instance, onClick }) {
   const [hovered, setHovered] = useState(false);
   const { repo_name, org_name, repos } = instance;
-  const repoList = repos && repos.length > 0 ? repos.join(", ") : "no managed repos";
+  const repoList = repos && repos.length > 0 ? repos.join(", ") : null;
 
   return (
     <button
@@ -279,8 +283,8 @@ function InstanceButton({ instance, onClick }) {
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-        <span style={{ ...font.serif, fontSize: "1.05rem", color: C.ink }}>
-          {org_name || repo_name}
+        <span style={{ ...font.mono, fontSize: "0.95rem", color: C.ink }}>
+          {repo_name}
         </span>
         <span style={{
           ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "1px",
@@ -289,9 +293,11 @@ function InstanceButton({ instance, onClick }) {
           Join
         </span>
       </div>
-      <span style={{ ...font.mono, fontSize: "0.65rem", color: C.muted }}>
-        {repo_name} · {repoList}
-      </span>
+      {(org_name || repoList) && (
+        <span style={{ ...font.mono, fontSize: "0.65rem", color: C.muted }}>
+          {org_name}{repoList ? ` · ${repoList}` : ""}
+        </span>
+      )}
     </button>
   );
 }
