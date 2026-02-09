@@ -170,7 +170,14 @@ async def exchange_github_code(code: str) -> str:
             timeout=10.0,
         )
 
-    data = resp.json()
+    if resp.status_code >= 500:
+        raise HTTPException(status_code=502, detail=f"GitHub is temporarily unavailable ({resp.status_code}). Try again in a moment.")
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="GitHub returned an invalid response. Try again in a moment.")
+
     token = data.get("access_token")
     if not token:
         error = data.get("error_description", data.get("error", "Unknown error"))
