@@ -138,7 +138,8 @@ CREATE (s:Session {
   date: date($date),
   topic: $topic,
   summary: $summary,
-  filePath: $filePath
+  filePath: $filePath,
+  handoffStatus: 'pending'
 })
 CREATE (s)-[:BY]->(p)
 WITH s

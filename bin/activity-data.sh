@@ -44,8 +44,8 @@ bash "$GS" query "MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Per
 # Q5: Answered questions (7 days)
 bash "$GS" query "MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC" > "$TMPDIR/q5.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q5.json" &
 
-# Q6: Handoffs to me (7 days)
-bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS author, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
+# Q6: Handoffs to me (7 days, exclude done)
+bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P7D') AND coalesce(s.handoffStatus, 'pending') <> 'done' MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS author, s.filePath AS filePath, s.id AS sessionId, coalesce(s.handoffStatus, 'pending') AS status ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
 
 # Q7: All handoffs (7 days)
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS from, target.name AS to, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q7.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q7.json" &

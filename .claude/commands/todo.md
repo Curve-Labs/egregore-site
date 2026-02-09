@@ -72,10 +72,10 @@ bash bin/graph.sh query "MATCH (t:Todo {status: 'open'})-[:BY]->(p:Person {name:
 ```
 
 Formatting rules:
-- `!` prefix for priority >= 2
-- `→` quest link + time ago on second line
-- `?` prefix on second line for items with MENTIONS relationship (ask-routed)
-- Time ago: <1h `Nm ago` · 1-23h `Nh ago` · 1d `yesterday` · 2-6d `Nd ago` · 7d+ `Mon DD`
+- Exclamation mark (!) prefix for priority >= 2
+- Arrow (→) quest link + time ago on second line
+- Question mark (?) prefix on second line for items with MENTIONS relationship (ask-routed)
+- Time ago: under 1h show "Nm ago", 1-23h show "Nh ago", 1d "yesterday", 2-6d "Nd ago", 7d+ "Mon DD"
 - Numbers are positional (based on display order, not stored IDs)
 
 ### List with `all` flag
