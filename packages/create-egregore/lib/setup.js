@@ -78,7 +78,7 @@ async function install(data, ui, targetDir) {
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(dirSlug, org_name, egregoreDir);
-  installShellAlias(egregoreDir, ui);
+  const aliasName = installShellAlias(egregoreDir, ui);
 
   // 6+. Clone managed repos (if any)
   const clonedRepos = [];
@@ -108,7 +108,7 @@ async function install(data, ui, targetDir) {
     ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
   }
   console.log("");
-  ui.info(`Next: type ${ui.bold("egregore")} in any terminal to start.`);
+  ui.info(`Next: type ${ui.bold(aliasName)} in any terminal to start.`);
   console.log("");
 }
 
@@ -159,13 +159,16 @@ function installShellAlias(egregoreDir, ui) {
   const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
   if (!fs.existsSync(script)) {
     ui.warn("Shell alias script not found — add alias manually.");
-    return;
+    return "egregore";
   }
   try {
-    execSync(`bash "${script}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 });
-    ui.success(`Installed ${ui.dim("egregore")} command`);
+    const output = execSync(`bash "${script}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
+    const aliasName = output || "egregore";
+    ui.success(`Installed ${ui.dim(aliasName)} command`);
+    return aliasName;
   } catch {
     ui.warn("Could not install shell alias — add it manually.");
+    return "egregore";
   }
 }
 
