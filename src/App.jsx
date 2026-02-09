@@ -825,8 +825,9 @@ const Footer = () => (
 export default function App() {
   const path = useRoute();
 
-  // Setup flow routes
-  if (path === "/callback" || path === "/setup" || path === "/join") {
+  // Setup flow routes (check with and without trailing slash)
+  const cleanPath = path.replace(/\/$/, "") || "/";
+  if (cleanPath === "/callback" || cleanPath === "/setup" || cleanPath === "/join") {
     return <SetupFlow />;
   }
 

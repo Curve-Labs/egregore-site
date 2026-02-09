@@ -768,8 +768,9 @@ export default function SetupFlow() {
   const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
   const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
 
-  const isCallback = window.location.pathname === "/callback";
-  const isJoin = window.location.pathname === "/join";
+  const cleanPath = window.location.pathname.replace(/\/$/, "") || "/";
+  const isCallback = cleanPath === "/callback";
+  const isJoin = cleanPath === "/join";
   const params = new URLSearchParams(window.location.search);
   const inviteToken = params.get("invite") || sessionStorage.getItem("egregore_invite");
 
