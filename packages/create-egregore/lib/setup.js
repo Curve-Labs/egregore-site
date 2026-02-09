@@ -167,7 +167,9 @@ async function installShellAlias(egregoreDir, ui) {
     const defaultName = suggested || "egregore";
 
     // Ask user what they want to call it
-    const answer = await ui.prompt(`Shell command name [${defaultName}]:`);
+    console.log("");
+    ui.info(`This instance will be launched with a shell command.`);
+    const answer = await ui.prompt(`Command name (Enter for ${ui.bold(defaultName)}):`);
     const chosenName = answer || defaultName;
 
     // Install with chosen name
