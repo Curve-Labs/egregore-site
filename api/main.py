@@ -43,7 +43,7 @@ app = FastAPI(
 
 # CORS: Only allow browser requests from known origins.
 # CLI tools (bin/graph.sh, bin/notify.sh, create-egregore) use curl, not browsers.
-_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore.xyz").split(",")
+_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore-core.netlify.app").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -331,9 +331,21 @@ async def setup_orgs(authorization: str = Header(...)):
     }
 
 
+@app.get("/api/org/setup/repos")
+async def setup_repos(org: str, authorization: str = Header(...)):
+    """List repos for an org, for the repo picker during setup."""
+    token = authorization.replace("Bearer ", "").strip()
+    try:
+        await gh.get_user(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+    repos = await gh.list_org_repos(token, org)
+    return {"repos": repos}
+
+
 @app.post("/api/org/setup")
 async def org_setup(body: OrgSetup, authorization: str = Header(...)):
-    """Founder: full org setup. Forks, creates memory, bootstraps Neo4j, returns setup token."""
+    """Founder: full org setup. Generates from template, creates memory, bootstraps Neo4j, returns setup token."""
     token = authorization.replace("Bearer ", "").strip()
 
     try:
@@ -343,20 +355,34 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
 
     target_org = None if body.is_personal else body.github_org
     owner = user["login"] if body.is_personal else body.github_org
-    slug = owner.lower().replace("-", "").replace(" ", "")
-    memory_repo_name = f"{owner}-memory"
+    base_slug = owner.lower().replace("-", "").replace(" ", "")
+
+    # Compute instance slug and repo name
+    if body.instance_name:
+        instance_suffix = body.instance_name.lower().replace(" ", "-")
+        slug = f"{base_slug}-{instance_suffix}"
+        repo_name = f"egregore-{instance_suffix}"
+    else:
+        slug = base_slug
+        repo_name = "egregore-core"
+
+    # Memory repo: use slug prefix for additional instances, owner prefix for first (backwards compat)
+    if body.instance_name:
+        memory_repo_name = f"{slug}-memory"
+    else:
+        memory_repo_name = f"{owner}-memory"
 
     # Check if already set up
-    if await gh.repo_exists(token, owner, "egregore-core"):
-        raise HTTPException(status_code=409, detail=f"Egregore already set up for {owner}")
+    if await gh.repo_exists(token, owner, repo_name):
+        raise HTTPException(status_code=409, detail=f"Egregore already set up for {owner} ({repo_name})")
 
-    # 1. Fork egregore-core
-    logger.info(f"Forking egregore-core to {owner}")
-    await gh.fork_repo(token, target_org)
+    # 1. Generate repo from template (replaces fork)
+    logger.info(f"Generating {repo_name} from template for {owner}")
+    await gh.generate_from_template(token, owner, repo_name)
 
-    # 2. Wait for fork to be ready
-    if not await gh.wait_for_fork(token, owner):
-        raise HTTPException(status_code=504, detail="Fork timed out — try again")
+    # 2. Wait for repo to be ready
+    if not await gh.wait_for_repo(token, owner, repo_name):
+        raise HTTPException(status_code=504, detail="Repo generation timed out — try again")
 
     # 3. Create memory repo
     logger.info(f"Creating {memory_repo_name} for {owner}")
@@ -392,16 +418,18 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     }
     ORG_CONFIGS[slug] = new_org
 
-    # 6. Update egregore.json in the fork
+    # 6. Update egregore.json in the generated repo
     memory_url = f"https://github.com/{owner}/{memory_repo_name}.git"
     try:
         await gh.update_egregore_json(
-            token, owner, "egregore-core",
+            token, owner, repo_name,
             body.org_name, owner, memory_repo_name,
             api_url,
+            slug=slug,
+            repos=body.repos,
         )
     except ValueError as e:
-        logger.warning(f"Failed to update egregore.json in fork: {e}")
+        logger.warning(f"Failed to update egregore.json: {e}")
 
     # 7. Bootstrap Neo4j — Org, founder Person, Project
     try:
@@ -430,7 +458,7 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     telegram_invite = generate_bot_invite_link(slug)
 
     # 9. Generate setup token
-    fork_url = f"https://github.com/{owner}/egregore-core.git"
+    fork_url = f"https://github.com/{owner}/{repo_name}.git"
     setup_token = create_token({
         "fork_url": fork_url,
         "memory_url": memory_url,
@@ -440,6 +468,8 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         "github_org": owner,
         "github_token": token,
         "slug": slug,
+        "repos": body.repos,
+        "repo_name": repo_name,
     })
 
     logger.info(f"Org setup complete: {slug} by {user['login']}")
@@ -465,14 +495,14 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
 
     owner = body.github_org
 
-    # Verify fork exists
-    if not await gh.repo_exists(token, owner, "egregore-core"):
-        raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner}")
+    # Verify repo exists
+    if not await gh.repo_exists(token, owner, body.repo_name):
+        raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner} ({body.repo_name})")
 
-    # Read egregore.json from fork to get config
-    config_raw = await gh.get_file_content(token, owner, "egregore-core", "egregore.json")
+    # Read egregore.json from repo to get config
+    config_raw = await gh.get_file_content(token, owner, body.repo_name, "egregore.json")
     if not config_raw:
-        raise HTTPException(status_code=404, detail="egregore.json not found in fork")
+        raise HTTPException(status_code=404, detail="egregore.json not found in repo")
 
     config = json.loads(config_raw)
     memory_repo = config.get("memory_repo", f"{owner}-memory")
@@ -491,11 +521,12 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
             detail=f"You don't have access to {owner}/{memory_repo_name}. Ask your team to add you.",
         )
 
-    fork_url = f"https://github.com/{owner}/egregore-core.git"
+    fork_url = f"https://github.com/{owner}/{body.repo_name}.git"
     api_url = config.get("api_url", "")
 
-    # Look up org's API key from server config (not from egregore.json — secrets don't go in git)
-    slug = owner.lower().replace("-", "").replace(" ", "")
+    # Look up org's API key — prefer slug from config, fall back to computing from owner
+    slug = config.get("slug", owner.lower().replace("-", "").replace(" ", ""))
+    repos = config.get("repos", [])
     org_config = ORG_CONFIGS.get(slug)
     if org_config:
         try:
@@ -518,6 +549,8 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
         "github_org": owner,
         "github_token": token,
         "slug": slug,
+        "repos": repos,
+        "repo_name": body.repo_name,
     })
 
     return {
@@ -541,7 +574,7 @@ async def org_claim(token: str):
 async def org_install_script(token: str):
     """Return a bash install script for users without Node.js.
 
-    Usage: curl -fsSL https://egregore.xyz/api/org/install/st_xxx | bash
+    Usage: curl -fsSL https://egregore-core.netlify.app/api/org/install/st_xxx | bash
     """
     from fastapi.responses import PlainTextResponse
 
@@ -650,6 +683,26 @@ EGREGORE_API_KEY=$API_KEY
 ENVEOF
 chmod 600 "$EGREGORE_DIR/.env"
 
+# Clone managed repos (if any)
+REPO_LIST=""
+if $HAS_JQ; then
+  REPO_LIST=$(echo "$RESPONSE" | jq -r '.repos[]? // empty' 2>/dev/null)
+fi
+STEP=6
+REPO_DIRS=""
+for REPO in $REPO_LIST; do
+  echo "  [$STEP] Cloning $REPO..."
+  REPO_DIR="./$REPO"
+  if [ -d "$REPO_DIR" ]; then
+    echo "         Already exists — pulling latest"
+    git -C "$REPO_DIR" pull -q
+  else
+    git clone -q "https://github.com/$GITHUB_ORG/$REPO.git" "$REPO_DIR"
+  fi
+  REPO_DIRS="$REPO_DIRS $REPO_DIR"
+  STEP=$((STEP + 1))
+done
+
 # Register instance
 mkdir -p "$HOME/.egregore"
 REGISTRY="$HOME/.egregore/instances.json"
@@ -664,7 +717,7 @@ if $HAS_JQ; then
 fi
 
 # Install egregore alias (uses script from cloned repo)
-bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null || true
+ALIAS_NAME=$(bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null || echo "egregore")
 
 echo ""
 echo "  Egregore is ready for $ORG_NAME"
@@ -672,8 +725,11 @@ echo ""
 echo "  Your workspace:"
 echo "    $EGREGORE_DIR/   — Your Egregore instance"
 echo "    $MEMORY_DIR/     — Shared knowledge"
+for REPO_DIR in $REPO_DIRS; do
+  echo "    $REPO_DIR/       — Managed repo"
+done
 echo ""
-echo "  Next: cd $EGREGORE_DIR && claude start"
+echo "  Next: type $ALIAS_NAME in any terminal to start."
 echo ""
 """
     return PlainTextResponse(script, media_type="text/plain")
@@ -763,9 +819,9 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
 
     owner = body.github_org
 
-    # Verify the fork exists (org has Egregore)
-    if not await gh.repo_exists(token, owner, "egregore-core"):
-        raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner}")
+    # Verify the repo exists (org has Egregore)
+    if not await gh.repo_exists(token, owner, body.repo_name):
+        raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner} ({body.repo_name})")
 
     # Verify inviter is an admin
     role = await gh.get_org_membership(token, owner)
@@ -779,12 +835,15 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
     github_result = await gh.invite_to_org(token, owner, body.github_username)
 
     # Read org config for the invite token
-    config_raw = await gh.get_file_content(token, owner, "egregore-core", "egregore.json")
+    config_raw = await gh.get_file_content(token, owner, body.repo_name, "egregore.json")
     org_name = owner
     slug = owner.lower().replace("-", "").replace(" ", "")
+    repos = []
     if config_raw:
         config = json.loads(config_raw)
         org_name = config.get("org_name", owner)
+        slug = config.get("slug", slug)
+        repos = config.get("repos", [])
 
         # Also add them as collaborator on the memory repo
         memory_repo = config.get("memory_repo", f"{owner}-memory")
@@ -795,13 +854,15 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         await gh.add_repo_collaborator(token, owner, memory_repo_name, body.github_username)
 
     # Create invite token (7-day TTL)
-    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     invite_token = create_invite_token({
         "github_org": owner,
         "org_name": org_name,
         "invited_username": body.github_username,
         "invited_by": inviter["login"],
         "slug": slug,
+        "repos": repos,
+        "repo_name": body.repo_name,
     })
 
     invite_url = f"{site_url}/join?invite={invite_token}"
@@ -873,10 +934,11 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
         }
 
     # Membership is active — proceed with Egregore join
-    # Read egregore.json from fork
-    config_raw = await gh.get_file_content(token, owner, "egregore-core", "egregore.json")
+    # Read egregore.json from repo (use repo_name from invite data, default to egregore-core)
+    invite_repo_name = invite_data.get("repo_name", "egregore-core")
+    config_raw = await gh.get_file_content(token, owner, invite_repo_name, "egregore.json")
     if not config_raw:
-        raise HTTPException(status_code=404, detail="egregore.json not found in fork")
+        raise HTTPException(status_code=404, detail="egregore.json not found in repo")
 
     config = json.loads(config_raw)
     memory_repo = config.get("memory_repo", f"{owner}-memory")
@@ -885,8 +947,9 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
     else:
         memory_url = f"https://github.com/{owner}/{memory_repo}.git"
 
-    fork_url = f"https://github.com/{owner}/egregore-core.git"
+    fork_url = f"https://github.com/{owner}/{invite_repo_name}.git"
     api_url = config.get("api_url", "")
+    repos = config.get("repos", [])
 
     # Add person to Neo4j
     org_config = ORG_CONFIGS.get(slug)
@@ -917,6 +980,8 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
         "github_org": owner,
         "github_token": token,
         "slug": slug,
+        "repos": repos,
+        "repo_name": invite_repo_name,
     })
 
     # Generate Telegram group invite link for the new member

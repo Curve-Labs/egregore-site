@@ -73,17 +73,25 @@ class EgregoreAPI {
     });
   }
 
-  async setupOrg(githubToken, { github_org, org_name, is_personal = false }) {
-    return request("POST", `${this.base}/api/org/setup`, {
+  async getOrgRepos(githubToken, org) {
+    return request("GET", `${this.base}/api/org/setup/repos?org=${encodeURIComponent(org)}`, {
       headers: { Authorization: `Bearer ${githubToken}` },
-      body: { github_org, org_name, is_personal },
     });
   }
 
-  async joinOrg(githubToken, { github_org }) {
+  async setupOrg(githubToken, { github_org, org_name, is_personal = false, repos = [], instance_name }) {
+    const body = { github_org, org_name, is_personal, repos };
+    if (instance_name) body.instance_name = instance_name;
+    return request("POST", `${this.base}/api/org/setup`, {
+      headers: { Authorization: `Bearer ${githubToken}` },
+      body,
+    });
+  }
+
+  async joinOrg(githubToken, { github_org, repo_name = "egregore-core" }) {
     return request("POST", `${this.base}/api/org/join`, {
       headers: { Authorization: `Bearer ${githubToken}` },
-      body: { github_org },
+      body: { github_org, repo_name },
     });
   }
 

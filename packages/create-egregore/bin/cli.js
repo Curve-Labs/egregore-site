@@ -38,7 +38,7 @@ function showHelp() {
   ui.info("  npx create-egregore                          Interactive setup");
   ui.info("");
   ui.info("Options:");
-  ui.info("  --token <token>   Setup token from egregore.dev");
+  ui.info("  --token <token>   Setup token from egregore-core.netlify.app");
   ui.info("  --api <url>       API URL override");
   ui.info("  -h, --help        Show this help");
   ui.info("");
@@ -76,7 +76,7 @@ async function tokenFlow(api, token) {
     ui.error(err.message);
     ui.info("");
     ui.info("The token may have expired or already been used.");
-    ui.info("Visit egregore.dev to get a new one, or run without --token:");
+    ui.info("Visit egregore-core.netlify.app to get a new one, or run without --token:");
     ui.info("  npx create-egregore");
     process.exit(1);
   }
@@ -173,12 +173,27 @@ async function setupFlow(api, githubToken, choice) {
   const orgName = await ui.prompt(`Organization display name [${choice.login}]:`);
   const name = orgName || choice.login;
 
+  // Repo picker — show org repos for selection
+  let selectedRepos = [];
+  try {
+    const repoData = await api.getOrgRepos(githubToken, choice.login);
+    if (repoData.repos && repoData.repos.length > 0) {
+      selectedRepos = await ui.multiSelect(
+        "Which repos should Egregore manage?",
+        repoData.repos,
+      );
+    }
+  } catch {
+    // Non-fatal — continue without repos
+  }
+
   const s = ui.spinner(`Setting up Egregore for ${ui.bold(name)}...`);
   try {
     const result = await api.setupOrg(githubToken, {
       github_org: choice.login,
       org_name: name,
       is_personal: choice.is_personal || false,
+      repos: selectedRepos,
     });
     s.stop("Setup complete on GitHub");
 

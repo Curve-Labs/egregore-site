@@ -1131,7 +1131,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # In private chat, point to website
     if chat_type == "private":
-        site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+        site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
         await update.message.reply_text(
             "Welcome to Egregore!\n\n"
             f"Get set up here: {site_url}/setup\n\n"
@@ -1194,7 +1194,7 @@ async def debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /onboard command — redirect to website."""
-    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     await update.message.reply_text(f"Get set up here: {site_url}/setup")
 
 
@@ -1345,7 +1345,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     org_config = ORG_CONFIG[chat_id]
     logger.info(f"New member {new_member.first_name} ({new_member.id}) joined {org_config['name']}")
 
-    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore.xyz")
+    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     await context.bot.send_message(
         chat_id=chat_id,
         text=f"Welcome {new_member.first_name}! Get set up here: {site_url}/setup",

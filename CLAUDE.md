@@ -312,16 +312,16 @@ Save `workspace_ready: true` to state.
 
 ### Step 4: Shell command
 
-The `egregore` shell command is automatically installed by `bin/session-start.sh` (runs on every launch). It registers the current instance in `~/.egregore/instances.json` and writes a shell function to the user's profile if not already present.
+Set up the launch command so the user can start Egregore from anywhere:
 
-**No manual setup needed.** The session-start hook handles everything.
+```bash
+ALIAS_NAME=$(bash bin/ensure-shell-function.sh)
+```
 
-The shell function supports multiple Egregore instances:
-- 1 instance → launches directly
-- 2+ instances → shows a numbered picker
+The script detects the user's shell (`$SHELL`), writes to the right profile (`.zshrc`, `.bash_profile`, `.bashrc`, or fish `config.fish`), and outputs the alias name. First install gets `egregore`, subsequent installs get `egregore-{slug}`.
 
-Tell the user:
-> From now on, just type **`egregore`** in any terminal to launch. If you have multiple orgs, it'll ask which one.
+Tell the user (using the actual alias name returned):
+> From now on, just type **`{ALIAS_NAME}`** in any terminal to launch. It syncs everything and shows you where you are.
 
 ### Step 5: Complete
 

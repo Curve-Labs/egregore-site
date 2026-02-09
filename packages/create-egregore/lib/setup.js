@@ -20,7 +20,7 @@ function run(cmd, opts = {}) {
  * @param {string} targetDir - where to install (default: cwd)
  */
 async function install(data, ui, targetDir) {
-  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key } = data;
+  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [] } = data;
   const base = targetDir || process.cwd();
 
   const dirSlug = (github_org || slug || "egregore").toLowerCase();
@@ -31,7 +31,7 @@ async function install(data, ui, targetDir) {
     .replace(/\.git$/, "");
   const memoryDir = path.join(base, memoryDirName);
 
-  const totalSteps = 5;
+  const totalSteps = 5 + repos.length;
 
   // Configure git credential helper for HTTPS cloning
   configureGitCredentials(github_token);
@@ -78,7 +78,24 @@ async function install(data, ui, targetDir) {
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(dirSlug, org_name, egregoreDir);
-  installShellAlias(egregoreDir, ui);
+  const aliasName = await installShellAlias(egregoreDir, ui);
+
+  // 6+. Clone managed repos (if any)
+  const clonedRepos = [];
+  for (let i = 0; i < repos.length; i++) {
+    const repoName = repos[i];
+    ui.step(6 + i, totalSteps, `Cloning ${repoName}...`);
+    const repoDir = path.join(base, repoName);
+    if (fs.existsSync(repoDir)) {
+      ui.warn(`${repoName}/ already exists — pulling latest`);
+      run("git pull", { cwd: repoDir });
+    } else {
+      const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
+      execFileSync("git", ["clone", repoUrl, repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    }
+    clonedRepos.push(repoName);
+    ui.success(`Cloned ${repoName}`);
+  }
 
   // Done
   console.log("");
@@ -87,8 +104,11 @@ async function install(data, ui, targetDir) {
   ui.info(`Your workspace:`);
   ui.info(`  ${ui.cyan(`./egregore-${dirSlug}/`)}  — Your Egregore instance`);
   ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
+  for (const repoName of clonedRepos) {
+    ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
+  }
   console.log("");
-  ui.info(`Next: type ${ui.bold("egregore")} in any terminal to start.`);
+  ui.info(`Next: type ${ui.bold(aliasName)} in any terminal to start.`);
   console.log("");
 }
 
@@ -135,17 +155,29 @@ function registerInstance(slug, name, egregoreDir) {
   fs.writeFileSync(registryFile, JSON.stringify(instances, null, 2) + "\n");
 }
 
-function installShellAlias(egregoreDir, ui) {
+async function installShellAlias(egregoreDir, ui) {
   const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
   if (!fs.existsSync(script)) {
     ui.warn("Shell alias script not found — add alias manually.");
-    return;
+    return "egregore";
   }
   try {
-    execSync(`bash "${script}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 });
-    ui.success(`Installed ${ui.dim("egregore")} command`);
+    // Get recommended name
+    const suggested = execSync(`bash "${script}" suggest`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
+    const defaultName = suggested || "egregore";
+
+    // Ask user what they want to call it
+    const answer = await ui.prompt(`Shell command name [${defaultName}]:`);
+    const chosenName = answer || defaultName;
+
+    // Install with chosen name
+    const output = execSync(`bash "${script}" install "${chosenName}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
+    const aliasName = output || chosenName;
+    ui.success(`Installed ${ui.dim(aliasName)} command`);
+    return aliasName;
   } catch {
     ui.warn("Could not install shell alias — add it manually.");
+    return "egregore";
   }
 }
 
