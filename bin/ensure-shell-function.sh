@@ -151,11 +151,11 @@ case "$MODE" in
       exit 1
     fi
     write_alias "$CUSTOM_NAME"
-    echo "$CUSTOM_NAME"
+    echo "$CUSTOM_NAME:$PROFILE"
     ;;
   auto|*)
     NAME=$(recommend_name)
     write_alias "$NAME"
-    echo "$NAME"
+    echo "$NAME:$PROFILE"
     ;;
 esac

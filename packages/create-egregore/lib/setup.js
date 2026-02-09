@@ -78,7 +78,7 @@ async function install(data, ui, targetDir) {
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(dirSlug, org_name, egregoreDir);
-  const aliasName = await installShellAlias(egregoreDir, ui);
+  const alias = await installShellAlias(egregoreDir, ui);
 
   // 6+. Clone managed repos (if any)
   const clonedRepos = [];
@@ -108,7 +108,7 @@ async function install(data, ui, targetDir) {
     ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
   }
   console.log("");
-  ui.info(`Next: type ${ui.bold(aliasName)} in any terminal to start.`);
+  ui.info(`Next: open a ${ui.bold("new terminal")} and type ${ui.bold(alias.aliasName)} to start.`);
   console.log("");
 }
 
@@ -159,7 +159,7 @@ async function installShellAlias(egregoreDir, ui) {
   const script = path.join(egregoreDir, "bin", "ensure-shell-function.sh");
   if (!fs.existsSync(script)) {
     ui.warn("Shell alias script not found — add alias manually.");
-    return "egregore";
+    return { aliasName: "egregore", profileFile: ".zshrc" };
   }
   try {
     // Get recommended name
@@ -172,14 +172,15 @@ async function installShellAlias(egregoreDir, ui) {
     const answer = await ui.prompt(`Command name (Enter for ${ui.bold(defaultName)}):`);
     const chosenName = answer || defaultName;
 
-    // Install with chosen name
+    // Install with chosen name — output is "name:/path/to/profile"
     const output = execSync(`bash "${script}" install "${chosenName}"`, { stdio: "pipe", encoding: "utf-8", timeout: 10000 }).trim();
-    const aliasName = output || chosenName;
+    const [aliasName, profilePath] = (output || chosenName).split(":");
+    const profileFile = profilePath ? path.basename(profilePath) : ".zshrc";
     ui.success(`Installed ${ui.dim(aliasName)} command`);
-    return aliasName;
+    return { aliasName, profilePath, profileFile };
   } catch {
     ui.warn("Could not install shell alias — add it manually.");
-    return "egregore";
+    return { aliasName: "egregore", profileFile: ".zshrc" };
   }
 }
 
