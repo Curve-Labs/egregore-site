@@ -547,6 +547,15 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
             pass
 
     api_key = org_config.get("api_key", "") if org_config else ""
+
+    # Generate Telegram group invite if configured
+    telegram_group_link = None
+    if org_config:
+        try:
+            telegram_group_link = await create_group_invite_link(org_config)
+        except Exception:
+            pass
+
     setup_token = create_token({
         "fork_url": fork_url,
         "memory_url": memory_url,
@@ -558,6 +567,7 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
         "slug": slug,
         "repos": repos,
         "repo_name": body.repo_name,
+        "telegram_group_link": telegram_group_link,
     })
 
     return {
@@ -565,6 +575,7 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
         "fork_url": fork_url,
         "memory_url": memory_url,
         "org_slug": slug,
+        "telegram_group_link": telegram_group_link,
     }
 
 
@@ -636,6 +647,7 @@ if $HAS_JQ; then
   API_KEY=$(echo "$RESPONSE" | jq -r '.api_key')
   API_URL=$(echo "$RESPONSE" | jq -r '.api_url')
   SLUG=$(echo "$RESPONSE" | jq -r '.slug')
+  TELEGRAM_LINK=$(echo "$RESPONSE" | jq -r '.telegram_group_link // empty')
 else
   # Fallback: extract with grep/sed (works for simple JSON)
   extract() {{ echo "$RESPONSE" | grep -o "\\"$1\\":\\"[^\\"]*\\"" | head -1 | sed 's/.*:"//;s/"$//'; }}
@@ -647,6 +659,7 @@ else
   API_KEY=$(extract api_key)
   API_URL=$(extract api_url)
   SLUG=$(extract slug)
+  TELEGRAM_LINK=$(extract telegram_group_link)
 fi
 
 DIR_SLUG=$(echo "$GITHUB_ORG" | tr '[:upper:]' '[:lower:]')
@@ -735,6 +748,11 @@ echo "    $MEMORY_DIR/     — Shared knowledge"
 for REPO_DIR in $REPO_DIRS; do
   echo "    $REPO_DIR/       — Managed repo"
 done
+if [ -n "$TELEGRAM_LINK" ]; then
+  echo ""
+  echo "  Join the Telegram group for notifications:"
+  echo "    $TELEGRAM_LINK"
+fi
 echo ""
 echo "  Next: open a new terminal and type $ALIAS_NAME to start."
 echo ""

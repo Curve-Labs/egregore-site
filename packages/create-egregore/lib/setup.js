@@ -20,7 +20,7 @@ function run(cmd, opts = {}) {
  * @param {string} targetDir - where to install (default: cwd)
  */
 async function install(data, ui, targetDir) {
-  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [] } = data;
+  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [], telegram_group_link } = data;
   const base = targetDir || process.cwd();
 
   const dirSlug = (github_org || slug || "egregore").toLowerCase();
@@ -106,6 +106,11 @@ async function install(data, ui, targetDir) {
   ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
   for (const repoName of clonedRepos) {
     ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
+  }
+  if (telegram_group_link) {
+    console.log("");
+    ui.info(`Join the Telegram group for notifications:`);
+    ui.info(`  ${ui.cyan(telegram_group_link)}`);
   }
   console.log("");
   ui.info(`Next: open a ${ui.bold("new terminal")} and type ${ui.bold(alias.aliasName)} to start.`);
