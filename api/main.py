@@ -724,7 +724,8 @@ if $HAS_JQ; then
 fi
 
 # Install egregore alias (uses script from cloned repo)
-ALIAS_NAME=$(bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null || echo "egregore")
+ALIAS_OUTPUT=$(bash "$EGREGORE_DIR/bin/ensure-shell-function.sh" 2>/dev/null || echo "egregore:")
+ALIAS_NAME="${ALIAS_OUTPUT%%:*}"
 
 echo ""
 echo "  Egregore is ready for $ORG_NAME"
@@ -736,7 +737,7 @@ for REPO_DIR in $REPO_DIRS; do
   echo "    $REPO_DIR/       — Managed repo"
 done
 echo ""
-echo "  Next: type $ALIAS_NAME in any terminal to start."
+echo "  Next: open a new terminal and type $ALIAS_NAME to start."
 echo ""
 """
     return PlainTextResponse(script, media_type="text/plain")
