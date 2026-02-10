@@ -653,6 +653,15 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
   const inGroup = membershipStatus?.in_group;
   const isConfigured = membershipStatus?.status === "configured";
   const groupName = membershipStatus?.group_name;
+  const groupLink = membershipStatus?.telegram_group_link || telegramGroupLink;
+  const telegramHandle = membershipStatus?.telegram_username;
+
+  const inGroupLabel = (
+    <>
+      <CheckIcon /> You're in <strong>{groupName || "the Telegram group"}</strong>
+      {telegramHandle && <span style={{ color: "#5a5650", fontWeight: "normal" }}>&nbsp;as @{telegramHandle}</span>}
+    </>
+  );
 
   return (
     <div style={{ marginBottom: "2.5rem" }}>
@@ -660,9 +669,20 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
         Step 2 — Telegram
       </p>
       {inGroup ? (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem" }}>
-          <CheckIcon /> You're in {groupName || "the Telegram group"}
-        </div>
+        groupLink ? (
+          <a
+            href={groupLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem", textDecoration: "none", flexWrap: "wrap" }}
+          >
+            {inGroupLabel}
+          </a>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem", flexWrap: "wrap" }}>
+            {inGroupLabel}
+          </div>
+        )
       ) : telegramGroupLink ? (
         <a
           href={telegramGroupLink}
