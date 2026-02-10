@@ -177,32 +177,59 @@ def load_dynamic_orgs():
 
 
 async def register_group(slug: str, chat_id: int) -> dict | None:
-    """Register a Telegram group with the API. Returns response dict or None."""
-    if not EGREGORE_API_URL:
-        logger.warning("EGREGORE_API_URL not set — cannot register group")
+    """Register a Telegram group with the API. Falls back to direct Neo4j write."""
+    # Try API first
+    if EGREGORE_API_URL:
+        headers = {"Content-Type": "application/json"}
+        if BOT_TOKEN:
+            headers["Authorization"] = f"Bearer {BOT_TOKEN}"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{EGREGORE_API_URL}/api/org/telegram",
+                    json={"org_slug": slug, "chat_id": str(chat_id)},
+                    headers=headers,
+                    timeout=10.0,
+                )
+            if resp.status_code == 200:
+                data = resp.json()
+                logger.info(f"Registered group {chat_id} for org {slug} via API")
+                return data
+            else:
+                logger.warning(f"API registration failed: {resp.status_code} {resp.text}")
+        except Exception as e:
+            logger.warning(f"API registration failed: {e}")
+
+    # Fallback: write directly to Neo4j
+    neo4j_uri = os.environ.get("EGREGORE_NEO4J_URI", NEO4J_URI)
+    neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", NEO4J_USER)
+    neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", NEO4J_PASSWORD)
+
+    if not neo4j_uri or not neo4j_password:
+        logger.error("No Neo4j connection — cannot register group")
         return None
 
-    headers = {"Content-Type": "application/json"}
-    if BOT_TOKEN:
-        headers["Authorization"] = f"Bearer {BOT_TOKEN}"
-
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{EGREGORE_API_URL}/api/org/telegram",
-                json={"org_slug": slug, "chat_id": str(chat_id)},
-                headers=headers,
-                timeout=10.0,
+        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (o:Org {id: $slug}) "
+                "SET o.telegram_chat_id = $chat_id "
+                "RETURN o.name AS name",
+                slug=slug, chat_id=str(chat_id),
             )
-        if resp.status_code == 200:
-            data = resp.json()
-            logger.info(f"Registered group {chat_id} for org {slug}")
-            return data
-        else:
-            logger.error(f"Failed to register group: {resp.status_code} {resp.text}")
-            return None
+            record = result.single()
+            driver.close()
+            if record:
+                org_name = record["name"] or slug
+                logger.info(f"Registered group {chat_id} for org {slug} via Neo4j fallback")
+                return {"status": "connected", "org_slug": slug, "org_name": org_name}
+            else:
+                logger.error(f"Org {slug} not found in Neo4j")
+                return None
     except Exception as e:
-        logger.error(f"Failed to register group: {e}")
+        logger.error(f"Neo4j fallback registration failed: {e}")
         return None
 
 
