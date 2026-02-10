@@ -329,6 +329,7 @@ async def setup_orgs(authorization: str = Header(...)):
             "name": org["name"],
             "has_egregore": has_egregore,
             "is_member": is_member,
+            "can_setup": True,
             "role": role or "member",
             "avatar_url": org.get("avatar_url", ""),
             "instances": instances,
@@ -347,6 +348,7 @@ async def setup_orgs(authorization: str = Header(...)):
             "login": user["login"],
             "has_egregore": personal_has,
             "is_member": personal_member,
+            "can_setup": True,
             "instances": personal_instances,
         },
     }
@@ -534,13 +536,28 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
     else:
         memory_url = f"https://github.com/{owner}/{memory_repo}.git"
 
-    # Verify user has access to memory repo
+    # Verify user has access to memory repo — create if missing and user is owner/admin
     memory_repo_name = memory_repo.split("/")[-1].replace(".git", "") if "/" in memory_repo else memory_repo
     if not await gh.repo_exists(token, owner, memory_repo_name):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You don't have access to {owner}/{memory_repo_name}. Ask your team to add you.",
-        )
+        # Check if user can create it (personal account owner or org admin)
+        can_create = (owner == user["login"]) or (await gh.get_org_membership(token, owner) == "admin")
+        if can_create:
+            logger.info(f"Memory repo {owner}/{memory_repo_name} missing — creating for incomplete setup")
+            try:
+                target_org = None if owner == user["login"] else owner
+                await gh.create_repo(token, memory_repo_name, target_org)
+                await gh.init_memory_structure(token, owner, memory_repo_name)
+            except Exception as e:
+                logger.error(f"Failed to create memory repo: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Memory repo {owner}/{memory_repo_name} doesn't exist and couldn't be created: {e}",
+                )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You don't have access to {owner}/{memory_repo_name}. Ask your team to add you.",
+            )
 
     fork_url = f"https://github.com/{owner}/{body.repo_name}.git"
     api_url = config.get("api_url", "")
