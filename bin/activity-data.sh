@@ -45,11 +45,12 @@ bash "$GS" query "MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Per
 bash "$GS" query "MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC" > "$TMPDIR/q5.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q5.json" &
 
 # Q_resolve: Auto-resolve read handoffs with subsequent sessions
+# Uses handoffReadDate if set, falls back to handoff creation date
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
-WHERE s.handoffStatus = 'read' AND s.handoffReadDate IS NOT NULL
-WITH s, p
+WHERE s.handoffStatus = 'read'
+WITH s, p, coalesce(s.handoffReadDate, s.date) AS sinceDate
 MATCH (later:Session)-[:BY]->(p)
-WHERE later.date > s.handoffReadDate
+WHERE later.date > sinceDate
 WITH s, count(later) AS laterSessions WHERE laterSessions > 0
 SET s.handoffStatus = 'done'
 RETURN s.id AS resolved" > "$TMPDIR/qresolve.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qresolve.json" &
@@ -60,7 +61,8 @@ WHERE s.date >= date() - duration('P7D')
 MATCH (s)-[:BY]->(author:Person)
 RETURN s.topic AS topic, s.date AS date, author.name AS author,
        s.filePath AS filePath, s.id AS sessionId,
-       coalesce(s.handoffStatus, 'pending') AS status
+       coalesce(s.handoffStatus, 'pending') AS status,
+       s.handoffResponse AS response
 ORDER BY
   CASE coalesce(s.handoffStatus, 'pending')
     WHEN 'pending' THEN 0

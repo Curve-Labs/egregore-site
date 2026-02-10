@@ -39,7 +39,7 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Handoffs & Asks** (skip if all empty):
 - Handoffs (status=pending) → `[N] ● {from} → you: {topic} ({when})`
 - Handoffs (status=read) → `[N] ◐ {from} → you: {topic} ({when})`
-- Handoffs (status=done) → `    ○ {from} → you: {topic} (done)`
+- Handoffs (status=done) → `    ○ {from} → you: {topic} (done)`. If `response` field is non-null, append on next line: `      "{response truncated to 50 chars}..."`
 - Pending questions → `[N] {from} asks about "{topic}" ({when})`
 - Answered questions → `    ✓ {name} answered "{topic}"`
 - Other handoffs → `    {from} → {to}: {topic} ({when})`

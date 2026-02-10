@@ -348,11 +348,15 @@ FOREACH (_ IN CASE WHEN target IS NOT NULL THEN [1] ELSE [] END |
 RETURN s.id
 ```
 
-After creating the Session node, resolve any `read` handoffs for the current user (creating a session is an implicit signal that prior handoffs have been addressed):
+After creating the Session node, resolve any `read` handoffs where the user has completed a subsequent session (same criteria as Q_resolve in activity-data.sh):
 
 ```cypher
 MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: $author})
 WHERE s.handoffStatus = 'read' AND s.id <> $sessionId
+WITH s, p, coalesce(s.handoffReadDate, s.date) AS sinceDate
+MATCH (later:Session)-[:BY]->(p)
+WHERE later.date > sinceDate
+WITH s, count(later) AS laterSessions WHERE laterSessions > 0
 SET s.handoffStatus = 'done'
 RETURN s.id AS id, s.topic AS topic
 ```
@@ -574,12 +578,14 @@ Same boundary rules apply — 4 line patterns only, no sub-boxes, 72-char outer 
 
 ### When /activity shows handoffs
 
-In `/activity` action items, handoffs directed at the current user appear as:
+In `/activity`, handoffs directed at the current user use the three-icon status system:
 ```
-[2] ⇌ Handoff from cem: Defensibility architecture (today)
+[1] ● oz → you: Infra fix after sync (yesterday)      ← pending (unread)
+[2] ◐ ali → you: Slash command testing (2d ago)        ← read but open
+    ○ oz → you: Setup flow (done)                      ← resolved (unnumbered)
 ```
 
-When the user selects that numbered item, display the receiver view above by reading the handoff file from the path in the Session node's `filePath` property.
+When the user selects a numbered item, display the receiver view above by reading the handoff file from the path in the Session node's `filePath` property.
 
 ## Step 9: Reflection prompt
 

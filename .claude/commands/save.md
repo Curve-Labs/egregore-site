@@ -96,11 +96,15 @@ Parse frontmatter for: author, date, topic/title, project, quests (for artifacts
 
 ### Auto-resolve read handoffs
 
-After all sync queries, resolve any `read` handoffs for the current user (implicit signal — they completed a session):
+After all sync queries, resolve any `read` handoffs where the user has completed a subsequent session (same criteria as Q_resolve in activity-data.sh):
 
 ```cypher
 MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: $me})
 WHERE s.handoffStatus = 'read'
+WITH s, p, coalesce(s.handoffReadDate, s.date) AS sinceDate
+MATCH (later:Session)-[:BY]->(p)
+WHERE later.date > sinceDate
+WITH s, count(later) AS laterSessions WHERE laterSessions > 0
 SET s.handoffStatus = 'done'
 RETURN s.id AS id, s.topic AS topic
 ```
