@@ -851,11 +851,13 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     if not org.get("telegram_chat_id"):
         return {"status": "not_configured", "in_group": False}
 
-    # Look up Person by GitHub username → get telegramId
+    # Look up Person by GitHub username or name → get telegramId
     person_result = await execute_query(org, """
-        MATCH (p:Person {name: $name})
+        MATCH (p:Person)
+        WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
         RETURN p.telegramId AS telegramId
-    """, {"name": username})
+        LIMIT 1
+    """, {"username": username, "usernameLower": username.lower()})
 
     values = person_result.get("values", [])
     if not values or not values[0][0]:
