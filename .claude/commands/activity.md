@@ -12,7 +12,16 @@ bash bin/activity-data.sh
 
 Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `checkins`, `stale_blockers`, `todos`, `last_checkin`, `prs`, `disk`.
 
-If the command fails, fall back to reading `memory/` files. Add `(offline)` after ✦ in header.
+If the command fails, run this scoped fallback instead — ONLY read from this project's own directory:
+
+```bash
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Read from $SCRIPT_DIR/memory/ ONLY — never browse parent or sibling directories
+ls -1 "$SCRIPT_DIR/memory/handoffs/$(date +%Y-%m)/" 2>/dev/null | head -10
+ls -1t "$SCRIPT_DIR/memory/knowledge/decisions/" 2>/dev/null | head -5
+```
+
+Add `(offline)` after ✦ in header. If empty data is returned (graph has no sessions, no handoffs), display the dashboard with empty sections — do NOT explore the filesystem for alternative data sources. NEVER read from directories outside this project.
 
 ## Step 2: Render dashboard
 
@@ -116,5 +125,6 @@ Handoffs with status `read` or `done` are excluded from Focus options but inform
 ## Rules
 
 - `bash bin/activity-data.sh` for ALL data — never call graph.sh directly
+- **NEVER read files outside this project directory** — no browsing parent/sibling directories, no looking at other egregore installations. If data is empty, show empty sections.
 - No sub-boxes — only outer frame `│` and `├────┤` separators
 - DO NOT output reasoning, character counting, or analysis — render directly

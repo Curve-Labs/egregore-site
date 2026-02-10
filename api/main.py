@@ -886,7 +886,14 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     membership_values = membership_result.get("values", [])
     in_group = bool(membership_values and membership_values[0][0] > 0)
 
-    return {"status": "configured", "in_group": in_group, "group_name": group_name}
+    # Generate invite link so frontend can link to the group
+    telegram_group_link = None
+    try:
+        telegram_group_link = await create_group_invite_link(org)
+    except Exception:
+        pass
+
+    return {"status": "configured", "in_group": in_group, "group_name": group_name, "telegram_group_link": telegram_group_link}
 
 
 @app.get("/api/auth/github/client-id")
