@@ -1,0 +1,326 @@
+/* Egregore Docs - Custom Starlight Styling */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=UnifrakturMaguntia&display=swap');
+
+:root {
+  --sl-color-accent-low: #3d0a0f;
+  --sl-color-accent: #7A0F1B;
+  --sl-color-accent-high: #a91525;
+  --sl-color-white: #F4F1EA;
+  --sl-color-gray-1: #e8e4dc;
+  --sl-color-gray-2: #d4cfc5;
+  --sl-color-gray-3: #8a8578;
+  --sl-color-gray-4: #5a564e;
+  --sl-color-gray-5: #3a3730;
+  --sl-color-gray-6: #1a1714;
+  --sl-color-black: #0d0c0a;
+
+  --sl-font: 'Cormorant Garamond', Georgia, serif;
+  --sl-font-mono: 'Space Mono', monospace;
+
+  --sl-text-h1: 2.4rem;
+  --sl-text-h2: 1.8rem;
+  --sl-text-h3: 1.4rem;
+}
+
+/* Light theme */
+:root[data-theme='light'] {
+  --sl-color-bg: #F4F1EA;
+  --sl-color-bg-nav: rgba(244, 241, 234, 0.95);
+  --sl-color-bg-sidebar: #F4F1EA;
+  --sl-color-hairline-light: #d4cfc5;
+  --sl-color-hairline: #d4cfc5;
+  --sl-color-text: #1a1714;
+  --sl-color-text-accent: #7A0F1B;
+}
+
+/* Dark theme */
+:root[data-theme='dark'] {
+  --sl-color-bg: #1a1714;
+  --sl-color-bg-nav: rgba(26, 23, 20, 0.95);
+  --sl-color-bg-sidebar: #1a1714;
+  --sl-color-text: #F4F1EA;
+  --sl-color-text-accent: #a91525;
+}
+
+/* ─── Logo - Gothic font like main page ─── */
+.site-title {
+  font-family: 'UnifrakturMaguntia', cursive !important;
+  font-size: 1.8rem !important;
+  color: #7A0F1B !important;
+}
+
+/* Hide the SVG logo */
+.site-title img,
+.site-title svg {
+  display: none !important;
+}
+
+/* Add Egregore text */
+.site-title::after {
+  content: 'Egregore';
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 1.8rem;
+  color: #7A0F1B;
+}
+
+/* ─── Search button - fix light theme ─── */
+:root[data-theme='light'] site-search button {
+  background: #F4F1EA !important;
+  color: #1a1714 !important;
+  border: 1px solid #d4cfc5 !important;
+}
+
+:root[data-theme='light'] site-search button:hover {
+  background: #e8e4dc !important;
+  border-color: #8a8578 !important;
+}
+
+:root[data-theme='light'] site-search svg {
+  color: #1a1714 !important;
+}
+
+/* Search button layout */
+:root[data-theme='light'] site-search button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+}
+
+/* Keyboard shortcut (Ctrl+K) in search - unified look */
+:root[data-theme='light'] site-search button > kbd {
+  display: flex !important;
+  margin-left: auto !important;
+  background: #e8e4dc !important;
+  border: 1px solid #d4cfc5 !important;
+  border-radius: 4px !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='light'] site-search button > kbd kbd {
+  background: transparent !important;
+  color: #1a1714 !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0.2em 0.4em !important;
+}
+
+/* Search modal light theme */
+:root[data-theme='light'] dialog {
+  background: #F4F1EA !important;
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] dialog input {
+  background: #fff !important;
+  color: #1a1714 !important;
+  border: 1px solid #d4cfc5 !important;
+}
+
+/* ─── Header styling ─── */
+header.header {
+  background: rgba(244, 241, 234, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #d4cfc5 !important;
+}
+
+:root[data-theme='dark'] header.header {
+  background: rgba(26, 23, 20, 0.95) !important;
+  border-bottom: 1px solid #3a3730 !important;
+}
+
+/* ─── Sidebar light theme fix ─── */
+:root[data-theme='light'] nav.sidebar {
+  background: #F4F1EA !important;
+}
+
+:root[data-theme='light'] .sidebar-content a {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sidebar-content a:hover {
+  color: #7A0F1B !important;
+}
+
+:root[data-theme='light'] .sidebar-content a[aria-current="page"] {
+  color: #7A0F1B !important;
+  background: rgba(122, 15, 27, 0.1) !important;
+}
+
+/* Section labels in sidebar */
+:root[data-theme='light'] .sidebar-content .top-level > li > details > summary,
+:root[data-theme='light'] .sidebar-content .top-level > li > a {
+  color: #8a8578 !important;
+}
+
+/* ─── Main content light theme ─── */
+:root[data-theme='light'] .main-frame {
+  background: #F4F1EA !important;
+}
+
+:root[data-theme='light'] .content-panel {
+  background: #F4F1EA !important;
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .content-panel h1 {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-container {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content p,
+:root[data-theme='light'] .sl-markdown-content li,
+:root[data-theme='light'] .sl-markdown-content span {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content h1,
+:root[data-theme='light'] .sl-markdown-content h2,
+:root[data-theme='light'] .sl-markdown-content h3,
+:root[data-theme='light'] .sl-markdown-content h4 {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content a {
+  color: #7A0F1B !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content strong {
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content code:not(pre code) {
+  background: rgba(212, 207, 197, 0.5) !important;
+  color: #1a1714 !important;
+}
+
+/* ─── Table of contents light theme ─── */
+:root[data-theme='light'] starlight-toc a {
+  color: #8a8578 !important;
+}
+
+:root[data-theme='light'] starlight-toc a:hover,
+:root[data-theme='light'] starlight-toc a[aria-current="true"] {
+  color: #7A0F1B !important;
+}
+
+/* ─── Pagination links light theme ─── */
+:root[data-theme='light'] .pagination-links a {
+  background: #F4F1EA !important;
+  color: #1a1714 !important;
+  border: 1px solid #d4cfc5 !important;
+}
+
+:root[data-theme='light'] .pagination-links a:hover {
+  border-color: #7A0F1B !important;
+}
+
+/* ─── Theme toggle button ─── */
+:root[data-theme='light'] starlight-theme-select button {
+  color: #1a1714 !important;
+}
+
+/* Theme dropdown options */
+:root[data-theme='light'] starlight-theme-select select,
+:root[data-theme='light'] starlight-theme-select option {
+  background: #F4F1EA !important;
+  color: #1a1714 !important;
+}
+
+:root[data-theme='light'] starlight-theme-select select option {
+  color: #1a1714 !important;
+}
+
+/* ─── Typography ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 400;
+}
+
+/* Sidebar styling */
+.sidebar-content a {
+  font-size: 0.9rem;
+}
+
+/* Code blocks - matching main page terminal style */
+pre,
+.expressive-code pre,
+.expressive-code .frame {
+  background: rgb(58, 26, 29) !important;
+  color: rgb(232, 224, 212) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.8rem !important;
+  padding: 1.1rem 1.4rem !important;
+  line-height: 1.5 !important;
+  border-radius: 0 !important;
+  border-top: 1px solid rgba(122, 15, 27, 0.4) !important;
+  border-left: 1px solid rgba(122, 15, 27, 0.2) !important;
+  border-right: 1px solid rgba(122, 15, 27, 0.2) !important;
+  border-bottom: 1px solid rgba(122, 15, 27, 0.2) !important;
+}
+
+pre code,
+.expressive-code code,
+.expressive-code .ec-line,
+.expressive-code .ec-line span,
+.expressive-code .ec-line code {
+  background: transparent !important;
+  color: rgb(232, 224, 212) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.8rem !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Override ALL syntax highlighting to use terminal colors */
+.expressive-code .ec-line span[style],
+pre code span,
+pre span {
+  color: rgb(232, 224, 212) !important;
+}
+
+/* Comments slightly dimmed */
+.expressive-code .ec-line .comment,
+pre .comment {
+  color: rgba(232, 224, 212, 0.5) !important;
+}
+
+/* Inline code */
+code {
+  font-size: 0.9em;
+}
+
+:root[data-theme='light'] code:not(pre code) {
+  background: rgba(58, 26, 29, 0.1) !important;
+  color: rgb(58, 26, 29) !important;
+  font-family: 'Space Mono', monospace !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 3px !important;
+}
+
+/* Links */
+a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Tables */
+table {
+  font-size: 0.95rem;
+}
+
+th {
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

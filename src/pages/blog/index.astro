@@ -1,0 +1,257 @@
+---
+import { getCollection } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const posts = await getCollection('posts', ({ data }) => !data.draft);
+const sortedPosts = posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const featuredPosts = sortedPosts.filter(p => p.data.featured);
+const regularPosts = sortedPosts.filter(p => !p.data.featured);
+
+const categories = ['all', 'product', 'philosophy', 'guide', 'research'] as const;
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+---
+
+<BlogLayout title="Blog" description="Thoughts on shared cognition, context gardening, and building with AI">
+  <div class="container">
+    <header class="blog-header">
+      <p class="label">Chronicle</p>
+      <h1>Blog</h1>
+      <p class="subtitle">Thoughts on shared cognition, context gardening, and building with AI</p>
+    </header>
+
+    <nav class="categories">
+      {categories.map(cat => (
+        <button class="cat-btn" data-category={cat}>
+          {cat}
+        </button>
+      ))}
+    </nav>
+
+    {featuredPosts.length > 0 && (
+      <section class="featured">
+        {featuredPosts.map(post => (
+          <a href={`/blog/${post.slug}`} class="featured-card" data-category={post.data.category}>
+            <span class="tag">{post.data.category}</span>
+            <h2>{post.data.title}</h2>
+            <p>{post.data.description}</p>
+            <time>{formatDate(post.data.date)}</time>
+          </a>
+        ))}
+      </section>
+    )}
+
+    <section class="posts">
+      {regularPosts.map(post => (
+        <a href={`/blog/${post.slug}`} class="post-card" data-category={post.data.category}>
+          <div class="post-meta">
+            <span class="tag">{post.data.category}</span>
+            <time>{formatDate(post.data.date)}</time>
+          </div>
+          <h3>{post.data.title}</h3>
+          <p>{post.data.description}</p>
+        </a>
+      ))}
+    </section>
+
+    {sortedPosts.length === 0 && (
+      <div class="empty">
+        <p>No posts yet. Check back soon.</p>
+      </div>
+    )}
+  </div>
+</BlogLayout>
+
+<style>
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .blog-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #8a8578;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem;
+    font-weight: 400;
+    color: #1a1714;
+    margin: 0 0 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: #8a8578;
+    margin: 0;
+  }
+
+  .categories {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+  }
+
+  .cat-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: transparent !important;
+    border: 1px solid #7A0F1B !important;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #7A0F1B !important;
+    border-radius: 0;
+  }
+
+  .cat-btn:hover {
+    background: #7A0F1B !important;
+    color: #F4F1EA !important;
+    border-color: #7A0F1B !important;
+  }
+
+  .cat-btn.active {
+    background: #7A0F1B !important;
+    color: #F4F1EA !important;
+    border-color: #7A0F1B !important;
+  }
+
+  .featured {
+    margin-bottom: 3rem;
+  }
+
+  .featured-card {
+    display: block;
+    background: #F4F1EA;
+    border: 1px solid #d4cfc5;
+    padding: 2.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .featured-card:hover {
+    border-color: #7A0F1B;
+  }
+
+  .featured-card h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 400;
+    margin: 0.5rem 0;
+    color: #1a1714;
+  }
+
+  .featured-card p {
+    color: #8a8578;
+    margin: 0.5rem 0;
+  }
+
+  .featured-card time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #8a8578;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #7A0F1B;
+  }
+
+  .posts {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .post-card {
+    display: block;
+    padding: 1.5rem;
+    border: 1px solid #d4cfc5;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .post-card:hover {
+    border-color: #7A0F1B;
+  }
+
+  .post-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .post-card time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #8a8578;
+  }
+
+  .post-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+    margin: 0 0 0.5rem;
+    color: #1a1714;
+  }
+
+  .post-card p {
+    color: #8a8578;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #8a8578;
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll('.cat-btn');
+  const cards = document.querySelectorAll('.featured-card, .post-card');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = (btn as HTMLElement).dataset.category;
+
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      cards.forEach(card => {
+        const cardCat = (card as HTMLElement).dataset.category;
+        if (cat === 'all' || cardCat === cat) {
+          (card as HTMLElement).style.display = '';
+        } else {
+          (card as HTMLElement).style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Set 'all' as active by default
+  document.querySelector('.cat-btn[data-category="all"]')?.classList.add('active');
+</script>

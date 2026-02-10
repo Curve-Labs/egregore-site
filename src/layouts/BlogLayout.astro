@@ -1,0 +1,60 @@
+---
+import '../index.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — Egregore</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
+    <link rel="alternate" type="application/rss+xml" title="Egregore Blog" href="/rss.xml" />
+  </head>
+  <body style="background: #F4F1EA; color: #1a1714; font-family: 'Cormorant Garamond', serif; line-height: 1.6; margin: 0;">
+    <nav style="position: fixed; top: 0; width: 100%; z-index: 900; padding: 1.5rem 3rem; display: flex; justify-content: space-between; align-items: center; background: rgba(244,241,234,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #d4cfc5; box-sizing: border-box;">
+      <a href="/" style="font-family: 'UnifrakturMaguntia', cursive; font-size: 1.8rem; color: #7A0F1B; text-decoration: none;">
+        Egregore
+      </a>
+      <div style="display: flex; gap: 2.5rem; align-items: center;">
+        <a href="/#problem" class="nav-link">Manifesto</a>
+        <a href="/#commands" class="nav-link">Commands</a>
+        <a href="/blog" class="nav-link">Blog</a>
+        <a href="/#research" class="nav-link">Research</a>
+      </div>
+    </nav>
+
+    <main style="padding-top: 6rem; min-height: 100vh;">
+      <slot />
+    </main>
+
+    <footer style="padding: 3rem; text-align: center; border-top: 1px solid #d4cfc5; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #8a8578;">
+      <a href="/" style="font-family: 'UnifrakturMaguntia', cursive; font-size: 1.4rem; color: #7A0F1B; text-decoration: none;">Egregore</a>
+      <p style="margin-top: 1rem;">Shared cognition for teams and agents</p>
+    </footer>
+
+    <style>
+      .nav-link {
+        font-family: 'Space Mono', monospace;
+        font-size: 0.7rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #1a1714;
+        text-decoration: none;
+        padding: 0.4rem 0;
+      }
+      .nav-link:hover {
+        color: #7A0F1B;
+      }
+    </style>
+  </body>
+</html>

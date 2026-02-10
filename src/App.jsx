@@ -90,6 +90,8 @@ const Navigation = () => {
         <a href="#problem" style={linkStyle}>Manifesto</a>
         <a href="#commands" style={linkStyle}>Commands</a>
         <a href="#research" style={linkStyle}>Research</a>
+        <a href="/blog" style={linkStyle}>Blog</a>
+        <a href="/getting-started" style={linkStyle}>Docs</a>
         <a href={getGitHubAuthUrl()} style={{ ...linkStyle, border: `1px solid ${C.ink}`, padding: "0.4rem 1rem" }}>
           Join
         </a>
