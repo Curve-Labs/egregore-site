@@ -41,7 +41,10 @@ def load_org_configs() -> dict:
     # Dynamic orgs from EGREGORE_ORGS env var (JSON list)
     orgs_raw = os.environ.get("EGREGORE_ORGS")
     if orgs_raw:
+        default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
         for org in json.loads(orgs_raw):
+            if not org.get("telegram_bot_token") and default_bot_token:
+                org["telegram_bot_token"] = default_bot_token
             configs[org["slug"]] = org
 
     return configs
@@ -132,9 +135,11 @@ async def load_orgs_from_neo4j():
             if not slug or not api_key:
                 continue
             if slug in ORG_CONFIGS:
-                # Update telegram_chat_id if stored in Neo4j
+                # Update telegram fields if stored in Neo4j
                 if telegram_chat_id:
                     ORG_CONFIGS[slug]["telegram_chat_id"] = telegram_chat_id
+                if not ORG_CONFIGS[slug].get("telegram_bot_token"):
+                    ORG_CONFIGS[slug]["telegram_bot_token"] = default_bot_token
                 continue
 
             ORG_CONFIGS[slug] = {
