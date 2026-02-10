@@ -844,9 +844,10 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     if not github_token:
         raise HTTPException(status_code=401, detail="Missing GitHub token")
 
-    org = ORG_CONFIGS.get(slug)
-    if not org:
+    org_config = ORG_CONFIGS.get(slug)
+    if not org_config:
         raise HTTPException(status_code=404, detail="Org not found")
+    org = {**org_config, "slug": slug}
 
     # Get GitHub username
     async with httpx.AsyncClient() as client:
