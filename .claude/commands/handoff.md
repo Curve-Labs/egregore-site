@@ -155,6 +155,17 @@ FOREACH (_ IN CASE WHEN target IS NOT NULL THEN [1] ELSE [] END |
 RETURN s.id
 ```
 
+After creating the Session node, resolve any `read` handoffs for the current user (creating a session is an implicit signal that prior handoffs have been addressed):
+
+```cypher
+MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: $author})
+WHERE s.handoffStatus = 'read' AND s.id <> $sessionId
+SET s.handoffStatus = 'done'
+RETURN s.id AS id, s.topic AS topic
+```
+
+If any resolved, include in progress output: `[3/5] ✓ Session -> knowledge graph (resolved N prior handoffs)`
+
 Where:
 - `$sessionId` = `YYYY-MM-DD-author-topic-slug` (matches filename without extension)
 - `$author` = short name (oz, cem, ali)

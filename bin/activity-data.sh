@@ -44,8 +44,31 @@ bash "$GS" query "MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Per
 # Q5: Answered questions (7 days)
 bash "$GS" query "MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC" > "$TMPDIR/q5.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q5.json" &
 
-# Q6: Handoffs to me (7 days, exclude done)
-bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P7D') AND coalesce(s.handoffStatus, 'pending') <> 'done' MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS author, s.filePath AS filePath, s.id AS sessionId, coalesce(s.handoffStatus, 'pending') AS status ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
+# Q_resolve: Auto-resolve read handoffs with subsequent sessions
+bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
+WHERE s.handoffStatus = 'read' AND s.handoffReadDate IS NOT NULL
+WITH s, p
+MATCH (later:Session)-[:BY]->(p)
+WHERE later.date > s.handoffReadDate
+WITH s, count(later) AS laterSessions WHERE laterSessions > 0
+SET s.handoffStatus = 'done'
+RETURN s.id AS resolved" > "$TMPDIR/qresolve.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qresolve.json" &
+
+# Q6: Handoffs to me (7 days, all statuses)
+bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
+WHERE s.date >= date() - duration('P7D')
+MATCH (s)-[:BY]->(author:Person)
+RETURN s.topic AS topic, s.date AS date, author.name AS author,
+       s.filePath AS filePath, s.id AS sessionId,
+       coalesce(s.handoffStatus, 'pending') AS status
+ORDER BY
+  CASE coalesce(s.handoffStatus, 'pending')
+    WHEN 'pending' THEN 0
+    WHEN 'read' THEN 1
+    ELSE 2
+  END,
+  s.date DESC
+LIMIT 8" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
 
 # Q7: All handoffs (7 days)
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS from, target.name AS to, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q7.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q7.json" &
@@ -97,7 +120,7 @@ bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - durati
 wait
 
 # --- Validate JSON files ---
-for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans; do
+for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve; do
   jq . "$TMPDIR/$f.json" >/dev/null 2>&1 || echo "$EMPTY" > "$TMPDIR/$f.json"
 done
 

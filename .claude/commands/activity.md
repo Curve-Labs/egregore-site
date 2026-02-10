@@ -35,12 +35,13 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective.
 
 **Handoffs & Asks** (skip if all empty):
-- Handoffs to me (status=pending or null) → `[N] {from} → you: {topic} ({when})`
-- Handoffs to me (status=read) → unnumbered `    ○ {from} → you: {topic} (read)`
+- Handoffs (status=pending) → `[N] ● {from} → you: {topic} ({when})`
+- Handoffs (status=read) → `[N] ◐ {from} → you: {topic} ({when})`
+- Handoffs (status=done) → `    ○ {from} → you: {topic} (done)`
 - Pending questions → `[N] {from} asks about "{topic}" ({when})`
-- Answered questions → `[N] ✓ {name} answered "{topic}"`
-- Other handoffs → unnumbered `{from} → {to}: {topic} ({when})`
-- Numbered items first, blank line, then read handoffs + others.
+- Answered questions → `    ✓ {name} answered "{topic}"`
+- Other handoffs → `    {from} → {to}: {topic} ({when})`
+- Numbered items (● and ◐) first, blank line, then ○ + others.
 
 **Sessions**:
 - `◦ YOUR SESSIONS` — top 5. Format: `{date}  {topic}`
@@ -82,7 +83,7 @@ Generate 2-4 options, prioritized (take first 2-4 that apply):
 
 | Priority | Source | Label | Description |
 |----------|--------|-------|-------------|
-| 1 | handoffs_to_me | `Read {author}'s handoff` | `{topic} — {when}` |
+| 1 | handoffs_to_me **(status=pending only)** | `Read {author}'s handoff` | `{topic} — {when}` |
 | 2 | pending_questions | `Answer {asker}'s questions` | `About "{topic}" — {when}` |
 | 3-4 | my_sessions (last 3 days) | Work stream name | Cluster recent sessions by theme. Name specifically. Max 2 clusters. Hint at what's next, not what's done. |
 | 5 | prs (not by me) | `Review PR #{N}` | `{title} by {author}` |
@@ -90,11 +91,13 @@ Generate 2-4 options, prioritized (take first 2-4 that apply):
 
 Minimum 2 options. "Other" is automatic.
 
+Handoffs with status `read` or `done` are excluded from Focus options but inform work stream clustering (priority 3-4). When generating work stream labels, consider topics from recent handoffs you've already seen.
+
 ### After selection
 
 | Selection | Action |
 |-----------|--------|
-| Handoff | Read filePath from data. Display content + entry points. **Immediately** mark as read: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'read' RETURN s.id"`. After displaying content, ask via AskUserQuestion: header "Handoff", question "What next?", options: "Start working on this" (marks `handoffStatus = 'done'` via `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'done' RETURN s.id"`), "Keep it open" (stays `read`, no action needed). |
+| Handoff | Read filePath from data. Display content + entry points. **Immediately** mark as read: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'read', s.handoffReadDate = date() RETURN s.id"`. Then proceed — no follow-up question. Resolution happens automatically at next dashboard load (Q_resolve) or via `/activity done N`. |
 | Questions | Load QuestionSet, present via AskUserQuestion. |
 | Work stream | Read most recent handoff from cluster. Show Open Threads / Next Steps. Mention relevant knowledge artifacts. |
 | PR | `gh pr view #N --json title,body,additions,deletions,files`. Summarize. |
@@ -104,6 +107,7 @@ Minimum 2 options. "Other" is automatic.
 
 - `/activity quests` — expand quests, show all with full counts
 - `/activity @name` — filter to that person's sessions
+- `/activity done [N]` — resolve handoff N. Fetch activity data, map Nth ●/◐ handoff to sessionId, run: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'done' RETURN s.id"`. Output: `✓ Resolved: {topic} from {author}`
 
 ## Rules
 
