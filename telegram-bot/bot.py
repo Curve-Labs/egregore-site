@@ -333,10 +333,73 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optio
             {"name": name_lower, "tid": telegram_id}
         )
         if results:
-            logger.info(f"Auto-registered {results[0].get('name')} with Telegram ID {telegram_id} (matched by first name)")
-            return results[0].get("name")
+            person_name = results[0].get("name")
+            logger.info(f"Auto-registered {person_name} with Telegram ID {telegram_id} (matched by first name)")
+            # Also create/link TelegramUser node
+            run_query(
+                """
+                MERGE (tu:TelegramUser {telegramId: $tid})
+                SET tu.firstName = $firstName
+                WITH tu
+                MATCH (p:Person {telegramId: $tid})
+                MERGE (tu)-[:IDENTIFIES]->(p)
+                """,
+                {"tid": telegram_id, "firstName": first_name},
+            )
+            return person_name
 
     return None
+
+
+def track_telegram_membership(telegram_id: int, username: str, first_name: str, org_slug: str, action: str = "join"):
+    """Track Telegram group membership via TelegramUser nodes.
+
+    Creates/updates TelegramUser node and IN_GROUP relationship.
+    Uses the shared Neo4j driver directly since TelegramUser is global (unscoped).
+
+    action: "join" or "leave"
+    """
+    driver = get_neo4j_driver()
+    if not driver:
+        logger.warning("Neo4j not configured — cannot track membership")
+        return
+
+    try:
+        with driver.session() as session:
+            if action == "join":
+                # Create/update TelegramUser and IN_GROUP relationship
+                session.run(
+                    """
+                    MERGE (tu:TelegramUser {telegramId: $tid})
+                    SET tu.username = $username, tu.firstName = $firstName
+                    WITH tu
+                    MATCH (o:Org {id: $org})
+                    MERGE (tu)-[r:IN_GROUP]->(o)
+                    SET r.joinedAt = datetime(), r.status = 'active'
+                    """,
+                    {"tid": telegram_id, "username": username or "", "firstName": first_name or "", "org": org_slug},
+                )
+                # Link to existing Person nodes that have this telegramId
+                session.run(
+                    """
+                    MATCH (tu:TelegramUser {telegramId: $tid})
+                    MATCH (p:Person {telegramId: $tid})
+                    MERGE (tu)-[:IDENTIFIES]->(p)
+                    """,
+                    {"tid": telegram_id},
+                )
+                logger.info(f"Tracked join: TelegramUser {telegram_id} ({first_name}) → org {org_slug}")
+            elif action == "leave":
+                session.run(
+                    """
+                    MATCH (tu:TelegramUser {telegramId: $tid})-[r:IN_GROUP]->(o:Org {id: $org})
+                    SET r.status = 'left', r.leftAt = datetime()
+                    """,
+                    {"tid": telegram_id, "org": org_slug},
+                )
+                logger.info(f"Tracked leave: TelegramUser {telegram_id} from org {org_slug}")
+    except Exception as e:
+        logger.error(f"Failed to track membership: {e}")
 
 
 # =============================================================================
@@ -945,10 +1008,10 @@ async def handle_question(update: Update, context, question: str) -> None:
     chat_id = update.effective_chat.id
     org_config = ORG_CONFIG.get(chat_id)
     if not org_config:
-        # Fallback to default org
-        org_config = ORG_CONFIG.get(-1003081443167)
+        await update.message.reply_text("This group isn't connected to an Egregore org yet. Ask your admin to add the bot through the setup flow.")
+        return
 
-    org_name = org_config.get("name", "default") if org_config else "default"
+    org_name = org_config.get("name", "default")
     logger.info(f"handle_question: chat_id={chat_id}, org={org_name}")
 
     # Check if Neo4j is configured for this org
@@ -1325,31 +1388,48 @@ async def handle_notify_request(request: Request) -> JSONResponse:
 # NEW MEMBER ONBOARDING
 # =============================================================================
 
-async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle new members joining a group — welcome them with setup link."""
+async def handle_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle members joining or leaving a group — track membership + welcome."""
     if not update.chat_member:
         return
 
     old_status = update.chat_member.old_chat_member.status
     new_status = update.chat_member.new_chat_member.status
-
-    if new_status not in ["member", "administrator"] or old_status in ["member", "administrator"]:
-        return
-
-    new_member = update.chat_member.new_chat_member.user
+    member = update.chat_member.new_chat_member.user
     chat_id = update.effective_chat.id
 
     if chat_id not in ORG_CONFIG:
         return
 
     org_config = ORG_CONFIG[chat_id]
-    logger.info(f"New member {new_member.first_name} ({new_member.id}) joined {org_config['name']}")
+    org_slug = org_config.get("name", "default")
 
-    site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"Welcome {new_member.first_name}! Get set up here: {site_url}/setup",
-    )
+    # Detect join
+    if new_status in ["member", "administrator"] and old_status not in ["member", "administrator"]:
+        logger.info(f"Member joined: {member.first_name} ({member.id}) → {org_slug}")
+        track_telegram_membership(
+            telegram_id=member.id,
+            username=member.username or "",
+            first_name=member.first_name or "",
+            org_slug=org_slug,
+            action="join",
+        )
+        site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Welcome {member.first_name}! Get set up here: {site_url}/setup",
+        )
+
+    # Detect leave
+    elif old_status in ["member", "administrator"] and new_status in ["left", "kicked"]:
+        logger.info(f"Member left: {member.first_name} ({member.id}) from {org_slug}")
+        track_telegram_membership(
+            telegram_id=member.id,
+            username=member.username or "",
+            first_name=member.first_name or "",
+            org_slug=org_slug,
+            action="leave",
+        )
 
 
 async def handle_onboarding_dm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -1662,7 +1742,7 @@ def main() -> None:
     ptb_app.add_handler(CommandHandler("activity", activity_command))
     ptb_app.add_handler(CommandHandler("debug", debug_command))
     ptb_app.add_handler(CommandHandler("onboard", onboard_command))
-    ptb_app.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
+    ptb_app.add_handler(ChatMemberHandler(handle_member_update, ChatMemberHandler.CHAT_MEMBER))
     ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     if WEBHOOK_URL:
