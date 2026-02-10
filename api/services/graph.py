@@ -98,7 +98,7 @@ def inject_org_scope(statement: str, org_slug: str) -> str:
         return statement
 
     # System labels that should NOT be org-scoped
-    SYSTEM_LABELS = {"Org"}
+    SYSTEM_LABELS = {"Org", "TelegramUser"}
 
     # 1. Add org to patterns WITH properties: (var:Label {props})
     def add_org_to_props(match):

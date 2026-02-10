@@ -818,6 +818,64 @@ async def org_telegram_invite_link(org: dict = Depends(validate_api_key)):
     return {"invite_link": link}
 
 
+@app.get("/api/org/{slug}/telegram/membership")
+async def org_telegram_membership(slug: str, authorization: str = Header(...)):
+    """Check if a user is in the org's Telegram group.
+
+    Auth: GitHub token (from setup flow OAuth).
+    Looks up Person by GitHub username → gets telegramId → checks TelegramUser IN_GROUP.
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    org = ORG_CONFIGS.get(slug)
+    if not org:
+        raise HTTPException(status_code=404, detail="Org not found")
+
+    # Get GitHub username
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    username = user_resp.json().get("login", "")
+
+    # Check if Telegram is configured for this org
+    if not org.get("telegram_chat_id"):
+        return {"status": "not_configured", "in_group": False}
+
+    # Look up Person by GitHub username → get telegramId
+    person_result = await execute_query(org, """
+        MATCH (p:Person {name: $name})
+        RETURN p.telegramId AS telegramId
+    """, {"name": username})
+
+    values = person_result.get("values", [])
+    if not values or not values[0][0]:
+        return {"status": "configured", "in_group": False}
+
+    telegram_id = values[0][0]
+
+    # Check TelegramUser IN_GROUP with active status
+    # TelegramUser is unscoped, so query directly without org injection
+    membership_result = await execute_query(org, """
+        MATCH (tu:TelegramUser {telegramId: $tid})-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
+        RETURN count(r) AS cnt
+    """, {"tid": telegram_id, "orgId": slug})
+
+    membership_values = membership_result.get("values", [])
+    in_group = bool(membership_values and membership_values[0][0] > 0)
+
+    return {"status": "configured", "in_group": in_group}
+
+
 @app.get("/api/auth/github/client-id")
 async def github_client_id():
     """Return the GitHub OAuth client ID for the web flow."""
