@@ -520,34 +520,13 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
       {/* Step 1: Install command */}
       <InstallCommand setupToken={result.setup_token} label="Step 1 — Install" />
 
-      {/* Step 2: Telegram — setup flow (add bot) or join flow (join group) */}
-      {(result.telegram_invite_link || result.telegram_group_link) && (
-        <div style={{ marginBottom: "2.5rem" }}>
-          <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
-            Step 2 — {result.telegram_group_link ? "Join Telegram" : `Connect Telegram ${telegramConnected ? "" : "(optional)"}`}
-          </p>
-          {telegramConnected ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem" }}>
-              <CheckIcon /> Telegram connected
-            </div>
-          ) : (
-            <a
-              href={result.telegram_group_link || result.telegram_invite_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                ...font.mono, fontSize: "0.8rem",
-                display: "inline-flex", alignItems: "center", gap: "0.5rem",
-                color: C.crimson, textDecoration: "none",
-                border: `1px solid ${C.crimson}`, padding: "0.65rem 1.25rem",
-                transition: "all 0.2s",
-              }}
-            >
-              {result.telegram_group_link ? "Join the Telegram group" : "Add bot to your group"}
-            </a>
-          )}
-        </div>
-      )}
+      {/* Step 2: Telegram */}
+      <TelegramStep
+        isFounder={!org.has_egregore}
+        telegramInviteLink={result.telegram_invite_link}
+        telegramGroupLink={result.telegram_group_link}
+        telegramConnected={telegramConnected}
+      />
 
       {/* What's next */}
       <div style={{ borderTop: `1px solid ${C.warmGray}`, paddingTop: "1.5rem" }}>
@@ -570,6 +549,121 @@ function Spinner() {
       animation: "spin 0.8s linear infinite",
     }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function SmallSpinner() {
+  return (
+    <div style={{
+      width: 14, height: 14, border: `2px solid ${C.warmGray}`, borderTopColor: C.crimson,
+      borderRadius: "50%", flexShrink: 0,
+      animation: "spin 0.8s linear infinite",
+    }} />
+  );
+}
+
+const TelegramIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+  </svg>
+);
+
+function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegramConnected }) {
+  if (isFounder) {
+    return (
+      <div style={{ marginBottom: "2.5rem" }}>
+        <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
+          Step 2 — Connect Telegram
+        </p>
+
+        {telegramConnected ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem", marginBottom: "1rem" }}>
+              <CheckIcon /> Telegram connected
+            </div>
+            <div style={{ background: "rgba(45,138,78,0.06)", border: `1px solid rgba(45,138,78,0.15)`, padding: "1rem 1.25rem" }}>
+              <p style={{ ...font.mono, fontSize: "0.7rem", color: "#5a5650", margin: 0, lineHeight: 1.6 }}>
+                To invite team members to the Telegram group, open the group in Telegram and share the invite link. Or use <code style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson }}>/invite</code> in Egregore to send setup links.
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>1.</span>
+                <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5 }}>
+                  Open Telegram and create a new group for your team
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>2.</span>
+                <div>
+                  <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5, marginBottom: "0.5rem" }}>
+                    Add the Egregore bot to your group
+                  </p>
+                  <a
+                    href={telegramInviteLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      ...font.mono, fontSize: "0.75rem",
+                      display: "inline-flex", alignItems: "center", gap: "0.5rem",
+                      color: C.crimson, textDecoration: "none",
+                      border: `1px solid ${C.crimson}`, padding: "0.5rem 1rem",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <TelegramIcon /> Add bot to group
+                  </a>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>3.</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5 }}>
+                    The bot will auto-connect
+                  </p>
+                  <SmallSpinner />
+                </div>
+              </div>
+            </div>
+            <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
+              Waiting for the bot to connect to your group...
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Joiner / invitee path
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+        Step 2 — Telegram
+      </p>
+      {telegramGroupLink ? (
+        <a
+          href={telegramGroupLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            ...font.mono, fontSize: "0.8rem",
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            color: C.crimson, textDecoration: "none",
+            border: `1px solid ${C.crimson}`, padding: "0.65rem 1.25rem",
+            transition: "all 0.2s",
+          }}
+        >
+          <TelegramIcon /> Join the Telegram group
+        </a>
+      ) : (
+        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, lineHeight: 1.6 }}>
+          Your team hasn't connected a Telegram group yet. Ask your admin to set it up, or skip this step.
+        </p>
+      )}
     </div>
   );
 }
@@ -723,28 +817,13 @@ function InviteAccept({ token, user, inviteToken }) {
 
       <InstallCommand setupToken={result.setup_token} />
 
-      {/* Telegram group link */}
-      {result.telegram_group_link && (
-        <div style={{ marginBottom: "2.5rem" }}>
-          <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
-            Telegram
-          </p>
-          <a
-            href={result.telegram_group_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              ...font.mono, fontSize: "0.8rem",
-              display: "inline-flex", alignItems: "center", gap: "0.5rem",
-              color: C.crimson, textDecoration: "none",
-              border: `1px solid ${C.crimson}`, padding: "0.65rem 1.25rem",
-              transition: "all 0.2s",
-            }}
-          >
-            Join the Telegram group
-          </a>
-        </div>
-      )}
+      {/* Telegram */}
+      <TelegramStep
+        isFounder={false}
+        telegramInviteLink={null}
+        telegramGroupLink={result.telegram_group_link}
+        telegramConnected={false}
+      />
 
       <div style={{ borderTop: `1px solid ${C.warmGray}`, paddingTop: "1.5rem" }}>
         <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
