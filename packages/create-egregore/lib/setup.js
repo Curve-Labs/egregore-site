@@ -37,13 +37,18 @@ async function install(data, ui, targetDir) {
   // Configure git credential helper for HTTPS cloning
   configureGitCredentials(github_token);
 
+  // Embed token in URLs as fallback for private repos (credential helper may not work)
+  const authedForkUrl = embedToken(fork_url, github_token);
+  const authedMemoryUrl = embedToken(memory_url, github_token);
+
   // 1. Clone fork
   ui.step(1, totalSteps, "Cloning egregore...");
   if (fs.existsSync(egregoreDir)) {
     ui.warn("egregore/ already exists — pulling latest");
     run("git pull", { cwd: egregoreDir });
   } else {
-    execFileSync("git", ["clone", fork_url, egregoreDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    execFileSync("git", ["clone", authedForkUrl, egregoreDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    try { run(`git remote set-url origin ${fork_url}`, { cwd: egregoreDir }); } catch {}
   }
   ui.success("Cloned egregore");
 
@@ -53,7 +58,8 @@ async function install(data, ui, targetDir) {
     ui.warn(`${memoryDirName}/ already exists — pulling latest`);
     run("git pull", { cwd: memoryDir });
   } else {
-    execFileSync("git", ["clone", memory_url, memoryDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    execFileSync("git", ["clone", authedMemoryUrl, memoryDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    try { run(`git remote set-url origin ${memory_url}`, { cwd: memoryDir }); } catch {}
   }
   ui.success("Cloned memory");
 
@@ -97,7 +103,8 @@ async function install(data, ui, targetDir) {
       run("git pull", { cwd: repoDir });
     } else {
       const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
-      execFileSync("git", ["clone", repoUrl, repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+      execFileSync("git", ["clone", embedToken(repoUrl, github_token), repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+      try { run(`git remote set-url origin ${repoUrl}`, { cwd: repoDir }); } catch {}
     }
     clonedRepos.push(repoName);
     ui.success(`Cloned ${repoName}`);
@@ -121,6 +128,14 @@ async function install(data, ui, targetDir) {
   console.log("");
   ui.info(`Next: open a ${ui.bold("new terminal")} and type ${ui.bold(alias.aliasName)} to start.`);
   console.log("");
+}
+
+function embedToken(url, token) {
+  try {
+    return url.replace("https://github.com/", `https://x-access-token:${token}@github.com/`);
+  } catch {
+    return url;
+  }
 }
 
 function configureGitCredentials(token) {
