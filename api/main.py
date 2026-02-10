@@ -929,16 +929,25 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
     if not await gh.repo_exists(token, owner, body.repo_name):
         raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner} ({body.repo_name})")
 
-    # Verify inviter is an admin
-    role = await gh.get_org_membership(token, owner)
-    if role not in ("admin",):
-        raise HTTPException(
-            status_code=403,
-            detail="Only org admins can invite. Ask an admin to send the invite.",
-        )
+    # Detect personal vs org account
+    is_personal = not await gh.is_org(token, owner)
 
-    # Try to send GitHub org invitation
-    github_result = await gh.invite_to_org(token, owner, body.github_username)
+    if is_personal:
+        # Personal account: inviter must be the repo owner
+        if inviter["login"].lower() != owner.lower():
+            raise HTTPException(status_code=403, detail="Only the account owner can invite.")
+        # Add as collaborator on egregore repo
+        await gh.add_repo_collaborator(token, owner, body.repo_name, body.github_username)
+        github_result = {"status": "collaborator_invited"}
+    else:
+        # Org account: inviter must be admin
+        role = await gh.get_org_membership(token, owner)
+        if role not in ("admin",):
+            raise HTTPException(
+                status_code=403,
+                detail="Only org admins can invite. Ask an admin to send the invite.",
+            )
+        github_result = await gh.invite_to_org(token, owner, body.github_username)
 
     # Read org config for the invite token
     config_raw = await gh.get_file_content(token, owner, body.repo_name, "egregore.json")
@@ -951,7 +960,7 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         slug = config.get("slug", slug)
         repos = config.get("repos", [])
 
-        # Also add them as collaborator on the memory repo
+        # Add as collaborator on the memory repo
         memory_repo = config.get("memory_repo", f"{owner}-memory")
         if "/" in memory_repo:
             memory_repo_name = memory_repo.split("/")[-1].replace(".git", "")
@@ -969,6 +978,7 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         "slug": slug,
         "repos": repos,
         "repo_name": body.repo_name,
+        "is_personal": is_personal,
     })
 
     invite_url = f"{site_url}/join?invite={invite_token}"
@@ -1015,31 +1025,41 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
     owner = invite_data["github_org"]
     slug = invite_data.get("slug", owner.lower().replace("-", "").replace(" ", ""))
+    is_personal = invite_data.get("is_personal", False)
 
-    # Check org membership — auto-accept if pending
-    membership = await gh.check_org_membership(token, owner, user["login"])
-
-    if membership == "pending":
-        # Auto-accept the GitHub org invitation on behalf of the user
-        accepted = await gh.accept_org_invitation(token, owner)
-        if accepted:
-            membership = "active"
-        else:
+    if is_personal:
+        # Personal account: accept repo collaboration invitations
+        accepted = await gh.accept_repo_invitations(token, owner)
+        # Even if 0 accepted (already a collaborator or invite pending), check access
+        if not await gh.repo_exists(token, owner, invite_data.get("repo_name", "egregore-core")):
             return {
-                "status": "error",
-                "message": "Could not accept the org invitation. Try again or accept it manually on GitHub.",
+                "status": "pending_github",
+                "message": "The collaboration invitation hasn't arrived yet. Try again in a moment.",
+                "github_org": owner,
+            }
+    else:
+        # Org account: check org membership — auto-accept if pending
+        membership = await gh.check_org_membership(token, owner, user["login"])
+
+        if membership == "pending":
+            accepted = await gh.accept_org_invitation(token, owner)
+            if accepted:
+                membership = "active"
+            else:
+                return {
+                    "status": "error",
+                    "message": "Could not accept the org invitation. Try again or accept it manually on GitHub.",
+                    "github_org": owner,
+                }
+
+        if membership == "none":
+            return {
+                "status": "pending_github",
+                "message": "The org invitation hasn't arrived yet. Try again in a moment.",
                 "github_org": owner,
             }
 
-    if membership == "none":
-        # GitHub org invite hasn't arrived yet (race condition) — retry shortly
-        return {
-            "status": "pending_github",
-            "message": "The org invitation hasn't arrived yet. Try again in a moment.",
-            "github_org": owner,
-        }
-
-    # Membership is active — proceed with Egregore join
+    # Access verified — proceed with Egregore join
     # Read egregore.json from repo (use repo_name from invite data, default to egregore-core)
     invite_repo_name = invite_data.get("repo_name", "egregore-core")
     config_raw = await gh.get_file_content(token, owner, invite_repo_name, "egregore.json")
@@ -1057,18 +1077,8 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
     api_url = config.get("api_url", "")
     repos = config.get("repos", [])
 
-    # Add person to Neo4j
+    # Person node creation deferred to first session start
     org_config = ORG_CONFIGS.get(slug)
-    if org_config:
-        try:
-            await execute_query(org_config, """
-                MERGE (p:Person {name: $name})
-                WITH p
-                MATCH (o:Org {id: $_org})
-                MERGE (p)-[:MEMBER_OF]->(o)
-            """, {"name": user["login"]})
-        except Exception:
-            pass
 
     # Consume the invite token now
     claim_token(invite_token)

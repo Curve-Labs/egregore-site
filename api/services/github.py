@@ -417,3 +417,41 @@ async def accept_org_invitation(token: str, org: str) -> bool:
             timeout=10.0,
         )
     return resp.status_code == 200
+
+
+async def accept_repo_invitations(token: str, owner: str) -> int:
+    """Accept all pending repo collaboration invitations from a specific owner.
+    Returns the number of invitations accepted."""
+    accepted = 0
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{API_BASE}/user/repository_invitations",
+            headers=_headers(token),
+            params={"per_page": 100},
+            timeout=15.0,
+        )
+    if resp.status_code != 200:
+        return 0
+    for inv in resp.json():
+        repo_owner = inv.get("repository", {}).get("owner", {}).get("login", "")
+        if repo_owner.lower() == owner.lower():
+            async with httpx.AsyncClient() as client:
+                patch_resp = await client.patch(
+                    f"{API_BASE}/user/repository_invitations/{inv['id']}",
+                    headers=_headers(token),
+                    timeout=10.0,
+                )
+            if patch_resp.status_code == 204:
+                accepted += 1
+    return accepted
+
+
+async def is_org(token: str, name: str) -> bool:
+    """Check if a GitHub name is an org (True) or a user (False)."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{API_BASE}/orgs/{name}",
+            headers=_headers(token),
+            timeout=10.0,
+        )
+    return resp.status_code == 200
