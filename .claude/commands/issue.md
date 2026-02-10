@@ -489,8 +489,8 @@ The separator lines are ALWAYS identical — copy-paste the same 72-char string.
 Who's this for?
   1. Just memory — tracked in knowledge graph, visible on /activity
   2. egregore — (coming soon — Phase B)
-  3. Curve-Labs/egregore-core — filed on the org's fork
-  4. Curve-Labs/lace — filed on lace
+  3. {github_org}/egregore-core — filed on the org's fork
+  4. {github_org}/lace — filed on lace
 
 > 1
 
@@ -520,9 +520,9 @@ Who's this for?
 Who's this for?
   ...
 
-> Curve-Labs/egregore-core
+> {github_org}/egregore-core
 
-  [2/4] ✓ Filed on Curve-Labs/egregore-core · #42
+  [2/4] ✓ Filed on {github_org}/egregore-core · #42
   [3/4] ✓ Team notified
   [4/4] ✓ Auto-saved
 
@@ -531,7 +531,7 @@ Who's this for?
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  Title: Memory symlink breaks after pull                             │
-│  For: Curve-Labs/egregore-core · issue #42                           │
+│  For: {github_org}/egregore-core · issue #42                           │
 │                                                                      │
 │  ✓ Saved to memory · graphed · team notified                         │
 │  → memory/knowledge/issues/2026-02-09-memory-symlink.md              │
