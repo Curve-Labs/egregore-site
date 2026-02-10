@@ -863,33 +863,30 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
 
     # Check if Telegram is configured for this org
     if not org.get("telegram_chat_id"):
-        return {"status": "not_configured", "in_group": False}
+        return {"status": "not_configured", "in_group": False, "group_name": None}
 
-    # Look up Person by GitHub username or name → get telegramId
-    person_result = await execute_query(org, """
-        MATCH (p:Person)
-        WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
-        RETURN p.telegramId AS telegramId
-        LIMIT 1
-    """, {"username": username, "usernameLower": username.lower()})
+    # Get org display name
+    org_name_result = await execute_query(org, """
+        MATCH (o:Org {id: $orgId})
+        RETURN o.name AS name
+    """, {"orgId": slug})
+    org_name_values = org_name_result.get("values", [])
+    group_name = org_name_values[0][0] if org_name_values and org_name_values[0][0] else slug
 
-    values = person_result.get("values", [])
-    if not values or not values[0][0]:
-        return {"status": "configured", "in_group": False}
-
-    telegram_id = values[0][0]
-
-    # Check TelegramUser IN_GROUP with active status
-    # TelegramUser is unscoped, so query directly without org injection
+    # Single cross-org query: find Person by github/name (any org) → TelegramUser → IN_GROUP → target Org
+    # Person is org-scoped but TelegramUser and Org are not, so we use IDENTIFIES to bridge
     membership_result = await execute_query(org, """
-        MATCH (tu:TelegramUser {telegramId: $tid})-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
+        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p:Person)
+        WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
+        WITH DISTINCT tu
+        MATCH (tu)-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
         RETURN count(r) AS cnt
-    """, {"tid": telegram_id, "orgId": slug})
+    """, {"username": username, "usernameLower": username.lower(), "orgId": slug})
 
     membership_values = membership_result.get("values", [])
     in_group = bool(membership_values and membership_values[0][0] > 0)
 
-    return {"status": "configured", "in_group": in_group}
+    return {"status": "configured", "in_group": in_group, "group_name": group_name}
 
 
 @app.get("/api/auth/github/client-id")
