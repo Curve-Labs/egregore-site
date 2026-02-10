@@ -20,6 +20,7 @@ Read org name from `jq -r '.org_name' egregore.json`. The `✦` star is reserved
 | `/handoff` | `⇌ HANDOFF` | The bridge — passing context between minds |
 | `/quest` | `⚑ QUEST` | The flag — planting direction in unknown territory |
 | `/todo` | `□ TODO` | The checkbox — actionable items, personal intent |
+| `/archive` | `◇ ARCHIVE` | The diamond — crystallized pattern, refined and preserved |
 
 ### Section Markers
 
