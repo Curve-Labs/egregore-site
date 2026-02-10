@@ -105,6 +105,42 @@ bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'}) WHERE s.date
 # Q_orphans: Orphan artifact count (14 days)
 bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - duration('P14D') AND NOT (a)-[:PART_OF]->(:Quest) RETURN count(a) AS orphanCount" > "$TMPDIR/qorphans.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qorphans.json" &
 
+# --- Trend queries (4 lightweight metrics for Insight enrichment) ---
+
+# AM_cadence: My session count per week (4 weeks)
+bash "$GS" query "
+MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'})
+WHERE s.date >= date() - duration('P28D')
+WITH duration.inDays(s.date, date()).days / 7 AS weeksAgo, count(s) AS sessions
+RETURN weeksAgo, sessions ORDER BY weeksAgo" > "$TMPDIR/am_cadence.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/am_cadence.json" &
+
+# AM_resolution: My handoff resolution stats (30d avg)
+bash "$GS" query "
+MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
+WHERE s.handoffStatus = 'done' AND s.date >= date() - duration('P30D')
+  AND s.handoffReadDate IS NOT NULL
+WITH duration.inDays(s.date, s.handoffReadDate).days AS days
+RETURN avg(days) AS avgDays, count(*) AS resolved" > "$TMPDIR/am_resolution.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/am_resolution.json" &
+
+# AM_throughput: My todo created vs done (28d)
+bash "$GS" query "
+MATCH (t:Todo)-[:BY]->(p:Person {name: '$ME'})
+WHERE t.created >= datetime() - duration('P28D') OR
+      (t.status = 'done' AND t.lastTransitionDate >= datetime() - duration('P28D'))
+RETURN count(CASE WHEN t.created >= datetime() - duration('P28D') THEN 1 END) AS created,
+       count(CASE WHEN t.status = 'done' AND t.lastTransitionDate >= datetime() - duration('P28D') THEN 1 END) AS completed" > "$TMPDIR/am_throughput.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/am_throughput.json" &
+
+# AM_capture: My knowledge capture ratio (28d)
+bash "$GS" query "
+MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'})
+WHERE s.date >= date() - duration('P28D')
+OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p)
+WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day})
+  AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D')
+WITH s, count(a) AS artifacts
+RETURN count(s) AS total,
+       count(CASE WHEN artifacts > 0 THEN 1 END) AS captured" > "$TMPDIR/am_capture.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/am_capture.json" &
+
 # Git sync + PRs + disk cross-reference
 (
   # Sync
@@ -146,7 +182,7 @@ bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - durati
 wait
 
 # --- Validate JSON files ---
-for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve qcheckins qstale qtodos qlastcheckin; do
+for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve qcheckins qstale qtodos qlastcheckin am_cadence am_resolution am_throughput am_capture; do
   jq . "$TMPDIR/$f.json" >/dev/null 2>&1 || echo "$EMPTY" > "$TMPDIR/$f.json"
 done
 
@@ -174,6 +210,10 @@ jq -n \
   --slurpfile stale_blockers "$TMPDIR/qstale.json" \
   --slurpfile todos "$TMPDIR/qtodos.json" \
   --slurpfile last_checkin "$TMPDIR/qlastcheckin.json" \
+  --slurpfile am_cadence "$TMPDIR/am_cadence.json" \
+  --slurpfile am_resolution "$TMPDIR/am_resolution.json" \
+  --slurpfile am_throughput "$TMPDIR/am_throughput.json" \
+  --slurpfile am_capture "$TMPDIR/am_capture.json" \
   --argjson prs "$PRS" \
   --arg disk_handoffs "$DISK_HANDOFFS" \
   --arg disk_decisions "$DISK_DECISIONS" \
@@ -195,5 +235,11 @@ jq -n \
     todos: $todos[0],
     last_checkin: $last_checkin[0],
     prs: $prs,
-    disk: {handoffs: $disk_handoffs, decisions: $disk_decisions}
+    disk: {handoffs: $disk_handoffs, decisions: $disk_decisions},
+    trends: {
+      cadence: $am_cadence[0],
+      resolution: $am_resolution[0],
+      throughput: $am_throughput[0],
+      capture: $am_capture[0]
+    }
   }'
