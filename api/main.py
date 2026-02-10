@@ -865,26 +865,35 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     if not org.get("telegram_chat_id"):
         return {"status": "not_configured", "in_group": False, "group_name": None}
 
-    # Get org display name
-    org_name_result = await execute_query(org, """
-        MATCH (o:Org {id: $orgId})
-        RETURN o.name AS name
-    """, {"orgId": slug})
-    org_name_values = org_name_result.get("values", [])
-    group_name = org_name_values[0][0] if org_name_values and org_name_values[0][0] else slug
+    # Get actual Telegram group title from Telegram API
+    bot_token = org.get("telegram_bot_token", "")
+    chat_id = org.get("telegram_chat_id", "")
+    group_name = slug  # fallback
+    async with httpx.AsyncClient() as client:
+        try:
+            chat_resp = await client.get(
+                f"https://api.telegram.org/bot{bot_token}/getChat",
+                params={"chat_id": chat_id},
+                timeout=10.0,
+            )
+            chat_data = chat_resp.json()
+            if chat_data.get("ok"):
+                group_name = chat_data["result"].get("title", slug)
+        except Exception:
+            pass
 
-    # Single cross-org query: find Person by github/name (any org) → TelegramUser → IN_GROUP → target Org
-    # Person is org-scoped but TelegramUser and Org are not, so we use IDENTIFIES to bridge
+    # Find Person by GitHub username → TelegramUser → IN_GROUP, also return Telegram username
     membership_result = await execute_query(org, """
         MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p:Person)
         WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
         WITH DISTINCT tu
-        MATCH (tu)-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
-        RETURN count(r) AS cnt
+        OPTIONAL MATCH (tu)-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
+        RETURN count(r) AS cnt, tu.username AS telegramUsername
     """, {"username": username, "usernameLower": username.lower(), "orgId": slug})
 
     membership_values = membership_result.get("values", [])
-    in_group = bool(membership_values and membership_values[0][0] > 0)
+    in_group = bool(membership_values and membership_values[0] and membership_values[0][0] > 0)
+    telegram_username = membership_values[0][1] if membership_values and len(membership_values[0]) > 1 else None
 
     # Generate invite link so frontend can link to the group
     telegram_group_link = None
@@ -893,7 +902,13 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     except Exception:
         pass
 
-    return {"status": "configured", "in_group": in_group, "group_name": group_name, "telegram_group_link": telegram_group_link}
+    return {
+        "status": "configured",
+        "in_group": in_group,
+        "group_name": group_name,
+        "telegram_group_link": telegram_group_link,
+        "telegram_username": telegram_username,
+    }
 
 
 @app.get("/api/auth/github/client-id")
