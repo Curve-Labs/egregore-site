@@ -454,28 +454,7 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json: {e}")
 
-    # 7. Bootstrap Neo4j — Org, founder Person, Project
-    try:
-        await execute_query(new_org, """
-            MERGE (o:Org {id: $_org})
-            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
-        """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
-
-        await execute_query(new_org, """
-            MERGE (p:Person {name: $name})
-            WITH p
-            MATCH (o:Org {id: $_org})
-            MERGE (p)-[:MEMBER_OF]->(o)
-        """, {"name": user["login"]})
-
-        await execute_query(new_org, """
-            MERGE (pr:Project {name: "Egregore"})
-            WITH pr
-            MATCH (o:Org {id: $_org})
-            MERGE (pr)-[:PART_OF]->(o)
-        """, {})
-    except Exception as e:
-        logger.warning(f"Neo4j bootstrap partial failure: {e}")
+    # 7. Neo4j bootstrap deferred to first session start (avoids orphaned nodes)
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
@@ -565,18 +544,8 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
     # Look up org's API key — prefer slug from config, fall back to computing from owner
     slug = config.get("slug", owner.lower().replace("-", "").replace(" ", ""))
     repos = config.get("repos", [])
+    # Person node creation deferred to first session start (avoids orphaned nodes)
     org_config = ORG_CONFIGS.get(slug)
-    if org_config:
-        try:
-            await execute_query(org_config, """
-                MERGE (p:Person {name: $name})
-                WITH p
-                MATCH (o:Org {id: $_org})
-                MERGE (p)-[:MEMBER_OF]->(o)
-            """, {"name": user["login"]})
-        except Exception:
-            pass
-
     api_key = org_config.get("api_key", "") if org_config else ""
 
     # Generate Telegram group invite if configured
