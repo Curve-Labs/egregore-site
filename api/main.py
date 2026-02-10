@@ -68,7 +68,8 @@ async def graph_query(body: GraphQuery, org: dict = Depends(validate_api_key)):
     """Execute a Cypher query scoped to the org."""
     result = await execute_query(org, body.statement, body.parameters)
     if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
+        status = 429 if result.get("rate_limited") else 400
+        raise HTTPException(status_code=status, detail=result["error"])
     return result
 
 

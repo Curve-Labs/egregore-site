@@ -3,6 +3,15 @@ import re
 
 import httpx
 
+from .guard import (
+    validate_query,
+    check_org_tampering,
+    rate_limiter,
+    audit_log,
+    classify_query,
+    RateLimitError,
+)
+
 
 async def execute_query(
     org: dict, statement: str, parameters: dict = None
@@ -13,6 +22,16 @@ async def execute_query(
     password = org["neo4j_password"]
     slug = org["slug"]
 
+    # Guard: validate query before execution
+    try:
+        validate_query(statement)
+        check_org_tampering(statement, parameters)
+        rate_limiter.check(slug)
+    except RateLimitError as e:
+        return {"error": str(e), "rate_limited": True}
+    except ValueError as e:
+        return {"error": str(e)}
+
     url = f"https://{host}/db/neo4j/query/v2"
     auth = base64.b64encode(f"{user}:{password}".encode()).decode()
 
@@ -20,6 +39,9 @@ async def execute_query(
     scoped_statement = inject_org_scope(statement, slug)
     params = parameters or {}
     params["_org"] = slug
+
+    # Audit log (after injection, before HTTP call)
+    audit_log(slug, classify_query(statement), len(statement))
 
     body = {"statement": scoped_statement, "parameters": params}
 

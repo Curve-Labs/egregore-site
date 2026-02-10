@@ -47,7 +47,10 @@ rsync -av --delete \
   --exclude='node_modules' \
   --exclude='__pycache__' \
   --exclude='.claude/settings.local.json' \
+  --exclude='.claude/commands/release.md' \
+  --exclude='.claude/commands/sync-public.md' \
   --exclude='.playwright-mcp' \
+  --exclude='skills/cl-admin' \
   --exclude='api' \
   --exclude='ascii-oracle' \
   --exclude='blog' \
@@ -134,7 +137,7 @@ Current diff between repos:
 
 ## Rules
 
-- **Never sync**: `.git/`, `memory/`, `.env`, `.egregore-state.json`, `egregore.json`, `.mcp.json`, `mcp.json`, `mcp.shared.*.json`, `node_modules/`, `__pycache__/`, `.claude/settings.local.json`, `.playwright-mcp/`, `api/`, `ascii-oracle/`, `blog/`, `telegram-bot/`, `tests/`, `data/`, `packages/`, `Dockerfile`, `TELEGRAM_BOT_PLAN.md`, `bin/preflight.sh`
+- **Never sync**: `.git/`, `memory/`, `.env`, `.egregore-state.json`, `egregore.json`, `.mcp.json`, `mcp.json`, `mcp.shared.*.json`, `node_modules/`, `__pycache__/`, `.claude/settings.local.json`, `.claude/commands/release.md`, `.claude/commands/sync-public.md`, `.playwright-mcp/`, `skills/cl-admin/`, `api/`, `ascii-oracle/`, `blog/`, `telegram-bot/`, `tests/`, `data/`, `packages/`, `Dockerfile`, `TELEGRAM_BOT_PLAN.md`, `bin/preflight.sh`
 - **Always sync everything else** — commands, bin scripts, CLAUDE.md, README.md, settings.json, start scripts, `.env.example`, etc.
 - The `--delete` flag ensures files removed from curve-labs-core are also removed from egregore-core
 - Always show the diff before committing
