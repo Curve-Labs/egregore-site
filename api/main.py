@@ -58,6 +58,16 @@ async def startup():
     await load_orgs_from_neo4j()
 
 
+@app.post("/api/admin/reload")
+async def admin_reload(authorization: str = Header(...)):
+    """Reload ORG_CONFIGS from Neo4j. Requires any valid API key."""
+    key = authorization.replace("Bearer ", "").strip()
+    if not any(org.get("api_key") == key for org in ORG_CONFIGS.values()):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    await load_orgs_from_neo4j()
+    return {"status": "ok", "orgs_loaded": len(ORG_CONFIGS)}
+
+
 # =============================================================================
 # GRAPH ENDPOINTS
 # =============================================================================
