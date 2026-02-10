@@ -454,7 +454,15 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json: {e}")
 
-    # 7. Neo4j bootstrap deferred to first session start (avoids orphaned nodes)
+    # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
+    # Person and Project nodes deferred to first session start (avoids orphans)
+    try:
+        await execute_query(new_org, """
+            MERGE (o:Org {id: $_org})
+            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
+        """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
+    except Exception as e:
+        logger.warning(f"Neo4j Org bootstrap failed: {e}")
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
