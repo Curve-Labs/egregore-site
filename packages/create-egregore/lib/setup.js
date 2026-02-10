@@ -23,8 +23,9 @@ async function install(data, ui, targetDir) {
   const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [], telegram_group_link } = data;
   const base = targetDir || process.cwd();
 
-  const dirSlug = (github_org || slug || "egregore").toLowerCase();
-  const egregoreDir = path.join(base, `egregore-${dirSlug}`);
+  // Directory name from fork URL (what git clone would use), e.g. "egregore-core"
+  const forkDirName = fork_url.split("/").pop().replace(/\.git$/, "");
+  const egregoreDir = path.join(base, forkDirName);
   const memoryDirName = memory_url
     .split("/")
     .pop()
@@ -82,7 +83,7 @@ async function install(data, ui, targetDir) {
 
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
-  registerInstance(dirSlug, org_name, egregoreDir);
+  registerInstance(forkDirName, org_name, egregoreDir);
   const alias = await installShellAlias(egregoreDir, ui);
 
   // 6+. Clone managed repos (if any)
@@ -107,7 +108,7 @@ async function install(data, ui, targetDir) {
   ui.success(`Egregore is ready for ${ui.bold(org_name)}`);
   console.log("");
   ui.info(`Your workspace:`);
-  ui.info(`  ${ui.cyan(`./egregore-${dirSlug}/`)}  — Your Egregore instance`);
+  ui.info(`  ${ui.cyan(`./${forkDirName}/`)}  — Your Egregore instance`);
   ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
   for (const repoName of clonedRepos) {
     ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
