@@ -7,6 +7,10 @@ class GraphQuery(BaseModel):
     parameters: dict = {}
 
 
+class GraphBatch(BaseModel):
+    queries: list[GraphQuery] = Field(..., min_length=1, max_length=20)
+
+
 class NotifySend(BaseModel):
     to: str
     message: str

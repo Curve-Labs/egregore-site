@@ -23,11 +23,11 @@ from .auth import (
     load_orgs_from_neo4j, exchange_github_code, GITHUB_CLIENT_ID,
 )
 from .models import (
-    GraphQuery, NotifySend, NotifyGroup, OrgRegister,
+    GraphQuery, GraphBatch, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
     OrgInvite, OrgAcceptInvite,
 )
-from .services.graph import execute_query, get_schema, test_connection
+from .services.graph import execute_query, execute_batch, get_schema, test_connection
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
 from .services import github as gh
 from .services.tokens import create_token, claim_token, create_invite_token, peek_token
@@ -71,6 +71,19 @@ async def graph_query(body: GraphQuery, org: dict = Depends(validate_api_key)):
         status = 429 if result.get("rate_limited") else 400
         raise HTTPException(status_code=status, detail=result["error"])
     return result
+
+
+@app.post("/api/graph/batch")
+async def graph_batch(body: GraphBatch, org: dict = Depends(validate_api_key)):
+    """Execute multiple Cypher queries concurrently, scoped to the org."""
+    queries = [{"statement": q.statement, "parameters": q.parameters} for q in body.queries]
+    results = await execute_batch(org, queries)
+    # If the first result has a batch-level error, raise it
+    if len(results) == 1 and isinstance(results[0], dict) and results[0].get("error"):
+        r = results[0]
+        status = 429 if r.get("rate_limited") else 400
+        raise HTTPException(status_code=status, detail=r["error"])
+    return {"results": results}
 
 
 @app.get("/api/graph/schema")
