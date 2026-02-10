@@ -4,7 +4,7 @@ Topic: $ARGUMENTS
 
 ## Data collection
 
-Run ALL of these in parallel (one Bash call each):
+Run ALL THREE of these in parallel (one Bash call each):
 
 **Call 1 — sync + user + org + PRs:**
 ```bash
@@ -22,83 +22,50 @@ echo "---PRS---"; gh pr list --base develop --state open --json number,title,aut
 
 Map git username → short name: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, "Cem F" → cem, "Ali" → ali, etc.
 
-**Calls 2–8 — Neo4j queries via `bash bin/graph.sh query "..."`:**
+**Call 2 — All Neo4j queries in one batch call:**
 
-Q1 — My sessions (with tiebreaker for same-day ordering):
-```
-MATCH (s:Session)-[:BY]->(p:Person {name: '$me'})
-OPTIONAL MATCH (s)-[:HANDED_TO]->(target:Person)
-RETURN s.date AS date, s.topic AS topic, s.id AS id, s.filePath AS filePath,
-       target.name AS handedTo
-ORDER BY s.date DESC, s.id DESC LIMIT 10
-```
-Note: Returns 10 (not 5) so orientation can pick from more context. Display still shows top 5. The `s.id DESC` tiebreaker ensures most recently created sessions within the same day sort first. `filePath` and `handedTo` are used by the session orientation logic.
+After Call 1 returns and you know `$me` (short name), run all Neo4j queries in a single batch. Replace `$me` with the actual short name in each query string before sending.
 
-Q2 — Team (7 days):
-```
-MATCH (s:Session)-[:BY]->(p:Person) WHERE p.name <> '$me' AND s.date >= date() - duration('P7D') RETURN s.date AS date, s.topic AS topic, p.name AS by ORDER BY s.date DESC LIMIT 5
-```
-
-Q3 — Active quests (scored with personal relevance):
-```
-MATCH (q:Quest {status: 'active'})
-OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
-OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person) WHERE p.name IS NOT NULL AND p.name <> 'external'
-OPTIONAL MATCH (q)-[:STARTED_BY]->(starter:Person {name: '$me'})
-OPTIONAL MATCH (myArt:Artifact)-[:PART_OF]->(q) WHERE (myArt)-[:CONTRIBUTED_BY]->(:Person {name: '$me'})
-WITH q, count(DISTINCT a) AS artifacts, count(DISTINCT p) AS contributors,
-     CASE WHEN count(a) > 0 THEN duration.inDays(date(max(a.created)), date()).days
-          ELSE duration.inDays(date(q.started), date()).days END AS daysSince,
-     coalesce(q.priority, 0) AS priority,
-     starter IS NOT NULL AS iStarted,
-     count(DISTINCT myArt) AS myArtifacts
-RETURN q.id AS quest, q.title AS title, artifacts, daysSince, iStarted, myArtifacts,
-       round((toFloat(artifacts) + toFloat(contributors)*1.5
-         + toFloat(priority)*5.0
-         + 30.0/(1.0+toFloat(daysSince)*0.5)
-         + CASE WHEN iStarted THEN 15.0 ELSE 0.0 END
-         + toFloat(myArtifacts)*3.0
-       ) * 100)/100 AS score
-ORDER BY score DESC
-```
-Personal relevance: +15 if I started the quest, +3 per artifact I contributed. This ensures quests I own always rank above quests where I have zero involvement.
-
-Q4 — Pending questions for me:
-```
-MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Person {name: '$me'}) MATCH (qs)-[:ASKED_BY]->(asker:Person) RETURN qs.id AS setId, qs.topic AS topic, qs.created AS created, asker.name AS from ORDER BY qs.created DESC
+```bash
+bash bin/graph-batch.sh '[
+  {"statement": "MATCH (s:Session)-[:BY]->(p:Person {name: '"'"'$me'"'"'}) OPTIONAL MATCH (s)-[:HANDED_TO]->(target:Person) RETURN s.date AS date, s.topic AS topic, s.id AS id, s.filePath AS filePath, target.name AS handedTo ORDER BY s.date DESC, s.id DESC LIMIT 10"},
+  {"statement": "MATCH (s:Session)-[:BY]->(p:Person) WHERE p.name <> '"'"'$me'"'"' AND s.date >= date() - duration('"'"'P7D'"'"') RETURN s.date AS date, s.topic AS topic, p.name AS by ORDER BY s.date DESC LIMIT 5"},
+  {"statement": "MATCH (q:Quest {status: '"'"'active'"'"'}) OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person) WHERE p.name IS NOT NULL AND p.name <> '"'"'external'"'"' OPTIONAL MATCH (q)-[:STARTED_BY]->(starter:Person {name: '"'"'$me'"'"'}) OPTIONAL MATCH (myArt:Artifact)-[:PART_OF]->(q) WHERE (myArt)-[:CONTRIBUTED_BY]->(:Person {name: '"'"'$me'"'"'}) WITH q, count(DISTINCT a) AS artifacts, count(DISTINCT p) AS contributors, CASE WHEN count(a) > 0 THEN duration.inDays(date(max(a.created)), date()).days ELSE duration.inDays(date(q.started), date()).days END AS daysSince, coalesce(q.priority, 0) AS priority, starter IS NOT NULL AS iStarted, count(DISTINCT myArt) AS myArtifacts RETURN q.id AS quest, q.title AS title, artifacts, daysSince, iStarted, myArtifacts, round((toFloat(artifacts) + toFloat(contributors)*1.5 + toFloat(priority)*5.0 + 30.0/(1.0+toFloat(daysSince)*0.5) + CASE WHEN iStarted THEN 15.0 ELSE 0.0 END + toFloat(myArtifacts)*3.0) * 100)/100 AS score ORDER BY score DESC"},
+  {"statement": "MATCH (qs:QuestionSet {status: '"'"'pending'"'"'})-[:ASKED_TO]->(p:Person {name: '"'"'$me'"'"'}) MATCH (qs)-[:ASKED_BY]->(asker:Person) RETURN qs.id AS setId, qs.topic AS topic, qs.created AS created, asker.name AS from ORDER BY qs.created DESC"},
+  {"statement": "MATCH (qs:QuestionSet {status: '"'"'answered'"'"'})-[:ASKED_BY]->(p:Person {name: '"'"'$me'"'"'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('"'"'P7D'"'"') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC"},
+  {"statement": "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '"'"'$me'"'"'}) WHERE s.date >= date() - duration('"'"'P7D'"'"') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name, s.filePath ORDER BY s.date DESC LIMIT 5"},
+  {"statement": "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('"'"'P7D'"'"') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name AS from, target.name AS to, s.filePath ORDER BY s.date DESC LIMIT 5"},
+  {"statement": "MATCH (a:Artifact) WHERE a.created >= date() - duration('"'"'P14D'"'"') WITH count(a) AS totalRecent MATCH (orphan:Artifact) WHERE orphan.created >= date() - duration('"'"'P14D'"'"') AND NOT (orphan)-[:PART_OF]->(:Quest) WITH totalRecent, collect(orphan) AS orphans, count(orphan) AS orphanCount WITH totalRecent, orphanCount, orphans, CASE WHEN totalRecent > 0 THEN toFloat(orphanCount) / toFloat(totalRecent) ELSE 0.0 END AS orphanRatio UNWIND orphans AS o UNWIND o.topics AS topic WITH orphanRatio, orphanCount, totalRecent, topic, count(DISTINCT o) AS topicCount ORDER BY topicCount DESC RETURN orphanRatio, orphanCount, totalRecent, collect({topic: topic, count: topicCount})[..5] AS topClusters"},
+  {"statement": "MATCH (s:Session)-[:BY]->(p:Person {name: '"'"'$me'"'"'}) WHERE s.date >= date() - duration('"'"'P14D'"'"') OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p) WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day}) AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('"'"'P1D'"'"') WITH s, count(a) AS artifactCount WHERE artifactCount = 0 RETURN count(s) AS gapCount"}
+]'
 ```
 
-Q5 — Answered questions (7 days):
-```
-MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$me'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC
-```
+This returns `{"results": [...]}` — an array of 9 results in the same order:
+- `results[0]` = Q1 (my sessions, 10 rows for orientation)
+- `results[1]` = Q2 (team sessions, 7 days)
+- `results[2]` = Q3 (active quests with scores)
+- `results[3]` = Q4 (pending questions for me)
+- `results[4]` = Q5 (answered questions, 7 days)
+- `results[5]` = Q6 (handoffs directed to me, 7 days)
+- `results[6]` = Q7 (all recent handoffs, 7 days)
+- `results[7]` = Q8 (orphan ratio + topic clusters)
+- `results[8]` = Knowledge gap (sessions without artifacts, 14 days)
 
-Q6 — Handoffs directed to me (7 days):
-```
-MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$me'}) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name, s.filePath ORDER BY s.date DESC LIMIT 5
-```
+Note: Q1 returns 10 (not 5) so orientation can pick from more context. Display still shows top 5. The `s.id DESC` tiebreaker ensures most recently created sessions within the same day sort first. `filePath` and `handedTo` are used by the session orientation logic.
 
-Q7 — All recent handoffs (7 days):
-```
-MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic, s.date, author.name AS from, target.name AS to, s.filePath ORDER BY s.date DESC LIMIT 5
-```
+Personal relevance in Q3: +15 if I started the quest, +3 per artifact I contributed. This ensures quests I own always rank above quests where I have zero involvement.
 
-Q8 — Orphan ratio + topic clusters (14 days):
+**Conditional queries Q9/Q10** — only if `results[7]` (Q8) shows orphanRatio > 0.4:
+```bash
+bash bin/graph-batch.sh '[
+  {"statement": "MATCH (q:Quest {status: '"'"'active'"'"'}) WHERE q.priority >= 2 OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) WITH q, CASE WHEN count(a) > 0 THEN duration.inDays(date(max(a.created)), date()).days ELSE duration.inDays(date(q.started), date()).days END AS daysSince WHERE daysSince >= 10 RETURN q.id AS quest, q.priority AS priority, daysSince"},
+  {"statement": "MATCH (q:Quest {status: '"'"'active'"'"'}) WHERE q.topics IS NOT NULL RETURN q.id AS quest, q.topics AS topics"}
+]'
 ```
-MATCH (a:Artifact) WHERE a.created >= date() - duration('P14D') WITH count(a) AS totalRecent MATCH (orphan:Artifact) WHERE orphan.created >= date() - duration('P14D') AND NOT (orphan)-[:PART_OF]->(:Quest) WITH totalRecent, collect(orphan) AS orphans, count(orphan) AS orphanCount WITH totalRecent, orphanCount, orphans, CASE WHEN totalRecent > 0 THEN toFloat(orphanCount) / toFloat(totalRecent) ELSE 0.0 END AS orphanRatio UNWIND orphans AS o UNWIND o.topics AS topic WITH orphanRatio, orphanCount, totalRecent, topic, count(DISTINCT o) AS topicCount ORDER BY topicCount DESC RETURN orphanRatio, orphanCount, totalRecent, collect({topic: topic, count: topicCount})[..5] AS topClusters
-```
+- `results[0]` = Q9 (stale high-priority quests)
+- `results[1]` = Q10 (quest topic coverage)
 
-Q9 — Stale high-priority quests (only if Q8 orphanRatio > 0.4):
-```
-MATCH (q:Quest {status: 'active'}) WHERE q.priority >= 2 OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) WITH q, CASE WHEN count(a) > 0 THEN duration.inDays(date(max(a.created)), date()).days ELSE duration.inDays(date(q.started), date()).days END AS daysSince WHERE daysSince >= 10 RETURN q.id AS quest, q.priority AS priority, daysSince
-```
-
-Q10 — Quest topic coverage (only if Q8 orphanRatio > 0.4):
-```
-MATCH (q:Quest {status: 'active'}) WHERE q.topics IS NOT NULL RETURN q.id AS quest, q.topics AS topics
-```
-
-**Call 9 — Disk cross-reference (run in parallel with Neo4j calls):**
+**Call 3 — Disk cross-reference (run in parallel with Call 2):**
 ```bash
 # Recent handoff files on disk — catches work not yet synced to graph
 ls -1 memory/handoffs/$(date +%Y-%m)/ 2>/dev/null | grep "$(date +%d)-\|$(date -v-1d +%d 2>/dev/null || date -d 'yesterday' +%d)-" | head -10
@@ -109,7 +76,7 @@ This catches today's and yesterday's handoff files + recent knowledge artifacts 
 
 ## Data freshness check
 
-After all queries return, compare Q1 session count for today/yesterday against Call 9 disk files. If disk has more handoff files for today than Q1 has sessions for today, the graph is stale. In that case:
+After all calls return, compare `results[0]` (Q1 — my sessions) session count for today/yesterday against Call 3 disk files. If disk has more handoff files for today than Q1 has sessions for today, the graph is stale. In that case:
 
 1. **For the dashboard display**: Use graph data as-is (it's what we have)
 2. **For the orientation options**: Supplement with disk data. Read the titles from the most recent handoff files on disk (parse the `# Handoff: [topic]` header line) to generate "Continue" options even when the graph is behind.
@@ -213,19 +180,7 @@ Separated by a blank line between the two sub-sections. Omit either if empty.
 
 **Footer** (always shown, separated by `├────┤`)
 - If Q8 orphanCount > 0: `N artifacts unlinked to quests — /quest suggest` (shown before command hints)
-- Command hints: `/ask a question · /quest to see more · /reflect for insights` — BUT if Q4 (knowledge gaps from reflect's schema) shows sessions without artifacts, replace the generic `/reflect for insights` with a specific CTA: `N sessions without captured insights — /reflect to extract` (where N = number of gap sessions from Q4-equivalent query below)
-
-**Knowledge gap query** (run in parallel with other queries, only used for footer):
-```cypher
-MATCH (s:Session)-[:BY]->(p:Person {name: '$me'})
-WHERE s.date >= date() - duration('P14D')
-OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p)
-WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day})
-  AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D')
-WITH s, count(a) AS artifactCount
-WHERE artifactCount = 0
-RETURN count(s) AS gapCount
-```
+- Command hints: `/ask a question · /quest to see more · /reflect for insights` — BUT if `results[8]` (knowledge gap query from the batch) shows `gapCount > 0`, replace the generic `/reflect for insights` with a specific CTA: `N sessions without captured insights — /reflect to extract`
 
 If `gapCount > 0`, the footer line becomes: `{gapCount} sessions without captured insights — /reflect to extract`
 If `gapCount = 0`, use the default: `/ask a question · /quest to see more · /reflect for insights`
@@ -249,7 +204,7 @@ If `gapCount = 0`, use the default: `/ask a question · /quest to see more · /r
 
 ### Option generation
 
-Generate 2-4 options from the data already collected (Q1–Q8 + Call 9 + PRs). Rank by priority — the first option should be the highest-signal action. Cap at 4 options total (AskUserQuestion limit). "Other" is provided automatically by the tool.
+Generate 2-4 options from the data already collected (results[0]–results[8] + Call 3 disk files + PRs from Call 1). Rank by priority — the first option should be the highest-signal action. Cap at 4 options total (AskUserQuestion limit). "Other" is provided automatically by the tool.
 
 **Priority ranking** (take the first 2-4 that apply):
 
@@ -257,7 +212,7 @@ Generate 2-4 options from the data already collected (Q1–Q8 + Call 9 + PRs). R
 |----------|--------|---------------|-------|-------------|
 | 1 | Q6 (handoffs to me) | Someone directed work at you | `Read {author}'s handoff` | `{topic} — {time_ago}` |
 | 2 | Q4 (pending questions) | Someone is waiting for answers | `Answer {asker}'s questions` | `About "{topic}" — {time_ago}` |
-| 3–4 | Q1 + Call 9 (work streams) | You have recent work | `{work_stream_name}` | `{specific actionable hint}` |
+| 3–4 | Q1 + Call 3 (work streams) | You have recent work | `{work_stream_name}` | `{specific actionable hint}` |
 | 5 | PRs (from Call 1) | Open PRs not by you | `Review PR #{number}` | `{title} by {author}` |
 | 6 | — (fallback) | Nothing above applies | `Start something new` | `Begin a fresh work stream` |
 
@@ -267,7 +222,7 @@ Generate 2-4 options from the data already collected (Q1–Q8 + Call 9 + PRs). R
 
 This is the most important part of the orientation. The goal is to surface 1-2 **specific, actionable work streams** the user could start right now — not vague themes, not random quests.
 
-**Step A: Gather recent session topics.** Merge Q1 sessions (last 3 days only) with Call 9 handoff files on disk. If a file appears on disk but not in Q1, read its `# Handoff: [topic]` line. Deduplicate by session ID or filename slug.
+**Step A: Gather recent session topics.** Merge Q1 sessions (last 3 days only) with Call 3 handoff files on disk. If a file appears on disk but not in Q1, read its `# Handoff: [topic]` line. Deduplicate by session ID or filename slug.
 
 **Step B: Cluster into work streams.** Group sessions by shared themes in their topics. Look for recurring keywords and concepts. For example:
 - "Individual tier strategy", "Individual tier agent prompts", "Pricing strategy" → **Pricing & business model**
@@ -469,9 +424,9 @@ If Neo4j fails, use `memory/` files. Add `(offline)` after ✦ in header. No han
 ## Rules
 
 - No sibling directory access — Neo4j or memory/ only
-- `bash bin/graph.sh query "..."` for Neo4j — never MCP
+- `bash bin/graph-batch.sh '[...]'` for Neo4j batch queries, `bash bin/graph.sh query "..."` for single queries — never MCP
 - `gh pr list --base develop --state open --json number,title,author` for PRs
 - Org name from `jq -r '.org_name' egregore.json` — truncate at 20 chars
-- Run all queries in parallel
+- All Neo4j queries go in one batch call (Call 2), run in parallel with Call 1 and Call 3
 - **No sub-boxes** — only outer frame `│` borders and `├────┤` separators
 - Pad every content line with trailing spaces so closing `│` aligns

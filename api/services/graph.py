@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import re
 
@@ -12,14 +13,50 @@ from .guard import (
     RateLimitError,
 )
 
+# Module-level client for connection reuse across requests
+_client: httpx.AsyncClient | None = None
+
+
+def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(timeout=30.0)
+    return _client
+
+
+async def _post_neo4j(org: dict, scoped_statement: str, params: dict) -> dict:
+    """Send a single query to Neo4j. Shared by execute_query and execute_batch."""
+    host = org["neo4j_host"]
+    user = org["neo4j_user"]
+    password = org["neo4j_password"]
+
+    url = f"https://{host}/db/neo4j/query/v2"
+    auth = base64.b64encode(f"{user}:{password}".encode()).decode()
+
+    body = {"statement": scoped_statement, "parameters": params}
+
+    client = _get_client()
+    response = await client.post(
+        url,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+        },
+        json=body,
+    )
+
+    data = response.json()
+
+    if data.get("errors") and data["errors"] != []:
+        return {"error": data["errors"]}
+
+    return data.get("data", {})
+
 
 async def execute_query(
     org: dict, statement: str, parameters: dict = None
 ) -> dict:
     """Execute a Cypher query against the org's Neo4j instance, scoped to their org."""
-    host = org["neo4j_host"]
-    user = org["neo4j_user"]
-    password = org["neo4j_password"]
     slug = org["slug"]
 
     # Guard: validate query before execution
@@ -32,9 +69,6 @@ async def execute_query(
     except ValueError as e:
         return {"error": str(e)}
 
-    url = f"https://{host}/db/neo4j/query/v2"
-    auth = base64.b64encode(f"{user}:{password}".encode()).decode()
-
     # Inject org scoping into the query
     scoped_statement = inject_org_scope(statement, slug)
     params = parameters or {}
@@ -43,25 +77,40 @@ async def execute_query(
     # Audit log (after injection, before HTTP call)
     audit_log(slug, classify_query(statement), len(statement))
 
-    body = {"statement": scoped_statement, "parameters": params}
+    return await _post_neo4j(org, scoped_statement, params)
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            url,
-            headers={
-                "Authorization": f"Basic {auth}",
-                "Content-Type": "application/json",
-            },
-            json=body,
-            timeout=30.0,
-        )
 
-    data = response.json()
+async def execute_batch(
+    org: dict, queries: list[dict]
+) -> list[dict]:
+    """Execute multiple Cypher queries concurrently, return results in same order."""
+    slug = org["slug"]
 
-    if data.get("errors") and data["errors"] != []:
-        return {"error": data["errors"]}
+    # Validate all queries upfront before executing any
+    for i, q in enumerate(queries):
+        try:
+            validate_query(q["statement"])
+            check_org_tampering(q["statement"], q.get("parameters"))
+        except (RateLimitError, ValueError) as e:
+            return [{"error": str(e), "failed_at": i}]
 
-    return data.get("data", {})
+    # Rate limit: count each query in the batch
+    try:
+        for _ in queries:
+            rate_limiter.check(slug)
+    except RateLimitError as e:
+        return [{"error": str(e), "rate_limited": True}]
+
+    # Prepare and execute all queries concurrently
+    async def run_one(q: dict) -> dict:
+        scoped = inject_org_scope(q["statement"], slug)
+        params = dict(q.get("parameters") or {})
+        params["_org"] = slug
+        audit_log(slug, classify_query(q["statement"]), len(q["statement"]))
+        return await _post_neo4j(org, scoped, params)
+
+    results = await asyncio.gather(*[run_one(q) for q in queries])
+    return list(results)
 
 
 async def get_schema(org: dict) -> dict:
