@@ -302,6 +302,56 @@ function InstanceButton({ instance, onClick }) {
   );
 }
 
+function InstanceNamePrompt({ org, onSubmit }) {
+  const [name, setName] = useState("");
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem", textAlign: "center" }}>
+        New instance for {org.name || org.login}
+      </p>
+      <p style={{ ...font.serif, fontSize: "1.1rem", textAlign: "center", marginBottom: "0.5rem" }}>
+        Name this instance
+      </p>
+      <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, textAlign: "center", marginBottom: "2rem" }}>
+        A short name to distinguish it from other instances. This will be used in the repo name.
+      </p>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="e.g. research, frontend, ops"
+        autoFocus
+        style={{
+          ...font.mono, fontSize: "0.85rem", width: "100%", padding: "0.75rem 1rem",
+          border: `1px solid ${C.warmGray}`, background: "transparent", color: C.ink,
+          outline: "none", marginBottom: "0.75rem", boxSizing: "border-box",
+        }}
+        onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onSubmit(name.trim()); }}
+      />
+      {name.trim() && (
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1.5rem" }}>
+          Repo: <span style={{ color: C.ink }}>egregore-{name.trim().toLowerCase().replace(/\s+/g, "-")}</span>
+        </p>
+      )}
+      <div style={{ textAlign: "right" }}>
+        <button
+          onClick={() => onSubmit(name.trim())}
+          disabled={!name.trim()}
+          style={{
+            ...font.mono, fontSize: "0.75rem",
+            background: name.trim() ? C.ink : C.warmGray, color: C.parchment,
+            border: "none", padding: "0.6rem 1.25rem",
+            cursor: name.trim() ? "pointer" : "default",
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RepoPicker({ token, org, onPick }) {
   const [repos, setRepos] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -449,7 +499,7 @@ function RepoPicker({ token, org, onPick }) {
   );
 }
 
-function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
+function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceName }) {
   const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -463,6 +513,7 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
           org_name: org.name || org.login,
           is_personal: org.is_personal || false,
           repos,
+          instance_name: instanceName || undefined,
         });
 
     action
@@ -891,6 +942,7 @@ export default function SetupFlow() {
   const [selectedRepos, setSelectedRepos] = useState(null); // null = not picked yet, [] = skipped
   const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
   const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
+  const [instanceName, setInstanceName] = useState(null); // name for new instance (when creatingNew)
 
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
@@ -972,6 +1024,15 @@ export default function SetupFlow() {
     );
   }
 
+  // Instance name prompt (when creating new instance in org that already has one)
+  if (githubToken && selectedOrg && creatingNew && instanceName === null) {
+    return (
+      <SetupLayout>
+        <InstanceNamePrompt org={selectedOrg} onSubmit={setInstanceName} />
+      </SetupLayout>
+    );
+  }
+
   // Repo picker (for new setup or creating new instance in existing org)
   if (githubToken && selectedOrg && selectedRepos === null) {
     return (
@@ -983,9 +1044,10 @@ export default function SetupFlow() {
 
   // Setup in progress / complete
   if (githubToken && selectedOrg) {
+    const orgForSetup = creatingNew ? { ...selectedOrg, has_egregore: false } : selectedOrg;
     return (
       <SetupLayout>
-        <SetupProgress token={githubToken} user={user} org={selectedOrg} repos={selectedRepos || []} />
+        <SetupProgress token={githubToken} user={user} org={orgForSetup} repos={selectedRepos || []} instanceName={instanceName} />
       </SetupLayout>
     );
   }
