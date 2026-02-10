@@ -192,18 +192,29 @@ Hey Cem, oz started a quest you're involved in: {title}
 
 ## Linked Todos (in detail view)
 
-When showing quest details (`/quest [name]`), query linked todos:
+When showing quest details (`/quest [name]`), query linked todos (all active statuses):
 
 ```bash
-bash bin/graph.sh query "MATCH (t:Todo {status: 'open'})-[:PART_OF]->(q:Quest {id: '$questSlug'}) MATCH (t)-[:BY]->(p:Person) RETURN t.text AS text, p.name AS by, t.created AS created ORDER BY t.created DESC"
+bash bin/graph.sh query "MATCH (t:Todo)-[:PART_OF]->(q:Quest {id: '$questSlug'}) WHERE t.status IN ['open', 'blocked', 'deferred'] MATCH (t)-[:BY]->(p:Person) RETURN t.text AS text, t.status AS status, t.blockedBy AS blockedBy, t.deferredUntil AS deferredUntil, p.name AS by, t.created AS created ORDER BY t.created DESC"
 ```
 
-Display after Threads section, before Artifacts:
+Display after Threads section, before Artifacts, with status indicators and health:
 ```
-Todos:
+Todos: (healthy — 2/3 moving)
   □ cem: fix retry logic in graph.sh (2d ago)
-  □ oz: investigate connection pooling (today)
+  ✗ oz: investigate connection pooling — blocked: "waiting on API docs" (today)
+  ↓ cem: finalize tier naming — deferred until Feb 15 (5d ago)
 ```
+
+**Health indicator** — derived from todo status distribution:
+- All open/progressing → `healthy`
+- >50% blocked → `stalling`
+- All deferred → `hibernating`
+- Mixed → show fraction: `{n}/{total} moving`
+
+Format: `Todos: ({health} — {n}/{total} moving)` or `Todos: ({health})` for simple states.
+
+Status sigils in todo list: `□` open, `✗` blocked (with blockedBy text), `↓` deferred (with deferredUntil date).
 
 Omit the Todos section entirely if no todos are linked to the quest.
 

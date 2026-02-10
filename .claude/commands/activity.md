@@ -10,7 +10,7 @@ Run ONE command to get all dashboard data:
 bash bin/activity-data.sh
 ```
 
-Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `prs`, `disk`.
+Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `checkins`, `stale_blockers`, `todos`, `last_checkin`, `prs`, `disk`.
 
 If the command fails, fall back to reading `memory/` files. Add `(offline)` after ✦ in header.
 
@@ -32,7 +32,9 @@ Content rows: `│  {text padded with trailing spaces}  │`
 
 **Header**: `{ORG} EGREGORE ✦ ACTIVITY DASHBOARD` left, `{me} · {date}` right
 
-**Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective.
+**Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective. Additional insight lines:
+- If `stale_blockers.staleBlockedCount > 0`: `{N} todos blocked for 3+ days. /todo check to review.`
+- If no check-in in 3+ days (check `last_checkin`) AND `todos.activeTodoCount >= 3`: `{N} active todos, no check-in in {days}d. /todo check to review.`
 
 **Handoffs & Asks** (skip if all empty):
 - Handoffs (status=pending) → `[N] ● {from} → you: {topic} ({when})`
@@ -45,7 +47,9 @@ Content rows: `│  {text padded with trailing spaces}  │`
 
 **Sessions**:
 - `◦ YOUR SESSIONS` — top 5. Format: `{date}  {topic}`
+  - Interleave check-ins from `checkins` (by current user) in chronological order: `{date}  Check-in: {summary}`
 - `◦ TEAM` — top 5. Format: `{date}  {name}: {topic}`
+  - Interleave check-ins from `checkins` (by others) in chronological order: `{date}  {name}: Check-in: {summary}`
 - Blank line between sub-sections.
 
 **Quests & PRs** (skip if both empty):
@@ -56,7 +60,7 @@ Content rows: `│  {text padded with trailing spaces}  │`
 **Footer** (separated by `├────┤`):
 - If orphans.orphanCount > 0: `{N} artifacts unlinked to quests — /quest suggest`
 - If knowledge_gap.gapCount > 0: `{N} sessions without captured insights — /reflect to extract`
-- Else: `/ask a question · /quest to see more · /reflect for insights`
+- Else: `/todo check to review · /ask a question · /quest to see more`
 - Always end with: `What's your focus?`
 
 ### Date formatting

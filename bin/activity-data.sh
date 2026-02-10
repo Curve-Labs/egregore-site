@@ -73,6 +73,30 @@ LIMIT 8" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
 # Q7: All handoffs (7 days)
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS from, target.name AS to, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q7.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q7.json" &
 
+# Q_checkins: Recent check-ins (7 days)
+bash "$GS" query "MATCH (c:CheckIn)-[:BY]->(p:Person)
+WHERE c.date >= date() - duration('P7D')
+RETURN c.id AS id, c.summary AS summary, c.date AS date,
+       p.name AS by, c.totalItems AS total
+ORDER BY c.date DESC LIMIT 5" > "$TMPDIR/qcheckins.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qcheckins.json" &
+
+# Q_stale_blockers: Todos blocked for > 3 days
+bash "$GS" query "MATCH (t:Todo {status: 'blocked'})-[:BY]->(p:Person {name: '$ME'})
+WHERE t.lastTransitionDate <= datetime() - duration('P3D')
+RETURN count(t) AS staleBlockedCount" > "$TMPDIR/qstale.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qstale.json" &
+
+# Q_todos: Active todos count (open + blocked + deferred)
+bash "$GS" query "MATCH (t:Todo)-[:BY]->(p:Person {name: '$ME'})
+WHERE t.status IN ['open', 'blocked', 'deferred']
+RETURN count(t) AS activeTodoCount,
+       count(CASE WHEN t.status = 'blocked' THEN 1 END) AS blockedCount,
+       count(CASE WHEN t.status = 'deferred' THEN 1 END) AS deferredCount" > "$TMPDIR/qtodos.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qtodos.json" &
+
+# Q_last_checkin: Days since last check-in
+bash "$GS" query "MATCH (c:CheckIn)-[:BY]->(p:Person {name: '$ME'})
+RETURN c.date AS lastDate
+ORDER BY c.date DESC LIMIT 1" > "$TMPDIR/qlastcheckin.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qlastcheckin.json" &
+
 # Q_gap: Knowledge gap count (sessions without artifacts)
 bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P14D') OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p) WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day}) AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D') WITH s, count(a) AS artifactCount WHERE artifactCount = 0 RETURN count(s) AS gapCount" > "$TMPDIR/qgap.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qgap.json" &
 
@@ -120,7 +144,7 @@ bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - durati
 wait
 
 # --- Validate JSON files ---
-for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve; do
+for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve qcheckins qstale qtodos qlastcheckin; do
   jq . "$TMPDIR/$f.json" >/dev/null 2>&1 || echo "$EMPTY" > "$TMPDIR/$f.json"
 done
 
@@ -144,6 +168,10 @@ jq -n \
   --slurpfile all_handoffs "$TMPDIR/q7.json" \
   --slurpfile knowledge_gap "$TMPDIR/qgap.json" \
   --slurpfile orphans "$TMPDIR/qorphans.json" \
+  --slurpfile checkins "$TMPDIR/qcheckins.json" \
+  --slurpfile stale_blockers "$TMPDIR/qstale.json" \
+  --slurpfile todos "$TMPDIR/qtodos.json" \
+  --slurpfile last_checkin "$TMPDIR/qlastcheckin.json" \
   --argjson prs "$PRS" \
   --arg disk_handoffs "$DISK_HANDOFFS" \
   --arg disk_decisions "$DISK_DECISIONS" \
@@ -160,6 +188,10 @@ jq -n \
     all_handoffs: $all_handoffs[0],
     knowledge_gap: $knowledge_gap[0],
     orphans: $orphans[0],
+    checkins: $checkins[0],
+    stale_blockers: $stale_blockers[0],
+    todos: $todos[0],
+    last_checkin: $last_checkin[0],
     prs: $prs,
     disk: {handoffs: $disk_handoffs, decisions: $disk_decisions}
   }'

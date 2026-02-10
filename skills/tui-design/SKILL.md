@@ -34,6 +34,7 @@ Used within all TUI boxes to prefix items by category:
 - `⇌` Handoffs (in activity action items)
 - `◎` Reflections
 - `□` Todos (in activity dashboard)
+- `★` Priority marker (todo items with priority >= 2)
 - `◉` Artifacts (in handoff summaries)
 
 ## 2. Box Drawing Rules
