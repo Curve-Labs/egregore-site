@@ -310,7 +310,7 @@ def lookup_person_by_telegram_id(telegram_id: int) -> Optional[str]:
     return None
 
 
-def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optional[str]:
+def auto_register_telegram_id(telegram_id: int, first_name: str = None, username: str = None) -> Optional[str]:
     """Auto-register a Telegram ID to a Person node if we can match them.
 
     Matches by first name against Person nodes in Neo4j.
@@ -319,6 +319,12 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optio
     # First check if already registered
     existing = lookup_person_by_telegram_id(telegram_id)
     if existing:
+        # Update username on existing TelegramUser if we have it now
+        if username:
+            run_query(
+                "MATCH (tu:TelegramUser {telegramId: $tid}) SET tu.username = $username",
+                {"tid": telegram_id, "username": username},
+            )
         return existing
 
     # Try matching by first name (lowercase)
@@ -339,12 +345,12 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None) -> Optio
             run_query(
                 """
                 MERGE (tu:TelegramUser {telegramId: $tid})
-                SET tu.firstName = $firstName
+                SET tu.firstName = $firstName, tu.username = $username
                 WITH tu
                 MATCH (p:Person {telegramId: $tid})
                 MERGE (tu)-[:IDENTIFIES]->(p)
                 """,
-                {"tid": telegram_id, "firstName": first_name},
+                {"tid": telegram_id, "firstName": first_name, "username": username or ""},
             )
             return person_name
 
@@ -1026,11 +1032,18 @@ async def handle_question(update: Update, context, question: str) -> None:
     if update.effective_user:
         user_id = update.effective_user.id
         first_name = update.effective_user.first_name
+        username = update.effective_user.username
 
         # Try lookup first, then auto-register if not found
         sender_name = lookup_person_by_telegram_id(user_id)
         if not sender_name:
-            sender_name = auto_register_telegram_id(user_id, first_name)
+            sender_name = auto_register_telegram_id(user_id, first_name, username=username)
+        elif username:
+            # Update username on existing TelegramUser if available
+            run_query(
+                "MATCH (tu:TelegramUser {telegramId: $tid}) SET tu.username = $username",
+                {"tid": user_id, "username": username},
+            )
 
         if sender_name:
             logger.info(f"Identified sender: {sender_name} (Telegram ID: {user_id})")
