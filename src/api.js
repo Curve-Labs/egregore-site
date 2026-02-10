@@ -51,6 +51,10 @@ export async function getTelegramStatus(slug) {
   return request("GET", `/api/org/telegram/status/${slug}`);
 }
 
+export async function checkTelegramMembership(slug, githubToken) {
+  return request("GET", `/api/org/${slug}/telegram/membership`, { token: githubToken });
+}
+
 export async function getInviteInfo(inviteToken) {
   return request("GET", `/api/org/invite/${inviteToken}`);
 }

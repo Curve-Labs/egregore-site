@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership } from "../api";
 
 const C = {
   parchment: "#F4F1EA",
@@ -526,6 +526,8 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName }) {
         telegramInviteLink={result.telegram_invite_link}
         telegramGroupLink={result.telegram_group_link}
         telegramConnected={telegramConnected}
+        orgSlug={result.org_slug}
+        githubToken={token}
       />
 
       {/* What's next */}
@@ -569,7 +571,16 @@ const TelegramIcon = () => (
   </svg>
 );
 
-function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegramConnected }) {
+function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegramConnected, orgSlug, githubToken }) {
+  const [membershipStatus, setMembershipStatus] = useState(null); // null | {status, in_group}
+
+  useEffect(() => {
+    if (!orgSlug || !githubToken || isFounder) return;
+    checkTelegramMembership(orgSlug, githubToken)
+      .then(setMembershipStatus)
+      .catch(() => {}); // silently ignore — falls back to existing behavior
+  }, [orgSlug, githubToken, isFounder]);
+
   if (isFounder) {
     return (
       <div style={{ marginBottom: "2.5rem" }}>
@@ -639,12 +650,19 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
   }
 
   // Joiner / invitee path
+  const inGroup = membershipStatus?.in_group;
+  const isConfigured = membershipStatus?.status === "configured";
+
   return (
     <div style={{ marginBottom: "2.5rem" }}>
       <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
         Step 2 — Telegram
       </p>
-      {telegramGroupLink ? (
+      {inGroup ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem" }}>
+          <CheckIcon /> You're already in the group
+        </div>
+      ) : telegramGroupLink ? (
         <a
           href={telegramGroupLink}
           target="_blank"
@@ -823,6 +841,8 @@ function InviteAccept({ token, user, inviteToken }) {
         telegramInviteLink={null}
         telegramGroupLink={result.telegram_group_link}
         telegramConnected={false}
+        orgSlug={result.org_slug}
+        githubToken={token}
       />
 
       <div style={{ borderTop: `1px solid ${C.warmGray}`, paddingTop: "1.5rem" }}>
