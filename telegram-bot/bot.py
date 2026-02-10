@@ -90,7 +90,7 @@ ALLOWED_CHAT_IDS = [
 EGREGORE_CHANNEL_ID = int(os.environ.get("EGREGORE_CHANNEL_ID", "0") or "0")
 
 ORG_CONFIG = {
-    -1003081443167: {
+    -1003527692267: {
         "name": "curvelabs",
         "neo4j_uri": os.environ.get("NEO4J_URI", ""),
         "neo4j_user": os.environ.get("NEO4J_USER", "neo4j"),
