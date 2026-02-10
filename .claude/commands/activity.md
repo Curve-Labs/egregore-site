@@ -10,7 +10,9 @@ Run ONE command to get all dashboard data:
 bash bin/activity-data.sh
 ```
 
-Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `checkins`, `stale_blockers`, `todos`, `last_checkin`, `prs`, `disk`.
+Returns JSON: `me`, `org`, `date`, `my_sessions`, `team_sessions`, `quests`, `pending_questions`, `answered_questions`, `handoffs_to_me`, `all_handoffs`, `knowledge_gap`, `orphans`, `checkins`, `stale_blockers`, `todos`, `last_checkin`, `prs`, `disk`, `trends`.
+
+The `trends` object contains: `cadence` (sessions per week, 4 weeks), `resolution` (handoff avg days, 30d), `throughput` (todos created vs done, 28d), `capture` (sessions with artifacts / total, 28d).
 
 If the command fails, fall back to reading `memory/` files. Add `(offline)` after ✦ in header.
 
@@ -32,7 +34,8 @@ Content rows: `│  {text padded with trailing spaces}  │`
 
 **Header**: `{ORG} EGREGORE ✦ ACTIVITY DASHBOARD` left, `{me} · {date}` right
 
-**Insight** (1-2 lines): Synthesize what's happening. Warm, concise, connective. Additional insight lines:
+**Insight** (1-3 lines): Synthesize what's happening. Warm, concise, connective.
+- Use `trends` data when available to enrich synthesis. Compare this week's cadence vs last week ("session cadence up 40%"), note capture ratio ("capture ratio at 75%"), mention throughput ("3 todos created, 5 completed this week"). Only mention trends that are notable — don't list all metrics.
 - If `stale_blockers.staleBlockedCount > 0`: `{N} todos blocked for 3+ days. /todo check to review.`
 - If no check-in in 3+ days (check `last_checkin`) AND `todos.activeTodoCount >= 3`: `{N} active todos, no check-in in {days}d. /todo check to review.`
 
@@ -112,6 +115,7 @@ Handoffs with status `read` or `done` are excluded from Focus options but inform
 - `/activity quests` — expand quests, show all with full counts
 - `/activity @name` — filter to that person's sessions
 - `/activity done [N]` — resolve handoff N. Fetch activity data, map Nth ●/◐ handoff to sessionId, run: `bash bin/graph.sh query "MATCH (s:Session {id: '$sessionId'}) SET s.handoffStatus = 'done' RETURN s.id"`. Output: `✓ Resolved: {topic} from {author}`
+- `/activity analytics` — Run `bash bin/analytics-data.sh` instead of the normal data script. Render full org health using all 10 metrics (cadence, resolution, quest velocity, collaboration density, todo health, throughput, capture ratio, question response, check-in frequency, issue lifecycle). Same TUI box, 72-char frame. Model decides layout — no rigid template. Group metrics by theme (velocity, collaboration, health). Highlight notable patterns, comparisons between people, and week-over-week changes.
 
 ## Rules
 

@@ -28,6 +28,7 @@ from .models import (
     OrgInvite, OrgAcceptInvite,
 )
 from .services.graph import execute_query, get_schema, test_connection
+from .services.analytics import get_org_analytics
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
 from .services import github as gh
 from .services.tokens import create_token, claim_token, create_invite_token, peek_token
@@ -1084,6 +1085,18 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
         "org_name": config.get("org_name", owner),
         "telegram_group_link": telegram_group_link,
     }
+
+
+# =============================================================================
+# ANALYTICS ENDPOINTS
+# =============================================================================
+
+
+@app.get("/api/analytics/org")
+async def analytics_org(org: dict = Depends(validate_api_key)):
+    """Get org-level analytics (AM1-AM10). All 10 metrics run concurrently."""
+    result = await get_org_analytics(org)
+    return result
 
 
 # =============================================================================
