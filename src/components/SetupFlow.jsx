@@ -652,6 +652,7 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
   // Joiner / invitee path
   const inGroup = membershipStatus?.in_group;
   const isConfigured = membershipStatus?.status === "configured";
+  const groupName = membershipStatus?.group_name;
 
   return (
     <div style={{ marginBottom: "2.5rem" }}>
@@ -660,7 +661,7 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
       </p>
       {inGroup ? (
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2d8a4e", ...font.mono, fontSize: "0.85rem" }}>
-          <CheckIcon /> You're already in the group
+          <CheckIcon /> You're in {groupName || "the Telegram group"}
         </div>
       ) : telegramGroupLink ? (
         <a
@@ -675,8 +676,12 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
             transition: "all 0.2s",
           }}
         >
-          <TelegramIcon /> Join the Telegram group
+          <TelegramIcon /> Join {groupName || "the Telegram group"}
         </a>
+      ) : isConfigured ? (
+        <p style={{ ...font.mono, fontSize: "0.75rem", color: "#5a5650", lineHeight: 1.6 }}>
+          {groupName || "A Telegram group"} is set up. Ask your admin for the invite link, or open Telegram and search for the group.
+        </p>
       ) : (
         <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, lineHeight: 1.6 }}>
           Your team hasn't connected a Telegram group yet. Ask your admin to set it up, or skip this step.
