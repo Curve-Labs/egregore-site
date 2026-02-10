@@ -899,9 +899,10 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
         except Exception:
             pass
 
-    # Find Person by GitHub username → TelegramUser → IN_GROUP, also return Telegram username
+    # Cross-org query: TelegramUser (system label, not org-scoped) → Person via IDENTIFIES
+    # We start from TelegramUser to avoid org scoping on Person which would restrict to current org only
     membership_result = await execute_query(org, """
-        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p:Person)
+        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
         WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
         WITH DISTINCT tu
         OPTIONAL MATCH (tu)-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
