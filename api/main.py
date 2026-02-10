@@ -679,13 +679,18 @@ MEMORY_DIR="./$MEMORY_DIR_NAME"
 git config credential.helper store 2>/dev/null || true
 printf 'protocol=https\\nhost=github.com\\nusername=x-access-token\\npassword=%s\\n' "$GITHUB_TOKEN" | git credential-store store 2>/dev/null || true
 
+# Embed token in URLs for private repos (credential helper may not work)
+AUTHED_FORK=$(echo "$FORK_URL" | sed "s|https://github.com/|https://x-access-token:$GITHUB_TOKEN@github.com/|")
+AUTHED_MEMORY=$(echo "$MEMORY_URL" | sed "s|https://github.com/|https://x-access-token:$GITHUB_TOKEN@github.com/|")
+
 # Clone fork
 echo "  [2/5] Cloning egregore..."
 if [ -d "$EGREGORE_DIR" ]; then
   echo "         Already exists — pulling latest"
   git -C "$EGREGORE_DIR" pull -q
 else
-  git clone -q "$FORK_URL" "$EGREGORE_DIR"
+  git clone -q "$AUTHED_FORK" "$EGREGORE_DIR"
+  git -C "$EGREGORE_DIR" remote set-url origin "$FORK_URL" 2>/dev/null || true
 fi
 
 # Clone memory
@@ -694,7 +699,8 @@ if [ -d "$MEMORY_DIR" ]; then
   echo "         Already exists — pulling latest"
   git -C "$MEMORY_DIR" pull -q
 else
-  git clone -q "$MEMORY_URL" "$MEMORY_DIR"
+  git clone -q "$AUTHED_MEMORY" "$MEMORY_DIR"
+  git -C "$MEMORY_DIR" remote set-url origin "$MEMORY_URL" 2>/dev/null || true
 fi
 
 # Symlink
