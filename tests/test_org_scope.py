@@ -75,20 +75,27 @@ class TestPropertyNodePatterns:
 
 
 class TestSystemLabels:
-    """Org label should NOT be scoped — it's a system-level label."""
+    """Only TelegramUser is a system label. Org IS now org-scoped."""
 
-    def test_org_label_skipped_bare(self):
+    def test_org_label_is_scoped_with_props(self):
         result = inject_org_scope("MATCH (o:Org {id: $id}) RETURN o", "alpha")
-        assert "org: $_org" not in result or result == "MATCH (o:Org {id: $id}) RETURN o"
+        assert "org: $_org" in result
 
-    def test_org_label_skipped_in_mixed_query(self):
+    def test_org_bare_label_is_scoped(self):
+        result = inject_org_scope("MATCH (o:Org) RETURN o", "alpha")
+        assert "(o:Org {org: $_org})" in result
+
+    def test_org_scoped_in_mixed_query(self):
         result = inject_org_scope(
             "MATCH (p:Person)-[:MEMBER_OF]->(o:Org) RETURN p, o", "alpha"
         )
-        # Person should be scoped
         assert "(p:Person {org: $_org})" in result
-        # Org should NOT be scoped
-        assert "(o:Org)" in result
+        assert "(o:Org {org: $_org})" in result
+
+    def test_telegram_user_still_skipped(self):
+        result = inject_org_scope("MATCH (tu:TelegramUser) RETURN tu", "alpha")
+        assert "(tu:TelegramUser)" in result
+        assert "org: $_org" not in result
 
 
 class TestCallStatements:
@@ -160,11 +167,8 @@ class TestCreateMerge:
         result = inject_org_scope(stmt, "alpha")
         # Person should be scoped
         assert "name: $name, org: $_org}" in result
-        # Org should NOT be scoped
-        assert "id: $_org}" in result
-        # Count: Person gets org added, Org keeps its existing id
-        org_count = result.count("org: $_org")
-        assert org_count >= 1  # At least Person got scoped
+        # Org is also scoped now (no longer a system label)
+        assert "id: $_org, org: $_org}" in result
 
 
 class TestEdgeCases:
@@ -199,6 +203,8 @@ class TestEdgeCases:
         stmt = "MATCH (o:Org {id: $_org}) SET o.name = $name RETURN o"
         result = inject_org_scope(stmt, "alpha")
         assert "SET o.name = $name" in result
+        # Org is now scoped
+        assert "id: $_org, org: $_org}" in result
 
     def test_where_clause_preserved(self):
         stmt = "MATCH (p:Person) WHERE p.name = $name RETURN p"

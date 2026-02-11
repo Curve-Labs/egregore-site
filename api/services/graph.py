@@ -113,6 +113,15 @@ async def execute_batch(
     return list(results)
 
 
+async def execute_system_query(org: dict, statement: str, parameters: dict = None) -> dict:
+    """Execute an unscoped query for system operations (startup, admin reload).
+
+    Bypasses guard and org scoping. Internal use only — never expose to client input.
+    """
+    params = parameters or {}
+    return await _post_neo4j(org, statement, params)
+
+
 async def get_schema(org: dict) -> dict:
     """Get the Neo4j schema for an org."""
     result = await execute_query(
@@ -147,7 +156,7 @@ def inject_org_scope(statement: str, org_slug: str) -> str:
         return statement
 
     # System labels that should NOT be org-scoped
-    SYSTEM_LABELS = {"Org", "TelegramUser"}
+    SYSTEM_LABELS = {"TelegramUser"}
 
     # 1. Add org to patterns WITH properties: (var:Label {props})
     def add_org_to_props(match):
