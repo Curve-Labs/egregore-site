@@ -116,8 +116,8 @@ async def load_orgs_from_neo4j():
             return
 
     try:
-        from .services.graph import execute_query
-        result = await execute_query(
+        from .services.graph import execute_system_query
+        result = await execute_system_query(
             seed_org,
             "MATCH (o:Org) RETURN o.id AS slug, o.name AS name, o.github_org AS github_org, "
             "o.api_key AS api_key, o.telegram_chat_id AS telegram_chat_id",
@@ -156,6 +156,13 @@ async def load_orgs_from_neo4j():
                 "telegram_chat_id": telegram_chat_id or "",
             }
             logger.info(f"Loaded org from Neo4j: {slug}")
+
+        # Backfill org property on existing Org nodes that predate scoping change
+        await execute_system_query(
+            seed_org,
+            "MATCH (o:Org) WHERE o.org IS NULL SET o.org = o.id",
+            {},
+        )
 
     except Exception as e:
         logger.warning(f"Failed to load orgs from Neo4j: {e}")

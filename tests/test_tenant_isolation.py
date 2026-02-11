@@ -124,10 +124,15 @@ class TestNeo4jOrgScoping:
         result = inject_org_scope("MATCH (p:Person {name: $name}) RETURN p", "alpha")
         assert "name: $name, org: $_org}" in result
 
-    def test_scope_skips_org_label(self):
+    def test_scope_includes_org_label(self):
+        """Org IS now org-scoped (no longer a system label)."""
         result = inject_org_scope("MATCH (o:Org {id: $id}) RETURN o", "alpha")
-        # Org is a system label — should not get org: $_org
-        assert result.count("org: $_org") == 0 or "Org {id: $id}" in result
+        assert "org: $_org" in result
+
+    def test_org_nodes_scoped_to_own_org(self):
+        """Bare Org queries are scoped — customers only see their own Org node."""
+        result = inject_org_scope("MATCH (o:Org) RETURN o.id, o.name", "alpha")
+        assert "(o:Org {org: $_org})" in result
 
     def test_scope_skips_call_statements(self):
         stmt = "CALL db.schema.visualization()"
@@ -274,14 +279,14 @@ class TestNotificationIsolation:
         assert len(telegram_calls) == 1
         assert telegram_calls[0]["chat_id"] == "-100alpha"
 
-    def test_telegram_chat_id_update_scoped(self, app_client, _patch_org_configs, monkeypatch):
+    def test_telegram_chat_id_update_scoped(self, app_client, org_alpha, org_beta, monkeypatch):
         """POST /api/org/telegram updates only the target org's chat_id."""
         bot_token = "test_bot_token_for_auth"
         monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
 
         with respx.mock:
             # Neo4j update
-            respx.post(url__regex=r"https://neo4j.*").mock(
+            respx.post(url__regex=r"https://neo4j-alpha.*").mock(
                 return_value=Response(200, json=_neo4j_ok())
             )
 
@@ -293,9 +298,9 @@ class TestNotificationIsolation:
 
         assert resp.status_code == 200
         # Alpha's chat_id updated
-        assert _patch_org_configs["alpha"]["telegram_chat_id"] == "-999new"
+        assert org_alpha["telegram_chat_id"] == "-999new"
         # Beta's chat_id unchanged
-        assert _patch_org_configs["beta"]["telegram_chat_id"] == "-100beta"
+        assert org_beta["telegram_chat_id"] == "-100beta"
 
 
 # =============================================================================
