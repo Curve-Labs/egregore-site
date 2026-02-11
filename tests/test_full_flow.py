@@ -88,6 +88,10 @@ class TestPersonalNamedInstanceFlow:
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "testuser/egregore-research"})
         )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/testuser/egregore-research/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
+        )
         # Create memory repo (personal account → /user/repos)
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "testuser/testuser-research-memory"})
@@ -165,6 +169,10 @@ class TestPersonalNamedInstanceFlow:
         )
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "founder/egregore-research"})
+        )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
@@ -1075,6 +1083,10 @@ class TestClaimDataConsistency:
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "founder/egregore-research"})
         )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
+        )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
         )
@@ -1243,6 +1255,10 @@ class TestMemoryRepoVerification:
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "founder/egregore-core"})
         )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
+        )
         # Memory repo creation "succeeds" (201) but repo doesn't actually exist
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-memory"})
@@ -1282,6 +1298,10 @@ class TestMemoryRepoVerification:
         )
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "founder/egregore-core"})
+        )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-memory"})
