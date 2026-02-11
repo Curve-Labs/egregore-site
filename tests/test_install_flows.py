@@ -56,11 +56,16 @@ def _egregore_json_content(org_name="TestOrg", github_org="TestOrg", slug="testo
 
 class TestFounderSetup:
     @respx.mock
-    def test_founder_setup_creates_org(self, app_client):
+    def test_founder_setup_creates_org(self, app_client, monkeypatch):
         """POST /api/org/setup with valid GitHub token creates org and returns setup token."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         # Mock GitHub: user, fork, repo exists checks, repo creation, etc.
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        # Auto-detect: FounderOrg is an org (not personal account)
+        respx.get(f"{GITHUB_API}/orgs/FounderOrg").mock(
+            return_value=Response(200, json={"login": "FounderOrg"})
         )
         # Repo check: first call = 404 (doesn't exist), subsequent = 200 (fork ready)
         _repo_check_calls = []
@@ -99,8 +104,8 @@ class TestFounderSetup:
         respx.put(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/egregore.json").mock(
             return_value=Response(201, json={"content": {"sha": "new"}})
         )
-        # Neo4j bootstrap queries (3 MERGE calls)
-        respx.post(url__regex=r"https://neo4j.*").mock(
+        # Neo4j bootstrap queries
+        respx.post(url__regex=r"https://neo4j-test.*").mock(
             return_value=Response(200, json=_neo4j_ok())
         )
 
@@ -119,10 +124,15 @@ class TestFounderSetup:
         assert data["org_slug"] == "founderorg"
 
     @respx.mock
-    def test_founder_setup_idempotent_when_repo_exists(self, app_client):
+    def test_founder_setup_idempotent_when_repo_exists(self, app_client, monkeypatch):
         """Same org twice → succeeds (setup is idempotent, skips existing repos)."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        # Auto-detect: ExistingOrg is an org
+        respx.get(f"{GITHUB_API}/orgs/ExistingOrg").mock(
+            return_value=Response(200, json={"login": "ExistingOrg"})
         )
         # Repo already exists
         respx.get(f"{GITHUB_API}/repos/ExistingOrg/egregore-core").mock(
@@ -151,7 +161,7 @@ class TestFounderSetup:
             return_value=Response(201, json={"content": {"sha": "new"}})
         )
         # Neo4j
-        respx.post(url__regex=r"https://neo4j.*").mock(
+        respx.post(url__regex=r"https://neo4j-test.*").mock(
             return_value=Response(200, json=_neo4j_ok())
         )
 
@@ -172,6 +182,10 @@ class TestFounderSetup:
 
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "creator-user", "name": "Creator"})
+        )
+        # Auto-detect: CreatorOrg is an org
+        respx.get(f"{GITHUB_API}/orgs/CreatorOrg").mock(
+            return_value=Response(200, json={"login": "CreatorOrg"})
         )
         respx.get(f"{GITHUB_API}/repos/CreatorOrg/egregore-core").mock(
             return_value=Response(200, json={"full_name": "CreatorOrg/egregore-core"})
@@ -398,3 +412,257 @@ class TestTokenClaim:
 
         resp = app_client.get(f"/api/org/claim/{token}")
         assert resp.status_code == 404
+
+
+# =============================================================================
+# PERSONAL ACCOUNT AUTO-DETECTION
+# =============================================================================
+
+
+class TestPersonalAccountDetection:
+    @respx.mock
+    def test_personal_account_auto_detected(self, app_client, monkeypatch):
+        """Send is_personal: false with personal account. Server detects via GET /orgs → 404."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "ozfun", "name": "Oz Fun"})
+        )
+        # Auto-detect: NOT an org (404 → personal account)
+        respx.get(f"{GITHUB_API}/orgs/ozfun").mock(
+            return_value=Response(404)
+        )
+        # Personal account: owner = user login, fork goes to personal (no organization field)
+        fork_calls = []
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            side_effect=lambda req: (
+                fork_calls.append(json.loads(req.content)),
+                Response(202, json={"full_name": "ozfun/egregore-core"}),
+            )[-1]
+        )
+        # Repo check: first = 404 (pre-check), then 200 (wait_for_fork)
+        _repo_calls = []
+        respx.get(f"{GITHUB_API}/repos/ozfun/egregore-core").mock(
+            side_effect=lambda req: (
+                _repo_calls.append(True),
+                Response(404) if len(_repo_calls) == 1 else Response(200, json={"full_name": "ozfun/egregore-core"}),
+            )[-1]
+        )
+        # Memory repo creation goes to /user/repos (personal), not /orgs/{org}/repos
+        user_repo_calls = []
+        respx.post(f"{GITHUB_API}/user/repos").mock(
+            side_effect=lambda req: (
+                user_repo_calls.append(json.loads(req.content)),
+                Response(201, json={"full_name": "ozfun/ozfun-memory"}),
+            )[-1]
+        )
+        # Memory repo verification
+        respx.get(f"{GITHUB_API}/repos/ozfun/ozfun-memory").mock(
+            return_value=Response(200, json={"full_name": "ozfun/ozfun-memory"})
+        )
+        # Init memory structure
+        respx.get(url__regex=rf"{GITHUB_API}/repos/ozfun/ozfun-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/ozfun/ozfun-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # egregore.json update
+        respx.get(f"{GITHUB_API}/repos/ozfun/egregore-core/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/ozfun/egregore-core/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # Neo4j
+        respx.post(url__regex=r"https://neo4j-test.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
+        )
+
+        resp = app_client.post(
+            "/api/org/setup",
+            json={"github_org": "ozfun", "org_name": "Oz Fun", "is_personal": False},
+            headers={"Authorization": f"Bearer {FAKE_TOKEN}"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["org_slug"] == "ozfun"
+
+        # Fork should NOT have "organization" field (personal account)
+        assert len(fork_calls) == 1
+        assert "organization" not in fork_calls[0]
+
+        # Memory repo created via /user/repos (personal endpoint)
+        assert len(user_repo_calls) == 1
+
+
+# =============================================================================
+# NEO4J PERSISTENCE ORDERING
+# =============================================================================
+
+
+class TestNeo4jPersistence:
+    @respx.mock
+    def test_setup_fails_on_neo4j_error(self, app_client, _patch_org_configs, monkeypatch):
+        """Neo4j failure during setup → 503. Slug NOT in ORG_CONFIGS."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-fail.example.com")
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        # Auto-detect: org
+        respx.get(f"{GITHUB_API}/orgs/FailOrg").mock(
+            return_value=Response(200, json={"login": "FailOrg"})
+        )
+        # Repo already exists (skip fork)
+        respx.get(f"{GITHUB_API}/repos/FailOrg/egregore-core").mock(
+            return_value=Response(200, json={"full_name": "FailOrg/egregore-core"})
+        )
+        # Memory repo already exists
+        respx.post(f"{GITHUB_API}/orgs/FailOrg/repos").mock(
+            return_value=Response(422, json={"message": "name already exists"})
+        )
+        respx.get(f"{GITHUB_API}/repos/FailOrg/FailOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "FailOrg/FailOrg-memory"})
+        )
+        # Init memory structure
+        respx.get(url__regex=rf"{GITHUB_API}/repos/FailOrg/FailOrg-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/FailOrg/FailOrg-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # Neo4j FAILS with errors array
+        respx.post(url__regex=r"https://neo4j-fail.*").mock(
+            return_value=Response(200, json={"errors": [{"message": "connection refused"}]})
+        )
+
+        resp = app_client.post(
+            "/api/org/setup",
+            json={"github_org": "FailOrg", "org_name": "Fail Org"},
+            headers={"Authorization": f"Bearer {FAKE_TOKEN}"},
+        )
+
+        assert resp.status_code == 503
+        # Org should NOT be in ORG_CONFIGS since Neo4j failed
+        assert "failorg" not in _patch_org_configs
+
+    @respx.mock
+    def test_telegram_update_fails_on_neo4j_error(self, app_client, _patch_org_configs, monkeypatch):
+        """Neo4j failure during telegram update → 503. chat_id NOT updated."""
+        from conftest import ALPHA_SLUG, ALPHA_CONFIG
+
+        _patch_org_configs[ALPHA_SLUG] = {**ALPHA_CONFIG}
+        original_chat_id = ALPHA_CONFIG["telegram_chat_id"]
+
+        bot_token = "test_bot_token_for_auth"
+        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
+
+        # Neo4j fails (returns errors array → _post_neo4j returns {"error": ...})
+        respx.post(url__regex=r"https://neo4j-alpha.*").mock(
+            return_value=Response(200, json={"errors": [{"message": "connection timeout"}]})
+        )
+
+        resp = app_client.post(
+            "/api/org/telegram",
+            json={"org_slug": "alpha", "chat_id": "-999new"},
+            headers={"Authorization": f"Bearer {bot_token}"},
+        )
+
+        assert resp.status_code == 503
+        # chat_id should NOT have been updated
+        assert _patch_org_configs[ALPHA_SLUG]["telegram_chat_id"] == original_chat_id
+
+
+# =============================================================================
+# TELEGRAM GROUP METADATA
+# =============================================================================
+
+
+class TestTelegramGroupMetadata:
+    @respx.mock
+    def test_telegram_stores_group_title(self, app_client, _patch_org_configs, monkeypatch):
+        """POST with group_title → stored in Neo4j and returned in response."""
+        from conftest import ALPHA_SLUG, ALPHA_CONFIG
+
+        _patch_org_configs[ALPHA_SLUG] = {**ALPHA_CONFIG}
+
+        bot_token = "test_bot_token_for_auth"
+        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
+
+        neo4j_bodies = []
+        respx.post(url__regex=r"https://neo4j-alpha.*").mock(
+            side_effect=lambda req: (
+                neo4j_bodies.append(json.loads(req.content)),
+                Response(200, json=_neo4j_ok()),
+            )[-1]
+        )
+
+        resp = app_client.post(
+            "/api/org/telegram",
+            json={
+                "org_slug": "alpha",
+                "chat_id": "-100new",
+                "group_title": "Alpha Team Chat",
+                "group_username": "alphateam",
+            },
+            headers={"Authorization": f"Bearer {bot_token}"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["group_title"] == "Alpha Team Chat"
+        assert data["group_username"] == "alphateam"
+
+        # Verify stored in ORG_CONFIGS
+        assert _patch_org_configs[ALPHA_SLUG]["telegram_group_title"] == "Alpha Team Chat"
+        assert _patch_org_configs[ALPHA_SLUG]["telegram_group_username"] == "alphateam"
+
+        # Verify Neo4j received the group metadata
+        assert len(neo4j_bodies) == 1
+        stmt = neo4j_bodies[0]["statement"]
+        assert "telegram_group_title" in stmt
+        assert "telegram_group_username" in stmt
+
+    @respx.mock
+    def test_telegram_no_group_title_backwards_compat(self, app_client, _patch_org_configs, monkeypatch):
+        """POST without group_title → still 200, backward compatible."""
+        from conftest import ALPHA_SLUG, ALPHA_CONFIG
+
+        _patch_org_configs[ALPHA_SLUG] = {**ALPHA_CONFIG}
+
+        bot_token = "test_bot_token_for_auth"
+        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
+
+        respx.post(url__regex=r"https://neo4j-alpha.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
+        )
+
+        resp = app_client.post(
+            "/api/org/telegram",
+            json={"org_slug": "alpha", "chat_id": "-100new"},
+            headers={"Authorization": f"Bearer {bot_token}"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["group_title"] is None
+        assert data["group_username"] is None
+
+    @respx.mock
+    def test_telegram_status_returns_group_metadata(self, app_client, _patch_org_configs):
+        """GET /api/org/telegram/status returns group_title if stored."""
+        from conftest import ALPHA_SLUG, ALPHA_CONFIG
+
+        _patch_org_configs[ALPHA_SLUG] = {
+            **ALPHA_CONFIG,
+            "telegram_group_title": "Alpha Team",
+            "telegram_group_username": "alphateam",
+        }
+
+        resp = app_client.get("/api/org/telegram/status/alpha")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["connected"] is True
+        assert data["group_title"] == "Alpha Team"
+        assert data["group_username"] == "alphateam"

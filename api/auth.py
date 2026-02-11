@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 import logging
 import secrets
 
@@ -115,15 +116,33 @@ async def load_orgs_from_neo4j():
             logger.info("No Neo4j connection available — skipping org reload")
             return
 
-    try:
-        from .services.graph import execute_system_query
-        result = await execute_system_query(
-            seed_org,
-            "MATCH (o:Org) RETURN o.id AS slug, o.name AS name, o.github_org AS github_org, "
-            "o.api_key AS api_key, o.telegram_chat_id AS telegram_chat_id",
-            {},
-        )
+    from .services.graph import execute_system_query
 
+    max_retries = 3
+    result = None
+    for attempt in range(max_retries):
+        try:
+            result = await execute_system_query(
+                seed_org,
+                "MATCH (o:Org) RETURN o.id AS slug, o.name AS name, o.github_org AS github_org, "
+                "o.api_key AS api_key, o.telegram_chat_id AS telegram_chat_id, "
+                "o.telegram_group_title AS telegram_group_title, "
+                "o.telegram_group_username AS telegram_group_username",
+                {},
+            )
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Neo4j reload attempt {attempt + 1}/{max_retries} failed: {e}")
+                await asyncio.sleep(2 ** attempt)
+            else:
+                logger.error(f"Failed to load orgs from Neo4j after {max_retries} attempts: {e}")
+                return
+
+    if result is None:
+        return
+
+    try:
         values = result.get("values", [])
         if not values:
             return
@@ -134,13 +153,17 @@ async def load_orgs_from_neo4j():
         default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
         for row in values:
-            slug, name, github_org, api_key, telegram_chat_id = row
+            slug, name, github_org, api_key, telegram_chat_id, telegram_group_title, telegram_group_username = row
             if not slug or not api_key:
                 continue
             if slug in ORG_CONFIGS:
                 # Update telegram fields if stored in Neo4j
                 if telegram_chat_id:
                     ORG_CONFIGS[slug]["telegram_chat_id"] = telegram_chat_id
+                if telegram_group_title:
+                    ORG_CONFIGS[slug]["telegram_group_title"] = telegram_group_title
+                if telegram_group_username:
+                    ORG_CONFIGS[slug]["telegram_group_username"] = telegram_group_username
                 if not ORG_CONFIGS[slug].get("telegram_bot_token"):
                     ORG_CONFIGS[slug]["telegram_bot_token"] = default_bot_token
                 continue
@@ -154,6 +177,8 @@ async def load_orgs_from_neo4j():
                 "neo4j_password": default_neo4j_password,
                 "telegram_bot_token": default_bot_token,
                 "telegram_chat_id": telegram_chat_id or "",
+                "telegram_group_title": telegram_group_title or "",
+                "telegram_group_username": telegram_group_username or "",
             }
             logger.info(f"Loaded org from Neo4j: {slug}")
 
