@@ -39,24 +39,24 @@ bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person) WHERE p.name <> '$ME' AND 
 bash "$GS" query "MATCH (q:Quest {status: 'active'}) OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q) OPTIONAL MATCH (a)-[:CONTRIBUTED_BY]->(p:Person) WHERE p.name IS NOT NULL AND p.name <> 'external' OPTIONAL MATCH (q)-[:STARTED_BY]->(starter:Person {name: '$ME'}) OPTIONAL MATCH (myArt:Artifact)-[:PART_OF]->(q) WHERE (myArt)-[:CONTRIBUTED_BY]->(:Person {name: '$ME'}) WITH q, count(DISTINCT a) AS artifacts, count(DISTINCT p) AS contributors, CASE WHEN count(a) > 0 THEN duration.inDays(max(a.created), date()).days ELSE duration.inDays(q.started, date()).days END AS daysSince, coalesce(q.priority, 0) AS priority, CASE WHEN starter IS NOT NULL THEN 1 ELSE 0 END AS iStarted, count(DISTINCT myArt) AS myArtifacts WITH q, artifacts, daysSince, round((toFloat(artifacts) + toFloat(contributors)*1.5 + toFloat(priority)*5.0 + 30.0/(1.0+toFloat(daysSince)*0.5) + CASE WHEN iStarted = 1 THEN 15.0 ELSE 0.0 END + toFloat(myArtifacts)*3.0) * 100)/100 AS score ORDER BY score DESC LIMIT 5 RETURN q.id AS quest, q.title AS title, artifacts, daysSince, score" > "$TMPDIR/q3.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q3.json" &
 
 # Q4: Pending questions for me
-bash "$GS" query "MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_BY]->(asker:Person) RETURN qs.id AS setId, qs.topic AS topic, qs.created AS created, asker.name AS from ORDER BY qs.created DESC" > "$TMPDIR/q4.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q4.json" &
+bash "$GS" query "MATCH (qs:QuestionSet {status: 'pending'})-[:ASKED_TO]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_BY]->(asker:Person) RETURN qs.id AS setId, qs.topic AS topic, qs.created AS created, asker.name AS from ORDER BY qs.created DESC LIMIT 10" > "$TMPDIR/q4.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q4.json" &
 
 # Q5: Answered questions (7 days)
-bash "$GS" query "MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC" > "$TMPDIR/q5.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q5.json" &
+bash "$GS" query "MATCH (qs:QuestionSet {status: 'answered'})-[:ASKED_BY]->(p:Person {name: '$ME'}) MATCH (qs)-[:ASKED_TO]->(target:Person) WHERE qs.created >= datetime() - duration('P7D') RETURN qs.id AS setId, qs.topic AS topic, target.name AS answeredBy ORDER BY qs.created DESC LIMIT 10" > "$TMPDIR/q5.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q5.json" &
 
-# Q_resolve: Auto-resolve read handoffs with subsequent sessions
-# Uses handoffReadDate if set, falls back to handoff creation date
-bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
+# Q_resolve + Q6: Auto-resolve handoffs THEN fetch (sequential to fix race condition)
+(
+  # First: resolve read handoffs with subsequent sessions
+  bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
 WHERE s.handoffStatus = 'read'
 WITH s, p, coalesce(s.handoffReadDate, s.date) AS sinceDate
 MATCH (later:Session)-[:BY]->(p)
 WHERE later.date > sinceDate
 WITH s, count(later) AS laterSessions WHERE laterSessions > 0
 SET s.handoffStatus = 'done'
-RETURN s.id AS resolved" > "$TMPDIR/qresolve.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qresolve.json" &
-
-# Q6: Handoffs to me (7 days, all statuses)
-bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
+RETURN s.id AS resolved" > "$TMPDIR/qresolve.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qresolve.json"
+  # Then: fetch handoffs with accurate status
+  bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: '$ME'})
 WHERE s.date >= date() - duration('P7D')
 MATCH (s)-[:BY]->(author:Person)
 RETURN s.topic AS topic, s.date AS date, author.name AS author,
@@ -70,7 +70,8 @@ ORDER BY
     ELSE 2
   END,
   s.date DESC
-LIMIT 8" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json" &
+LIMIT 8" > "$TMPDIR/q6.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q6.json"
+) &
 
 # Q7: All handoffs (7 days)
 bash "$GS" query "MATCH (s:Session)-[:HANDED_TO]->(target:Person) WHERE s.date >= date() - duration('P7D') MATCH (s)-[:BY]->(author:Person) RETURN s.topic AS topic, s.date AS date, author.name AS from, target.name AS to, s.filePath AS filePath ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/q7.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/q7.json" &
@@ -82,28 +83,29 @@ RETURN c.id AS id, c.summary AS summary, c.date AS date,
        p.name AS by, c.totalItems AS total
 ORDER BY c.date DESC LIMIT 5" > "$TMPDIR/qcheckins.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qcheckins.json" &
 
-# Q_stale_blockers: Todos blocked for > 3 days
-bash "$GS" query "MATCH (t:Todo {status: 'blocked'})-[:BY]->(p:Person {name: '$ME'})
-WHERE t.lastTransitionDate <= datetime() - duration('P3D')
-RETURN count(t) AS staleBlockedCount" > "$TMPDIR/qstale.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qstale.json" &
-
-# Q_todos: Active todos count (open + blocked + deferred)
-bash "$GS" query "MATCH (t:Todo)-[:BY]->(p:Person {name: '$ME'})
+# Q_todos_merged: Active todos + stale blockers + last checkin (3 queries → 1)
+bash "$GS" query "OPTIONAL MATCH (t:Todo)-[:BY]->(:Person {name: '$ME'})
 WHERE t.status IN ['open', 'blocked', 'deferred']
-RETURN count(t) AS activeTodoCount,
-       count(CASE WHEN t.status = 'blocked' THEN 1 END) AS blockedCount,
-       count(CASE WHEN t.status = 'deferred' THEN 1 END) AS deferredCount" > "$TMPDIR/qtodos.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qtodos.json" &
-
-# Q_last_checkin: Days since last check-in
-bash "$GS" query "MATCH (c:CheckIn)-[:BY]->(p:Person {name: '$ME'})
-RETURN c.date AS lastDate
-ORDER BY c.date DESC LIMIT 1" > "$TMPDIR/qlastcheckin.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qlastcheckin.json" &
+WITH count(t) AS activeTodoCount,
+     count(CASE WHEN t.status = 'blocked' THEN 1 END) AS blockedCount,
+     count(CASE WHEN t.status = 'deferred' THEN 1 END) AS deferredCount,
+     count(CASE WHEN t.status = 'blocked' AND t.lastTransitionDate <= datetime() - duration('P3D') THEN 1 END) AS staleBlockedCount
+OPTIONAL MATCH (c:CheckIn)-[:BY]->(:Person {name: '$ME'})
+WITH activeTodoCount, blockedCount, deferredCount, staleBlockedCount, c
+ORDER BY c.date DESC LIMIT 1
+RETURN activeTodoCount, blockedCount, deferredCount, staleBlockedCount, c.date AS lastCheckinDate" > "$TMPDIR/qtodos_merged.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qtodos_merged.json" &
 
 # Q_gap: Knowledge gap count (sessions without artifacts)
 bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'}) WHERE s.date >= date() - duration('P14D') OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p) WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day}) AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D') WITH s, count(a) AS artifactCount WHERE artifactCount = 0 RETURN count(s) AS gapCount" > "$TMPDIR/qgap.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qgap.json" &
 
 # Q_orphans: Orphan artifact count (14 days)
 bash "$GS" query "OPTIONAL MATCH (a:Artifact) WHERE a.created >= date() - duration('P14D') AND NOT (a)-[:PART_OF]->(:Quest) RETURN count(a) AS orphanCount" > "$TMPDIR/qorphans.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qorphans.json" &
+
+# Q_focus_history: Recent Focus selections (what user chose vs what was shown)
+bash "$GS" query "MATCH (s:Session)-[:BY]->(p:Person {name: '$ME'})
+WHERE s.focusSelected IS NOT NULL
+RETURN s.focusShown AS shown, s.focusSelected AS selected, s.focusDismissed AS dismissed, s.date AS date, s.topic AS topic
+ORDER BY s.date DESC LIMIT 5" > "$TMPDIR/qfocus.json" 2>/dev/null || echo "$EMPTY" > "$TMPDIR/qfocus.json" &
 
 # --- Trend queries (4 lightweight metrics for Insight enrichment) ---
 
@@ -150,7 +152,7 @@ RETURN count(s) AS total,
     git -C "$SCRIPT_DIR" fetch origin develop:develop --quiet 2>/dev/null || true
   fi
   if [[ "$CURRENT" == dev/* ]]; then
-    git -C "$SCRIPT_DIR" rebase develop --quiet 2>/dev/null || git -C "$SCRIPT_DIR" rebase --abort 2>/dev/null || true
+    git -C "$SCRIPT_DIR" rebase develop --quiet >/dev/null 2>&1 || git -C "$SCRIPT_DIR" rebase --abort >/dev/null 2>&1 || true
   fi
 
   # Memory sync
@@ -182,7 +184,7 @@ RETURN count(s) AS total,
 wait
 
 # --- Validate JSON files ---
-for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve qcheckins qstale qtodos qlastcheckin am_cadence am_resolution am_throughput am_capture; do
+for f in q1 q2 q3 q4 q5 q6 q7 qgap qorphans qresolve qcheckins qtodos_merged qfocus am_cadence am_resolution am_throughput am_capture; do
   jq . "$TMPDIR/$f.json" >/dev/null 2>&1 || echo "$EMPTY" > "$TMPDIR/$f.json"
 done
 
@@ -207,9 +209,8 @@ jq -n \
   --slurpfile knowledge_gap "$TMPDIR/qgap.json" \
   --slurpfile orphans "$TMPDIR/qorphans.json" \
   --slurpfile checkins "$TMPDIR/qcheckins.json" \
-  --slurpfile stale_blockers "$TMPDIR/qstale.json" \
-  --slurpfile todos "$TMPDIR/qtodos.json" \
-  --slurpfile last_checkin "$TMPDIR/qlastcheckin.json" \
+  --slurpfile todos_merged "$TMPDIR/qtodos_merged.json" \
+  --slurpfile focus_history "$TMPDIR/qfocus.json" \
   --slurpfile am_cadence "$TMPDIR/am_cadence.json" \
   --slurpfile am_resolution "$TMPDIR/am_resolution.json" \
   --slurpfile am_throughput "$TMPDIR/am_throughput.json" \
@@ -231,9 +232,8 @@ jq -n \
     knowledge_gap: $knowledge_gap[0],
     orphans: $orphans[0],
     checkins: $checkins[0],
-    stale_blockers: $stale_blockers[0],
-    todos: $todos[0],
-    last_checkin: $last_checkin[0],
+    todos_merged: $todos_merged[0],
+    focus_history: $focus_history[0],
     prs: $prs,
     disk: {handoffs: $disk_handoffs, decisions: $disk_decisions},
     trends: {
