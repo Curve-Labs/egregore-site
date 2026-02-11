@@ -115,14 +115,36 @@ class TestFounderSetup:
         assert data["org_slug"] == "founderorg"
 
     @respx.mock
-    def test_founder_setup_rejects_duplicate(self, app_client):
-        """Same org twice → 409 Conflict."""
+    def test_founder_setup_idempotent_when_repo_exists(self, app_client):
+        """Same org twice → succeeds (setup is idempotent, skips existing repos)."""
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
         # Repo already exists
         respx.get(f"{GITHUB_API}/repos/ExistingOrg/egregore-core").mock(
             return_value=Response(200, json={"full_name": "ExistingOrg/egregore-core"})
+        )
+        # Memory repo creation returns 422 (already exists) — that's fine
+        respx.post(f"{GITHUB_API}/orgs/ExistingOrg/repos").mock(
+            return_value=Response(422, json={"message": "name already exists"})
+        )
+        # Init memory structure
+        respx.get(url__regex=rf"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # egregore.json update
+        respx.get(f"{GITHUB_API}/repos/ExistingOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/ExistingOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # Neo4j
+        respx.post(url__regex=r"https://neo4j.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
         )
 
         resp = app_client.post(
@@ -131,7 +153,8 @@ class TestFounderSetup:
             headers={"Authorization": f"Bearer {FAKE_TOKEN}"},
         )
 
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        assert "setup_token" in resp.json()
 
     @respx.mock
     def test_founder_setup_invalid_github_token(self, app_client):
@@ -217,6 +240,10 @@ class TestJoinerFlow:
         # Memory repo NOT accessible
         respx.get(f"{GITHUB_API}/repos/AlphaOrg/AlphaOrg-memory").mock(
             return_value=Response(404)
+        )
+        # User is not admin of AlphaOrg (needed for can_create check)
+        respx.get(f"{GITHUB_API}/user/memberships/orgs/AlphaOrg").mock(
+            return_value=Response(200, json={"role": "member"})
         )
 
         resp = app_client.post(

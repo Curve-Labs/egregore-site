@@ -5,19 +5,64 @@ Provides fixtures for:
 - Neo4j driver (session-scoped)
 - Memory path
 - Filesystem artifacts, sessions, quests
+- FastAPI test client (for API tests)
+- Org config patching (for API tests)
 """
 
 import os
+import sys
 import pytest
 from pathlib import Path
-from dotenv import load_dotenv
+from unittest.mock import patch
 
-from utils.neo4j_helpers import create_driver
+# Ensure project root is on the path so `api` package is importable
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Load environment from telegram-bot
-_env_path = Path(__file__).parent.parent / "telegram-bot" / ".env"
-if _env_path.exists():
-    load_dotenv(_env_path)
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).parent.parent / "telegram-bot" / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path)
+except ImportError:
+    pass
+
+try:
+    from utils.neo4j_helpers import create_driver
+except ImportError:
+    create_driver = None
+
+
+# =============================================================================
+# TEST ORG CONSTANTS (used by API tests)
+# =============================================================================
+
+ALPHA_SLUG = "alpha"
+ALPHA_API_KEY = "ek_alpha_testkey123"
+ALPHA_CONFIG = {
+    "api_key": ALPHA_API_KEY,
+    "org_name": "Alpha Corp",
+    "github_org": "AlphaOrg",
+    "neo4j_host": "neo4j+s://test.neo4j.io",
+    "neo4j_user": "neo4j",
+    "neo4j_password": "testpass",
+    "telegram_bot_token": "123456:ABC",
+    "telegram_chat_id": "-100alpha",
+    "slug": "alpha",
+}
+
+BETA_SLUG = "beta"
+BETA_API_KEY = "ek_beta_testkey456"
+BETA_CONFIG = {
+    "api_key": BETA_API_KEY,
+    "org_name": "Beta Inc",
+    "github_org": "BetaOrg",
+    "neo4j_host": "neo4j+s://test.neo4j.io",
+    "neo4j_user": "neo4j",
+    "neo4j_password": "testpass",
+    "telegram_bot_token": "654321:XYZ",
+    "telegram_chat_id": "-100beta",
+    "slug": "beta",
+}
 
 
 # =============================================================================
@@ -196,3 +241,48 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "retrieval: Retrieval stability tests")
     config.addinivalue_line("markers", "quality: Data quality tests")
     config.addinivalue_line("markers", "security: Security tests")
+    config.addinivalue_line("markers", "api: API endpoint tests")
+    config.addinivalue_line("markers", "isolation: Cross-tenant isolation tests")
+    config.addinivalue_line("markers", "flow: End-to-end flow tests")
+
+
+# =============================================================================
+# FASTAPI TEST CLIENT (for API tests)
+# =============================================================================
+
+
+@pytest.fixture
+def app_client():
+    """FastAPI TestClient for API endpoint tests."""
+    from fastapi.testclient import TestClient
+    from api.main import app
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def _patch_org_configs(monkeypatch):
+    """Patch ORG_CONFIGS dict in both api.main and api.auth modules.
+
+    Returns the mutable dict so tests can add/modify org configs.
+    """
+    from api import auth as _auth_mod
+    from api import main as _main_mod
+
+    configs = {}
+    monkeypatch.setattr(_auth_mod, "ORG_CONFIGS", configs)
+    monkeypatch.setattr(_main_mod, "ORG_CONFIGS", configs)
+    return configs
+
+
+@pytest.fixture
+def org_alpha(_patch_org_configs):
+    """Set up Alpha org in ORG_CONFIGS."""
+    _patch_org_configs[ALPHA_SLUG] = {**ALPHA_CONFIG}
+    return _patch_org_configs[ALPHA_SLUG]
+
+
+@pytest.fixture
+def org_beta(_patch_org_configs):
+    """Set up Beta org in ORG_CONFIGS."""
+    _patch_org_configs[BETA_SLUG] = {**BETA_CONFIG}
+    return _patch_org_configs[BETA_SLUG]
