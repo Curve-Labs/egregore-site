@@ -27,7 +27,7 @@ from .models import (
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
     OrgInvite, OrgAcceptInvite, UserProfileUpdate,
 )
-from .services.graph import execute_query, execute_batch, get_schema, test_connection
+from .services.graph import execute_query, execute_batch, execute_system_query, get_schema, test_connection
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
 from .services import github as gh
 from .services.tokens import create_token, claim_token, create_invite_token, peek_token
@@ -275,9 +275,9 @@ async def org_register(body: OrgRegister, authorization: str = Header(...)):
     # Create Org node in Neo4j
     await execute_query(new_org, """
         MERGE (o:Org {id: $_org})
-        SET o.name = $name, o.github_org = $github_org
+        SET o.name = $name, o.github_org = $github_org, o.created_by = $created_by
         RETURN o.id
-    """, {"name": body.org_name, "github_org": body.github_org})
+    """, {"name": body.org_name, "github_org": body.github_org, "created_by": github_user.get("login", "")})
 
     logger.info(f"Registered new org: {slug} by {github_user.get('login')}")
 
@@ -496,8 +496,8 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     try:
         neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
-            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
-        """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
+            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key, o.created_by = $created_by
+        """, {"name": body.org_name, "github_org": owner, "api_key": api_key, "created_by": user["login"]})
         if "error" in neo4j_result:
             logger.error(f"Neo4j Org bootstrap error: {neo4j_result['error']}")
         else:
@@ -923,9 +923,9 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
         except Exception:
             pass
 
-    # Cross-org query: TelegramUser (system label, not org-scoped) → Person via IDENTIFIES
-    # We start from TelegramUser to avoid org scoping on Person which would restrict to current org only
-    membership_result = await execute_query(org, """
+    # Cross-org query: uses execute_system_query to bypass org scoping
+    # (TelegramUser → Person lookup spans all orgs intentionally)
+    membership_result = await execute_system_query(org, """
         MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
         WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
         WITH DISTINCT tu
@@ -1019,8 +1019,9 @@ async def user_profile_get(authorization: str = Header(...)):
             "memberships": [],
         }
 
+    # Cross-org queries use execute_system_query (bypasses org scoping)
     # Query 1: Find TelegramUser linked to any Person with this github
-    tu_result = await execute_query(seed_org, """
+    tu_result = await execute_system_query(seed_org, """
         MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
         WHERE p.github = $username
         RETURN tu.username AS tuUser, COLLECT(DISTINCT p.org) AS orgs
@@ -1035,7 +1036,7 @@ async def user_profile_get(authorization: str = Header(...)):
         org_ids.update(o for o in (tu_values[0][1] or []) if o)
 
     # Query 2 (fallback): Find unlinked Person nodes
-    p_result = await execute_query(seed_org, """
+    p_result = await execute_system_query(seed_org, """
         MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
         RETURN COLLECT(DISTINCT p.org) AS orgs
     """, {"username": username})
@@ -1047,7 +1048,7 @@ async def user_profile_get(authorization: str = Header(...)):
     # Query 3: For each org, get Org name + IN_GROUP status
     memberships = []
     if org_ids:
-        org_result = await execute_query(seed_org, """
+        org_result = await execute_system_query(seed_org, """
             MATCH (o:Org) WHERE o.id IN $orgIds
             OPTIONAL MATCH (tu:TelegramUser {username: $tuUser})-[r:IN_GROUP {status: 'active'}]->(o)
             RETURN o.id AS slug, o.name AS name, count(r) > 0 AS inGroup
@@ -1103,14 +1104,15 @@ async def user_profile_update(body: UserProfileUpdate, authorization: str = Head
     if not seed_org:
         raise HTTPException(status_code=503, detail="No Neo4j connection available")
 
+    # Cross-org queries use execute_system_query (bypasses org scoping)
     # Set telegramUsername on all Person nodes with matching github
-    await execute_query(seed_org, """
+    await execute_system_query(seed_org, """
         MATCH (p) WHERE p.github = $username
         SET p.telegramUsername = $tgHandle
     """, {"username": username, "tgHandle": tg_handle})
 
     # MERGE TelegramUser and IDENTIFIES relationships
-    await execute_query(seed_org, """
+    await execute_system_query(seed_org, """
         MERGE (tu:TelegramUser {username: $tgHandle})
         WITH tu
         MATCH (p) WHERE p.github = $username
@@ -1119,7 +1121,7 @@ async def user_profile_update(body: UserProfileUpdate, authorization: str = Head
 
     # Return updated profile (same shape as GET)
     # Re-gather memberships
-    org_result = await execute_query(seed_org, """
+    org_result = await execute_system_query(seed_org, """
         MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
         WITH COLLECT(DISTINCT p.org) AS orgIds
         UNWIND orgIds AS oid

@@ -165,6 +165,68 @@ class TestFounderSetup:
         assert "setup_token" in resp.json()
 
     @respx.mock
+    def test_founder_setup_stores_created_by(self, app_client, monkeypatch):
+        """Neo4j MERGE for Org node should include created_by with GitHub username."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-creator.example.com")
+        neo4j_bodies = []
+
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "creator-user", "name": "Creator"})
+        )
+        respx.get(f"{GITHUB_API}/repos/CreatorOrg/egregore-core").mock(
+            return_value=Response(200, json={"full_name": "CreatorOrg/egregore-core"})
+        )
+        respx.post(f"{GITHUB_API}/orgs/CreatorOrg/repos").mock(
+            return_value=Response(422, json={"message": "already exists"})
+        )
+        respx.get(f"{GITHUB_API}/repos/CreatorOrg/CreatorOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "CreatorOrg/CreatorOrg-memory"})
+        )
+        respx.get(url__regex=rf"{GITHUB_API}/repos/CreatorOrg/CreatorOrg-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/CreatorOrg/CreatorOrg-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        respx.get(f"{GITHUB_API}/repos/CreatorOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/CreatorOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # Develop branch sync
+        respx.get(url__regex=rf"{GITHUB_API}/repos/CreatorOrg/egregore-core/git/ref/.*").mock(
+            return_value=Response(200, json={"object": {"sha": "abc123"}})
+        )
+        respx.patch(url__regex=rf"{GITHUB_API}/repos/CreatorOrg/egregore-core/git/refs/.*").mock(
+            return_value=Response(200, json={"object": {"sha": "abc123"}})
+        )
+        respx.post(url__regex=r"https://neo4j-creator.*").mock(
+            side_effect=lambda req: (
+                neo4j_bodies.append(json.loads(req.content)),
+                Response(200, json=_neo4j_ok()),
+            )[-1]
+        )
+
+        resp = app_client.post(
+            "/api/org/setup",
+            json={"github_org": "CreatorOrg", "org_name": "Creator Org"},
+            headers={"Authorization": f"Bearer {FAKE_TOKEN}"},
+        )
+
+        assert resp.status_code == 200
+        # Find the MERGE Org query in captured Neo4j calls
+        org_merge = None
+        for body in neo4j_bodies:
+            stmt = body.get("statement", "")
+            if "MERGE" in stmt and "Org" in stmt:
+                org_merge = body
+                break
+        assert org_merge is not None, "Expected MERGE Org query in Neo4j calls"
+        assert org_merge["parameters"].get("created_by") == "creator-user"
+        assert "created_by" in org_merge["statement"]
+
+    @respx.mock
     def test_founder_setup_invalid_github_token(self, app_client):
         """Bad GitHub token → 401."""
         respx.get(f"{GITHUB_API}/user").mock(

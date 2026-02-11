@@ -29,6 +29,18 @@ _ALLOWED_CALLS = {
     "dbms.components",
 }
 
+# Matches unlabeled node patterns: (n), (), (n {props})
+# Excludes function calls like count(n) via negative lookbehind for word chars
+_UNLABELED_NODE = re.compile(
+    r'(?<!\w)\('           # open paren not preceded by word char
+    r'\s*'                 # optional whitespace
+    r'(?:[a-zA-Z_]\w*)?'  # optional variable name
+    r'\s*'                 # optional whitespace
+    r'(?:\{[^}]*\})?'     # optional properties block
+    r'\s*'                 # optional whitespace
+    r'\)'                  # close paren
+)
+
 
 class RateLimitError(Exception):
     """Raised when an org exceeds the query rate limit."""
@@ -85,6 +97,28 @@ def validate_query(statement: str) -> None:
             raise ValueError(
                 f"Procedure '{procedure}' is not in the allowlist. "
                 f"Allowed: {', '.join(sorted(_ALLOWED_CALLS))}"
+            )
+
+    # Block unlabeled node patterns — they bypass org scoping
+    # Skip CALL statements (already exempted from scoping)
+    if not stripped.strip().upper().startswith("CALL"):
+        # Variables that are labeled somewhere in the query (rebound refs are OK)
+        labeled_vars = set(re.findall(r'\(([a-zA-Z_]\w*)\s*:', stripped))
+        for match in _UNLABELED_NODE.finditer(stripped):
+            content = match.group(0)
+            # Check for label colon (before any property block, not inside {})
+            brace_pos = content.find('{')
+            label_section = content[:brace_pos] if brace_pos >= 0 else content
+            if ':' in label_section:
+                continue
+            # Allow rebound variables that were labeled earlier
+            var_match = re.match(r'\(\s*([a-zA-Z_]\w*)', content)
+            if var_match and var_match.group(1) in labeled_vars:
+                continue
+            raise ValueError(
+                f"Unlabeled node pattern '{content.strip()}' is not allowed. "
+                f"All node patterns must include a label (e.g., (n:Person)) "
+                f"to ensure proper org isolation."
             )
 
 

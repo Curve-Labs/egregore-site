@@ -419,3 +419,60 @@ class TestQuerySizeLimit:
         from api.models import GraphQuery
         with pytest.raises(ValidationError):
             GraphQuery(statement="A" * 10241)
+
+
+# =============================================================================
+# UNLABELED NODE PATTERNS
+# =============================================================================
+
+
+class TestUnlabeledNodePatterns:
+    """Unlabeled node patterns must be blocked to prevent org scope bypass."""
+
+    def test_bare_variable_node_blocked(self):
+        with pytest.raises(ValueError, match="Unlabeled node pattern"):
+            validate_query("MATCH (n) RETURN labels(n)")
+
+    def test_anonymous_node_blocked(self):
+        with pytest.raises(ValueError, match="Unlabeled node pattern"):
+            validate_query("MATCH ()-[:REL]->() RETURN count(*)")
+
+    def test_unlabeled_with_properties_blocked(self):
+        with pytest.raises(ValueError, match="Unlabeled node pattern"):
+            validate_query('MATCH (n {name: "x"}) RETURN n')
+
+    def test_labeled_node_allowed(self):
+        validate_query("MATCH (n:Person) RETURN n")
+
+    def test_labeled_node_with_props_allowed(self):
+        validate_query("MATCH (n:Person {name: $name}) RETURN n")
+
+    def test_function_call_not_blocked(self):
+        """count(n), collect(n.name) are function calls, not node patterns."""
+        validate_query("MATCH (p:Person) RETURN count(p)")
+
+    def test_collect_function_not_blocked(self):
+        validate_query("MATCH (p:Person) RETURN collect(p.name)")
+
+    def test_call_statement_exempt(self):
+        validate_query("CALL db.labels()")
+
+    def test_relationship_with_labels_allowed(self):
+        validate_query("MATCH (p:Person)-[:BY]->(s:Session) RETURN p, s")
+
+    def test_return_literal_allowed(self):
+        validate_query("RETURN 1 AS ok")
+
+    def test_rebound_variable_allowed(self):
+        """Variables labeled earlier in the query can be reused without label."""
+        validate_query(
+            "MERGE (p:Person {name: $name}) "
+            "WITH p "
+            "MATCH (o:Org {id: $_org}) "
+            "MERGE (p)-[:MEMBER_OF]->(o)"
+        )
+
+    def test_truly_unlabeled_variable_blocked(self):
+        """Variable never labeled anywhere in query → blocked."""
+        with pytest.raises(ValueError, match="Unlabeled node pattern"):
+            validate_query("MATCH (x) RETURN x")
