@@ -25,7 +25,7 @@ from .auth import (
 from .models import (
     GraphQuery, GraphBatch, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
-    OrgInvite, OrgAcceptInvite,
+    OrgInvite, OrgAcceptInvite, UserProfileUpdate,
 )
 from .services.graph import execute_query, execute_batch, get_schema, test_connection
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
@@ -929,6 +929,180 @@ async def github_client_id():
 
 
 # =============================================================================
+# USER PROFILE
+# =============================================================================
+
+
+def _get_seed_org() -> dict | None:
+    """Get a seed org config with Neo4j access for cross-org queries."""
+    for slug, org in ORG_CONFIGS.items():
+        if org.get("neo4j_host"):
+            return {**org, "slug": slug}
+    return None
+
+
+@app.get("/api/user/profile")
+async def user_profile_get(authorization: str = Header(...)):
+    """Get user profile: Telegram handle + org memberships.
+
+    Auth: GitHub token. Cross-org lookup (not scoped to a single org).
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    # Get GitHub user info
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    github_user = user_resp.json()
+    username = github_user.get("login", "")
+    name = github_user.get("name", "") or username
+
+    seed_org = _get_seed_org()
+    if not seed_org:
+        return {
+            "github_username": username,
+            "name": name,
+            "telegram_username": None,
+            "memberships": [],
+        }
+
+    # Query 1: Find TelegramUser linked to any Person with this github
+    tu_result = await execute_query(seed_org, """
+        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
+        WHERE p.github = $username
+        RETURN tu.username AS tuUser, COLLECT(DISTINCT p.org) AS orgs
+    """, {"username": username})
+
+    tu_username = None
+    org_ids = set()
+
+    tu_values = tu_result.get("values", [])
+    if tu_values and tu_values[0]:
+        tu_username = tu_values[0][0]
+        org_ids.update(o for o in (tu_values[0][1] or []) if o)
+
+    # Query 2 (fallback): Find unlinked Person nodes
+    p_result = await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
+        RETURN COLLECT(DISTINCT p.org) AS orgs
+    """, {"username": username})
+
+    p_values = p_result.get("values", [])
+    if p_values and p_values[0]:
+        org_ids.update(o for o in (p_values[0][0] or []) if o)
+
+    # Query 3: For each org, get Org name + IN_GROUP status
+    memberships = []
+    if org_ids:
+        org_result = await execute_query(seed_org, """
+            MATCH (o:Org) WHERE o.id IN $orgIds
+            OPTIONAL MATCH (tu:TelegramUser {username: $tuUser})-[r:IN_GROUP {status: 'active'}]->(o)
+            RETURN o.id AS slug, o.name AS name, count(r) > 0 AS inGroup
+        """, {"orgIds": list(org_ids), "tuUser": tu_username or ""})
+
+        for row in org_result.get("values", []):
+            if row and len(row) >= 3:
+                memberships.append({
+                    "org_slug": row[0],
+                    "org_name": row[1] or row[0],
+                    "in_telegram_group": bool(row[2]),
+                })
+
+    return {
+        "github_username": username,
+        "name": name,
+        "telegram_username": tu_username,
+        "memberships": memberships,
+    }
+
+
+@app.post("/api/user/profile")
+async def user_profile_update(body: UserProfileUpdate, authorization: str = Header(...)):
+    """Update user profile: set Telegram handle on all Person nodes + TelegramUser.
+
+    Auth: GitHub token. Cross-org update.
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    github_user = user_resp.json()
+    username = github_user.get("login", "")
+    name = github_user.get("name", "") or username
+
+    # Strip leading @ and trim
+    tg_handle = body.telegram_username.lstrip("@").strip()
+    if not tg_handle:
+        raise HTTPException(status_code=400, detail="Telegram username cannot be empty")
+
+    seed_org = _get_seed_org()
+    if not seed_org:
+        raise HTTPException(status_code=503, detail="No Neo4j connection available")
+
+    # Set telegramUsername on all Person nodes with matching github
+    await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username
+        SET p.telegramUsername = $tgHandle
+    """, {"username": username, "tgHandle": tg_handle})
+
+    # MERGE TelegramUser and IDENTIFIES relationships
+    await execute_query(seed_org, """
+        MERGE (tu:TelegramUser {username: $tgHandle})
+        WITH tu
+        MATCH (p) WHERE p.github = $username
+        MERGE (tu)-[:IDENTIFIES]->(p)
+    """, {"username": username, "tgHandle": tg_handle})
+
+    # Return updated profile (same shape as GET)
+    # Re-gather memberships
+    org_result = await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
+        WITH COLLECT(DISTINCT p.org) AS orgIds
+        UNWIND orgIds AS oid
+        MATCH (o:Org {id: oid})
+        OPTIONAL MATCH (tu:TelegramUser {username: $tgHandle})-[r:IN_GROUP {status: 'active'}]->(o)
+        RETURN o.id AS slug, o.name AS name, count(r) > 0 AS inGroup
+    """, {"username": username, "tgHandle": tg_handle})
+
+    memberships = []
+    for row in org_result.get("values", []):
+        if row and len(row) >= 3:
+            memberships.append({
+                "org_slug": row[0],
+                "org_name": row[1] or row[0],
+                "in_telegram_group": bool(row[2]),
+            })
+
+    return {
+        "github_username": username,
+        "name": name,
+        "telegram_username": tg_handle,
+        "memberships": memberships,
+    }
+
+
+# =============================================================================
 # INVITE FLOW
 # =============================================================================
 
@@ -1052,13 +1226,38 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
     is_personal = invite_data.get("is_personal", False)
 
     if is_personal:
-        # Personal account: accept repo collaboration invitations
+        # Personal account: accept ALL pending repo collaboration invitations from this owner
         accepted = await gh.accept_repo_invitations(token, owner)
-        # Even if 0 accepted (already a collaborator or invite pending), check access
-        if not await gh.repo_exists(token, owner, invite_data.get("repo_name", "egregore-core")):
+
+        # Verify access to both egregore repo AND memory repo
+        repo_name = invite_data.get("repo_name", "egregore-core")
+        has_egregore_access = await gh.repo_exists(token, owner, repo_name)
+
+        # Read memory repo name from egregore.json
+        memory_repo_name = f"{owner}-memory"
+        try:
+            config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+            if config_raw:
+                _cfg = json.loads(config_raw)
+                _mem = _cfg.get("memory_repo", memory_repo_name)
+                if "/" in _mem:
+                    memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                else:
+                    memory_repo_name = _mem
+        except Exception:
+            pass
+
+        has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
+
+        if not has_egregore_access or not has_memory_access:
+            missing = []
+            if not has_egregore_access:
+                missing.append(repo_name)
+            if not has_memory_access:
+                missing.append(memory_repo_name)
             return {
                 "status": "pending_github",
-                "message": "The collaboration invitation hasn't arrived yet. Try again in a moment.",
+                "message": f"Waiting for access to: {', '.join(missing)}. Retrying automatically...",
                 "github_org": owner,
             }
     else:
