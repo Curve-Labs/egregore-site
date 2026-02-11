@@ -62,3 +62,11 @@ export async function getInviteInfo(inviteToken) {
 export async function acceptInvite(token, inviteToken) {
   return request("POST", `/api/org/invite/${inviteToken}/accept`, { token });
 }
+
+export async function getUserProfile(token) {
+  return request("GET", "/api/user/profile", { token });
+}
+
+export async function updateUserProfile(token, { telegram_username }) {
+  return request("POST", "/api/user/profile", { token, body: { telegram_username } });
+}

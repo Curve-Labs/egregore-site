@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile } from "../api";
 
 const C = {
   parchment: "#F4F1EA",
@@ -762,6 +762,143 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
   );
 }
 
+// ─── Profile Step ───────────────────────────────────────────────
+
+function ProfileStep({ token, user, onContinue }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [handle, setHandle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getUserProfile(token)
+      .then((data) => {
+        setProfile(data);
+        if (data.telegram_username) setHandle(data.telegram_username);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Profile API down — skip gracefully
+        onContinue();
+      });
+  }, [token]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "3rem" }}>
+        <Spinner />
+        <p style={{ ...font.mono, fontSize: "0.8rem", color: C.muted, marginTop: "1rem" }}>Loading profile...</p>
+      </div>
+    );
+  }
+
+  const hasMemberships = profile.memberships && profile.memberships.length > 0;
+  const handleChanged = handle.replace(/^@/, "").trim() !== (profile.telegram_username || "");
+
+  const handleContinue = async () => {
+    const cleaned = handle.replace(/^@/, "").trim();
+    if (cleaned && handleChanged) {
+      setSaving(true);
+      try {
+        await updateUserProfile(token, { telegram_username: cleaned });
+      } catch {
+        // Save failed — continue anyway
+      }
+      setSaving(false);
+    }
+    onContinue();
+  };
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem", textAlign: "center" }}>
+        {hasMemberships ? "Welcome back" : "Your profile"}
+      </p>
+      <p style={{ ...font.serif, fontSize: "1.3rem", textAlign: "center", marginBottom: "2.5rem" }}>
+        {profile.name || user.login}
+      </p>
+
+      {/* Telegram handle */}
+      <div style={{ marginBottom: "2rem" }}>
+        <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+          Telegram
+        </p>
+        <input
+          type="text"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          placeholder="@your_handle"
+          style={{
+            ...font.mono, fontSize: "0.85rem", width: "100%", padding: "0.75rem 1rem",
+            border: `1px solid ${C.warmGray}`, background: "transparent", color: C.ink,
+            outline: "none", boxSizing: "border-box",
+          }}
+        />
+        <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "0.4rem" }}>
+          Used for notifications and group membership detection
+        </p>
+      </div>
+
+      {/* Memberships */}
+      {hasMemberships && (
+        <div style={{ marginBottom: "2rem" }}>
+          <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+            Organizations
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {profile.memberships.map((m) => (
+              <div
+                key={m.org_slug}
+                style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "0.6rem 1rem", border: `1px solid ${C.warmGray}`,
+                }}
+              >
+                <span style={{ ...font.serif, fontSize: "0.95rem", color: C.ink }}>
+                  {m.org_name}
+                </span>
+                {m.in_telegram_group ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", ...font.mono, fontSize: "0.6rem", color: "#2d8a4e" }}>
+                    <CheckIcon /> in group
+                  </span>
+                ) : (
+                  <span style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
+                    not in group
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button
+          onClick={onContinue}
+          style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        >
+          Skip
+        </button>
+        <button
+          onClick={handleContinue}
+          disabled={saving}
+          style={{
+            ...font.mono, fontSize: "0.75rem",
+            background: C.ink, color: C.parchment,
+            border: "none", padding: "0.6rem 1.25rem",
+            cursor: saving ? "default" : "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? "Saving..." : "Continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Invite Flow Components ─────────────────────────────────────
 
 function InviteLanding({ inviteToken, onAuth }) {
@@ -837,6 +974,8 @@ function InviteAccept({ token, user, inviteToken }) {
   const [status, setStatus] = useState("working"); // working, done, pending_github, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [retries, setRetries] = useState(0);
+  const MAX_RETRIES = 20; // ~60 seconds of polling
 
   const doAccept = () => {
     setStatus("working");
@@ -844,6 +983,7 @@ function InviteAccept({ token, user, inviteToken }) {
     acceptInvite(token, inviteToken)
       .then((data) => {
         if (data.status === "pending_github") {
+          setRetries((r) => r + 1);
           setStatus("pending_github");
           setResult(data);
         } else {
@@ -871,17 +1011,26 @@ function InviteAccept({ token, user, inviteToken }) {
   }
 
   if (status === "pending_github") {
-    // Auto-retry after a short delay — the invite may just need a moment to propagate
-    setTimeout(doAccept, 3000);
+    if (retries < MAX_RETRIES) {
+      // Auto-retry after a short delay — the invite may just need a moment to propagate
+      setTimeout(doAccept, 3000);
+    }
     return (
       <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
-        <Spinner />
+        {retries < MAX_RETRIES ? <Spinner /> : null}
         <p style={{ ...font.serif, fontSize: "1.2rem", marginTop: "1.5rem" }}>
-          Setting up your access...
+          {retries < MAX_RETRIES ? "Setting up your access..." : "Still waiting for GitHub access"}
         </p>
         <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
-          Waiting for GitHub to process the invitation
+          {retries < MAX_RETRIES
+            ? "Waiting for GitHub to process the invitation"
+            : (result?.message || "The GitHub invitation may not have been sent yet. Check your GitHub notifications or ask your admin.")}
         </p>
+        {retries >= MAX_RETRIES && (
+          <button onClick={() => { setRetries(0); doAccept(); }} style={{ ...font.mono, fontSize: "0.8rem", color: C.ink, background: "none", border: `1px solid ${C.warmGray}`, padding: "0.5rem 1rem", cursor: "pointer", marginTop: "1rem" }}>
+            Retry
+          </button>
+        )}
       </div>
     );
   }
@@ -938,6 +1087,7 @@ function InviteAccept({ token, user, inviteToken }) {
 export default function SetupFlow() {
   const [githubToken, setGithubToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [profileDone, setProfileDone] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [selectedRepos, setSelectedRepos] = useState(null); // null = not picked yet, [] = skipped
   const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
@@ -947,7 +1097,16 @@ export default function SetupFlow() {
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
   const params = new URLSearchParams(window.location.search);
-  const inviteToken = params.get("invite") || sessionStorage.getItem("egregore_invite");
+  // Only load invite token from sessionStorage on /join or /callback (survives OAuth redirect).
+  // On /setup, ignore stale tokens so the setup flow isn't hijacked.
+  const inviteToken = params.get("invite") || ((isJoin || isCallback) ? sessionStorage.getItem("egregore_invite") : null);
+
+  // Clear stale invite tokens when explicitly on /setup
+  useEffect(() => {
+    if (!isJoin && !isCallback && !params.get("invite")) {
+      sessionStorage.removeItem("egregore_invite");
+    }
+  }, []);
 
   // Invite flow: /join?invite=inv_xxx
   if (isJoin && inviteToken && !githubToken) {
@@ -984,6 +1143,15 @@ export default function SetupFlow() {
     return (
       <SetupLayout>
         <InviteAccept token={githubToken} user={user} inviteToken={inviteToken} />
+      </SetupLayout>
+    );
+  }
+
+  // Profile step (after OAuth, before org picker — skipped for invite flow)
+  if (githubToken && !profileDone && !inviteToken) {
+    return (
+      <SetupLayout>
+        <ProfileStep token={githubToken} user={user} onContinue={() => setProfileDone(true)} />
       </SetupLayout>
     );
   }
