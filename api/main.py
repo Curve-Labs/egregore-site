@@ -482,16 +482,18 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
     # Person and Project nodes deferred to first session start (avoids orphans)
     try:
+        logger.info(f"Neo4j bootstrap: slug={slug}, neo4j_host={new_org.get('neo4j_host', 'MISSING')[:20]}")
         neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
+        logger.info(f"Neo4j bootstrap result: {neo4j_result}")
         if "error" in neo4j_result:
             logger.error(f"Neo4j Org bootstrap returned error: {neo4j_result['error']}")
         else:
             logger.info(f"Neo4j Org node created for {slug}")
     except Exception as e:
-        logger.error(f"Neo4j Org bootstrap exception: {e}")
+        logger.error(f"Neo4j Org bootstrap exception: {e}", exc_info=True)
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
