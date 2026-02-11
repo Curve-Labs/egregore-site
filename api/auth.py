@@ -189,6 +189,28 @@ async def load_orgs_from_neo4j():
             {},
         )
 
+        # Migrate uniqueness constraints: single-prop → composite (name + org)
+        # Required for multi-tenant: same person name can exist in different orgs
+        migrations = [
+            ("person_name", "Person", "name"),
+            ("project_name", "Project", "name"),
+        ]
+        for old_name, label, prop in migrations:
+            try:
+                await execute_system_query(
+                    seed_org, f"DROP CONSTRAINT {old_name} IF EXISTS", {},
+                )
+                await execute_system_query(
+                    seed_org,
+                    f"CREATE CONSTRAINT {old_name}_org IF NOT EXISTS "
+                    f"FOR (n:{label}) REQUIRE (n.{prop}, n.org) IS UNIQUE",
+                    {},
+                )
+                logger.info(f"Migrated constraint {old_name} → {old_name}_org")
+            except Exception as e:
+                # Already migrated or unsupported — not fatal
+                logger.debug(f"Constraint migration {old_name}: {e}")
+
     except Exception as e:
         logger.warning(f"Failed to load orgs from Neo4j: {e}")
 
