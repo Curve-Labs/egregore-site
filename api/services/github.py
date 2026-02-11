@@ -20,7 +20,7 @@ def _headers(token: str) -> dict:
 
 async def get_user(token: str) -> dict:
     """Get authenticated user info."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(f"{API_BASE}/user", headers=_headers(token), timeout=10.0)
     if resp.status_code != 200:
         raise ValueError(f"GitHub auth failed: {resp.status_code}")
@@ -30,7 +30,7 @@ async def get_user(token: str) -> dict:
 
 async def list_orgs(token: str) -> list[dict]:
     """List user's GitHub organizations."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(f"{API_BASE}/user/orgs", headers=_headers(token), timeout=10.0)
     if resp.status_code != 200:
         return []
@@ -46,7 +46,7 @@ async def list_orgs(token: str) -> list[dict]:
 
 async def get_org_membership(token: str, org: str) -> str:
     """Get user's role in an org (admin, member, or empty if not a member)."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/user/memberships/orgs/{org}",
             headers=_headers(token),
@@ -74,7 +74,7 @@ async def fork_repo(token: str, target_org: str | None = None) -> dict:
     if target_org:
         body["organization"] = target_org
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(
             f"{API_BASE}/repos/{UPSTREAM_OWNER}/{UPSTREAM_REPO}/forks",
             headers=_headers(token),
@@ -100,7 +100,7 @@ async def generate_from_template(
         "private": private,
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(
             f"{API_BASE}/repos/{UPSTREAM_OWNER}/{UPSTREAM_REPO}/generate",
             headers=_headers(token),
@@ -114,7 +114,7 @@ async def generate_from_template(
 
 async def rename_repo(token: str, owner: str, old_name: str, new_name: str) -> dict:
     """Rename a repository. Returns updated repo data."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.patch(
             f"{API_BASE}/repos/{owner}/{old_name}",
             headers=_headers(token),
@@ -160,7 +160,7 @@ async def create_repo(token: str, name: str, org: str | None = None, private: bo
         "description": "Egregore shared memory",
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(url, headers=_headers(token), json=body, timeout=15.0)
     if resp.status_code not in (200, 201):
         raise ValueError(f"Create repo failed: {resp.status_code} {resp.text}")
@@ -173,14 +173,14 @@ async def update_file(token: str, owner: str, repo: str, path: str, content: str
     url = f"{API_BASE}/repos/{owner}/{repo}/contents/{path}"
 
     # Check if file exists to get its SHA (needed for updates)
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         existing = await client.get(url, headers=_headers(token), timeout=10.0)
 
     body = {"message": message, "content": encoded}
     if existing.status_code == 200:
         body["sha"] = existing.json()["sha"]
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.put(url, headers=_headers(token), json=body, timeout=15.0)
     if resp.status_code not in (200, 201):
         raise ValueError(f"Update file failed: {resp.status_code} {resp.text}")
@@ -215,7 +215,7 @@ async def list_org_repos(token: str, org: str) -> list[dict]:
     repos: list[dict] = []
     page = 1
     while True:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             resp = await client.get(
                 f"{API_BASE}/orgs/{org}/repos",
                 headers=_headers(token),
@@ -224,7 +224,7 @@ async def list_org_repos(token: str, org: str) -> list[dict]:
             )
         if resp.status_code == 404:
             # Not an org — try as personal account
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
                     f"{API_BASE}/users/{org}/repos",
                     headers=_headers(token),
@@ -287,7 +287,7 @@ async def update_egregore_json(
 
 async def check_collaborator(token: str, owner: str, repo: str, username: str) -> bool:
     """Check if a user is a collaborator on a repo."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
             headers=_headers(token),
@@ -309,7 +309,7 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
     egregore_repos: list[str] = []
 
     while True:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             resp = await client.get(
                 f"{API_BASE}/orgs/{org}/repos",
                 headers=_headers(token),
@@ -317,7 +317,7 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
                 timeout=15.0,
             )
         if resp.status_code == 404:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
                     f"{API_BASE}/users/{org}/repos",
                     headers=_headers(token),
@@ -360,7 +360,7 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
 
 async def get_file_content(token: str, owner: str, repo: str, path: str) -> str | None:
     """Get file content from a repo."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/repos/{owner}/{repo}/contents/{path}",
             headers=_headers(token),
@@ -376,7 +376,7 @@ async def get_file_content(token: str, owner: str, repo: str, path: str) -> str 
 async def invite_to_org(token: str, org: str, username: str) -> dict:
     """Send a GitHub org invitation. Requires admin:org scope + org owner/admin role.
     Returns {"status": "invited"} or {"status": "failed", "reason": "..."}."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.put(
             f"{API_BASE}/orgs/{org}/memberships/{username}",
             headers=_headers(token),
@@ -398,7 +398,7 @@ async def invite_to_org(token: str, org: str, username: str) -> dict:
 
 async def check_org_membership(token: str, org: str, username: str) -> str:
     """Check a user's org membership state. Returns 'active', 'pending', or 'none'."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/orgs/{org}/memberships/{username}",
             headers=_headers(token),
@@ -411,7 +411,7 @@ async def check_org_membership(token: str, org: str, username: str) -> str:
 
 async def add_repo_collaborator(token: str, owner: str, repo: str, username: str) -> bool:
     """Add a user as a collaborator to a repo. Returns True if successful."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.put(
             f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
             headers=_headers(token),
@@ -424,7 +424,7 @@ async def add_repo_collaborator(token: str, owner: str, repo: str, username: str
 async def accept_org_invitation(token: str, org: str) -> bool:
     """Accept a pending org invitation on behalf of the authenticated user.
     Uses PATCH /user/memberships/orgs/{org} with state=active."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.patch(
             f"{API_BASE}/user/memberships/orgs/{org}",
             headers=_headers(token),
@@ -438,7 +438,7 @@ async def accept_repo_invitations(token: str, owner: str) -> int:
     """Accept all pending repo collaboration invitations from a specific owner.
     Returns the number of invitations accepted."""
     accepted = 0
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/user/repository_invitations",
             headers=_headers(token),
@@ -450,7 +450,7 @@ async def accept_repo_invitations(token: str, owner: str) -> int:
     for inv in resp.json():
         repo_owner = inv.get("repository", {}).get("owner", {}).get("login", "")
         if repo_owner.lower() == owner.lower():
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
                 patch_resp = await client.patch(
                     f"{API_BASE}/user/repository_invitations/{inv['id']}",
                     headers=_headers(token),
@@ -467,7 +467,7 @@ async def sync_branch_to_main(token: str, owner: str, repo: str, branch: str = "
     Returns True if successful (or branch doesn't exist), False on error.
     """
     # Get main's SHA
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/repos/{owner}/{repo}/git/ref/heads/main",
             headers=_headers(token),
@@ -478,7 +478,7 @@ async def sync_branch_to_main(token: str, owner: str, repo: str, branch: str = "
     main_sha = resp.json()["object"]["sha"]
 
     # Check if the target branch exists
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/repos/{owner}/{repo}/git/ref/heads/{branch}",
             headers=_headers(token),
@@ -488,7 +488,7 @@ async def sync_branch_to_main(token: str, owner: str, repo: str, branch: str = "
         return True  # Branch doesn't exist, nothing to sync
 
     # Force-update branch to main's SHA
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.patch(
             f"{API_BASE}/repos/{owner}/{repo}/git/refs/heads/{branch}",
             headers=_headers(token),
@@ -500,7 +500,7 @@ async def sync_branch_to_main(token: str, owner: str, repo: str, branch: str = "
 
 async def is_org(token: str, name: str) -> bool:
     """Check if a GitHub name is an org (True) or a user (False)."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/orgs/{name}",
             headers=_headers(token),
