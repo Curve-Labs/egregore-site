@@ -81,6 +81,10 @@ class TestFounderSetup:
         respx.post(f"{GITHUB_API}/orgs/FounderOrg/repos").mock(
             return_value=Response(201, json={"full_name": "FounderOrg/FounderOrg-memory"})
         )
+        # Memory repo verification
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "FounderOrg/FounderOrg-memory"})
+        )
         # Init memory structure (update_file calls)
         respx.get(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
             return_value=Response(404)
@@ -127,6 +131,10 @@ class TestFounderSetup:
         # Memory repo creation returns 422 (already exists) — that's fine
         respx.post(f"{GITHUB_API}/orgs/ExistingOrg/repos").mock(
             return_value=Response(422, json={"message": "name already exists"})
+        )
+        # Memory repo verification (it exists from before)
+        respx.get(f"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "ExistingOrg/ExistingOrg-memory"})
         )
         # Init memory structure
         respx.get(url__regex=rf"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory/contents/.*").mock(

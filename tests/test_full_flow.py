@@ -1,9 +1,11 @@
-"""End-to-end flow tests: setup → invite → accept.
+"""End-to-end flow tests: setup → invite → accept → claim.
 
 These tests simulate the COMPLETE lifecycle with mocked GitHub API:
 1. Founder creates an Egregore instance (org or personal, default or named)
 2. Founder invites a user
 3. Invitee accepts the invite and gets a setup token
+4. Invitee claims the setup token and gets install config
+5. Install config (fork_url, memory_url) must point to repos that exist
 
 The key invariant tested: repo_name, memory_repo, and slug must stay
 consistent across the entire chain. A mismatch (like the accept endpoint
@@ -90,6 +92,10 @@ class TestPersonalNamedInstanceFlow:
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "testuser/testuser-research-memory"})
         )
+        # Memory repo verification
+        respx.get(f"{GITHUB_API}/repos/testuser/testuser-research-memory").mock(
+            return_value=Response(200, json={"full_name": "testuser/testuser-research-memory"})
+        )
         # Init memory structure
         respx.get(url__regex=rf"{GITHUB_API}/repos/testuser/testuser-research-memory/contents/.*").mock(
             return_value=Response(404)
@@ -162,6 +168,10 @@ class TestPersonalNamedInstanceFlow:
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
+        )
+        # Memory repo verification
+        respx.get(f"{GITHUB_API}/repos/founder/founder-research-memory").mock(
+            return_value=Response(200, json={"full_name": "founder/founder-research-memory"})
         )
         respx.get(url__regex=rf"{GITHUB_API}/repos/founder/founder-research-memory/contents/.*").mock(
             return_value=Response(404)
@@ -894,6 +904,10 @@ class TestSetupIdempotency:
         respx.post(f"{GITHUB_API}/orgs/FounderOrg/repos").mock(
             return_value=Response(422, json={"message": "name already exists"})
         )
+        # Memory repo verification (it exists from before)
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "FounderOrg/FounderOrg-memory"})
+        )
         # Init memory structure
         respx.get(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
             return_value=Response(404)
@@ -1024,3 +1038,283 @@ class TestEdgeCases:
             headers={"Authorization": "Bearer bad_token"},
         )
         assert resp.status_code == 401
+
+
+# =============================================================================
+# CLAIM + INSTALL DATA VERIFICATION
+# =============================================================================
+
+
+class TestClaimDataConsistency:
+    """Tests that the claim endpoint returns data the installer can actually use.
+
+    The installer (npx create-egregore) does:
+    1. GET /api/org/claim/{token} → gets fork_url, memory_url, api_key, etc.
+    2. git clone fork_url
+    3. git clone memory_url  ← THIS is where it breaks if memory repo doesn't exist
+
+    These tests verify the claim data is internally consistent and points
+    to repos that were actually created during setup.
+    """
+
+    @respx.mock
+    def test_setup_claim_has_consistent_urls(self, app_client):
+        """Claim data from setup must have matching repo_name, slug, and memory_url."""
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        repo_calls = []
+        def _repo_check(request):
+            repo_calls.append(True)
+            if len(repo_calls) <= 1:
+                return Response(404)
+            return Response(200, json={"full_name": "founder/egregore-research"})
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            side_effect=_repo_check
+        )
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-research"})
+        )
+        respx.post(f"{GITHUB_API}/user/repos").mock(
+            return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
+        )
+        # Memory repo exists after creation (verification step)
+        respx.get(f"{GITHUB_API}/repos/founder/founder-research-memory").mock(
+            return_value=Response(200, json={"full_name": "founder/founder-research-memory"})
+        )
+        respx.get(url__regex=rf"{GITHUB_API}/repos/founder/founder-research-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/founder/founder-research-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/founder/egregore-research/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        respx.post(url__regex=r"https://neo4j.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
+        )
+
+        # Setup
+        setup_resp = app_client.post(
+            "/api/org/setup",
+            json={
+                "github_org": "founder",
+                "org_name": "Research Lab",
+                "is_personal": True,
+                "instance_name": "research",
+            },
+            headers={"Authorization": f"Bearer {FOUNDER_TOKEN}"},
+        )
+        assert setup_resp.status_code == 200
+        setup_token = setup_resp.json()["setup_token"]
+
+        # Claim
+        claim_resp = app_client.get(f"/api/org/claim/{setup_token}")
+        assert claim_resp.status_code == 200
+        claim = claim_resp.json()
+
+        # Verify consistency
+        assert claim["repo_name"] == "egregore-research"
+        assert claim["slug"] == "founder-research"
+        assert "egregore-research" in claim["fork_url"]
+        assert "founder-research-memory" in claim["memory_url"]
+        assert claim["org_name"] == "Research Lab"
+        assert claim["github_org"] == "founder"
+        assert claim["api_key"].startswith("ek_founder-research_")
+
+    @respx.mock
+    def test_accept_claim_has_consistent_urls(self, app_client, _patch_org_configs):
+        """Claim data from invite accept must match the instance's actual repos."""
+        slug = "founder-research"
+        _patch_org_configs[slug] = {
+            "api_key": "ek_founder-research_abc",
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "neo4j_host": "neo4j+s://test.neo4j.io",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "test",
+            "telegram_bot_token": "123:ABC",
+            "telegram_chat_id": "-100test",
+        }
+
+        from api.services.tokens import create_invite_token
+        invite_token = create_invite_token({
+            "github_org": "founder",
+            "org_name": "Research Lab",
+            "invited_username": "invitee",
+            "invited_by": "founder",
+            "slug": "founder-research",
+            "repos": [],
+            "repo_name": "egregore-research",
+            "is_personal": True,
+        })
+
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "invitee", "name": "Invitee"})
+        )
+        respx.get(f"{GITHUB_API}/user/repository_invitations").mock(
+            return_value=Response(200, json=[])
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            return_value=Response(200, json={"full_name": "founder/egregore-research"})
+        )
+        egregore_config = {
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "memory_repo": "founder-research-memory",
+            "api_url": "https://api.example.com",
+            "slug": "founder-research",
+            "repo_name": "egregore-research",
+        }
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/egregore.json").mock(
+            return_value=Response(200, json=_b64_json(egregore_config))
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/founder-research-memory").mock(
+            return_value=Response(200, json={"full_name": "founder/founder-research-memory"})
+        )
+        respx.post(url__regex=r"https://neo4j.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
+        )
+        respx.post(url__regex=r"https://api\.telegram\.org/.*").mock(
+            return_value=Response(200, json={
+                "ok": True,
+                "result": {"invite_link": "https://t.me/+abc123"},
+            })
+        )
+
+        # Accept
+        accept_resp = app_client.post(
+            f"/api/org/invite/{invite_token}/accept",
+            headers={"Authorization": f"Bearer {INVITEE_TOKEN}"},
+        )
+        assert accept_resp.status_code == 200
+        accept_data = accept_resp.json()
+        assert accept_data["status"] == "accepted"
+
+        # Claim
+        claim_resp = app_client.get(f"/api/org/claim/{accept_data['setup_token']}")
+        assert claim_resp.status_code == 200
+        claim = claim_resp.json()
+
+        # Verify the installer will clone the RIGHT repos
+        assert "egregore-research" in claim["fork_url"], (
+            f"fork_url should reference egregore-research, got: {claim['fork_url']}"
+        )
+        assert "founder-research-memory" in claim["memory_url"], (
+            f"memory_url should reference founder-research-memory, got: {claim['memory_url']}"
+        )
+        assert claim["repo_name"] == "egregore-research"
+        assert claim["slug"] == "founder-research"
+        assert claim["api_key"] == "ek_founder-research_abc"
+
+
+# =============================================================================
+# MEMORY REPO VERIFICATION
+# =============================================================================
+
+
+class TestMemoryRepoVerification:
+    """Tests that setup FAILS if memory repo creation silently fails.
+
+    This catches the exact bug: setup says 'success' but the memory repo
+    doesn't exist, so the installer fails at 'git clone memory_url'.
+    """
+
+    @respx.mock
+    def test_setup_fails_if_memory_repo_not_created(self, app_client):
+        """Setup must error if memory repo doesn't exist after creation attempt."""
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        # Egregore repo: first 404 (doesn't exist), then 200 (created)
+        repo_calls = []
+        def _repo_check(request):
+            repo_calls.append(True)
+            if len(repo_calls) == 1:
+                return Response(404)
+            return Response(200, json={"full_name": "founder/egregore-core"})
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            side_effect=_repo_check
+        )
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-core"})
+        )
+        # Memory repo creation "succeeds" (201) but repo doesn't actually exist
+        respx.post(f"{GITHUB_API}/user/repos").mock(
+            return_value=Response(201, json={"full_name": "founder/founder-memory"})
+        )
+        # Verification: repo does NOT exist
+        respx.get(f"{GITHUB_API}/repos/founder/founder-memory").mock(
+            return_value=Response(404)
+        )
+
+        resp = app_client.post(
+            "/api/org/setup",
+            json={
+                "github_org": "founder",
+                "org_name": "Founder",
+                "is_personal": True,
+            },
+            headers={"Authorization": f"Bearer {FOUNDER_TOKEN}"},
+        )
+
+        assert resp.status_code == 500
+        assert "memory repo" in resp.json()["detail"].lower()
+
+    @respx.mock
+    def test_setup_succeeds_when_memory_repo_verified(self, app_client):
+        """Setup succeeds when memory repo exists after creation."""
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        repo_calls = []
+        def _repo_check(request):
+            repo_calls.append(True)
+            if len(repo_calls) <= 1:
+                return Response(404)
+            return Response(200, json={"full_name": "founder/egregore-core"})
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            side_effect=_repo_check
+        )
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-core"})
+        )
+        respx.post(f"{GITHUB_API}/user/repos").mock(
+            return_value=Response(201, json={"full_name": "founder/founder-memory"})
+        )
+        # Verification: repo DOES exist
+        respx.get(f"{GITHUB_API}/repos/founder/founder-memory").mock(
+            return_value=Response(200, json={"full_name": "founder/founder-memory"})
+        )
+        respx.get(url__regex=rf"{GITHUB_API}/repos/founder/founder-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/founder/founder-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/founder/egregore-core/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        respx.post(url__regex=r"https://neo4j.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
+        )
+
+        resp = app_client.post(
+            "/api/org/setup",
+            json={
+                "github_org": "founder",
+                "org_name": "Founder",
+                "is_personal": True,
+            },
+            headers={"Authorization": f"Bearer {FOUNDER_TOKEN}"},
+        )
+
+        assert resp.status_code == 200
+        assert "setup_token" in resp.json()

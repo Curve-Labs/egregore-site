@@ -426,7 +426,16 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
             raise
         # 422 = repo already exists, that's fine
 
-    # 4. Init memory structure
+    # 4. Verify memory repo exists (catches silent creation failures)
+    if not await gh.repo_exists(token, owner, memory_repo_name):
+        logger.error(f"Memory repo {owner}/{memory_repo_name} does not exist after creation attempt")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create memory repo {owner}/{memory_repo_name}. "
+                   f"Check that your GitHub token has the 'repo' scope.",
+        )
+
+    # 5. Init memory structure
     await gh.init_memory_structure(token, owner, memory_repo_name)
 
     # 5. Generate API key + store org
@@ -1259,9 +1268,16 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
             has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
             if not has_memory_access:
+                # Check if repo exists at all (using GitHub's unauthenticated check)
+                # If even the API returns 404 for this repo, it was never created
+                logger.warning(
+                    f"Memory repo {owner}/{memory_repo_name} not accessible by invitee. "
+                    f"It may not exist or the collaboration invite is pending."
+                )
                 return {
                     "status": "pending_github",
-                    "message": f"Waiting for access to: {memory_repo_name}. Retrying automatically...",
+                    "message": f"Waiting for access to: {memory_repo_name}. "
+                               f"If this persists, the repo may not exist — ask {owner} to re-run setup.",
                     "github_org": owner,
                 }
     else:
