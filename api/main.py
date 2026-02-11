@@ -448,9 +448,17 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     api_key = generate_api_key(slug)
     api_url = os.environ.get("EGREGORE_API_URL", "https://egregore-production-55f2.up.railway.app")
 
-    default_neo4j_host = os.environ.get("EGREGORE_NEO4J_HOST", os.environ.get("NEO4J_HOST", ""))
-    default_neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", os.environ.get("NEO4J_USER", "neo4j"))
-    default_neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", os.environ.get("NEO4J_PASSWORD", ""))
+    # Inherit Neo4j creds from an existing org config (all orgs share one Neo4j instance).
+    # Falls back to env vars only if no org configs are loaded yet.
+    seed_org = next((o for o in ORG_CONFIGS.values() if o.get("neo4j_host")), None)
+    if seed_org:
+        default_neo4j_host = seed_org["neo4j_host"]
+        default_neo4j_user = seed_org.get("neo4j_user", "neo4j")
+        default_neo4j_password = seed_org.get("neo4j_password", "")
+    else:
+        default_neo4j_host = os.environ.get("EGREGORE_NEO4J_HOST", os.environ.get("NEO4J_HOST", ""))
+        default_neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", os.environ.get("NEO4J_USER", "neo4j"))
+        default_neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", os.environ.get("NEO4J_PASSWORD", ""))
     default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
     new_org = {
@@ -481,19 +489,17 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
 
     # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
     # Person and Project nodes deferred to first session start (avoids orphans)
-    neo4j_debug = "not_attempted"
     try:
         neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
-            RETURN o.id, o.api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
-        neo4j_debug = f"host={new_org.get('neo4j_host', '?')[:30]} result={neo4j_result}"
         if "error" in neo4j_result:
             logger.error(f"Neo4j Org bootstrap error: {neo4j_result['error']}")
+        else:
+            logger.info(f"Neo4j Org node created for {slug}")
     except Exception as e:
-        neo4j_debug = f"exception: {e}"
-        logger.error(f"Neo4j Org bootstrap exception: {e}", exc_info=True)
+        logger.error(f"Neo4j Org bootstrap exception: {e}")
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
@@ -521,7 +527,6 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         "memory_url": memory_url,
         "org_slug": slug,
         "telegram_invite_link": telegram_invite,
-        "_debug_neo4j": neo4j_debug,
     }
 
 
@@ -1379,13 +1384,7 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "egregore-api",
-        "neo4j_host_set": bool(os.environ.get("NEO4J_HOST")),
-        "egregore_neo4j_host_set": bool(os.environ.get("EGREGORE_NEO4J_HOST")),
-        "orgs_loaded": len(ORG_CONFIGS),
-    }
+    return {"status": "ok", "service": "egregore-api"}
 
 
 if __name__ == "__main__":
