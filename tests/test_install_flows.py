@@ -77,6 +77,10 @@ class TestFounderSetup:
         respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             return_value=Response(201, json={"full_name": "FounderOrg/egregore-core"})
         )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
+        )
         # Create memory repo
         respx.post(f"{GITHUB_API}/orgs/FounderOrg/repos").mock(
             return_value=Response(201, json={"full_name": "FounderOrg/FounderOrg-memory"})
