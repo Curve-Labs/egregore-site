@@ -448,9 +448,11 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     api_key = generate_api_key(slug)
     api_url = os.environ.get("EGREGORE_API_URL", "https://egregore-production-55f2.up.railway.app")
 
-    default_neo4j_host = os.environ.get("EGREGORE_NEO4J_HOST", os.environ.get("NEO4J_HOST", ""))
-    default_neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", os.environ.get("NEO4J_USER", "neo4j"))
-    default_neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", os.environ.get("NEO4J_PASSWORD", ""))
+    # New customer orgs use the shared customer Neo4j instance (EGREGORE_NEO4J_HOST).
+    # CL's private instance (NEO4J_HOST) is only for the curvelabs org.
+    default_neo4j_host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    default_neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
+    default_neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
     default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
     new_org = {
@@ -479,6 +481,16 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json: {e}")
 
+    # 6b. Sync develop branch to main (fork inherits upstream branches with stale config)
+    try:
+        synced = await gh.sync_branch_to_main(token, owner, repo_name, "develop")
+        if synced:
+            logger.info(f"Synced develop → main for {owner}/{repo_name}")
+        else:
+            logger.warning(f"Failed to sync develop branch for {owner}/{repo_name}")
+    except Exception as e:
+        logger.warning(f"develop branch sync error: {e}")
+
     # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
     # Person and Project nodes deferred to first session start (avoids orphans)
     try:
@@ -487,9 +499,9 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
         if "error" in neo4j_result:
-            logger.error(f"Neo4j Org bootstrap returned error: {neo4j_result['error']}")
+            logger.error(f"Neo4j Org bootstrap error: {neo4j_result['error']}")
         else:
-            logger.info(f"Neo4j Org node created for {slug}")
+            logger.info(f"Neo4j Org node bootstrapped for {slug}")
     except Exception as e:
         logger.error(f"Neo4j Org bootstrap exception: {e}")
 
@@ -953,7 +965,19 @@ async def github_client_id():
 
 
 def _get_seed_org() -> dict | None:
-    """Get a seed org config with Neo4j access for cross-org queries."""
+    """Get a seed org config with Neo4j access for cross-org queries.
+
+    Prefers the shared customer database (EGREGORE_NEO4J_HOST) since cross-org
+    queries are used by the web setup flow, which is customer-facing.
+    """
+    host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    if host:
+        return {
+            "neo4j_host": host,
+            "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
+            "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
+            "slug": "__system__",
+        }
     for slug, org in ORG_CONFIGS.items():
         if org.get("neo4j_host"):
             return {**org, "slug": slug}

@@ -90,27 +90,30 @@ def reload_configs():
 
 
 async def load_orgs_from_neo4j():
-    """Load org configs from Neo4j on startup. New orgs survive API restarts."""
-    # Use the first available org config to connect to Neo4j
-    seed_org = None
-    for slug, org in ORG_CONFIGS.items():
-        if org.get("neo4j_host"):
-            seed_org = {**org, "slug": slug}
-            break
+    """Load org configs from Neo4j on startup. New orgs survive API restarts.
 
-    if not seed_org:
-        # Try shared Neo4j env vars
-        host = os.environ.get("EGREGORE_NEO4J_HOST", "")
-        if not host:
-            logger.info("No Neo4j connection available — skipping org reload")
-            return
-
+    Prefers EGREGORE_NEO4J_HOST (the shared customer database) over ORG_CONFIGS
+    seed. CL's private instance (NEO4J_HOST) is only for the curvelabs org.
+    """
+    # Prefer EGREGORE_NEO4J_HOST — that's the shared customer database
+    host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    if host:
         seed_org = {
             "neo4j_host": host,
             "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
             "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
             "slug": "__system__",
         }
+    else:
+        # Fallback: use any org with neo4j_host (e.g. curvelabs)
+        seed_org = None
+        for slug, org in ORG_CONFIGS.items():
+            if org.get("neo4j_host"):
+                seed_org = {**org, "slug": slug}
+                break
+        if not seed_org:
+            logger.info("No Neo4j connection available — skipping org reload")
+            return
 
     try:
         from .services.graph import execute_query
