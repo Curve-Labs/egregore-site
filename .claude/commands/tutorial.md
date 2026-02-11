@@ -2,6 +2,12 @@ Interactive walkthrough of Egregore's core loop. Auto-runs after onboarding; run
 
 Arguments: $ARGUMENTS
 
+## Tagging rule (applies to ALL artifacts and quests created during the tutorial)
+
+Every artifact and quest created during the tutorial MUST include `tutorial-generated` in its topics array. This tag lets `/handoff`, `/activity`, and other commands distinguish tutorial outputs from organic session work. Handoffs exclude `tutorial-generated` artifacts from the Session Artifacts section.
+
+This applies to: Step 2 reflect artifacts, Step 3 quests, Step 3 source artifacts, and the Step 4 journey log.
+
 ## Step 0: State Check
 
 Read `.egregore-state.json`. Extract `usage_type`, `tutorial_complete`, and any existing tutorial state (`domain`, `stage`, `team_or_solo`).
@@ -205,7 +211,7 @@ options:
 Using the user's Q1 and Q2 answers, construct a reflection. This is the real `/reflect` flow (Quick mode) — follow Steps 3-8 of the `/reflect` command spec:
 
 1. **Auto-classify** the content based on Q1+Q2 answers. Use classification signals from `/reflect` spec. Default to `finding`.
-2. **Extract**: Title from Q1 topic + user's freeform elaboration. Content from Q1+Q2 combined. Context from Step 1 data (domain, stage).
+2. **Extract**: Title from Q1 topic + user's freeform elaboration. Content from Q1+Q2 combined. Context from Step 1 data (domain, stage). **Always include `tutorial-generated` in the topics array** — this tags the artifact so handoffs and other commands can distinguish tutorial artifacts from organic session work.
 3. **Relation detection**: Run the quest link and related artifact queries from `/reflect` Step 4.
 4. **Auto-confirm**: During tutorial, skip the `y/edit/skip` proposal. Just show what's being created and proceed. The flow should not break for confirmation — this is a guided experience, not a dialog.
 5. **Create file**: Write to `memory/knowledge/{category}s/{YYYY-MM-DD}-{slug}.md` using the `/reflect` file format.

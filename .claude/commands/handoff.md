@@ -379,18 +379,21 @@ If no recipient, pass `$recipient` as empty string — the OPTIONAL MATCH will s
 
 ### Artifact query
 
-Query for artifacts created today by the author:
+Query for artifacts created today by the author, excluding tutorial-generated artifacts:
 
 ```cypher
 MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person {name: $author})
 WHERE a.created >= datetime({year: $year, month: $month, day: $day})
-RETURN a.title AS title, a.type AS type, a.filePath AS path
+  AND NOT 'tutorial-generated' IN coalesce(a.topics, [])
+RETURN a.title AS title, a.type AS type, a.filePath AS path, a.topics AS topics
 ORDER BY a.created DESC
 ```
 
 Run this in parallel with the Session creation query.
 
-If artifacts are found, update the handoff file's Session Artifacts section with the results. Format each artifact as:
+**Relevance filter:** After fetching, only include artifacts in the TUI whose topics overlap with the session topic. Compare each artifact's `topics` array against keywords extracted from the handoff topic. If no artifacts pass the relevance filter, omit the artifacts section entirely. This prevents unrelated same-day artifacts from leaking into handoffs.
+
+If relevant artifacts are found, update the handoff file's Session Artifacts section with the results. Format each artifact as:
 ```
 - [Type capitalized]: [Title] -> [shortened file path]
 ```
@@ -589,11 +592,12 @@ When the user selects a numbered item, display the receiver view above by readin
 
 ## Step 9: Reflection prompt
 
-After displaying the TUI confirmation, check if today's sessions produced no artifacts. Query:
+After displaying the TUI confirmation, check if today's sessions produced no non-tutorial artifacts. Query:
 
 ```cypher
 MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person {name: $me})
 WHERE a.created >= datetime({year: $year, month: $month, day: $day})
+  AND NOT 'tutorial-generated' IN coalesce(a.topics, [])
 RETURN count(a) AS artifactCount
 ```
 
