@@ -112,6 +112,20 @@ async def generate_from_template(
     return resp.json()
 
 
+async def rename_repo(token: str, owner: str, old_name: str, new_name: str) -> dict:
+    """Rename a repository. Returns updated repo data."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(
+            f"{API_BASE}/repos/{owner}/{old_name}",
+            headers=_headers(token),
+            json={"name": new_name},
+            timeout=15.0,
+        )
+    if resp.status_code != 200:
+        raise ValueError(f"Rename failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
+
 async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
     """Poll until fork is ready."""
     import asyncio
@@ -123,7 +137,7 @@ async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
 
 
 async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 30) -> bool:
-    """Poll until a repo is ready (generic replacement for wait_for_fork)."""
+    """Poll until a repo is ready."""
     import asyncio
     for _ in range(timeout // 2):
         if await repo_exists(token, owner, repo_name):

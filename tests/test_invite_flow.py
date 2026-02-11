@@ -61,6 +61,10 @@ def _mock_admin_github():
     respx.get(f"{GITHUB_API}/repos/AlphaOrg/egregore-core").mock(
         return_value=Response(200, json={"full_name": "AlphaOrg/egregore-core"})
     )
+    # AlphaOrg IS an org (not personal)
+    respx.get(f"{GITHUB_API}/orgs/AlphaOrg").mock(
+        return_value=Response(200, json={"login": "AlphaOrg"})
+    )
     # Admin role
     respx.get(f"{GITHUB_API}/user/memberships/orgs/AlphaOrg").mock(
         return_value=Response(200, json={"role": "admin"})
@@ -116,6 +120,10 @@ class TestInviteCreation:
         )
         respx.get(f"{GITHUB_API}/repos/AlphaOrg/egregore-core").mock(
             return_value=Response(200, json={"full_name": "AlphaOrg/egregore-core"})
+        )
+        # AlphaOrg IS an org
+        respx.get(f"{GITHUB_API}/orgs/AlphaOrg").mock(
+            return_value=Response(200, json={"login": "AlphaOrg"})
         )
         # Member role, not admin
         respx.get(f"{GITHUB_API}/user/memberships/orgs/AlphaOrg").mock(

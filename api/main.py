@@ -405,17 +405,23 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     else:
         memory_repo_name = f"{owner}-memory"
 
-    # 1. Generate repo from template (skip if already exists — makes setup idempotent)
+    # 1. Fork repo (skip if already exists — makes setup idempotent)
     repo_already_exists = await gh.repo_exists(token, owner, repo_name)
     if repo_already_exists:
         logger.info(f"{repo_name} already exists for {owner} — continuing setup")
     else:
-        logger.info(f"Generating {repo_name} from template for {owner}")
-        await gh.generate_from_template(token, owner, repo_name)
+        # Fork creates egregore-core, then rename if instance has a custom name
+        logger.info(f"Forking egregore-core for {owner}")
+        await gh.fork_repo(token, target_org)
 
-        # 2. Wait for repo to be ready
-        if not await gh.wait_for_repo(token, owner, repo_name):
-            raise HTTPException(status_code=504, detail="Repo generation timed out — try again")
+        # Wait for fork to be ready
+        if not await gh.wait_for_fork(token, owner):
+            raise HTTPException(status_code=504, detail="Fork timed out — try again")
+
+        # Rename if this is a named instance (egregore-core → egregore-{name})
+        if repo_name != "egregore-core":
+            logger.info(f"Renaming egregore-core → {repo_name}")
+            await gh.rename_repo(token, owner, "egregore-core", repo_name)
 
     # 3. Create memory repo
     logger.info(f"Creating {memory_repo_name} for {owner}")
@@ -426,7 +432,16 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
             raise
         # 422 = repo already exists, that's fine
 
-    # 4. Init memory structure
+    # 4. Verify memory repo exists (catches silent creation failures)
+    if not await gh.repo_exists(token, owner, memory_repo_name):
+        logger.error(f"Memory repo {owner}/{memory_repo_name} does not exist after creation attempt")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create memory repo {owner}/{memory_repo_name}. "
+                   f"Check that your GitHub token has the 'repo' scope.",
+        )
+
+    # 5. Init memory structure
     await gh.init_memory_structure(token, owner, memory_repo_name)
 
     # 5. Generate API key + store org
@@ -467,12 +482,16 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
     # Person and Project nodes deferred to first session start (avoids orphans)
     try:
-        await execute_query(new_org, """
+        neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
+        if "error" in neo4j_result:
+            logger.error(f"Neo4j Org bootstrap returned error: {neo4j_result['error']}")
+        else:
+            logger.info(f"Neo4j Org node created for {slug}")
     except Exception as e:
-        logger.warning(f"Neo4j Org bootstrap failed: {e}")
+        logger.error(f"Neo4j Org bootstrap exception: {e}")
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
@@ -1232,7 +1251,7 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
             # Invitee (not the repo owner): accept pending repo collaboration invitations
             accepted = await gh.accept_repo_invitations(token, owner)
 
-            # Verify access to the egregore repo (memory repo access was granted at invite time)
+            # Verify access to the egregore repo
             repo_name = invite_data.get("repo_name", "egregore-core")
             has_egregore_access = await gh.repo_exists(token, owner, repo_name)
 
@@ -1240,6 +1259,35 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
                 return {
                     "status": "pending_github",
                     "message": f"Waiting for access to: {repo_name}. Retrying automatically...",
+                    "github_org": owner,
+                }
+
+            # Verify access to memory repo
+            memory_repo_name = f"{owner}-memory"
+            try:
+                config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+                if config_raw:
+                    _cfg = json.loads(config_raw)
+                    _mem = _cfg.get("memory_repo", memory_repo_name)
+                    if "/" in _mem:
+                        memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                    else:
+                        memory_repo_name = _mem
+            except Exception:
+                pass
+
+            has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
+            if not has_memory_access:
+                # Check if repo exists at all (using GitHub's unauthenticated check)
+                # If even the API returns 404 for this repo, it was never created
+                logger.warning(
+                    f"Memory repo {owner}/{memory_repo_name} not accessible by invitee. "
+                    f"It may not exist or the collaboration invite is pending."
+                )
+                return {
+                    "status": "pending_github",
+                    "message": f"Waiting for access to: {memory_repo_name}. "
+                               f"If this persists, the repo may not exist — ask {owner} to re-run setup.",
                     "github_org": owner,
                 }
     else:

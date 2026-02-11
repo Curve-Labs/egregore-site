@@ -58,28 +58,36 @@ class TestFounderSetup:
     @respx.mock
     def test_founder_setup_creates_org(self, app_client):
         """POST /api/org/setup with valid GitHub token creates org and returns setup token."""
-        # Mock GitHub: user, template generate, repo exists checks, repo creation, etc.
+        # Mock GitHub: user, fork, repo exists checks, repo creation, etc.
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (created)
+        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (fork ready)
         _repo_check_calls = []
         def _repo_check(request):
             _repo_check_calls.append(True)
             if len(_repo_check_calls) == 1:
                 return Response(404)  # Duplicate check: not yet
-            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_repo
+            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_fork
 
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core").mock(
             side_effect=_repo_check
         )
-        # Template generation succeeds
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "FounderOrg/egregore-core"})
+        # Fork succeeds (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "FounderOrg/egregore-core"})
+        )
+        # CLAUDE.md content check (wait_for_repo checks template content is committed)
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/CLAUDE.md").mock(
+            return_value=Response(200, json={"content": "IyBFZ3JlZ29yZQ==", "encoding": "base64", "sha": "tmpl"})
         )
         # Create memory repo
         respx.post(f"{GITHUB_API}/orgs/FounderOrg/repos").mock(
             return_value=Response(201, json={"full_name": "FounderOrg/FounderOrg-memory"})
+        )
+        # Memory repo verification
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "FounderOrg/FounderOrg-memory"})
         )
         # Init memory structure (update_file calls)
         respx.get(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
@@ -88,7 +96,7 @@ class TestFounderSetup:
         respx.put(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
             return_value=Response(201, json={"content": {"sha": "new"}})
         )
-        # Update egregore.json in the generated repo
+        # Update egregore.json in the forked repo
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/egregore.json").mock(
             return_value=Response(404)
         )
@@ -115,14 +123,40 @@ class TestFounderSetup:
         assert data["org_slug"] == "founderorg"
 
     @respx.mock
-    def test_founder_setup_rejects_duplicate(self, app_client):
-        """Same org twice → 409 Conflict."""
+    def test_founder_setup_idempotent_when_repo_exists(self, app_client):
+        """Same org twice → succeeds (setup is idempotent, skips existing repos)."""
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
         # Repo already exists
         respx.get(f"{GITHUB_API}/repos/ExistingOrg/egregore-core").mock(
             return_value=Response(200, json={"full_name": "ExistingOrg/egregore-core"})
+        )
+        # Memory repo creation returns 422 (already exists) — that's fine
+        respx.post(f"{GITHUB_API}/orgs/ExistingOrg/repos").mock(
+            return_value=Response(422, json={"message": "name already exists"})
+        )
+        # Memory repo verification (it exists from before)
+        respx.get(f"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory").mock(
+            return_value=Response(200, json={"full_name": "ExistingOrg/ExistingOrg-memory"})
+        )
+        # Init memory structure
+        respx.get(url__regex=rf"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory/contents/.*").mock(
+            return_value=Response(404)
+        )
+        respx.put(url__regex=rf"{GITHUB_API}/repos/ExistingOrg/ExistingOrg-memory/contents/.*").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # egregore.json update
+        respx.get(f"{GITHUB_API}/repos/ExistingOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(404)
+        )
+        respx.put(f"{GITHUB_API}/repos/ExistingOrg/egregore-core/contents/egregore.json").mock(
+            return_value=Response(201, json={"content": {"sha": "new"}})
+        )
+        # Neo4j
+        respx.post(url__regex=r"https://neo4j.*").mock(
+            return_value=Response(200, json=_neo4j_ok())
         )
 
         resp = app_client.post(
@@ -131,7 +165,8 @@ class TestFounderSetup:
             headers={"Authorization": f"Bearer {FAKE_TOKEN}"},
         )
 
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        assert "setup_token" in resp.json()
 
     @respx.mock
     def test_founder_setup_invalid_github_token(self, app_client):
@@ -217,6 +252,10 @@ class TestJoinerFlow:
         # Memory repo NOT accessible
         respx.get(f"{GITHUB_API}/repos/AlphaOrg/AlphaOrg-memory").mock(
             return_value=Response(404)
+        )
+        # User is not admin of AlphaOrg (needed for can_create check)
+        respx.get(f"{GITHUB_API}/user/memberships/orgs/AlphaOrg").mock(
+            return_value=Response(200, json={"role": "member"})
         )
 
         resp = app_client.post(
