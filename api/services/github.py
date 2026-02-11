@@ -59,7 +59,7 @@ async def get_org_membership(token: str, org: str) -> str:
 
 async def repo_exists(token: str, owner: str, repo: str) -> bool:
     """Check if a repo exists and is accessible."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             f"{API_BASE}/repos/{owner}/{repo}",
             headers=_headers(token),
