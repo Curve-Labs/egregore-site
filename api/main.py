@@ -1376,7 +1376,13 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "egregore-api"}
+    return {
+        "status": "ok",
+        "service": "egregore-api",
+        "neo4j_host_set": bool(os.environ.get("NEO4J_HOST")),
+        "egregore_neo4j_host_set": bool(os.environ.get("EGREGORE_NEO4J_HOST")),
+        "orgs_loaded": len(ORG_CONFIGS),
+    }
 
 
 if __name__ == "__main__":
