@@ -93,3 +93,8 @@ class OrgInvite(BaseModel):
 class OrgAcceptInvite(BaseModel):
     """Accept an invite — invitee provides their token + invite token."""
     invite_token: str
+
+
+class UserProfileUpdate(BaseModel):
+    """Update user profile (Telegram handle)."""
+    telegram_username: str
