@@ -176,7 +176,7 @@ def load_dynamic_orgs():
         logger.error(f"Failed to load dynamic orgs: {e}")
 
 
-async def register_group(slug: str, chat_id: int) -> dict | None:
+async def register_group(slug: str, chat_id: int, group_title: str = None, group_username: str = None) -> dict | None:
     """Register a Telegram group with the API. Falls back to direct Neo4j write."""
     # Try API first
     if EGREGORE_API_URL:
@@ -184,11 +184,17 @@ async def register_group(slug: str, chat_id: int) -> dict | None:
         if BOT_TOKEN:
             headers["Authorization"] = f"Bearer {BOT_TOKEN}"
 
+        body = {"org_slug": slug, "chat_id": str(chat_id)}
+        if group_title:
+            body["group_title"] = group_title
+        if group_username:
+            body["group_username"] = group_username
+
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{EGREGORE_API_URL}/api/org/telegram",
-                    json={"org_slug": slug, "chat_id": str(chat_id)},
+                    json=body,
                     headers=headers,
                     timeout=10.0,
                 )
@@ -1206,7 +1212,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             chat_id = update.effective_chat.id
             logger.info(f"Group registration: slug={slug}, chat_id={chat_id}")
 
-            result = await register_group(slug, chat_id)
+            group_title = update.effective_chat.title
+            group_username = update.effective_chat.username
+            result = await register_group(slug, chat_id, group_title=group_title, group_username=group_username)
             if result:
                 org_name = result.get("org_name", slug)
                 # Add to local config

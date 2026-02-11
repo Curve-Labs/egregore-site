@@ -386,8 +386,10 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid GitHub token")
 
-    target_org = None if body.is_personal else body.github_org
-    owner = user["login"] if body.is_personal else body.github_org
+    # Auto-detect personal vs org account (don't trust client)
+    is_personal = not await gh.is_org(token, body.github_org)
+    target_org = None if is_personal else body.github_org
+    owner = user["login"] if is_personal else body.github_org
     base_slug = owner.lower().replace("-", "").replace(" ", "")
 
     # Compute instance slug and repo name
@@ -428,9 +430,11 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     try:
         await gh.create_repo(token, memory_repo_name, target_org)
     except ValueError as e:
-        if "422" not in str(e):
+        error_text = str(e).lower()
+        if "422" in error_text and ("already exists" in error_text or "name already" in error_text):
+            logger.info(f"{memory_repo_name} already exists for {owner} — continuing")
+        else:
             raise
-        # 422 = repo already exists, that's fine
 
     # 4. Verify memory repo exists (catches silent creation failures)
     if not await gh.repo_exists(token, owner, memory_repo_name):
@@ -466,9 +470,26 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         "telegram_chat_id": body.telegram_chat_id or "",
         "slug": slug,
     }
+
+    # 6. Persist Org node to Neo4j FIRST (before in-memory). If this fails, return 503.
+    try:
+        neo4j_result = await execute_query(new_org, """
+            MERGE (o:Org {id: $_org})
+            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key, o.created_by = $created_by
+        """, {"name": body.org_name, "github_org": owner, "api_key": api_key, "created_by": user["login"]})
+        if isinstance(neo4j_result, dict) and "error" in neo4j_result:
+            raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+        logger.info(f"Neo4j Org node bootstrapped for {slug}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Neo4j Org bootstrap exception: {e}")
+        raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+
+    # Only add to memory after successful Neo4j write
     ORG_CONFIGS[slug] = new_org
 
-    # 6. Update egregore.json in the generated repo
+    # 7. Update egregore.json in the generated repo
     memory_url = f"https://github.com/{owner}/{memory_repo_name}.git"
     try:
         await gh.update_egregore_json(
@@ -481,7 +502,7 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json: {e}")
 
-    # 6b. Sync develop branch to main (fork inherits upstream branches with stale config)
+    # 7b. Sync develop branch to main (fork inherits upstream branches with stale config)
     try:
         synced = await gh.sync_branch_to_main(token, owner, repo_name, "develop")
         if synced:
@@ -490,20 +511,6 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
             logger.warning(f"Failed to sync develop branch for {owner}/{repo_name}")
     except Exception as e:
         logger.warning(f"develop branch sync error: {e}")
-
-    # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
-    # Person and Project nodes deferred to first session start (avoids orphans)
-    try:
-        neo4j_result = await execute_query(new_org, """
-            MERGE (o:Org {id: $_org})
-            SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key, o.created_by = $created_by
-        """, {"name": body.org_name, "github_org": owner, "api_key": api_key, "created_by": user["login"]})
-        if "error" in neo4j_result:
-            logger.error(f"Neo4j Org bootstrap error: {neo4j_result['error']}")
-        else:
-            logger.info(f"Neo4j Org node bootstrapped for {slug}")
-    except Exception as e:
-        logger.error(f"Neo4j Org bootstrap exception: {e}")
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
@@ -837,19 +844,43 @@ async def org_telegram(body: OrgTelegram, authorization: str = Header(None)):
     if not org:
         raise HTTPException(status_code=404, detail=f"Unknown org: {slug}")
 
-    # Store chat_id
-    ORG_CONFIGS[slug]["telegram_chat_id"] = body.chat_id
-
-    # Persist to Neo4j
+    # Persist to Neo4j FIRST, then update in-memory
     try:
-        await execute_query(org, """
-            MATCH (o:Org {id: $_org})
-            SET o.telegram_chat_id = $chat_id
-        """, {"chat_id": body.chat_id})
-    except Exception as e:
-        logger.warning(f"Failed to persist telegram_chat_id: {e}")
+        neo4j_params = {"chat_id": body.chat_id}
+        set_clauses = ["o.telegram_chat_id = $chat_id"]
+        if body.group_title:
+            neo4j_params["group_title"] = body.group_title
+            set_clauses.append("o.telegram_group_title = $group_title")
+        if body.group_username:
+            neo4j_params["group_username"] = body.group_username
+            set_clauses.append("o.telegram_group_username = $group_username")
 
-    return {"status": "connected", "org_slug": slug, "org_name": org.get("org_name", slug)}
+        neo4j_result = await execute_query(org, f"""
+            MATCH (o:Org {{id: $_org}})
+            SET {', '.join(set_clauses)}
+        """, neo4j_params)
+        if isinstance(neo4j_result, dict) and "error" in neo4j_result:
+            raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to persist telegram config: {e}")
+        raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+
+    # Only update in-memory after successful Neo4j write
+    ORG_CONFIGS[slug]["telegram_chat_id"] = body.chat_id
+    if body.group_title:
+        ORG_CONFIGS[slug]["telegram_group_title"] = body.group_title
+    if body.group_username:
+        ORG_CONFIGS[slug]["telegram_group_username"] = body.group_username
+
+    return {
+        "status": "connected",
+        "org_slug": slug,
+        "org_name": org.get("org_name", slug),
+        "group_title": body.group_title,
+        "group_username": body.group_username,
+    }
 
 
 @app.get("/api/org/telegram/status/{slug}")
@@ -860,7 +891,12 @@ async def org_telegram_status(slug: str):
         raise HTTPException(status_code=404, detail=f"Unknown org: {slug}")
 
     connected = bool(org.get("telegram_chat_id"))
-    return {"connected": connected, "org_slug": slug}
+    return {
+        "connected": connected,
+        "org_slug": slug,
+        "group_title": org.get("telegram_group_title"),
+        "group_username": org.get("telegram_group_username"),
+    }
 
 
 @app.post("/api/org/telegram/invite-link")
