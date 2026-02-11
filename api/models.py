@@ -49,6 +49,8 @@ class OrgTelegram(BaseModel):
     """Bot reports its chat_id after being added to a group."""
     org_slug: str
     chat_id: str
+    group_title: Optional[str] = None
+    group_username: Optional[str] = None
 
 
 class GitHubCallback(BaseModel):
