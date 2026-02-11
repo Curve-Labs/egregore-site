@@ -652,47 +652,31 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
           </>
         ) : (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>1.</span>
-                <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5 }}>
-                  Open Telegram and create a new group for your team
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>2.</span>
-                <div>
-                  <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5, marginBottom: "0.5rem" }}>
-                    Add the Egregore bot to your group
-                  </p>
-                  <a
-                    href={telegramInviteLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      ...font.mono, fontSize: "0.75rem",
-                      display: "inline-flex", alignItems: "center", gap: "0.5rem",
-                      color: C.crimson, textDecoration: "none",
-                      border: `1px solid ${C.crimson}`, padding: "0.5rem 1rem",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <TelegramIcon /> Add bot to group
-                  </a>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                <span style={{ ...font.mono, fontSize: "0.7rem", color: C.crimson, flexShrink: 0, marginTop: "0.1rem" }}>3.</span>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5 }}>
-                    The bot will auto-connect
-                  </p>
-                  <SmallSpinner />
-                </div>
-              </div>
+            <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5, marginBottom: "1rem" }}>
+              Create a Telegram group for your team. Notifications, handoffs, and questions will appear there.
+            </p>
+            <a
+              href={telegramInviteLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                ...font.mono, fontSize: "0.75rem",
+                display: "inline-flex", alignItems: "center", gap: "0.5rem",
+                color: C.parchment, textDecoration: "none", background: C.crimson,
+                padding: "0.65rem 1.25rem",
+                transition: "all 0.2s", marginBottom: "1rem",
+              }}
+            >
+              <TelegramIcon /> Create Telegram group
+            </a>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <SmallSpinner />
+              <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, margin: 0 }}>
+                Waiting for bot to connect...
+              </p>
             </div>
             <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
-              Waiting for the bot to connect to your group...
+              Telegram will ask you to pick or create a group — choose "New Group", name it, and the bot connects automatically.
             </p>
           </>
         )}
