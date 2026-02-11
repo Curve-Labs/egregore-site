@@ -7,6 +7,10 @@ class GraphQuery(BaseModel):
     parameters: dict = {}
 
 
+class GraphBatch(BaseModel):
+    queries: list[GraphQuery] = Field(..., min_length=1, max_length=20)
+
+
 class NotifySend(BaseModel):
     to: str
     message: str
@@ -89,3 +93,8 @@ class OrgInvite(BaseModel):
 class OrgAcceptInvite(BaseModel):
     """Accept an invite — invitee provides their token + invite token."""
     invite_token: str
+
+
+class UserProfileUpdate(BaseModel):
+    """Update user profile (Telegram handle)."""
+    telegram_username: str

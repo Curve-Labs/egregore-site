@@ -23,12 +23,11 @@ from .auth import (
     load_orgs_from_neo4j, exchange_github_code, GITHUB_CLIENT_ID,
 )
 from .models import (
-    GraphQuery, NotifySend, NotifyGroup, OrgRegister,
+    GraphQuery, GraphBatch, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
-    OrgInvite, OrgAcceptInvite,
+    OrgInvite, OrgAcceptInvite, UserProfileUpdate,
 )
-from .services.graph import execute_query, get_schema, test_connection
-from .services.analytics import get_org_analytics
+from .services.graph import execute_query, execute_batch, get_schema, test_connection
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
 from .services import github as gh
 from .services.tokens import create_token, claim_token, create_invite_token, peek_token
@@ -59,6 +58,16 @@ async def startup():
     await load_orgs_from_neo4j()
 
 
+@app.post("/api/admin/reload")
+async def admin_reload(authorization: str = Header(...)):
+    """Reload ORG_CONFIGS from Neo4j. Requires any valid API key."""
+    key = authorization.replace("Bearer ", "").strip()
+    if not any(org.get("api_key") == key for org in ORG_CONFIGS.values()):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    await load_orgs_from_neo4j()
+    return {"status": "ok", "orgs_loaded": len(ORG_CONFIGS)}
+
+
 # =============================================================================
 # GRAPH ENDPOINTS
 # =============================================================================
@@ -72,6 +81,19 @@ async def graph_query(body: GraphQuery, org: dict = Depends(validate_api_key)):
         status = 429 if result.get("rate_limited") else 400
         raise HTTPException(status_code=status, detail=result["error"])
     return result
+
+
+@app.post("/api/graph/batch")
+async def graph_batch(body: GraphBatch, org: dict = Depends(validate_api_key)):
+    """Execute multiple Cypher queries concurrently, scoped to the org."""
+    queries = [{"statement": q.statement, "parameters": q.parameters} for q in body.queries]
+    results = await execute_batch(org, queries)
+    # If the first result has a batch-level error, raise it
+    if len(results) == 1 and isinstance(results[0], dict) and results[0].get("error"):
+        r = results[0]
+        status = 429 if r.get("rate_limited") else 400
+        raise HTTPException(status_code=status, detail=r["error"])
+    return {"results": results}
 
 
 @app.get("/api/graph/schema")
@@ -317,6 +339,7 @@ async def setup_orgs(authorization: str = Header(...)):
             "name": org["name"],
             "has_egregore": has_egregore,
             "is_member": is_member,
+            "can_setup": True,
             "role": role or "member",
             "avatar_url": org.get("avatar_url", ""),
             "instances": instances,
@@ -335,6 +358,7 @@ async def setup_orgs(authorization: str = Header(...)):
             "login": user["login"],
             "has_egregore": personal_has,
             "is_member": personal_member,
+            "can_setup": True,
             "instances": personal_instances,
         },
     }
@@ -381,17 +405,17 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     else:
         memory_repo_name = f"{owner}-memory"
 
-    # Check if already set up
-    if await gh.repo_exists(token, owner, repo_name):
-        raise HTTPException(status_code=409, detail=f"Egregore already set up for {owner} ({repo_name})")
+    # 1. Generate repo from template (skip if already exists — makes setup idempotent)
+    repo_already_exists = await gh.repo_exists(token, owner, repo_name)
+    if repo_already_exists:
+        logger.info(f"{repo_name} already exists for {owner} — continuing setup")
+    else:
+        logger.info(f"Generating {repo_name} from template for {owner}")
+        await gh.generate_from_template(token, owner, repo_name)
 
-    # 1. Generate repo from template (replaces fork)
-    logger.info(f"Generating {repo_name} from template for {owner}")
-    await gh.generate_from_template(token, owner, repo_name)
-
-    # 2. Wait for repo to be ready
-    if not await gh.wait_for_repo(token, owner, repo_name):
-        raise HTTPException(status_code=504, detail="Repo generation timed out — try again")
+        # 2. Wait for repo to be ready
+        if not await gh.wait_for_repo(token, owner, repo_name):
+            raise HTTPException(status_code=504, detail="Repo generation timed out — try again")
 
     # 3. Create memory repo
     logger.info(f"Creating {memory_repo_name} for {owner}")
@@ -440,28 +464,15 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     except ValueError as e:
         logger.warning(f"Failed to update egregore.json: {e}")
 
-    # 7. Bootstrap Neo4j — Org, founder Person, Project
+    # 7. Bootstrap Org node in Neo4j (required for ORG_CONFIGS on API restart + Telegram bot)
+    # Person and Project nodes deferred to first session start (avoids orphans)
     try:
         await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
-
-        await execute_query(new_org, """
-            MERGE (p:Person {name: $name})
-            WITH p
-            MATCH (o:Org {id: $_org})
-            MERGE (p)-[:MEMBER_OF]->(o)
-        """, {"name": user["login"]})
-
-        await execute_query(new_org, """
-            MERGE (pr:Project {name: "Egregore"})
-            WITH pr
-            MATCH (o:Org {id: $_org})
-            MERGE (pr)-[:PART_OF]->(o)
-        """, {})
     except Exception as e:
-        logger.warning(f"Neo4j bootstrap partial failure: {e}")
+        logger.warning(f"Neo4j Org bootstrap failed: {e}")
 
     # 8. Telegram invite link
     telegram_invite = generate_bot_invite_link(slug)
@@ -522,13 +533,28 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
     else:
         memory_url = f"https://github.com/{owner}/{memory_repo}.git"
 
-    # Verify user has access to memory repo
+    # Verify user has access to memory repo — create if missing and user is owner/admin
     memory_repo_name = memory_repo.split("/")[-1].replace(".git", "") if "/" in memory_repo else memory_repo
     if not await gh.repo_exists(token, owner, memory_repo_name):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You don't have access to {owner}/{memory_repo_name}. Ask your team to add you.",
-        )
+        # Check if user can create it (personal account owner or org admin)
+        can_create = (owner == user["login"]) or (await gh.get_org_membership(token, owner) == "admin")
+        if can_create:
+            logger.info(f"Memory repo {owner}/{memory_repo_name} missing — creating for incomplete setup")
+            try:
+                target_org = None if owner == user["login"] else owner
+                await gh.create_repo(token, memory_repo_name, target_org)
+                await gh.init_memory_structure(token, owner, memory_repo_name)
+            except Exception as e:
+                logger.error(f"Failed to create memory repo: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Memory repo {owner}/{memory_repo_name} doesn't exist and couldn't be created: {e}",
+                )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You don't have access to {owner}/{memory_repo_name}. Ask your team to add you.",
+            )
 
     fork_url = f"https://github.com/{owner}/{body.repo_name}.git"
     api_url = config.get("api_url", "")
@@ -536,18 +562,8 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
     # Look up org's API key — prefer slug from config, fall back to computing from owner
     slug = config.get("slug", owner.lower().replace("-", "").replace(" ", ""))
     repos = config.get("repos", [])
+    # Person node creation deferred to first session start (avoids orphaned nodes)
     org_config = ORG_CONFIGS.get(slug)
-    if org_config:
-        try:
-            await execute_query(org_config, """
-                MERGE (p:Person {name: $name})
-                WITH p
-                MATCH (o:Org {id: $_org})
-                MERGE (p)-[:MEMBER_OF]->(o)
-            """, {"name": user["login"]})
-        except Exception:
-            pass
-
     api_key = org_config.get("api_key", "") if org_config else ""
 
     # Generate Telegram group invite if configured
@@ -673,13 +689,18 @@ MEMORY_DIR="./$MEMORY_DIR_NAME"
 git config credential.helper store 2>/dev/null || true
 printf 'protocol=https\\nhost=github.com\\nusername=x-access-token\\npassword=%s\\n' "$GITHUB_TOKEN" | git credential-store store 2>/dev/null || true
 
+# Embed token in URLs for private repos (credential helper may not work)
+AUTHED_FORK=$(echo "$FORK_URL" | sed "s|https://github.com/|https://x-access-token:$GITHUB_TOKEN@github.com/|")
+AUTHED_MEMORY=$(echo "$MEMORY_URL" | sed "s|https://github.com/|https://x-access-token:$GITHUB_TOKEN@github.com/|")
+
 # Clone fork
 echo "  [2/5] Cloning egregore..."
 if [ -d "$EGREGORE_DIR" ]; then
   echo "         Already exists — pulling latest"
   git -C "$EGREGORE_DIR" pull -q
 else
-  git clone -q "$FORK_URL" "$EGREGORE_DIR"
+  git clone -q "$AUTHED_FORK" "$EGREGORE_DIR"
+  git -C "$EGREGORE_DIR" remote set-url origin "$FORK_URL" 2>/dev/null || true
 fi
 
 # Clone memory
@@ -688,7 +709,8 @@ if [ -d "$MEMORY_DIR" ]; then
   echo "         Already exists — pulling latest"
   git -C "$MEMORY_DIR" pull -q
 else
-  git clone -q "$MEMORY_URL" "$MEMORY_DIR"
+  git clone -q "$AUTHED_MEMORY" "$MEMORY_DIR"
+  git -C "$MEMORY_DIR" remote set-url origin "$MEMORY_URL" 2>/dev/null || true
 fi
 
 # Symlink
@@ -832,9 +854,10 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
     if not github_token:
         raise HTTPException(status_code=401, detail="Missing GitHub token")
 
-    org = ORG_CONFIGS.get(slug)
-    if not org:
+    org_config = ORG_CONFIGS.get(slug)
+    if not org_config:
         raise HTTPException(status_code=404, detail="Org not found")
+    org = {**org_config, "slug": slug}
 
     # Get GitHub username
     async with httpx.AsyncClient() as client:
@@ -850,39 +873,233 @@ async def org_telegram_membership(slug: str, authorization: str = Header(...)):
 
     # Check if Telegram is configured for this org
     if not org.get("telegram_chat_id"):
-        return {"status": "not_configured", "in_group": False}
+        return {"status": "not_configured", "in_group": False, "group_name": None}
 
-    # Look up Person by GitHub username or name → get telegramId
-    person_result = await execute_query(org, """
-        MATCH (p:Person)
-        WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
-        RETURN p.telegramId AS telegramId
-        LIMIT 1
-    """, {"username": username, "usernameLower": username.lower()})
+    # Get actual Telegram group title from Telegram API
+    bot_token = org.get("telegram_bot_token", "")
+    chat_id = org.get("telegram_chat_id", "")
+    group_name = slug  # fallback
+    async with httpx.AsyncClient() as client:
+        try:
+            chat_resp = await client.get(
+                f"https://api.telegram.org/bot{bot_token}/getChat",
+                params={"chat_id": chat_id},
+                timeout=10.0,
+            )
+            chat_data = chat_resp.json()
+            if chat_data.get("ok"):
+                group_name = chat_data["result"].get("title", slug)
+        except Exception:
+            pass
 
-    values = person_result.get("values", [])
-    if not values or not values[0][0]:
-        return {"status": "configured", "in_group": False}
-
-    telegram_id = values[0][0]
-
-    # Check TelegramUser IN_GROUP with active status
-    # TelegramUser is unscoped, so query directly without org injection
+    # Cross-org query: TelegramUser (system label, not org-scoped) → Person via IDENTIFIES
+    # We start from TelegramUser to avoid org scoping on Person which would restrict to current org only
     membership_result = await execute_query(org, """
-        MATCH (tu:TelegramUser {telegramId: $tid})-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
-        RETURN count(r) AS cnt
-    """, {"tid": telegram_id, "orgId": slug})
+        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
+        WHERE p.github = $username OR p.name = $username OR p.name = $usernameLower
+        WITH DISTINCT tu
+        OPTIONAL MATCH (tu)-[r:IN_GROUP {status: 'active'}]->(o:Org {id: $orgId})
+        RETURN count(r) AS cnt, tu.username AS telegramUsername
+    """, {"username": username, "usernameLower": username.lower(), "orgId": slug})
 
     membership_values = membership_result.get("values", [])
-    in_group = bool(membership_values and membership_values[0][0] > 0)
+    in_group = bool(membership_values and membership_values[0] and membership_values[0][0] > 0)
+    telegram_username = membership_values[0][1] if membership_values and len(membership_values[0]) > 1 else None
 
-    return {"status": "configured", "in_group": in_group}
+    # Generate invite link so frontend can link to the group
+    telegram_group_link = None
+    try:
+        telegram_group_link = await create_group_invite_link(org)
+    except Exception:
+        pass
+
+    return {
+        "status": "configured",
+        "in_group": in_group,
+        "group_name": group_name,
+        "telegram_group_link": telegram_group_link,
+        "telegram_username": telegram_username,
+    }
 
 
 @app.get("/api/auth/github/client-id")
 async def github_client_id():
     """Return the GitHub OAuth client ID for the web flow."""
     return {"client_id": GITHUB_CLIENT_ID}
+
+
+# =============================================================================
+# USER PROFILE
+# =============================================================================
+
+
+def _get_seed_org() -> dict | None:
+    """Get a seed org config with Neo4j access for cross-org queries."""
+    for slug, org in ORG_CONFIGS.items():
+        if org.get("neo4j_host"):
+            return {**org, "slug": slug}
+    return None
+
+
+@app.get("/api/user/profile")
+async def user_profile_get(authorization: str = Header(...)):
+    """Get user profile: Telegram handle + org memberships.
+
+    Auth: GitHub token. Cross-org lookup (not scoped to a single org).
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    # Get GitHub user info
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    github_user = user_resp.json()
+    username = github_user.get("login", "")
+    name = github_user.get("name", "") or username
+
+    seed_org = _get_seed_org()
+    if not seed_org:
+        return {
+            "github_username": username,
+            "name": name,
+            "telegram_username": None,
+            "memberships": [],
+        }
+
+    # Query 1: Find TelegramUser linked to any Person with this github
+    tu_result = await execute_query(seed_org, """
+        MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
+        WHERE p.github = $username
+        RETURN tu.username AS tuUser, COLLECT(DISTINCT p.org) AS orgs
+    """, {"username": username})
+
+    tu_username = None
+    org_ids = set()
+
+    tu_values = tu_result.get("values", [])
+    if tu_values and tu_values[0]:
+        tu_username = tu_values[0][0]
+        org_ids.update(o for o in (tu_values[0][1] or []) if o)
+
+    # Query 2 (fallback): Find unlinked Person nodes
+    p_result = await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
+        RETURN COLLECT(DISTINCT p.org) AS orgs
+    """, {"username": username})
+
+    p_values = p_result.get("values", [])
+    if p_values and p_values[0]:
+        org_ids.update(o for o in (p_values[0][0] or []) if o)
+
+    # Query 3: For each org, get Org name + IN_GROUP status
+    memberships = []
+    if org_ids:
+        org_result = await execute_query(seed_org, """
+            MATCH (o:Org) WHERE o.id IN $orgIds
+            OPTIONAL MATCH (tu:TelegramUser {username: $tuUser})-[r:IN_GROUP {status: 'active'}]->(o)
+            RETURN o.id AS slug, o.name AS name, count(r) > 0 AS inGroup
+        """, {"orgIds": list(org_ids), "tuUser": tu_username or ""})
+
+        for row in org_result.get("values", []):
+            if row and len(row) >= 3:
+                memberships.append({
+                    "org_slug": row[0],
+                    "org_name": row[1] or row[0],
+                    "in_telegram_group": bool(row[2]),
+                })
+
+    return {
+        "github_username": username,
+        "name": name,
+        "telegram_username": tu_username,
+        "memberships": memberships,
+    }
+
+
+@app.post("/api/user/profile")
+async def user_profile_update(body: UserProfileUpdate, authorization: str = Header(...)):
+    """Update user profile: set Telegram handle on all Person nodes + TelegramUser.
+
+    Auth: GitHub token. Cross-org update.
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    github_user = user_resp.json()
+    username = github_user.get("login", "")
+    name = github_user.get("name", "") or username
+
+    # Strip leading @ and trim
+    tg_handle = body.telegram_username.lstrip("@").strip()
+    if not tg_handle:
+        raise HTTPException(status_code=400, detail="Telegram username cannot be empty")
+
+    seed_org = _get_seed_org()
+    if not seed_org:
+        raise HTTPException(status_code=503, detail="No Neo4j connection available")
+
+    # Set telegramUsername on all Person nodes with matching github
+    await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username
+        SET p.telegramUsername = $tgHandle
+    """, {"username": username, "tgHandle": tg_handle})
+
+    # MERGE TelegramUser and IDENTIFIES relationships
+    await execute_query(seed_org, """
+        MERGE (tu:TelegramUser {username: $tgHandle})
+        WITH tu
+        MATCH (p) WHERE p.github = $username
+        MERGE (tu)-[:IDENTIFIES]->(p)
+    """, {"username": username, "tgHandle": tg_handle})
+
+    # Return updated profile (same shape as GET)
+    # Re-gather memberships
+    org_result = await execute_query(seed_org, """
+        MATCH (p) WHERE p.github = $username AND p.org IS NOT NULL
+        WITH COLLECT(DISTINCT p.org) AS orgIds
+        UNWIND orgIds AS oid
+        MATCH (o:Org {id: oid})
+        OPTIONAL MATCH (tu:TelegramUser {username: $tgHandle})-[r:IN_GROUP {status: 'active'}]->(o)
+        RETURN o.id AS slug, o.name AS name, count(r) > 0 AS inGroup
+    """, {"username": username, "tgHandle": tg_handle})
+
+    memberships = []
+    for row in org_result.get("values", []):
+        if row and len(row) >= 3:
+            memberships.append({
+                "org_slug": row[0],
+                "org_name": row[1] or row[0],
+                "in_telegram_group": bool(row[2]),
+            })
+
+    return {
+        "github_username": username,
+        "name": name,
+        "telegram_username": tg_handle,
+        "memberships": memberships,
+    }
 
 
 # =============================================================================
@@ -910,16 +1127,25 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
     if not await gh.repo_exists(token, owner, body.repo_name):
         raise HTTPException(status_code=404, detail=f"No Egregore setup found for {owner} ({body.repo_name})")
 
-    # Verify inviter is an admin
-    role = await gh.get_org_membership(token, owner)
-    if role not in ("admin",):
-        raise HTTPException(
-            status_code=403,
-            detail="Only org admins can invite. Ask an admin to send the invite.",
-        )
+    # Detect personal vs org account
+    is_personal = not await gh.is_org(token, owner)
 
-    # Try to send GitHub org invitation
-    github_result = await gh.invite_to_org(token, owner, body.github_username)
+    if is_personal:
+        # Personal account: inviter must be the repo owner
+        if inviter["login"].lower() != owner.lower():
+            raise HTTPException(status_code=403, detail="Only the account owner can invite.")
+        # Add as collaborator on egregore repo
+        await gh.add_repo_collaborator(token, owner, body.repo_name, body.github_username)
+        github_result = {"status": "collaborator_invited"}
+    else:
+        # Org account: inviter must be admin
+        role = await gh.get_org_membership(token, owner)
+        if role not in ("admin",):
+            raise HTTPException(
+                status_code=403,
+                detail="Only org admins can invite. Ask an admin to send the invite.",
+            )
+        github_result = await gh.invite_to_org(token, owner, body.github_username)
 
     # Read org config for the invite token
     config_raw = await gh.get_file_content(token, owner, body.repo_name, "egregore.json")
@@ -932,7 +1158,7 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         slug = config.get("slug", slug)
         repos = config.get("repos", [])
 
-        # Also add them as collaborator on the memory repo
+        # Add as collaborator on the memory repo
         memory_repo = config.get("memory_repo", f"{owner}-memory")
         if "/" in memory_repo:
             memory_repo_name = memory_repo.split("/")[-1].replace(".git", "")
@@ -950,6 +1176,7 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         "slug": slug,
         "repos": repos,
         "repo_name": body.repo_name,
+        "is_personal": is_personal,
     })
 
     invite_url = f"{site_url}/join?invite={invite_token}"
@@ -996,31 +1223,92 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
     owner = invite_data["github_org"]
     slug = invite_data.get("slug", owner.lower().replace("-", "").replace(" ", ""))
+    is_personal = invite_data.get("is_personal", False)
 
-    # Check org membership — auto-accept if pending
-    membership = await gh.check_org_membership(token, owner, user["login"])
+    if is_personal:
+        is_owner = user["login"].lower() == owner.lower()
 
-    if membership == "pending":
-        # Auto-accept the GitHub org invitation on behalf of the user
-        accepted = await gh.accept_org_invitation(token, owner)
-        if accepted:
-            membership = "active"
+        if not is_owner:
+            # Invitee (not the repo owner): accept pending repo collaboration invitations
+            accepted = await gh.accept_repo_invitations(token, owner)
+
+            # Verify access to both egregore repo AND memory repo
+            repo_name = invite_data.get("repo_name", "egregore-core")
+            has_egregore_access = await gh.repo_exists(token, owner, repo_name)
+
+            # Read memory repo name from egregore.json
+            memory_repo_name = f"{owner}-memory"
+            try:
+                config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+                if config_raw:
+                    _cfg = json.loads(config_raw)
+                    _mem = _cfg.get("memory_repo", memory_repo_name)
+                    if "/" in _mem:
+                        memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                    else:
+                        memory_repo_name = _mem
+            except Exception:
+                pass
+
+            has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
+
+            if not has_egregore_access or not has_memory_access:
+                missing = []
+                if not has_egregore_access:
+                    missing.append(repo_name)
+                if not has_memory_access:
+                    missing.append(memory_repo_name)
+                return {
+                    "status": "pending_github",
+                    "message": f"Waiting for access to: {', '.join(missing)}. Retrying automatically...",
+                    "github_org": owner,
+                }
         else:
+            # Owner accepting their own invite — ensure memory repo exists
+            repo_name = invite_data.get("repo_name", "egregore-core")
+            memory_repo_name = f"{owner}-memory"
+            try:
+                config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+                if config_raw:
+                    _cfg = json.loads(config_raw)
+                    _mem = _cfg.get("memory_repo", memory_repo_name)
+                    if "/" in _mem:
+                        memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                    else:
+                        memory_repo_name = _mem
+            except Exception:
+                pass
+
+            if not await gh.repo_exists(token, owner, memory_repo_name):
+                logger.info(f"Memory repo {owner}/{memory_repo_name} missing — creating for owner")
+                try:
+                    await gh.create_repo(token, memory_repo_name, None)
+                    await gh.init_memory_structure(token, owner, memory_repo_name)
+                except Exception as e:
+                    logger.error(f"Failed to create memory repo: {e}")
+    else:
+        # Org account: check org membership — auto-accept if pending
+        membership = await gh.check_org_membership(token, owner, user["login"])
+
+        if membership == "pending":
+            accepted = await gh.accept_org_invitation(token, owner)
+            if accepted:
+                membership = "active"
+            else:
+                return {
+                    "status": "error",
+                    "message": "Could not accept the org invitation. Try again or accept it manually on GitHub.",
+                    "github_org": owner,
+                }
+
+        if membership == "none":
             return {
-                "status": "error",
-                "message": "Could not accept the org invitation. Try again or accept it manually on GitHub.",
+                "status": "pending_github",
+                "message": "The org invitation hasn't arrived yet. Try again in a moment.",
                 "github_org": owner,
             }
 
-    if membership == "none":
-        # GitHub org invite hasn't arrived yet (race condition) — retry shortly
-        return {
-            "status": "pending_github",
-            "message": "The org invitation hasn't arrived yet. Try again in a moment.",
-            "github_org": owner,
-        }
-
-    # Membership is active — proceed with Egregore join
+    # Access verified — proceed with Egregore join
     # Read egregore.json from repo (use repo_name from invite data, default to egregore-core)
     invite_repo_name = invite_data.get("repo_name", "egregore-core")
     config_raw = await gh.get_file_content(token, owner, invite_repo_name, "egregore.json")
@@ -1038,18 +1326,8 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
     api_url = config.get("api_url", "")
     repos = config.get("repos", [])
 
-    # Add person to Neo4j
+    # Person node creation deferred to first session start
     org_config = ORG_CONFIGS.get(slug)
-    if org_config:
-        try:
-            await execute_query(org_config, """
-                MERGE (p:Person {name: $name})
-                WITH p
-                MATCH (o:Org {id: $_org})
-                MERGE (p)-[:MEMBER_OF]->(o)
-            """, {"name": user["login"]})
-        except Exception:
-            pass
 
     # Consume the invite token now
     claim_token(invite_token)
@@ -1085,18 +1363,6 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
         "org_name": config.get("org_name", owner),
         "telegram_group_link": telegram_group_link,
     }
-
-
-# =============================================================================
-# ANALYTICS ENDPOINTS
-# =============================================================================
-
-
-@app.get("/api/analytics/org")
-async def analytics_org(org: dict = Depends(validate_api_key)):
-    """Get org-level analytics (AM1-AM10). All 10 metrics run concurrently."""
-    result = await get_org_analytics(org)
-    return result
 
 
 # =============================================================================

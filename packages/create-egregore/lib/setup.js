@@ -23,8 +23,9 @@ async function install(data, ui, targetDir) {
   const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [], telegram_group_link } = data;
   const base = targetDir || process.cwd();
 
-  const dirSlug = (github_org || slug || "egregore").toLowerCase();
-  const egregoreDir = path.join(base, `egregore-${dirSlug}`);
+  // Directory name from fork URL (what git clone would use), e.g. "egregore-core"
+  const forkDirName = fork_url.split("/").pop().replace(/\.git$/, "");
+  const egregoreDir = path.join(base, forkDirName);
   const memoryDirName = memory_url
     .split("/")
     .pop()
@@ -36,13 +37,18 @@ async function install(data, ui, targetDir) {
   // Configure git credential helper for HTTPS cloning
   configureGitCredentials(github_token);
 
+  // Embed token in URLs as fallback for private repos (credential helper may not work)
+  const authedForkUrl = embedToken(fork_url, github_token);
+  const authedMemoryUrl = embedToken(memory_url, github_token);
+
   // 1. Clone fork
   ui.step(1, totalSteps, "Cloning egregore...");
   if (fs.existsSync(egregoreDir)) {
     ui.warn("egregore/ already exists — pulling latest");
     run("git pull", { cwd: egregoreDir });
   } else {
-    execFileSync("git", ["clone", fork_url, egregoreDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    execFileSync("git", ["clone", authedForkUrl, egregoreDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    try { run(`git remote set-url origin ${fork_url}`, { cwd: egregoreDir }); } catch {}
   }
   ui.success("Cloned egregore");
 
@@ -52,7 +58,8 @@ async function install(data, ui, targetDir) {
     ui.warn(`${memoryDirName}/ already exists — pulling latest`);
     run("git pull", { cwd: memoryDir });
   } else {
-    execFileSync("git", ["clone", memory_url, memoryDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    execFileSync("git", ["clone", authedMemoryUrl, memoryDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+    try { run(`git remote set-url origin ${memory_url}`, { cwd: memoryDir }); } catch {}
   }
   ui.success("Cloned memory");
 
@@ -82,7 +89,7 @@ async function install(data, ui, targetDir) {
 
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
-  registerInstance(dirSlug, org_name, egregoreDir);
+  registerInstance(forkDirName, org_name, egregoreDir);
   const alias = await installShellAlias(egregoreDir, ui);
 
   // 6+. Clone managed repos (if any)
@@ -96,7 +103,8 @@ async function install(data, ui, targetDir) {
       run("git pull", { cwd: repoDir });
     } else {
       const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
-      execFileSync("git", ["clone", repoUrl, repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+      execFileSync("git", ["clone", embedToken(repoUrl, github_token), repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+      try { run(`git remote set-url origin ${repoUrl}`, { cwd: repoDir }); } catch {}
     }
     clonedRepos.push(repoName);
     ui.success(`Cloned ${repoName}`);
@@ -107,7 +115,7 @@ async function install(data, ui, targetDir) {
   ui.success(`Egregore is ready for ${ui.bold(org_name)}`);
   console.log("");
   ui.info(`Your workspace:`);
-  ui.info(`  ${ui.cyan(`./egregore-${dirSlug}/`)}  — Your Egregore instance`);
+  ui.info(`  ${ui.cyan(`./${forkDirName}/`)}  — Your Egregore instance`);
   ui.info(`  ${ui.cyan(`./${memoryDirName}/`)}     — Shared knowledge`);
   for (const repoName of clonedRepos) {
     ui.info(`  ${ui.cyan(`./${repoName}/`)}        — Managed repo`);
@@ -120,6 +128,14 @@ async function install(data, ui, targetDir) {
   console.log("");
   ui.info(`Next: open a ${ui.bold("new terminal")} and type ${ui.bold(alias.aliasName)} to start.`);
   console.log("");
+}
+
+function embedToken(url, token) {
+  try {
+    return url.replace("https://github.com/", `https://x-access-token:${token}@github.com/`);
+  } catch {
+    return url;
+  }
 }
 
 function configureGitCredentials(token) {
