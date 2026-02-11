@@ -112,6 +112,20 @@ async def generate_from_template(
     return resp.json()
 
 
+async def rename_repo(token: str, owner: str, old_name: str, new_name: str) -> dict:
+    """Rename a repository. Returns updated repo data."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(
+            f"{API_BASE}/repos/{owner}/{old_name}",
+            headers=_headers(token),
+            json={"name": new_name},
+            timeout=15.0,
+        )
+    if resp.status_code != 200:
+        raise ValueError(f"Rename failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
+
 async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
     """Poll until fork is ready."""
     import asyncio
@@ -122,27 +136,11 @@ async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
     return False
 
 
-async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 60) -> bool:
-    """Poll until a repo is ready WITH content (not just created).
-
-    For template-generated repos, the repo API returns 200 before the
-    template files are committed. We must wait for actual content
-    (CLAUDE.md or README.md) to avoid a race condition where
-    update_egregore_json creates the first commit on an empty repo,
-    causing template content to be lost.
-    """
+async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 30) -> bool:
+    """Poll until a repo is ready."""
     import asyncio
     for _ in range(timeout // 2):
-        if not await repo_exists(token, owner, repo_name):
-            await asyncio.sleep(2)
-            continue
-        # Repo exists — check if template content has been committed
-        content = await get_file_content(token, owner, repo_name, "CLAUDE.md")
-        if content is not None:
-            return True
-        # Fallback: check README.md (some templates may not have CLAUDE.md)
-        content = await get_file_content(token, owner, repo_name, "README.md")
-        if content is not None:
+        if await repo_exists(token, owner, repo_name):
             return True
         await asyncio.sleep(2)
     return False

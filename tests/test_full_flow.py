@@ -74,19 +74,21 @@ class TestPersonalNamedInstanceFlow:
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "testuser", "name": "Test User"})
         )
-        # Repo doesn't exist yet → 404 first, then 200 after creation
-        repo_calls = []
-        def _repo_check(request):
-            repo_calls.append(True)
-            if len(repo_calls) == 1:
-                return Response(404)
-            return Response(200, json={"full_name": "testuser/egregore-research"})
+        # Named instance repo doesn't exist yet
         respx.get(f"{GITHUB_API}/repos/testuser/egregore-research").mock(
-            side_effect=_repo_check
+            return_value=Response(404)
         )
-        # Template generation
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "testuser/egregore-research"})
+        # Fork creates egregore-core first (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "testuser/egregore-core"})
+        )
+        # wait_for_fork polls egregore-core until ready
+        respx.get(f"{GITHUB_API}/repos/testuser/egregore-core").mock(
+            return_value=Response(200, json={"full_name": "testuser/egregore-core"})
+        )
+        # Rename egregore-core → egregore-research
+        respx.patch(f"{GITHUB_API}/repos/testuser/egregore-core").mock(
+            return_value=Response(200, json={"name": "egregore-research", "full_name": "testuser/egregore-research"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/testuser/egregore-research/contents/CLAUDE.md").mock(
@@ -158,17 +160,21 @@ class TestPersonalNamedInstanceFlow:
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        repo_calls = []
-        def _repo_check(request):
-            repo_calls.append(True)
-            if len(repo_calls) == 1:
-                return Response(404)
-            return Response(200, json={"full_name": "founder/egregore-research"})
+        # Named instance repo doesn't exist yet
         respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
-            side_effect=_repo_check
+            return_value=Response(404)
         )
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "founder/egregore-research"})
+        # Fork creates egregore-core first (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        )
+        # wait_for_fork polls egregore-core until ready
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            return_value=Response(200, json={"full_name": "founder/egregore-core"})
+        )
+        # Rename egregore-core → egregore-research
+        respx.patch(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            return_value=Response(200, json={"name": "egregore-research", "full_name": "founder/egregore-research"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/CLAUDE.md").mock(
@@ -1071,17 +1077,21 @@ class TestClaimDataConsistency:
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        repo_calls = []
-        def _repo_check(request):
-            repo_calls.append(True)
-            if len(repo_calls) <= 1:
-                return Response(404)
-            return Response(200, json={"full_name": "founder/egregore-research"})
+        # Named instance repo doesn't exist yet
         respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
-            side_effect=_repo_check
+            return_value=Response(404)
         )
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "founder/egregore-research"})
+        # Fork creates egregore-core first (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        )
+        # wait_for_fork polls egregore-core until ready
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            return_value=Response(200, json={"full_name": "founder/egregore-core"})
+        )
+        # Rename egregore-core → egregore-research
+        respx.patch(f"{GITHUB_API}/repos/founder/egregore-core").mock(
+            return_value=Response(200, json={"name": "egregore-research", "full_name": "founder/egregore-research"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/CLAUDE.md").mock(
@@ -1242,7 +1252,7 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Egregore repo: first 404 (doesn't exist), then 200 (created)
+        # Egregore repo: first 404 (doesn't exist), then 200 (fork ready)
         repo_calls = []
         def _repo_check(request):
             repo_calls.append(True)
@@ -1252,8 +1262,9 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
             side_effect=_repo_check
         )
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "founder/egregore-core"})
+        # Fork succeeds (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "founder/egregore-core"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core/contents/CLAUDE.md").mock(
@@ -1287,6 +1298,7 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
+        # Egregore repo: first 404 (doesn't exist), then 200 (fork ready)
         repo_calls = []
         def _repo_check(request):
             repo_calls.append(True)
@@ -1296,8 +1308,9 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
             side_effect=_repo_check
         )
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "founder/egregore-core"})
+        # Fork succeeds (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "founder/egregore-core"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core/contents/CLAUDE.md").mock(

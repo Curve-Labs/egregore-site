@@ -405,17 +405,23 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
     else:
         memory_repo_name = f"{owner}-memory"
 
-    # 1. Generate repo from template (skip if already exists — makes setup idempotent)
+    # 1. Fork repo (skip if already exists — makes setup idempotent)
     repo_already_exists = await gh.repo_exists(token, owner, repo_name)
     if repo_already_exists:
         logger.info(f"{repo_name} already exists for {owner} — continuing setup")
     else:
-        logger.info(f"Generating {repo_name} from template for {owner}")
-        await gh.generate_from_template(token, owner, repo_name)
+        # Fork creates egregore-core, then rename if instance has a custom name
+        logger.info(f"Forking egregore-core for {owner}")
+        await gh.fork_repo(token, target_org)
 
-        # 2. Wait for repo to be ready
-        if not await gh.wait_for_repo(token, owner, repo_name):
-            raise HTTPException(status_code=504, detail="Repo generation timed out — try again")
+        # Wait for fork to be ready
+        if not await gh.wait_for_fork(token, owner):
+            raise HTTPException(status_code=504, detail="Fork timed out — try again")
+
+        # Rename if this is a named instance (egregore-core → egregore-{name})
+        if repo_name != "egregore-core":
+            logger.info(f"Renaming egregore-core → {repo_name}")
+            await gh.rename_repo(token, owner, "egregore-core", repo_name)
 
     # 3. Create memory repo
     logger.info(f"Creating {memory_repo_name} for {owner}")

@@ -58,24 +58,24 @@ class TestFounderSetup:
     @respx.mock
     def test_founder_setup_creates_org(self, app_client):
         """POST /api/org/setup with valid GitHub token creates org and returns setup token."""
-        # Mock GitHub: user, template generate, repo exists checks, repo creation, etc.
+        # Mock GitHub: user, fork, repo exists checks, repo creation, etc.
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (created)
+        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (fork ready)
         _repo_check_calls = []
         def _repo_check(request):
             _repo_check_calls.append(True)
             if len(_repo_check_calls) == 1:
                 return Response(404)  # Duplicate check: not yet
-            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_repo
+            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_fork
 
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core").mock(
             side_effect=_repo_check
         )
-        # Template generation succeeds
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
-            return_value=Response(201, json={"full_name": "FounderOrg/egregore-core"})
+        # Fork succeeds (async)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+            return_value=Response(202, json={"full_name": "FounderOrg/egregore-core"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/CLAUDE.md").mock(
@@ -96,7 +96,7 @@ class TestFounderSetup:
         respx.put(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
             return_value=Response(201, json={"content": {"sha": "new"}})
         )
-        # Update egregore.json in the generated repo
+        # Update egregore.json in the forked repo
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/egregore.json").mock(
             return_value=Response(404)
         )
