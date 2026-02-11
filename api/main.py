@@ -1226,40 +1226,45 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
     is_personal = invite_data.get("is_personal", False)
 
     if is_personal:
-        # Personal account: accept ALL pending repo collaboration invitations from this owner
-        accepted = await gh.accept_repo_invitations(token, owner)
+        is_owner = user["login"].lower() == owner.lower()
 
-        # Verify access to both egregore repo AND memory repo
-        repo_name = invite_data.get("repo_name", "egregore-core")
-        has_egregore_access = await gh.repo_exists(token, owner, repo_name)
+        if not is_owner:
+            # Invitee (not the repo owner): accept pending repo collaboration invitations
+            accepted = await gh.accept_repo_invitations(token, owner)
 
-        # Read memory repo name from egregore.json
-        memory_repo_name = f"{owner}-memory"
-        try:
-            config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
-            if config_raw:
-                _cfg = json.loads(config_raw)
-                _mem = _cfg.get("memory_repo", memory_repo_name)
-                if "/" in _mem:
-                    memory_repo_name = _mem.split("/")[-1].replace(".git", "")
-                else:
-                    memory_repo_name = _mem
-        except Exception:
-            pass
+            # Verify access to both egregore repo AND memory repo
+            repo_name = invite_data.get("repo_name", "egregore-core")
+            has_egregore_access = await gh.repo_exists(token, owner, repo_name)
 
-        has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
+            # Read memory repo name from egregore.json
+            memory_repo_name = f"{owner}-memory"
+            try:
+                config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+                if config_raw:
+                    _cfg = json.loads(config_raw)
+                    _mem = _cfg.get("memory_repo", memory_repo_name)
+                    if "/" in _mem:
+                        memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                    else:
+                        memory_repo_name = _mem
+            except Exception:
+                pass
 
-        if not has_egregore_access or not has_memory_access:
-            missing = []
-            if not has_egregore_access:
-                missing.append(repo_name)
-            if not has_memory_access:
-                missing.append(memory_repo_name)
-            return {
-                "status": "pending_github",
-                "message": f"Waiting for access to: {', '.join(missing)}. Retrying automatically...",
-                "github_org": owner,
-            }
+            has_memory_access = await gh.repo_exists(token, owner, memory_repo_name)
+
+            if not has_egregore_access or not has_memory_access:
+                missing = []
+                if not has_egregore_access:
+                    missing.append(repo_name)
+                if not has_memory_access:
+                    missing.append(memory_repo_name)
+                return {
+                    "status": "pending_github",
+                    "message": f"Waiting for access to: {', '.join(missing)}. Retrying automatically...",
+                    "github_org": owner,
+                }
+        else:
+            logger.info(f"Owner {user['login']} accepting invite to their own org — skipping access check")
     else:
         # Org account: check org membership — auto-accept if pending
         membership = await gh.check_org_membership(token, owner, user["login"])
