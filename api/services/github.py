@@ -461,6 +461,43 @@ async def accept_repo_invitations(token: str, owner: str) -> int:
     return accepted
 
 
+async def sync_branch_to_main(token: str, owner: str, repo: str, branch: str = "develop") -> bool:
+    """Force-update a branch to match main. Used after setup to keep develop in sync.
+
+    Returns True if successful (or branch doesn't exist), False on error.
+    """
+    # Get main's SHA
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{API_BASE}/repos/{owner}/{repo}/git/ref/heads/main",
+            headers=_headers(token),
+            timeout=10.0,
+        )
+    if resp.status_code != 200:
+        return False
+    main_sha = resp.json()["object"]["sha"]
+
+    # Check if the target branch exists
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{API_BASE}/repos/{owner}/{repo}/git/ref/heads/{branch}",
+            headers=_headers(token),
+            timeout=10.0,
+        )
+    if resp.status_code == 404:
+        return True  # Branch doesn't exist, nothing to sync
+
+    # Force-update branch to main's SHA
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(
+            f"{API_BASE}/repos/{owner}/{repo}/git/refs/heads/{branch}",
+            headers=_headers(token),
+            json={"sha": main_sha, "force": True},
+            timeout=10.0,
+        )
+    return resp.status_code == 200
+
+
 async def is_org(token: str, name: str) -> bool:
     """Check if a GitHub name is an org (True) or a user (False)."""
     async with httpx.AsyncClient() as client:
