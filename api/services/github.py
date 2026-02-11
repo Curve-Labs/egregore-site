@@ -257,6 +257,7 @@ async def update_egregore_json(
         "github_org": github_org,
         "memory_repo": memory_repo,
         "api_url": api_url,
+        "repo_name": repo,
     }
     if slug:
         config["slug"] = slug
