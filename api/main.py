@@ -486,8 +486,9 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key
+            RETURN o.id, o.api_key
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key})
-        neo4j_debug = str(neo4j_result)
+        neo4j_debug = f"host={new_org.get('neo4j_host', '?')[:30]} result={neo4j_result}"
         if "error" in neo4j_result:
             logger.error(f"Neo4j Org bootstrap error: {neo4j_result['error']}")
     except Exception as e:
