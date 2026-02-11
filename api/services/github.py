@@ -122,11 +122,27 @@ async def wait_for_fork(token: str, owner: str, timeout: int = 30) -> bool:
     return False
 
 
-async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 30) -> bool:
-    """Poll until a repo is ready (generic replacement for wait_for_fork)."""
+async def wait_for_repo(token: str, owner: str, repo_name: str, timeout: int = 60) -> bool:
+    """Poll until a repo is ready WITH content (not just created).
+
+    For template-generated repos, the repo API returns 200 before the
+    template files are committed. We must wait for actual content
+    (CLAUDE.md or README.md) to avoid a race condition where
+    update_egregore_json creates the first commit on an empty repo,
+    causing template content to be lost.
+    """
     import asyncio
     for _ in range(timeout // 2):
-        if await repo_exists(token, owner, repo_name):
+        if not await repo_exists(token, owner, repo_name):
+            await asyncio.sleep(2)
+            continue
+        # Repo exists — check if template content has been committed
+        content = await get_file_content(token, owner, repo_name, "CLAUDE.md")
+        if content is not None:
+            return True
+        # Fallback: check README.md (some templates may not have CLAUDE.md)
+        content = await get_file_content(token, owner, repo_name, "README.md")
+        if content is not None:
             return True
         await asyncio.sleep(2)
     return False
