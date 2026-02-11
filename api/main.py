@@ -1264,7 +1264,28 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
                     "github_org": owner,
                 }
         else:
-            logger.info(f"Owner {user['login']} accepting invite to their own org — skipping access check")
+            # Owner accepting their own invite — ensure memory repo exists
+            repo_name = invite_data.get("repo_name", "egregore-core")
+            memory_repo_name = f"{owner}-memory"
+            try:
+                config_raw = await gh.get_file_content(token, owner, repo_name, "egregore.json")
+                if config_raw:
+                    _cfg = json.loads(config_raw)
+                    _mem = _cfg.get("memory_repo", memory_repo_name)
+                    if "/" in _mem:
+                        memory_repo_name = _mem.split("/")[-1].replace(".git", "")
+                    else:
+                        memory_repo_name = _mem
+            except Exception:
+                pass
+
+            if not await gh.repo_exists(token, owner, memory_repo_name):
+                logger.info(f"Memory repo {owner}/{memory_repo_name} missing — creating for owner")
+                try:
+                    await gh.create_repo(token, memory_repo_name, None)
+                    await gh.init_memory_structure(token, owner, memory_repo_name)
+                except Exception as e:
+                    logger.error(f"Failed to create memory repo: {e}")
     else:
         # Org account: check org membership — auto-accept if pending
         membership = await gh.check_org_membership(token, owner, user["login"])
