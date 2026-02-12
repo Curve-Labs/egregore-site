@@ -20,7 +20,7 @@ function run(cmd, opts = {}) {
  * @param {string} targetDir - where to install (default: cwd)
  */
 async function install(data, ui, targetDir) {
-  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [], telegram_group_link } = data;
+  const { fork_url, memory_url, github_token, org_name, github_org, slug, api_key, repos = [], telegram_group_link, github_username, github_name } = data;
   const base = targetDir || process.cwd();
 
   // Directory name from fork URL (what git clone would use), e.g. "egregore-core"
@@ -51,6 +51,16 @@ async function install(data, ui, targetDir) {
     try { run(`git remote set-url origin ${fork_url}`, { cwd: egregoreDir }); } catch {}
   }
   ui.success("Cloned egregore");
+
+  // Set repo-local git identity from GitHub user (not machine-global config)
+  if (github_username) {
+    try {
+      run(`git config user.name "${github_name || github_username}"`, { cwd: egregoreDir });
+      run(`git config user.email "${github_username}@users.noreply.github.com"`, { cwd: egregoreDir });
+    } catch {
+      // Non-fatal
+    }
+  }
 
   // 2. Clone memory
   ui.step(2, totalSteps, "Cloning shared memory...");
