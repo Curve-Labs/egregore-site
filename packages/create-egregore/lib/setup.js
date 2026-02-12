@@ -117,20 +117,26 @@ async function install(data, ui, targetDir) {
 
   // 6+. Clone managed repos (if any)
   const clonedRepos = [];
+  const failedRepos = [];
   for (let i = 0; i < repos.length; i++) {
     const repoName = repos[i];
     ui.step(6 + i, totalSteps, `Cloning ${repoName}...`);
     const repoDir = path.join(base, repoName);
-    if (fs.existsSync(repoDir)) {
-      ui.warn(`${repoName}/ already exists — pulling latest`);
-      run("git pull", { cwd: repoDir });
-    } else {
-      const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
-      execFileSync("git", ["clone", embedToken(repoUrl, github_token), repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
-      try { run(`git remote set-url origin ${repoUrl}`, { cwd: repoDir }); } catch {}
+    try {
+      if (fs.existsSync(repoDir)) {
+        ui.warn(`${repoName}/ already exists — pulling latest`);
+        run("git pull", { cwd: repoDir });
+      } else {
+        const repoUrl = `https://github.com/${github_org}/${repoName}.git`;
+        execFileSync("git", ["clone", embedToken(repoUrl, github_token), repoDir], { stdio: "pipe", encoding: "utf-8", timeout: 60000 });
+        try { run(`git remote set-url origin ${repoUrl}`, { cwd: repoDir }); } catch {}
+      }
+      clonedRepos.push(repoName);
+      ui.success(`Cloned ${repoName}`);
+    } catch {
+      failedRepos.push(repoName);
+      ui.warn(`Could not clone ${repoName} — you may not have access yet. Ask the org admin to grant access.`);
     }
-    clonedRepos.push(repoName);
-    ui.success(`Cloned ${repoName}`);
   }
 
   // Done
