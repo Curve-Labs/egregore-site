@@ -317,11 +317,13 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
                 timeout=15.0,
             )
         if resp.status_code == 404:
+            # Personal account: /orgs/ 404s. Use /user/repos (includes private repos)
+            # instead of /users/{org}/repos (public only for OAuth tokens).
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
-                    f"{API_BASE}/users/{org}/repos",
+                    f"{API_BASE}/user/repos",
                     headers=_headers(token),
-                    params={"per_page": 100, "sort": "updated", "page": page},
+                    params={"per_page": 100, "sort": "updated", "page": page, "affiliation": "owner"},
                     timeout=15.0,
                 )
         if resp.status_code != 200:
