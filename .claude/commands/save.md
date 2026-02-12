@@ -104,6 +104,23 @@ MATCH (q:Quest {id: $slug}) RETURN q.id
 
 Parse frontmatter for: author, date, topic/title, project, quests (for artifacts), topics (for artifacts), priority (for quests, default 0).
 
+### Auto-resolve read handoffs
+
+After all sync queries, resolve any `read` handoffs where the user has completed a subsequent session (same criteria as Q_resolve in activity-data.sh):
+
+```cypher
+MATCH (s:Session)-[:HANDED_TO]->(p:Person {name: $me})
+WHERE s.handoffStatus = 'read'
+WITH s, p, coalesce(s.handoffReadDate, s.date) AS sinceDate
+MATCH (later:Session)-[:BY]->(p)
+WHERE later.date > sinceDate
+WITH s, count(later) AS laterSessions WHERE laterSessions > 0
+SET s.handoffStatus = 'done'
+RETURN s.id AS id, s.topic AS topic
+```
+
+If any resolved, report: `[sync] ✓ Resolved N handoffs (read → done)`
+
 ### Topic sync on artifacts
 
 When syncing artifact files, parse `topics` from frontmatter (YAML list) and SET on the node:
