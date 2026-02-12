@@ -15,7 +15,7 @@ const C = {
 const font = {
   gothic: { fontFamily: "'UnifrakturMaguntia', cursive" },
   serif: { fontFamily: "'Cormorant Garamond', serif" },
-  mono: { fontFamily: "'Space Mono', monospace" },
+  mono: { fontFamily: "'IBM Plex Mono', monospace" },
 };
 
 // ─── Simple Router ──────────────────────────────────────────────
@@ -67,8 +67,10 @@ const Navigation = () => {
     ...font.mono,
     color: C.ink,
     textDecoration: "none",
-    fontSize: "0.7rem",
-    letterSpacing: "1.5px",
+    fontSize: "14px",
+    fontWeight: 400,
+    letterSpacing: "0",
+    lineHeight: "16px",
     textTransform: "uppercase",
     padding: "0.4rem 0",
   };
@@ -787,7 +789,7 @@ const ResearchSection = () => {
 
 // ─── Footer ─────────────────────────────────────────────────────
 const Footer = () => (
-  <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "5rem 0 3rem", textAlign: "center" }}>
+  <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "5rem 0 2rem", textAlign: "center" }}>
     <Container>
       <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
       <h2 style={{ ...font.serif, fontSize: "2rem", fontWeight: 400, marginBottom: "0.75rem" }}>
@@ -814,10 +816,16 @@ const Footer = () => (
       <p style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.35)", marginBottom: "3rem" }}>
         Or: <code>npx create-egregore@latest</code>
       </p>
-      <div style={{ ...font.mono, fontSize: "0.6rem", color: "rgba(244,241,234,0.25)", borderTop: "1px solid rgba(244,241,234,0.1)", paddingTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-        <span>Egregore</span>
-        <span>MMXXVI</span>
-        <span>Berlin / The Graph</span>
+
+      {/* Footer links */}
+      <div style={{ borderTop: "1px solid rgba(244,241,234,0.1)", paddingTop: "2.5rem", marginTop: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+          <a href="https://x.com/curvelabs" target="_blank" rel="noopener noreferrer" style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.5)", textDecoration: "none", transition: "color 0.2s" }}>Twitter</a>
+          <a href="https://github.com/Curve-Labs" target="_blank" rel="noopener noreferrer" style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.5)", textDecoration: "none", transition: "color 0.2s" }}>GitHub</a>
+        </div>
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: "rgba(244,241,234,0.35)", margin: 0 }}>
+          Made by <a href="https://curvelabs.eu" target="_blank" rel="noopener noreferrer" style={{ color: C.crimson, textDecoration: "none" }}>Curve Labs</a>
+        </p>
       </div>
     </Container>
   </footer>

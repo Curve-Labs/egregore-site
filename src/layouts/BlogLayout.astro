@@ -17,7 +17,7 @@ const { title, description } = Astro.props;
     {description && <meta name="description" content={description} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Space+Mono:wght@400;700&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
     <link rel="alternate" type="application/rss+xml" title="Egregore Blog" href="/rss.xml" />
   </head>
   <body style="background: #F4F1EA; color: #1a1714; font-family: 'Cormorant Garamond', serif; line-height: 1.6; margin: 0;">
@@ -37,16 +37,152 @@ const { title, description } = Astro.props;
       <slot />
     </main>
 
-    <footer style="padding: 3rem; text-align: center; border-top: 1px solid #d4cfc5; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #8a8578;">
-      <a href="/" style="font-family: 'UnifrakturMaguntia', cursive; font-size: 1.4rem; color: #7A0F1B; text-decoration: none;">Egregore</a>
-      <p style="margin-top: 1rem;">Shared cognition for teams and agents</p>
+    <footer class="site-footer">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <a href="/" class="footer-logo">Egregore</a>
+          <p class="footer-tagline">The organizational intelligence layer for AI-native teams. Persistent memory, async handoffs, and shared knowledge that accumulates over time.</p>
+        </div>
+
+        <div class="footer-links">
+          <div class="footer-section">
+            <span class="footer-heading">Product</span>
+            <a href="/#problem">Manifesto</a>
+            <a href="/#commands">Commands</a>
+            <a href="/blog">Blog</a>
+          </div>
+
+          <div class="footer-section">
+            <span class="footer-heading">Connect</span>
+            <a href="https://x.com/curvelabs" target="_blank" rel="noopener">Twitter</a>
+            <a href="https://github.com/Curve-Labs" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Made by <a href="https://curvelabs.eu" target="_blank" rel="noopener">Curve Labs</a></span>
+      </div>
     </footer>
 
     <style>
-      .nav-link {
-        font-family: 'Space Mono', monospace;
-        font-size: 0.7rem;
+      .site-footer {
+        border-top: 1px solid #d4cfc5;
+        padding: 4rem 3rem 2rem;
+        background: #F4F1EA;
+      }
+
+      .footer-content {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1.5fr 2fr;
+        gap: 4rem;
+      }
+
+      .footer-brand {
+        max-width: 320px;
+      }
+
+      .footer-logo {
+        font-family: 'UnifrakturMaguntia', cursive;
+        font-size: 1.6rem;
+        color: #7A0F1B;
+        text-decoration: none;
+        display: block;
+        margin-bottom: 1rem;
+      }
+
+      .footer-logo:hover {
+        opacity: 0.8;
+      }
+
+      .footer-tagline {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.95rem;
+        color: #8a8578;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .footer-links {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4rem;
+      }
+
+      .footer-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .footer-heading {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.65rem;
+        text-transform: uppercase;
         letter-spacing: 1.5px;
+        color: #1a1714;
+        margin-bottom: 0.5rem;
+      }
+
+      .footer-section a {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.75rem;
+        color: #8a8578;
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      .footer-section a:hover {
+        color: #7A0F1B;
+      }
+
+      .footer-bottom {
+        max-width: 1000px;
+        margin: 3rem auto 0;
+        padding-top: 1.5rem;
+        border-top: 1px solid #d4cfc5;
+        text-align: center;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.7rem;
+        color: #8a8578;
+      }
+
+      .footer-bottom a {
+        color: #7A0F1B;
+        text-decoration: none;
+      }
+
+      .footer-bottom a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 768px) {
+        .footer-content {
+          grid-template-columns: 1fr;
+          gap: 2.5rem;
+        }
+
+        .footer-brand {
+          max-width: none;
+        }
+
+        .footer-links {
+          justify-content: flex-start;
+          gap: 2.5rem;
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+
+    <style>
+      .nav-link {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 14px;
+        font-weight: 400;
+        letter-spacing: 0;
+        line-height: 16px;
         text-transform: uppercase;
         color: #1a1714;
         text-decoration: none;

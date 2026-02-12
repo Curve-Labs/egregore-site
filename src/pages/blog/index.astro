@@ -3,7 +3,17 @@ import { getCollection } from 'astro:content';
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const posts = await getCollection('posts', ({ data }) => !data.draft);
-const sortedPosts = posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// Calculate read time for each post
+const postsWithReadTime = await Promise.all(posts.map(async (post) => {
+  const { remarkPluginFrontmatter } = await post.render();
+  const content = post.body || '';
+  const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+  const readTime = Math.max(1, Math.ceil(wordCount / 200));
+  return { ...post, readTime };
+}));
+
+const sortedPosts = postsWithReadTime.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 const featuredPosts = sortedPosts.filter(p => p.data.featured);
 const regularPosts = sortedPosts.filter(p => !p.data.featured);
 
@@ -22,19 +32,14 @@ function formatDate(date: Date) {
       <p class="subtitle">Thoughts on shared cognition, context gardening, and building with AI</p>
     </header>
 
-    <nav class="categories">
-      {categories.map(cat => (
-        <button class="cat-btn" data-category={cat}>
-          {cat}
-        </button>
-      ))}
-    </nav>
-
     {featuredPosts.length > 0 && (
       <section class="featured">
         {featuredPosts.map(post => (
           <a href={`/blog/${post.slug}`} class="featured-card" data-category={post.data.category}>
-            <span class="tag">{post.data.category}</span>
+            <div class="card-meta">
+              <span class="tag">{post.data.category}</span>
+              <span class="read-time">{post.readTime} min read</span>
+            </div>
             <h2>{post.data.title}</h2>
             <p>{post.data.description}</p>
             <time>{formatDate(post.data.date)}</time>
@@ -43,11 +48,20 @@ function formatDate(date: Date) {
       </section>
     )}
 
+    <nav class="categories">
+      {categories.map(cat => (
+        <button type="button" class="cat-btn" data-category={cat}>
+          {cat}
+        </button>
+      ))}
+    </nav>
+
     <section class="posts">
       {regularPosts.map(post => (
         <a href={`/blog/${post.slug}`} class="post-card" data-category={post.data.category}>
           <div class="post-meta">
             <span class="tag">{post.data.category}</span>
+            <span class="read-time">{post.readTime} min read</span>
             <time>{formatDate(post.data.date)}</time>
           </div>
           <h3>{post.data.title}</h3>
@@ -69,6 +83,7 @@ function formatDate(date: Date) {
     max-width: 900px;
     margin: 0 auto;
     padding: 2rem;
+    overflow-anchor: none;
   }
 
   .blog-header {
@@ -77,10 +92,11 @@ function formatDate(date: Date) {
   }
 
   .label {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.65rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 3px;
+    letter-spacing: 0;
     color: #8a8578;
     margin-bottom: 0.5rem;
   }
@@ -108,13 +124,15 @@ function formatDate(date: Date) {
   }
 
   .cat-btn {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0;
+    line-height: 16px;
     background: transparent !important;
     border: 1px solid #7A0F1B !important;
-    padding: 0.4rem 1rem;
+    padding: 0.5rem 1.2rem;
     cursor: pointer;
     transition: all 0.2s;
     color: #7A0F1B !important;
@@ -165,17 +183,30 @@ function formatDate(date: Date) {
   }
 
   .featured-card time {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     color: #8a8578;
   }
 
   .tag {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.6rem;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: #7A0F1B;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .read-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: #8a8578;
   }
 
   .posts {
@@ -204,7 +235,7 @@ function formatDate(date: Date) {
   }
 
   .post-card time {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     color: #8a8578;
   }
@@ -230,28 +261,37 @@ function formatDate(date: Date) {
   }
 </style>
 
-<script>
-  const buttons = document.querySelectorAll('.cat-btn');
-  const cards = document.querySelectorAll('.featured-card, .post-card');
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('.cat-btn');
+    // Only filter regular post cards, NOT featured cards (they stay pinned)
+    const cards = document.querySelectorAll('.post-card');
 
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = (btn as HTMLElement).dataset.category;
+    buttons.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+        const cat = btn.dataset.category;
 
-      cards.forEach(card => {
-        const cardCat = (card as HTMLElement).dataset.category;
-        if (cat === 'all' || cardCat === cat) {
-          (card as HTMLElement).style.display = '';
-        } else {
-          (card as HTMLElement).style.display = 'none';
-        }
+        buttons.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+
+        cards.forEach(function(card) {
+          const cardCat = card.dataset.category;
+          if (cat === 'all' || cardCat === cat) {
+            card.style.display = '';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        return false;
       });
     });
-  });
 
-  // Set 'all' as active by default
-  document.querySelector('.cat-btn[data-category="all"]')?.classList.add('active');
+    // Set 'all' as active by default
+    const allBtn = document.querySelector('.cat-btn[data-category="all"]');
+    if (allBtn) allBtn.classList.add('active');
+  });
 </script>
