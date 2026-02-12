@@ -21,9 +21,13 @@ export async function GET({ params }: APIContext) {
   // Fetch Google Fonts with error handling
   let interFont: ArrayBuffer;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     interFont = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf', {
-      signal: AbortSignal.timeout(5000) // 5 second timeout
+      signal: controller.signal
     }).then((r) => {
+      clearTimeout(timeoutId);
       if (!r.ok) throw new Error('Font fetch failed');
       return r.arrayBuffer();
     });

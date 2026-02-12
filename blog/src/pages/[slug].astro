@@ -18,8 +18,8 @@ const { post } = Astro.props;
 const { title, subtitle, date, readTime, category, author, tags } = post.data;
 const { Content, headings } = await post.render();
 
-// Generate OG image URL - use a fallback default image
-const ogImage = `/og/${post.slug}.png`;
+// Generate OG image URL - use static fallback to avoid dynamic generation issues
+const ogImage = 'https://blog.curvelabs.eu/curve_labs_logo_white.png';
 
 // Filter to h2 and h3 only for TOC
 const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
