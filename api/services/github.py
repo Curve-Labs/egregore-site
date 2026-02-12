@@ -1,8 +1,11 @@
 """GitHub API operations for org setup."""
 
 import base64
+import logging
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 API_BASE = "https://api.github.com"
@@ -420,7 +423,13 @@ async def add_repo_collaborator(token: str, owner: str, repo: str, username: str
             json={"permission": "push"},
             timeout=10.0,
         )
-    return resp.status_code in (200, 201, 204)
+    ok = resp.status_code in (200, 201, 204)
+    if not ok:
+        logger.warning(
+            f"add_repo_collaborator {owner}/{repo} -> {username}: "
+            f"HTTP {resp.status_code} {resp.text[:200]}"
+        )
+    return ok
 
 
 async def accept_org_invitation(token: str, org: str) -> bool:
