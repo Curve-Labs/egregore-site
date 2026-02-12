@@ -18,12 +18,23 @@ export async function GET({ params }: APIContext) {
     return new Response('Not found', { status: 404 });
   }
 
-  // Fetch Google Fonts - using Inter as a reliable fallback since gstatic URLs are unstable
-  const [interFont] = await Promise.all([
-    fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf').then((r) =>
-      r.arrayBuffer()
-    ),
-  ]);
+  // Fetch Google Fonts with error handling
+  let interFont: ArrayBuffer;
+  try {
+    interFont = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf', {
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    }).then((r) => {
+      if (!r.ok) throw new Error('Font fetch failed');
+      return r.arrayBuffer();
+    });
+  } catch (error) {
+    // Return a simple fallback response if font fetch fails
+    console.error('Font fetch failed:', error);
+    return new Response('OG image generation temporarily unavailable', {
+      status: 503,
+      headers: { 'Retry-After': '60' }
+    });
+  }
 
   const svg = await satori(
     {
@@ -110,7 +121,7 @@ export async function GET({ params }: APIContext) {
                       color: '#9898a8',
                       lineHeight: 1.4,
                     },
-                    children: post.data.subtitle,
+                    children: post.data.subtitle || '',
                   },
                 },
               ],
@@ -134,7 +145,7 @@ export async function GET({ params }: APIContext) {
                       fontSize: '16px',
                       color: '#5a5a6a',
                     },
-                    children: `by ${post.data.author}`,
+                    children: `by ${post.data.author || 'Curve Labs'}`,
                   },
                 },
                 {
@@ -145,7 +156,7 @@ export async function GET({ params }: APIContext) {
                       fontSize: '16px',
                       color: '#5a5a6a',
                     },
-                    children: post.data.date.toLocaleDateString('en-US', {
+                    children: (post.data.date instanceof Date ? post.data.date : new Date(post.data.date)).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
