@@ -40,3 +40,7 @@ bin/seeds
 # Generated / personal
 memory
 .egregore
+.syncignore
+egregore-core
+oguzhan-memory
+*-memory
