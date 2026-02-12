@@ -213,27 +213,33 @@ async def list_org_repos(token: str, org: str) -> list[dict]:
     """List repos for an org (or personal account), filtering out egregore/memory repos.
 
     Returns [{name, description, language, private}].
-    Falls back to /users/{org}/repos for personal accounts.
+    Uses /user/repos for personal accounts (includes private repos).
     """
     repos: list[dict] = []
     page = 1
+    is_personal = False
     while True:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            resp = await client.get(
-                f"{API_BASE}/orgs/{org}/repos",
-                headers=_headers(token),
-                params={"per_page": 100, "sort": "updated", "page": page},
-                timeout=15.0,
-            )
-        if resp.status_code == 404:
-            # Not an org — try as personal account
+        if is_personal:
+            # Personal account: /user/repos includes private repos
+            # (/users/{org}/repos only returns public for OAuth tokens)
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
-                    f"{API_BASE}/users/{org}/repos",
+                    f"{API_BASE}/user/repos",
                     headers=_headers(token),
-                    params={"per_page": 100, "sort": "updated", "page": page},
+                    params={"per_page": 100, "sort": "updated", "page": page, "affiliation": "owner"},
                     timeout=15.0,
                 )
+        else:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                resp = await client.get(
+                    f"{API_BASE}/orgs/{org}/repos",
+                    headers=_headers(token),
+                    params={"per_page": 100, "sort": "updated", "page": page, "type": "all"},
+                    timeout=15.0,
+                )
+            if resp.status_code == 404:
+                is_personal = True
+                continue  # Retry with /user/repos
         if resp.status_code != 200:
             break
         batch = resp.json()
