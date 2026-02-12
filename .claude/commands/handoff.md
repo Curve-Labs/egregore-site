@@ -9,6 +9,15 @@ Topic: $ARGUMENTS
 **Neo4j-first.** All queries via `bash bin/graph.sh query "..."`. No MCP. No direct curl to Neo4j.
 **Notifications via `bash bin/notify.sh send`**. No direct curl to Telegram.
 
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` and `bin/notify.sh` calls MUST redirect stdout: pipe to `/dev/null` or capture in a variable. Only show formatted progress lines. Example:
+```bash
+bash bin/graph.sh query "..." > /dev/null 2>&1
+```
+If you need to parse the result, capture it and only echo a status:
+```bash
+RESULT=$(bash bin/graph.sh query "..." 2>/dev/null) && echo "OK" || echo "FAILED"
+```
+
 - 1 Bash call: `git config user.name`
 - 1 Neo4j query: Session creation (with HANDED_TO if recipient)
 - 1 Neo4j query: Artifact lookup (today's artifacts by author)
@@ -24,9 +33,10 @@ git config user.name
 
 Derive author handle: lowercase first word of git user.name (e.g. "Oguzhan Yayla" → "oguzhan").
 
-Query all team members from the graph:
+Query all team members from the graph (suppress raw output, parse names):
 ```bash
-bash bin/graph.sh query "MATCH (p:Person) RETURN p.name AS name"
+MEMBERS=$(bash bin/graph.sh query "MATCH (p:Person) RETURN p.name AS name" 2>/dev/null)
+echo "$MEMBERS" | jq -r '.values[][]' 2>/dev/null
 ```
 
 This returns all Person nodes in the org. Use this list for recipient matching in Step 1.
