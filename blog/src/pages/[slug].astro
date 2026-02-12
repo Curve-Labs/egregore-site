@@ -11,10 +11,22 @@ export async function getStaticPaths() {
 }
 
 interface Props {
-  post: CollectionEntry<'posts'>;
+  post?: CollectionEntry<'posts'>;
 }
 
-const { post } = Astro.props;
+// In SSR mode, getStaticPaths is ignored, so we need to fetch the post dynamically
+const { slug } = Astro.params;
+let post = Astro.props.post;
+
+if (!post) {
+  const posts = await getCollection('posts');
+  post = posts.find((p) => p.slug === slug);
+
+  if (!post) {
+    return Astro.redirect('/404');
+  }
+}
+
 const { title, subtitle, date, readTime, category, author, tags } = post.data;
 const { Content, headings } = await post.render();
 
