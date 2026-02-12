@@ -24,8 +24,11 @@ const ogImage = `/og/${post.slug}.png`;
 // Filter to h2 and h3 only for TOC
 const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
 
-// Ensure date is a Date object
+// Ensure date is a Date object with validation
 const postDate = date instanceof Date ? date : new Date(date);
+if (isNaN(postDate.getTime())) {
+  console.error(`[slug].astro: Invalid date for post ${post.slug}:`, date);
+}
 
 // Build share text with hashtags
 const articleUrl = `https://blog.curvelabs.eu/${post.slug}`;
@@ -68,12 +71,12 @@ const structuredData = {
 
 <Base
   title={title}
-  description={subtitle}
+  description={subtitle || title}
   image={ogImage}
   keywords={articleKeywords}
   type="article"
-  publishedTime={date.toISOString()}
-  author={author}
+  publishedTime={postDate.toISOString()}
+  author={author || 'Curve Labs'}
 >
   <div class="article-layout">
     <aside class="back-sidebar">
@@ -92,19 +95,19 @@ const structuredData = {
         <div class="post-meta">
           <span class="category">{category}</span>
           <span class="divider">•</span>
-          <time datetime={date.toISOString()}>
-            {date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          <time datetime={postDate.toISOString()}>
+            {postDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </time>
           <span class="divider">•</span>
           <span class="read-time">{readTime}</span>
         </div>
 
         <h1 class="post-title">{title}</h1>
-        <p class="post-subtitle">{subtitle}</p>
+        {subtitle && <p class="post-subtitle">{subtitle}</p>}
 
         <div class="post-author">
           <span class="author-label">by</span>
-          <span class="author-name">{author}</span>
+          <span class="author-name">{author || 'Curve Labs'}</span>
         </div>
       </header>
 
@@ -174,7 +177,7 @@ const structuredData = {
             class="share-btn copy-btn"
             title="Copy link"
             data-url={articleUrl}
-            data-share-text={`${title}\n\n${subtitle}\n\n${hashtagString}\n\n${articleUrl}`}
+            data-share-text={`${title}\n\n${subtitle || ''}\n\n${hashtagString}\n\n${articleUrl}`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
