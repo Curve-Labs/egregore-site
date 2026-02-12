@@ -68,27 +68,30 @@ class TestPersonalNamedInstanceFlow:
     """
 
     @respx.mock
-    def test_setup_creates_named_instance(self, app_client):
+    def test_setup_creates_named_instance(self, app_client, monkeypatch):
         """POST /api/org/setup with instance_name creates correctly named repos."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         # GitHub user
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "testuser", "name": "Test User"})
         )
-        # Named instance repo doesn't exist yet
-        respx.get(f"{GITHUB_API}/repos/testuser/egregore-research").mock(
+        # is_org check (personal account → 404)
+        respx.get(f"{GITHUB_API}/orgs/testuser").mock(
             return_value=Response(404)
         )
-        # Fork creates egregore-core first (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "testuser/egregore-core"})
+        # Named instance repo: 404 on initial check, then 200 when wait_for_repo polls
+        repo_check_calls = []
+        def _repo_check(request):
+            repo_check_calls.append(True)
+            if len(repo_check_calls) == 1:
+                return Response(404)
+            return Response(200, json={"full_name": "testuser/egregore-research"})
+        respx.get(f"{GITHUB_API}/repos/testuser/egregore-research").mock(
+            side_effect=_repo_check
         )
-        # wait_for_fork polls egregore-core until ready
-        respx.get(f"{GITHUB_API}/repos/testuser/egregore-core").mock(
-            return_value=Response(200, json={"full_name": "testuser/egregore-core"})
-        )
-        # Rename egregore-core → egregore-research
-        respx.patch(f"{GITHUB_API}/repos/testuser/egregore-core").mock(
-            return_value=Response(200, json={"name": "egregore-research", "full_name": "testuser/egregore-research"})
+        # Generate from template (creates with final name, private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "testuser/egregore-research"})
         )
         # Create memory repo (personal account → /user/repos)
         respx.post(f"{GITHUB_API}/user/repos").mock(
@@ -115,6 +118,10 @@ class TestPersonalNamedInstanceFlow:
         # Neo4j
         respx.post(url__regex=r"https://neo4j.*").mock(
             return_value=Response(200, json=_neo4j_ok())
+        )
+        # sync_branch_to_main (skip — branch doesn't exist yet)
+        respx.get(f"{GITHUB_API}/repos/testuser/egregore-research/git/ref/heads/main").mock(
+            return_value=Response(404)
         )
 
         resp = app_client.post(
@@ -144,7 +151,7 @@ class TestPersonalNamedInstanceFlow:
         assert token_data["slug"] == "testuser-research"
 
     @respx.mock
-    def test_full_setup_invite_accept_chain(self, app_client, _patch_org_configs):
+    def test_full_setup_invite_accept_chain(self, app_client, _patch_org_configs, monkeypatch):
         """Complete flow: setup → invite → accept for a personal named instance.
 
         This is THE critical test. It verifies that:
@@ -152,25 +159,28 @@ class TestPersonalNamedInstanceFlow:
         2. Invite reads repo_name and embeds it in the invite token
         3. Accept reads repo_name from the invite and checks the right repos
         """
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         # ---- STEP 1: SETUP ----
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Named instance repo doesn't exist yet
-        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+        # is_org check (personal account → 404)
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
             return_value=Response(404)
         )
-        # Fork creates egregore-core first (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        # Named instance repo: 404 on initial check, then 200 when wait_for_repo polls
+        repo_check_calls = []
+        def _repo_check(request):
+            repo_check_calls.append(True)
+            if len(repo_check_calls) == 1:
+                return Response(404)
+            return Response(200, json={"full_name": "founder/egregore-research"})
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            side_effect=_repo_check
         )
-        # wait_for_fork polls egregore-core until ready
-        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
-            return_value=Response(200, json={"full_name": "founder/egregore-core"})
-        )
-        # Rename egregore-core → egregore-research
-        respx.patch(f"{GITHUB_API}/repos/founder/egregore-core").mock(
-            return_value=Response(200, json={"name": "egregore-research", "full_name": "founder/egregore-research"})
+        # Generate from template (creates with final name, private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-research"})
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
@@ -194,6 +204,10 @@ class TestPersonalNamedInstanceFlow:
         )
         respx.post(url__regex=r"https://neo4j.*").mock(
             return_value=Response(200, json=_neo4j_ok())
+        )
+        # sync_branch_to_main (skip — branch doesn't exist yet)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/git/ref/heads/main").mock(
+            return_value=Response(404)
         )
 
         setup_resp = app_client.post(
@@ -897,10 +911,15 @@ class TestSetupIdempotency:
     """Setup should be idempotent — running twice doesn't break things."""
 
     @respx.mock
-    def test_setup_skips_existing_repo(self, app_client):
+    def test_setup_skips_existing_repo(self, app_client, monkeypatch):
         """If the egregore repo already exists, setup continues without error."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        # is_org check (FounderOrg is an org → 200)
+        respx.get(f"{GITHUB_API}/orgs/FounderOrg").mock(
+            return_value=Response(200, json={"login": "FounderOrg"})
         )
         # Repo already exists on first check
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core").mock(
@@ -934,6 +953,10 @@ class TestSetupIdempotency:
         # Neo4j
         respx.post(url__regex=r"https://neo4j.*").mock(
             return_value=Response(200, json=_neo4j_ok())
+        )
+        # sync_branch_to_main (skip)
+        respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/git/ref/heads/main").mock(
+            return_value=Response(404)
         )
 
         resp = app_client.post(
@@ -1064,26 +1087,29 @@ class TestClaimDataConsistency:
     """
 
     @respx.mock
-    def test_setup_claim_has_consistent_urls(self, app_client):
+    def test_setup_claim_has_consistent_urls(self, app_client, monkeypatch):
         """Claim data from setup must have matching repo_name, slug, and memory_url."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Named instance repo doesn't exist yet
-        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+        # is_org check (personal account → 404)
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
             return_value=Response(404)
         )
-        # Fork creates egregore-core first (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        # Named instance repo: 404 on initial check, then 200 when wait_for_repo polls
+        repo_check_calls = []
+        def _repo_check(request):
+            repo_check_calls.append(True)
+            if len(repo_check_calls) == 1:
+                return Response(404)
+            return Response(200, json={"full_name": "founder/egregore-research"})
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            side_effect=_repo_check
         )
-        # wait_for_fork polls egregore-core until ready
-        respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
-            return_value=Response(200, json={"full_name": "founder/egregore-core"})
-        )
-        # Rename egregore-core → egregore-research
-        respx.patch(f"{GITHUB_API}/repos/founder/egregore-core").mock(
-            return_value=Response(200, json={"name": "egregore-research", "full_name": "founder/egregore-research"})
+        # Generate from template (creates with final name, private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-research"})
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-research-memory"})
@@ -1106,6 +1132,10 @@ class TestClaimDataConsistency:
         )
         respx.post(url__regex=r"https://neo4j.*").mock(
             return_value=Response(200, json=_neo4j_ok())
+        )
+        # sync_branch_to_main (skip)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/git/ref/heads/main").mock(
+            return_value=Response(404)
         )
 
         # Setup
@@ -1235,12 +1265,17 @@ class TestMemoryRepoVerification:
     """
 
     @respx.mock
-    def test_setup_fails_if_memory_repo_not_created(self, app_client):
+    def test_setup_fails_if_memory_repo_not_created(self, app_client, monkeypatch):
         """Setup must error if memory repo doesn't exist after creation attempt."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Egregore repo: first 404 (doesn't exist), then 200 (fork ready)
+        # is_org check (personal account → 404)
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
+            return_value=Response(404)
+        )
+        # Egregore repo: first 404 (doesn't exist), then 200 when wait_for_repo polls
         repo_calls = []
         def _repo_check(request):
             repo_calls.append(True)
@@ -1250,9 +1285,9 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
             side_effect=_repo_check
         )
-        # Fork succeeds (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        # Generate from template (creates with correct name, private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-core"})
         )
         # Memory repo creation "succeeds" (201) but repo doesn't actually exist
         respx.post(f"{GITHUB_API}/user/repos").mock(
@@ -1277,12 +1312,17 @@ class TestMemoryRepoVerification:
         assert "memory repo" in resp.json()["detail"].lower()
 
     @respx.mock
-    def test_setup_succeeds_when_memory_repo_verified(self, app_client):
+    def test_setup_succeeds_when_memory_repo_verified(self, app_client, monkeypatch):
         """Setup succeeds when memory repo exists after creation."""
+        monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
-        # Egregore repo: first 404 (doesn't exist), then 200 (fork ready)
+        # is_org check (personal account → 404)
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
+            return_value=Response(404)
+        )
+        # Egregore repo: first 404 (doesn't exist), then 200 when wait_for_repo polls
         repo_calls = []
         def _repo_check(request):
             repo_calls.append(True)
@@ -1292,9 +1332,9 @@ class TestMemoryRepoVerification:
         respx.get(f"{GITHUB_API}/repos/founder/egregore-core").mock(
             side_effect=_repo_check
         )
-        # Fork succeeds (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "founder/egregore-core"})
+        # Generate from template (creates with correct name, private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "founder/egregore-core"})
         )
         respx.post(f"{GITHUB_API}/user/repos").mock(
             return_value=Response(201, json={"full_name": "founder/founder-memory"})
@@ -1317,6 +1357,10 @@ class TestMemoryRepoVerification:
         )
         respx.post(url__regex=r"https://neo4j.*").mock(
             return_value=Response(200, json=_neo4j_ok())
+        )
+        # sync_branch_to_main (skip)
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-core/git/ref/heads/main").mock(
+            return_value=Response(404)
         )
 
         resp = app_client.post(

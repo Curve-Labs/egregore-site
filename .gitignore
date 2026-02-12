@@ -4,6 +4,7 @@ memory
 # MCP configs (may contain credentials)
 .mcp.json
 mcp.json
+mcp.shared.*.json
 
 # OS files
 .DS_Store
