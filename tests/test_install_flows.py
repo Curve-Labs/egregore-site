@@ -59,7 +59,7 @@ class TestFounderSetup:
     def test_founder_setup_creates_org(self, app_client, monkeypatch):
         """POST /api/org/setup with valid GitHub token creates org and returns setup token."""
         monkeypatch.setenv("EGREGORE_NEO4J_HOST", "neo4j-test.example.com")
-        # Mock GitHub: user, fork, repo exists checks, repo creation, etc.
+        # Mock GitHub: user, template generation, repo exists checks, repo creation, etc.
         respx.get(f"{GITHUB_API}/user").mock(
             return_value=Response(200, json={"login": "founder", "name": "Founder"})
         )
@@ -67,20 +67,20 @@ class TestFounderSetup:
         respx.get(f"{GITHUB_API}/orgs/FounderOrg").mock(
             return_value=Response(200, json={"login": "FounderOrg"})
         )
-        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (fork ready)
+        # Repo check: first call = 404 (doesn't exist), subsequent = 200 (repo ready)
         _repo_check_calls = []
         def _repo_check(request):
             _repo_check_calls.append(True)
             if len(_repo_check_calls) == 1:
                 return Response(404)  # Duplicate check: not yet
-            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_fork
+            return Response(200, json={"full_name": "FounderOrg/egregore-core"})  # wait_for_repo
 
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core").mock(
             side_effect=_repo_check
         )
-        # Fork succeeds (async)
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
-            return_value=Response(202, json={"full_name": "FounderOrg/egregore-core"})
+        # Generate from template (private by default)
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
+            return_value=Response(201, json={"full_name": "FounderOrg/egregore-core"})
         )
         # CLAUDE.md content check (wait_for_repo checks template content is committed)
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/CLAUDE.md").mock(
@@ -101,7 +101,7 @@ class TestFounderSetup:
         respx.put(url__regex=rf"{GITHUB_API}/repos/FounderOrg/FounderOrg-memory/contents/.*").mock(
             return_value=Response(201, json={"content": {"sha": "new"}})
         )
-        # Update egregore.json in the forked repo
+        # Update egregore.json in the new repo
         respx.get(f"{GITHUB_API}/repos/FounderOrg/egregore-core/contents/egregore.json").mock(
             return_value=Response(404)
         )
@@ -435,15 +435,15 @@ class TestPersonalAccountDetection:
         respx.get(f"{GITHUB_API}/orgs/ozfun").mock(
             return_value=Response(404)
         )
-        # Personal account: owner = user login, fork goes to personal (no organization field)
-        fork_calls = []
-        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/forks").mock(
+        # Personal account: owner = user login, template generates to personal account
+        generate_calls = []
+        respx.post(f"{GITHUB_API}/repos/Curve-Labs/egregore-core/generate").mock(
             side_effect=lambda req: (
-                fork_calls.append(json.loads(req.content)),
-                Response(202, json={"full_name": "ozfun/egregore-core"}),
+                generate_calls.append(json.loads(req.content)),
+                Response(201, json={"full_name": "ozfun/egregore-core"}),
             )[-1]
         )
-        # Repo check: first = 404 (pre-check), then 200 (wait_for_fork)
+        # Repo check: first = 404 (pre-check), then 200 (wait_for_repo)
         _repo_calls = []
         respx.get(f"{GITHUB_API}/repos/ozfun/egregore-core").mock(
             side_effect=lambda req: (
@@ -492,9 +492,10 @@ class TestPersonalAccountDetection:
         data = resp.json()
         assert data["org_slug"] == "ozfun"
 
-        # Fork should NOT have "organization" field (personal account)
-        assert len(fork_calls) == 1
-        assert "organization" not in fork_calls[0]
+        # Template generation should use personal account login as owner
+        assert len(generate_calls) == 1
+        assert generate_calls[0]["owner"] == "ozfun"
+        assert generate_calls[0]["private"] is True
 
         # Memory repo created via /user/repos (personal endpoint)
         assert len(user_repo_calls) == 1
@@ -517,7 +518,7 @@ class TestNeo4jPersistence:
         respx.get(f"{GITHUB_API}/orgs/FailOrg").mock(
             return_value=Response(200, json={"login": "FailOrg"})
         )
-        # Repo already exists (skip fork)
+        # Repo already exists (skip creation)
         respx.get(f"{GITHUB_API}/repos/FailOrg/egregore-core").mock(
             return_value=Response(200, json={"full_name": "FailOrg/egregore-core"})
         )
