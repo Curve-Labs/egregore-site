@@ -1,5 +1,9 @@
 Save your contributions to Egregore. Pushes working branch, creates PR to develop.
 
+## Execution rules
+
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` calls MUST capture output in a variable and only show formatted status lines (e.g. "Synced 2 sessions, 1 artifact to graph").
+
 ## What to do
 
 1. **Sync to Neo4j first** (CRITICAL):
