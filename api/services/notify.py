@@ -56,10 +56,24 @@ async def test_notify(org: dict) -> dict:
 
 
 async def lookup_telegram_id(org: dict, name: str) -> str | None:
-    """Look up a person's Telegram ID from Neo4j."""
+    """Look up a person's Telegram ID from Neo4j.
+
+    Checks three paths in order:
+    1. p.telegramId directly on the Person node
+    2. TelegramUser linked via IDENTIFIES relationship
+    3. TelegramUser matched by username to p.telegramUsername
+    """
     result = await execute_query(
         org,
-        "MATCH (p:Person {name: $name}) RETURN p.telegramId AS tid",
+        """
+        MATCH (p:Person {name: $name})
+        OPTIONAL MATCH (tu:TelegramUser)-[:IDENTIFIES]->(p)
+        OPTIONAL MATCH (tu2:TelegramUser)
+          WHERE tu IS NULL AND tu2.username IS NOT NULL
+          AND p.telegramUsername IS NOT NULL
+          AND tu2.username = p.telegramUsername
+        RETURN COALESCE(p.telegramId, tu.telegramId, tu2.telegramId) AS tid
+        """,
         {"name": name},
     )
     try:
