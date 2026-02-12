@@ -185,38 +185,26 @@ if git show-ref --verify --quiet refs/remotes/origin/main 2>/dev/null; then
   COMMITS_AHEAD=$(git rev-list origin/main..develop --count 2>/dev/null || echo "0")
 fi
 
-# --- Create or resume working branch ---
-ACTION="created"
-BRANCH=""
+# --- Resume working branch or stay on current ---
+# Branch creation is deferred to conversation — Claude creates a topic-based
+# branch (dev/{author}/{topic-slug}) when the user says what they're working on.
+# This avoids meaningless date-only branches and lets PRs have descriptive names.
+ACTION="ready"
+BRANCH="$CURRENT_BRANCH"
 
-if [[ "$CURRENT_BRANCH" == dev/* ]]; then
-  # Resume existing session branch — rebase onto develop
-  BRANCH="$CURRENT_BRANCH"
+if [[ "$CURRENT_BRANCH" == dev/* ]] || [[ "$CURRENT_BRANCH" == feature/* ]] || [[ "$CURRENT_BRANCH" == bugfix/* ]]; then
+  # Already on a working branch — rebase onto develop to stay current
   if git rebase develop --quiet 2>/dev/null; then
-    ACTION="rebased"
+    ACTION="resumed"
   else
     git rebase --abort 2>/dev/null || true
     git merge develop --quiet -m "Sync with develop" 2>/dev/null || true
-    ACTION="merged"
+    ACTION="resumed"
   fi
-else
-  # Create new session branch from develop
-  BRANCH="dev/$AUTHOR/$DATE-session"
-
-  # If branch already exists (same person, same day), use it
-  if git show-ref --verify --quiet "refs/heads/$BRANCH" 2>/dev/null; then
-    git checkout "$BRANCH" --quiet 2>/dev/null
-    if git rebase develop --quiet 2>/dev/null; then
-      ACTION="resumed"
-    else
-      git rebase --abort 2>/dev/null || true
-      git merge develop --quiet -m "Sync with develop" 2>/dev/null || true
-      ACTION="resumed"
-    fi
-  else
-    git checkout -b "$BRANCH" develop --quiet 2>/dev/null
-    ACTION="created"
-  fi
+elif [[ "$CURRENT_BRANCH" != "develop" ]]; then
+  # On main or some other branch — switch to develop so we're ready
+  git checkout develop --quiet 2>/dev/null || true
+  BRANCH="develop"
 fi
 
 # --- Sync memory ---
@@ -275,14 +263,12 @@ cat << 'GREETING'
 GREETING
 
 # Status line
-if [ "$ACTION" = "created" ]; then
-  echo "  New session started."
-elif [ "$ACTION" = "resumed" ] || [ "$ACTION" = "rebased" ]; then
-  echo "  Session resumed."
-fi
-
 echo "  User: $AUTHOR"
-echo "  Branch: $BRANCH"
+if [ "$ACTION" = "resumed" ]; then
+  echo "  Branch: $BRANCH (resumed)"
+else
+  echo "  Branch: $BRANCH"
+fi
 echo "  Develop: synced"
 if [ "$MEMORY_SYNCED" = "true" ]; then echo "  Memory: synced"; fi
 if [ "$COMMITS_AHEAD" -gt 0 ] 2>/dev/null; then echo "  $COMMITS_AHEAD changes on develop since last release."; fi
