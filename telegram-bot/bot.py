@@ -332,27 +332,32 @@ def run_org_query(query: str, params: dict = None, org_config: dict = None) -> l
         return []
 
 
-def lookup_person_by_telegram_id(telegram_id: int) -> Optional[str]:
-    """Look up Person name by Telegram ID."""
-    results = run_query(
-        "MATCH (p:Person {telegramId: $tid}) RETURN p.name AS name",
-        {"tid": telegram_id}
-    )
+def lookup_person_by_telegram_id(telegram_id: int, org_config: dict = None) -> Optional[str]:
+    """Look up Person name by Telegram ID.
+
+    Uses org-specific driver if provided (Person nodes are per-org DB).
+    Falls back to default driver for backwards compatibility.
+    """
+    query = "MATCH (p:Person {telegramId: $tid}) RETURN p.name AS name"
+    params = {"tid": telegram_id}
+    results = run_org_query(query, params, org_config) if org_config else run_query(query, params)
     if results and results[0].get("name"):
         return results[0]["name"]
     return None
 
 
-def auto_register_telegram_id(telegram_id: int, first_name: str = None, username: str = None) -> Optional[str]:
+def auto_register_telegram_id(telegram_id: int, first_name: str = None, username: str = None, org_config: dict = None) -> Optional[str]:
     """Auto-register a Telegram ID to a Person node if we can match them.
 
-    Matches by first name against Person nodes in Neo4j.
-    Returns the person's name if registered, None otherwise.
+    Person queries use org-specific driver (Person nodes live in the org's DB).
+    TelegramUser queries use default driver (TelegramUser is global/unscoped).
     """
+    _run_person = (lambda q, p: run_org_query(q, p, org_config)) if org_config else run_query
+
     # First check if already registered
-    existing = lookup_person_by_telegram_id(telegram_id)
+    existing = lookup_person_by_telegram_id(telegram_id, org_config)
     if existing:
-        # Update username on existing TelegramUser if we have it now
+        # Update username on existing TelegramUser (global DB)
         if username:
             run_query(
                 "MATCH (tu:TelegramUser {telegramId: $tid}) SET tu.username = $username",
@@ -360,10 +365,33 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None, username
             )
         return existing
 
+    # Try matching by Telegram username → Person.telegramUsername (set by API)
+    if username:
+        results = _run_person(
+            """MATCH (p:Person {telegramUsername: $username})
+               WHERE p.telegramId IS NULL
+               SET p.telegramId = $tid
+               RETURN p.name AS name""",
+            {"username": username, "tid": telegram_id}
+        )
+        if results:
+            person_name = results[0].get("name")
+            logger.info(f"Auto-registered {person_name} with Telegram ID {telegram_id} (matched by username)")
+            # TelegramUser + IDENTIFIES: only works if both nodes are in same DB.
+            # For CL (same DB), create the link. For customer orgs (split DB), skip.
+            run_query(
+                """
+                MERGE (tu:TelegramUser {telegramId: $tid})
+                SET tu.firstName = $firstName, tu.username = $username
+                """,
+                {"tid": telegram_id, "firstName": first_name or "", "username": username},
+            )
+            return person_name
+
     # Try matching by first name (lowercase)
     if first_name:
         name_lower = first_name.lower().strip()
-        results = run_query(
+        results = _run_person(
             """MATCH (p:Person)
                WHERE (p.name = $name OR toLower(p.fullName) STARTS WITH $name)
                AND p.telegramId IS NULL
@@ -374,14 +402,10 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None, username
         if results:
             person_name = results[0].get("name")
             logger.info(f"Auto-registered {person_name} with Telegram ID {telegram_id} (matched by first name)")
-            # Also create/link TelegramUser node
             run_query(
                 """
                 MERGE (tu:TelegramUser {telegramId: $tid})
                 SET tu.firstName = $firstName, tu.username = $username
-                WITH tu
-                MATCH (p:Person {telegramId: $tid})
-                MERGE (tu)-[:IDENTIFIES]->(p)
                 """,
                 {"tid": telegram_id, "firstName": first_name, "username": username or ""},
             )
@@ -393,8 +417,8 @@ def auto_register_telegram_id(telegram_id: int, first_name: str = None, username
 def track_telegram_membership(telegram_id: int, username: str, first_name: str, org_slug: str, action: str = "join"):
     """Track Telegram group membership via TelegramUser nodes.
 
-    Creates/updates TelegramUser node and IN_GROUP relationship.
-    Uses the shared Neo4j driver directly since TelegramUser is global (unscoped).
+    TelegramUser + IN_GROUP: default driver (global/unscoped).
+    Person linking (telegramId, IDENTIFIES): org-specific driver (Person is per-org DB).
 
     action: "join" or "leave"
     """
@@ -403,10 +427,18 @@ def track_telegram_membership(telegram_id: int, username: str, first_name: str, 
         logger.warning("Neo4j not configured — cannot track membership")
         return
 
+    # Get org-specific driver for Person operations
+    org_config = None
+    for cid, cfg in ORG_CONFIG.items():
+        if cfg.get("name") == org_slug:
+            org_config = cfg
+            break
+    org_driver = get_org_driver(org_config) if org_config else driver
+
     try:
+        # TelegramUser + IN_GROUP on default driver (global)
         with driver.session() as session:
             if action == "join":
-                # Create/update TelegramUser and IN_GROUP relationship
                 session.run(
                     """
                     MERGE (tu:TelegramUser {telegramId: $tid})
@@ -418,16 +450,6 @@ def track_telegram_membership(telegram_id: int, username: str, first_name: str, 
                     """,
                     {"tid": telegram_id, "username": username or "", "firstName": first_name or "", "org": org_slug},
                 )
-                # Link to existing Person nodes that have this telegramId
-                session.run(
-                    """
-                    MATCH (tu:TelegramUser {telegramId: $tid})
-                    MATCH (p:Person {telegramId: $tid})
-                    MERGE (tu)-[:IDENTIFIES]->(p)
-                    """,
-                    {"tid": telegram_id},
-                )
-                logger.info(f"Tracked join: TelegramUser {telegram_id} ({first_name}) → org {org_slug}")
             elif action == "leave":
                 session.run(
                     """
@@ -437,6 +459,23 @@ def track_telegram_membership(telegram_id: int, username: str, first_name: str, 
                     {"tid": telegram_id, "org": org_slug},
                 )
                 logger.info(f"Tracked leave: TelegramUser {telegram_id} from org {org_slug}")
+                return
+
+        # Person linking on org-specific driver
+        with org_driver.session() as session:
+            # Try linking by username → telegramUsername (set by API onboarding)
+            if username:
+                session.run(
+                    """
+                    MATCH (p:Person)
+                    WHERE p.telegramUsername = $username
+                    AND p.telegramId IS NULL
+                    SET p.telegramId = $tid
+                    """,
+                    {"tid": telegram_id, "username": username},
+                )
+
+        logger.info(f"Tracked join: TelegramUser {telegram_id} ({first_name}) → org {org_slug}")
     except Exception as e:
         logger.error(f"Failed to track membership: {e}")
 
@@ -1068,9 +1107,9 @@ async def handle_question(update: Update, context, question: str) -> None:
         username = update.effective_user.username
 
         # Try lookup first, then auto-register if not found
-        sender_name = lookup_person_by_telegram_id(user_id)
+        sender_name = lookup_person_by_telegram_id(user_id, org_config=org_config)
         if not sender_name:
-            sender_name = auto_register_telegram_id(user_id, first_name, username=username)
+            sender_name = auto_register_telegram_id(user_id, first_name, username=username, org_config=org_config)
         elif username:
             # Update username on existing TelegramUser if available
             run_query(

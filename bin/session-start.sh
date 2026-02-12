@@ -240,10 +240,22 @@ if [ -f "$CONFIG" ] && [ -f "$ENV_FILE" ]; then
         fi
 
         # Always ensure Person node exists (idempotent) — use AUTHOR determined above
+        # Also set github username and fullName so API profile/notify can find them
         if [ -n "$AUTHOR" ]; then
+          GH_USERNAME_STATE=""
+          GH_FULLNAME_STATE=""
+          if [ -f "$STATE_FILE" ]; then
+            GH_USERNAME_STATE=$(jq -r '.github_username // empty' "$STATE_FILE" 2>/dev/null)
+            GH_FULLNAME_STATE=$(jq -r '.github_name // empty' "$STATE_FILE" 2>/dev/null)
+          fi
+          PERSON_PARAMS=$(jq -n \
+            --arg name "$AUTHOR" \
+            --arg github "${GH_USERNAME_STATE:-$AUTHOR}" \
+            --arg fullName "${GH_FULLNAME_STATE:-}" \
+            '{name: $name, github: $github, fullName: $fullName}')
           bash "$SCRIPT_DIR/bin/graph.sh" query \
-            "MERGE (p:Person {name: \$name}) WITH p MATCH (o:Org {id: \$_org}) MERGE (p)-[:MEMBER_OF]->(o)" \
-            "{\"name\":\"$AUTHOR\"}" 2>/dev/null || true
+            "MERGE (p:Person {name: \$name}) SET p.github = \$github, p.fullName = CASE WHEN \$fullName <> '' THEN \$fullName ELSE p.fullName END WITH p MATCH (o:Org {id: \$_org}) MERGE (p)-[:MEMBER_OF]->(o)" \
+            "$PERSON_PARAMS" 2>/dev/null || true
         fi
       fi
     fi
