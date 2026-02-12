@@ -97,6 +97,19 @@ async function install(data, ui, targetDir) {
   fs.writeFileSync(envPath, envLines.join("\n") + "\n", { mode: 0o600 });
   ui.success("Credentials saved");
 
+  // 4b. Save identity to .egregore-state.json (so session-start.sh knows who this is)
+  const statePath = path.join(egregoreDir, ".egregore-state.json");
+  let state = {};
+  if (fs.existsSync(statePath)) {
+    try { state = JSON.parse(fs.readFileSync(statePath, "utf-8")); } catch {}
+  }
+  if (github_username) {
+    state.github_username = github_username;
+    state.github_name = github_name || github_username;
+  }
+  state.onboarding_complete = true;
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+
   // 5. Register instance + shell alias
   ui.step(5, totalSteps, "Registering instance...");
   registerInstance(forkDirName, org_name, egregoreDir);
