@@ -8,6 +8,8 @@ Every artifact and quest created during the tutorial MUST include `tutorial-gene
 
 This applies to: Step 2 reflect artifacts, Step 3 quests, Step 3 source artifacts, and the Step 4 journey log.
 
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` and `bin/notify.sh` calls MUST capture output in a variable and only show formatted status lines.
+
 ## Step 0: State Check
 
 Read `.egregore-state.json`. Extract `usage_type`, `tutorial_complete`, and any existing tutorial state (`domain`, `stage`, `team_or_solo`).
@@ -272,10 +274,10 @@ options:
     description: "I'll invite others later"
 ```
 
-**If "A few people"** → query Neo4j for team members:
+**If "A few people"** → query Neo4j for team members (suppress raw output — capture in variable):
 
 ```bash
-bash bin/graph.sh query "MATCH (p:Person) RETURN p.name AS name"
+RESULT=$(bash bin/graph.sh query "MATCH (p:Person) RETURN p.name AS name" 2>/dev/null)
 ```
 
 Then use AskUserQuestion with multiSelect to let them pick:

@@ -6,6 +6,7 @@ Arguments: $ARGUMENTS (Required: GitHub username of the person to invite)
 
 **Neo4j-first.** All queries via `bash bin/graph.sh query "..."`. No MCP. No direct curl to Neo4j.
 **Notifications via `bash bin/notify.sh send`**. No direct curl to Telegram.
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` and `bin/notify.sh` calls MUST capture output in a variable and only show formatted status lines.
 
 **CRITICAL: Never expose credentials in tool output.**
 - Never read tokens in a separate bash call — always inline.

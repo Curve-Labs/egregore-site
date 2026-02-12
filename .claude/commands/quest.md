@@ -33,6 +33,8 @@ completed: null
 
 Priority values: `0` (none/default), `1` (low), `2` (medium), `3` (high). Used by `/activity` scoring.
 
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` and `bin/notify.sh` calls MUST capture output in a variable and only show formatted status lines.
+
 ## Neo4j Quest creation (via bin/graph.sh, on `/quest new`)
 
 Run with `bash bin/graph.sh query "..." '{"param": "value"}'`
