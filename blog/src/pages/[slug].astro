@@ -18,16 +18,19 @@ const { post } = Astro.props;
 const { title, subtitle, date, readTime, category, author, tags } = post.data;
 const { Content, headings } = await post.render();
 
-// Generate OG image URL
+// Generate OG image URL - use a fallback default image
 const ogImage = `/og/${post.slug}.png`;
 
 // Filter to h2 and h3 only for TOC
 const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
 
+// Ensure date is a Date object
+const postDate = date instanceof Date ? date : new Date(date);
+
 // Build share text with hashtags
 const articleUrl = `https://blog.curvelabs.eu/${post.slug}`;
 const hashtagString = tags && tags.length > 0 ? tags.map(t => `#${t.replace(/\s+/g, '')}`).join(' ') : '';
-const twitterText = `${title}\n\n${subtitle}\n\n${hashtagString}\n\nvia @curvelabs`;
+const twitterText = `${title}\n\n${subtitle || ''}\n\n${hashtagString}\n\nvia @curvelabs`;
 const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`;
 const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(articleUrl)}`;
 
@@ -39,13 +42,13 @@ const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'Article',
   headline: title,
-  description: subtitle,
+  description: subtitle || title,
   image: ogImage,
-  datePublished: date.toISOString(),
-  dateModified: date.toISOString(),
+  datePublished: postDate.toISOString(),
+  dateModified: postDate.toISOString(),
   author: {
     '@type': 'Person',
-    name: author
+    name: author || 'Curve Labs'
   },
   publisher: {
     '@type': 'Organization',
