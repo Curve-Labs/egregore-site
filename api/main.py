@@ -1210,8 +1210,12 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         if inviter["login"].lower() != owner.lower():
             raise HTTPException(status_code=403, detail="Only the account owner can invite.")
         # Add as collaborator on egregore repo
-        await gh.add_repo_collaborator(token, owner, body.repo_name, body.github_username)
-        github_result = {"status": "collaborator_invited"}
+        collab_ok = await gh.add_repo_collaborator(token, owner, body.repo_name, body.github_username)
+        if collab_ok:
+            github_result = {"status": "collaborator_invited"}
+        else:
+            logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{body.repo_name}")
+            github_result = {"status": "collaborator_failed", "reason": "Check token scopes (needs 'repo')"}
     else:
         # Org account: inviter must be admin
         role = await gh.get_org_membership(token, owner)
@@ -1239,7 +1243,9 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
             memory_repo_name = memory_repo.split("/")[-1].replace(".git", "")
         else:
             memory_repo_name = memory_repo
-        await gh.add_repo_collaborator(token, owner, memory_repo_name, body.github_username)
+        mem_ok = await gh.add_repo_collaborator(token, owner, memory_repo_name, body.github_username)
+        if not mem_ok:
+            logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{memory_repo_name}")
 
     # Create invite token (7-day TTL)
     site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
