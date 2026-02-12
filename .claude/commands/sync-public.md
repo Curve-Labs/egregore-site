@@ -31,39 +31,26 @@ If `$ARGUMENTS` is empty or not provided, assume full sync (not dry-run).
 
 ## Step 2: Rsync
 
+Excludes are read from `.syncignore` at the repo root (single source of truth). If the file is missing, abort with an error.
+
 ```bash
-rsync -av --delete \
-  --exclude='.git' \
-  --exclude='.git/' \
-  --exclude='memory' \
-  --exclude='.env' \
-  --exclude='.env.local' \
-  --exclude='.DS_Store' \
-  --exclude='.egregore-state.json' \
-  --exclude='egregore.json' \
-  --exclude='.mcp.json' \
-  --exclude='mcp.json' \
-  --exclude='mcp.shared.*.json' \
-  --exclude='node_modules' \
-  --exclude='__pycache__' \
-  --exclude='.claude/settings.local.json' \
-  --exclude='.claude/commands/release.md' \
-  --exclude='.claude/commands/sync-public.md' \
-  --exclude='.playwright-mcp' \
-  --exclude='skills/cl-admin' \
-  --exclude='api' \
-  --exclude='ascii-oracle' \
-  --exclude='blog' \
-  --exclude='telegram-bot' \
-  --exclude='tests' \
-  --exclude='data' \
-  --exclude='packages' \
-  --exclude='Dockerfile' \
-  --exclude='TELEGRAM_BOT_PLAN.md' \
-  --exclude='DEV.md' \
-  --exclude='bin/preflight.sh' \
-  "$(git rev-parse --show-toplevel)/" \
-  "$CORE_DIR/"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SYNCIGNORE="$REPO_ROOT/.syncignore"
+
+if [ ! -f "$SYNCIGNORE" ]; then
+  echo "Error: .syncignore not found. Cannot sync without exclude list."
+  exit 1
+fi
+
+# Build --exclude flags from .syncignore (skip comments and blank lines)
+EXCLUDE_FLAGS=""
+while IFS= read -r line; do
+  line="$(echo "$line" | sed 's/#.*//' | xargs)"
+  [ -z "$line" ] && continue
+  EXCLUDE_FLAGS="$EXCLUDE_FLAGS --exclude='$line'"
+done < "$SYNCIGNORE"
+
+eval rsync -av --delete $EXCLUDE_FLAGS "$REPO_ROOT/" "$CORE_DIR/"
 ```
 
 **If `$ARGUMENTS` is "dry"**: Add `--dry-run` to rsync. Show what would change, don't actually sync.
@@ -138,8 +125,9 @@ Current diff between repos:
 
 ## Rules
 
-- **Never sync**: `.git/`, `memory/`, `.env`, `.egregore-state.json`, `egregore.json`, `.mcp.json`, `mcp.json`, `mcp.shared.*.json`, `node_modules/`, `__pycache__/`, `.claude/settings.local.json`, `.claude/commands/release.md`, `.claude/commands/sync-public.md`, `.playwright-mcp/`, `skills/cl-admin/`, `api/`, `ascii-oracle/`, `blog/`, `telegram-bot/`, `tests/`, `data/`, `packages/`, `Dockerfile`, `TELEGRAM_BOT_PLAN.md`, `DEV.md`, `bin/preflight.sh`
-- **Always sync everything else** — commands, bin scripts, CLAUDE.md, README.md, settings.json, start scripts, `.env.example`, etc.
+- **Excludes live in `.syncignore`** at the repo root. Edit that file to add/remove private paths. Never hardcode excludes in this command.
+- **Always sync everything not in `.syncignore`** — commands, bin scripts, CLAUDE.md, README.md, settings.json, start scripts, `.env.example`, etc.
 - The `--delete` flag ensures files removed from curve-labs-core are also removed from egregore-core
-- Always show the diff before committing
+- Always show the diff before committing — **review it for anything that shouldn't be public**
 - Commit message includes the date for traceability
+- When adding new private directories or files to the repo, **always add them to `.syncignore`**

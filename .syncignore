@@ -1,0 +1,42 @@
+# Paths excluded from /sync-public (curve-labs-core → egregore-core)
+# One pattern per line. Same syntax as rsync --exclude.
+# This file is the single source of truth — edit here, not in the command.
+
+# Git / environment
+.git
+.git/
+.env
+.env.local
+.DS_Store
+.egregore-state.json
+egregore.json
+.mcp.json
+mcp.json
+mcp.shared.*.json
+node_modules
+__pycache__
+.playwright-mcp
+
+# Claude Code settings (private)
+.claude/settings.local.json
+.claude/commands/release.md
+.claude/commands/sync-public.md
+
+# CL-internal infrastructure
+api
+ascii-oracle
+blog
+telegram-bot
+tests
+data
+packages
+skills/cl-admin
+Dockerfile
+DEV.md
+TELEGRAM_BOT_PLAN.md
+bin/preflight.sh
+bin/seeds
+
+# Generated / personal
+memory
+.egregore
