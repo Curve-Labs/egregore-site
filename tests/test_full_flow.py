@@ -1395,3 +1395,141 @@ class TestMemoryRepoVerification:
 
         assert resp.status_code == 200
         assert "setup_token" in resp.json()
+
+
+# =============================================================================
+# COLLABORATOR ADDITION (invite reliability)
+# =============================================================================
+
+
+class TestCollaboratorAddition:
+    """Tests that invite reliably adds collaborators, with retries."""
+
+    @respx.mock
+    def test_invite_retries_collaborator_on_transient_failure(self, app_client, _patch_org_configs):
+        """If add_repo_collaborator fails once, retry succeeds."""
+        slug = "founder-research"
+        _patch_org_configs[slug] = {
+            "api_key": "ek_founder-research_abc",
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "neo4j_host": "neo4j+s://test.neo4j.io",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "test",
+            "telegram_bot_token": "",
+            "telegram_chat_id": "",
+        }
+
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            return_value=Response(200, json={"full_name": "founder/egregore-research"})
+        )
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
+            return_value=Response(404)
+        )
+        # Collaborator PUT: first call fails (422), second succeeds (201)
+        collab_calls = []
+        def _collab_side_effect(request):
+            collab_calls.append(True)
+            if len(collab_calls) == 1:
+                return Response(422, json={"message": "Validation Failed"})
+            return Response(201, json={"id": 1})
+        respx.put(f"{GITHUB_API}/repos/founder/egregore-research/collaborators/invitee").mock(
+            side_effect=_collab_side_effect
+        )
+        # egregore.json
+        egregore_config = {
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "memory_repo": "founder-research-memory",
+            "api_url": "https://api.example.com",
+            "slug": "founder-research",
+            "repo_name": "egregore-research",
+        }
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/egregore.json").mock(
+            return_value=Response(200, json=_b64_json(egregore_config))
+        )
+        # Memory repo collaborator (succeeds first time)
+        respx.put(f"{GITHUB_API}/repos/founder/founder-research-memory/collaborators/invitee").mock(
+            return_value=Response(204)
+        )
+
+        resp = app_client.post(
+            "/api/org/invite",
+            json={
+                "github_org": "founder",
+                "github_username": "invitee",
+                "repo_name": "egregore-research",
+            },
+            headers={"Authorization": f"Bearer {FOUNDER_TOKEN}"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Retry succeeded — collaborator was added
+        assert data["github_invite"]["status"] == "collaborator_invited"
+        # Verify retry happened (2 calls to the egregore repo collaborator endpoint)
+        assert len(collab_calls) == 2
+
+    @respx.mock
+    def test_invite_reports_failure_after_retries_exhausted(self, app_client, _patch_org_configs):
+        """If all retries fail, invite still created but reports collaborator_failed."""
+        slug = "founder-research"
+        _patch_org_configs[slug] = {
+            "api_key": "ek_founder-research_abc",
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "neo4j_host": "neo4j+s://test.neo4j.io",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "test",
+            "telegram_bot_token": "",
+            "telegram_chat_id": "",
+        }
+
+        respx.get(f"{GITHUB_API}/user").mock(
+            return_value=Response(200, json={"login": "founder", "name": "Founder"})
+        )
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research").mock(
+            return_value=Response(200, json={"full_name": "founder/egregore-research"})
+        )
+        respx.get(f"{GITHUB_API}/orgs/founder").mock(
+            return_value=Response(404)
+        )
+        # ALL collaborator calls fail
+        respx.put(f"{GITHUB_API}/repos/founder/egregore-research/collaborators/invitee").mock(
+            return_value=Response(403, json={"message": "Resource not accessible"})
+        )
+        # egregore.json
+        egregore_config = {
+            "org_name": "Research Lab",
+            "github_org": "founder",
+            "memory_repo": "founder-research-memory",
+            "api_url": "https://api.example.com",
+            "slug": "founder-research",
+            "repo_name": "egregore-research",
+        }
+        respx.get(f"{GITHUB_API}/repos/founder/egregore-research/contents/egregore.json").mock(
+            return_value=Response(200, json=_b64_json(egregore_config))
+        )
+        # Memory repo collaborator also fails
+        respx.put(f"{GITHUB_API}/repos/founder/founder-research-memory/collaborators/invitee").mock(
+            return_value=Response(403, json={"message": "Resource not accessible"})
+        )
+
+        resp = app_client.post(
+            "/api/org/invite",
+            json={
+                "github_org": "founder",
+                "github_username": "invitee",
+                "repo_name": "egregore-research",
+            },
+            headers={"Authorization": f"Bearer {FOUNDER_TOKEN}"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Invite link still created, but collaborator addition failed
+        assert data["invite_token"].startswith("inv_")
+        assert data["github_invite"]["status"] == "collaborator_failed"

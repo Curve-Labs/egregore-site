@@ -414,22 +414,26 @@ async def check_org_membership(token: str, org: str, username: str) -> str:
     return "none"
 
 
-async def add_repo_collaborator(token: str, owner: str, repo: str, username: str) -> bool:
-    """Add a user as a collaborator to a repo. Returns True if successful."""
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.put(
-            f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
-            headers=_headers(token),
-            json={"permission": "push"},
-            timeout=10.0,
-        )
-    ok = resp.status_code in (200, 201, 204)
-    if not ok:
+async def add_repo_collaborator(token: str, owner: str, repo: str, username: str, retries: int = 2) -> bool:
+    """Add a user as a collaborator to a repo. Retries on failure. Returns True if successful."""
+    import asyncio
+    for attempt in range(1, retries + 1):
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            resp = await client.put(
+                f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
+                headers=_headers(token),
+                json={"permission": "push"},
+                timeout=10.0,
+            )
+        if resp.status_code in (200, 201, 204):
+            return True
         logger.warning(
             f"add_repo_collaborator {owner}/{repo} -> {username}: "
-            f"HTTP {resp.status_code} {resp.text[:200]}"
+            f"attempt {attempt}/{retries} HTTP {resp.status_code} {resp.text[:200]}"
         )
-    return ok
+        if attempt < retries:
+            await asyncio.sleep(1)
+    return False
 
 
 async def accept_org_invitation(token: str, org: str) -> bool:
