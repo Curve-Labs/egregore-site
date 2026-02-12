@@ -12,6 +12,8 @@ DATE=$(date +%Y-%m-%d)
 # Priority: .egregore-state.json github_username > repo-local git config > GitHub API auto-detect > global git config
 ENV_FILE="$SCRIPT_DIR/.env"
 STORED_USERNAME=""
+FIRST_SESSION=""
+AUTHOR=""
 if [ -f "$STATE_FILE" ]; then
   STORED_USERNAME=$(jq -r '.github_username // empty' "$STATE_FILE" 2>/dev/null)
 fi
