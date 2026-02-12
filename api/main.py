@@ -1249,6 +1249,13 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         if not mem_ok:
             logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{memory_repo_name}")
 
+        # Add as collaborator on managed repos
+        if is_personal:
+            for repo_name in repos:
+                repo_ok = await gh.add_repo_collaborator(token, owner, repo_name, body.github_username)
+                if not repo_ok:
+                    logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{repo_name}")
+
     # Create invite token (7-day TTL)
     site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     invite_token = create_invite_token({
