@@ -7,29 +7,28 @@ interface Props {
 }
 
 const { post, index } = Astro.props;
-const { title, subtitle, date, readTime, category } = post.data;
+const { title, subtitle, date, readTime, category, tags } = post.data;
 const num = String(index + 1).padStart(2, '0');
+const tagsString = tags ? tags.join(',') : '';
 ---
 
-<article class="post-row" data-category={category}>
+<article class="post-row" data-category={category} data-tags={tagsString}>
   <a href={`/${post.slug}/`} class="post-link">
     <span class="post-num">[{num}]</span>
 
     <div class="post-content">
-      <div class="post-header">
-        <h3 class="post-title">{title}</h3>
-        <p class="post-subtitle">{subtitle}</p>
-      </div>
-
       <div class="post-meta">
         <span class="category">{category}</span>
         <span class="divider">•</span>
-        <time datetime={date.toISOString()}>
-          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </time>
-        <span class="divider">•</span>
         <span class="read-time">{readTime}</span>
       </div>
+
+      <h3 class="post-title">{title}</h3>
+      <p class="post-subtitle">{subtitle}</p>
+
+      <time class="post-date" datetime={date.toISOString()}>
+        {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      </time>
     </div>
 
     <span class="post-arrow">→</span>
@@ -52,7 +51,7 @@ const num = String(index + 1).padStart(2, '0');
     padding: var(--space-lg) 0;
     text-decoration: none;
     color: inherit;
-    transition: background var(--transition-fast);
+    transition: all var(--transition-base);
   }
 
   .post-link:hover {
@@ -60,6 +59,8 @@ const num = String(index + 1).padStart(2, '0');
     margin: 0 calc(-1 * var(--space-lg));
     padding: var(--space-lg);
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-glow);
+    transform: translateX(4px);
   }
 
   .post-num {
@@ -78,8 +79,24 @@ const num = String(index + 1).padStart(2, '0');
     min-width: 0;
   }
 
-  .post-header {
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     margin-bottom: var(--space-sm);
+  }
+
+  .category {
+    color: var(--accent);
+  }
+
+  .divider {
+    color: var(--text-dim);
   }
 
   .post-title {
@@ -100,25 +117,13 @@ const num = String(index + 1).padStart(2, '0');
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: var(--space-sm);
   }
 
-  .post-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
+  .post-date {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .category {
-    color: var(--accent);
-  }
-
-  .divider {
-    color: var(--text-dim);
   }
 
   .post-arrow {

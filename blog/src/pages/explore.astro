@@ -1,25 +1,11 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import FeaturedCarousel from '../components/FeaturedCarousel.astro';
-import PostRow from '../components/PostRow.astro';
-import PostGrid from '../components/PostGrid.astro';
-import Filters from '../components/Filters.astro';
-import ViewToggle from '../components/ViewToggle.astro';
-import Newsletter from '../components/Newsletter.astro';
 
-// Get all posts, filter out drafts, sort by date
+// Get all posts and extract unique tags
 const allPosts = (await getCollection('posts', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
-// Get featured posts (marked as featured, or top 3 most recent)
-const markedFeatured = allPosts.filter(post => post.data.featured);
-const featuredPosts = markedFeatured.length > 0 ? markedFeatured : allPosts.slice(0, 3);
-
-// Get remaining posts for the archive
-const archivePosts = allPosts.filter(post => !featuredPosts.includes(post));
-
-// Extract unique tags for Explore section
 const allTags = Array.from(
   new Set(allPosts.flatMap(post => post.data.tags || []))
 ).sort();
@@ -56,124 +42,78 @@ allTags.forEach(tag => {
 ---
 
 <Base
-  title="Blog"
-  description="Deep dives on knowledge graphs, multi-agent systems, and the infrastructure layer for human–AI collaboration."
-  keywords="Curve Labs, knowledge graphs, AI agents, multi-agent systems, distributed systems, cybernetics, protocol design, governance, coordination, active inference"
+  title="Explore"
+  description="Browse articles by topic and hashtag. Explore knowledge graphs, AI agents, cybernetics, and more."
+  keywords="Curve Labs, knowledge graphs, AI agents, topics, hashtags, research"
 >
-  <div class="container">
-    <!-- Header -->
-    <header class="page-header">
-      <h1 class="page-title">Dispatches</h1>
-      <p class="page-desc">Deep dives on knowledge graphs, multi-agent systems, and the infrastructure layer for human–AI collaboration.</p>
-    </header>
+  <div class="explore-container">
+    <div class="explore-header">
+      <div class="header-left">
+        <span class="hash-icon">#</span>
+        <h2 class="header-title">Explore</h2>
+      </div>
+      <div class="header-right">
+        INDEX_SIZE: {allTags.length} // ACTIVE_NODE: <span id="active-node">NULL</span>
+      </div>
+    </div>
 
-    <!-- Featured Posts Carousel -->
-    {featuredPosts.length > 0 && (
-      <section class="featured-section">
-        <FeaturedCarousel posts={featuredPosts} />
-      </section>
-    )}
-
-    <!-- Archive -->
-    {archivePosts.length > 0 && (
-      <section class="archive-section" id="archive">
-        <div class="archive-header">
-          <h2 class="archive-title">Archive</h2>
-          <div class="archive-controls">
-            <Filters />
-            <ViewToggle />
-          </div>
-        </div>
-
-        <!-- List View -->
-        <div class="post-list" data-layout="list" style="display: none;">
-          {archivePosts.map((post, index) => (
-            <PostRow post={post} index={index} />
-          ))}
-        </div>
-
-        <!-- Grid View (default) -->
-        <PostGrid posts={archivePosts} />
-      </section>
-    )}
-
-    <!-- Explore Terminal -->
-    <section class="explore-section" id="explore">
-      <div class="explore-header">
-        <h2 class="explore-title">Explore</h2>
+    <div class="explore-grid">
+      <!-- Left: Tag Cloud -->
+      <div class="tag-cluster">
+        {allTags.map((tag) => {
+          const count = postsByTag[tag].length;
+          return (
+            <button
+              type="button"
+              class="tag-btn"
+              data-tag={tag}
+              data-count={count}
+              data-description={tagDescriptions[tag] || 'Semantic node detected in knowledge base. Analyzing vector relationships...'}
+            >
+              <span class="tag-hash">#</span>{tag}
+            </button>
+          );
+        })}
       </div>
 
-      <div class="explore-grid">
-        <!-- Left: Tag Cloud -->
-        <div class="tag-cluster">
-          {allTags.map((tag) => {
-            const count = postsByTag[tag].length;
-            return (
-              <button
-                type="button"
-                class="tag-btn"
-                data-tag={tag}
-                data-count={count}
-                data-description={tagDescriptions[tag] || 'Semantic node detected in knowledge base. Analyzing vector relationships...'}
-              >
-                <span class="tag-hash">#</span>{tag}
-              </button>
-            );
-          })}
+      <!-- Right: Terminal Screen -->
+      <div class="terminal-screen">
+        <div class="terminal-header">
+          <div class="terminal-header-left">
+            <span class="terminal-icon">▸</span>
+            <span>/sys/analysis</span>
+          </div>
+          <div class="terminal-header-right">
+            <div class="status-indicator"></div>
+            <span id="terminal-status">IDLE</span>
+          </div>
         </div>
 
-        <!-- Right: Terminal Screen -->
-        <div class="terminal-screen">
-          <div class="terminal-header">
-            <div class="terminal-header-left">
-              <span class="terminal-icon">▸</span>
-              <span>/sys/analysis</span>
-            </div>
-            <div class="terminal-header-right">
-              <div class="status-indicator"></div>
-              <span id="terminal-status">IDLE</span>
-            </div>
+        <div class="terminal-content">
+          <div class="terminal-output" id="terminal-output">
+            > SYSTEM READY.<br/>
+            > AWAITING INPUT_VECTOR...<br/>
+            > SELECT A HASHTAG TO ANALYZE.
           </div>
+          <div class="terminal-cursor"></div>
 
-          <div class="terminal-content">
-            <div class="terminal-output" id="terminal-output">
-              > SYSTEM READY.<br/>
-              > AWAITING INPUT_VECTOR...<br/>
-              > SELECT A HASHTAG TO ANALYZE.
-            </div>
-            <div class="terminal-cursor"></div>
-
-            <div class="terminal-results" id="terminal-results"></div>
-          </div>
-
-          <div class="scanlines"></div>
+          <div class="terminal-results" id="terminal-results"></div>
         </div>
+
+        <div class="scanlines"></div>
       </div>
-    </section>
-
-    <!-- Social (placeholder for featured tweets) -->
-    <section class="social-section" id="social">
-      <h2 class="section-title">Social</h2>
-      <p class="section-placeholder">Featured tweets coming soon.</p>
-    </section>
-
-    <!-- Connect -->
-    <section class="connect-section" id="connect">
-      <Newsletter />
-    </section>
+    </div>
   </div>
 </Base>
 
-<script is:inline define:vars={{ postsByTag }}>
-  // Grid view is visible by default, no initial animation needed
-
-  // Explore Terminal
+<script is:inline define:vars={{ postsByTag, tagDescriptions }}>
   document.addEventListener('DOMContentLoaded', function() {
     var tagButtons = document.querySelectorAll('.tag-btn');
     var terminalOutput = document.getElementById('terminal-output');
     var terminalResults = document.getElementById('terminal-results');
     var terminalStatus = document.getElementById('terminal-status');
     var statusIndicator = document.querySelector('.status-indicator');
+    var activeNode = document.getElementById('active-node');
     var cursor = document.querySelector('.terminal-cursor');
 
     var activeTag = null;
@@ -250,6 +190,7 @@ allTags.forEach(tag => {
         btn.classList.add('active');
 
         activeTag = tag;
+        activeNode.textContent = '#' + tag;
         terminalResults.innerHTML = '';
 
         var outputText = '> QUERY: #' + tag.toUpperCase() + '\n' +
@@ -263,131 +204,64 @@ allTags.forEach(tag => {
         });
       });
     });
-
-    // Check URL for tag parameter and auto-activate
-    var urlParams = new URLSearchParams(window.location.search);
-    var tagFromUrl = urlParams.get('tag');
-    if (tagFromUrl) {
-      // Find the corresponding tag button
-      var targetBtn = Array.from(tagButtons).find(function(btn) {
-        return btn.dataset.tag.toLowerCase() === tagFromUrl.toLowerCase();
-      });
-
-      if (targetBtn) {
-        // Small delay to ensure page is fully loaded
-        setTimeout(function() {
-          targetBtn.click();
-        }, 300);
-      }
-    }
   });
 </script>
 
 <style>
-  .container {
-    max-width: 900px;
-  }
-
-  .page-header {
-    padding: var(--space-3xl) 0 var(--space-2xl);
-    text-align: center;
-  }
-
-  .page-title {
-    font-family: var(--font-gothic);
-    font-size: 3.5rem;
-    color: var(--text);
-    margin-bottom: var(--space-md);
-  }
-
-  .page-desc {
-    font-size: 1.125rem;
-    color: var(--text-soft);
-    margin: 0;
-  }
-
-  .featured-section {
-    margin-bottom: var(--space-3xl);
-  }
-
-  .archive-section {
-    margin-bottom: var(--space-3xl);
-  }
-
-  .archive-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
-    padding-bottom: var(--space-lg);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .archive-title {
-    font-family: var(--font-gothic);
-    font-size: 1.5rem;
-    color: var(--text);
-    margin: 0;
-  }
-
-  .archive-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--space-lg);
-  }
-
-  .post-list[hidden] {
-    display: none;
-  }
-
-  .social-section {
-    margin-bottom: var(--space-3xl);
-    padding: var(--space-2xl) 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .section-title {
-    font-family: var(--font-gothic);
-    font-size: 1.5rem;
-    color: var(--text);
-    margin-bottom: var(--space-lg);
-  }
-
-  .section-placeholder {
-    color: var(--text-muted);
+  .explore-container {
+    width: 100%;
+    background: var(--bg);
+    color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 0.875rem;
-  }
-
-  .connect-section {
-    margin-bottom: var(--space-3xl);
-    padding-top: var(--space-2xl);
+    padding: var(--space-3xl) 0;
     border-top: 1px solid var(--border);
-  }
-
-  /* Explore Section */
-  .explore-section {
-    margin-bottom: var(--space-3xl);
-    border-top: 1px solid var(--border);
-    padding-top: var(--space-3xl);
   }
 
   .explore-header {
-    margin-bottom: var(--space-xl);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3xl);
     padding-bottom: var(--space-lg);
     border-bottom: 1px solid var(--border);
   }
 
-  .explore-title {
-    font-family: var(--font-gothic);
-    font-size: 1.5rem;
-    color: var(--text);
-    margin: 0;
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .hash-icon {
+    font-size: 1.125rem;
+    color: var(--accent);
+  }
+
+  .header-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .header-right {
+    font-size: 0.625rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+
+  #active-node {
+    color: var(--accent);
   }
 
   .explore-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
     display: grid;
     grid-template-columns: 1fr 1.4fr;
     gap: var(--space-3xl);
@@ -600,22 +474,13 @@ allTags.forEach(tag => {
     .explore-grid {
       grid-template-columns: 1fr;
     }
+
+    .header-right {
+      display: none;
+    }
   }
 
   @media (max-width: 768px) {
-    .page-title {
-      font-size: 2.5rem;
-    }
-
-    .archive-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .archive-controls {
-      justify-content: space-between;
-    }
-
     .terminal-content {
       padding: 1rem;
     }

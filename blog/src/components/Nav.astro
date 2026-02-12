@@ -1,9 +1,9 @@
 ---
 const navItems = [
-  { label: 'Research', href: '/?category=Research#archive', num: '01' },
-  { label: 'Technical', href: '/?category=Technical#archive', num: '02' },
-  { label: 'Essays', href: '/?category=Essay#archive', num: '03' },
-  { label: 'Updates', href: '/?category=Update#archive', num: '04' },
+  { label: 'Archive', href: '/#archive', num: '01' },
+  { label: 'Explore', href: '/#explore', num: '02' },
+  { label: 'Social', href: '/#social', num: '03' },
+  { label: 'Connect', href: '/#connect', num: '04' },
 ];
 ---
 
@@ -24,8 +24,6 @@ const navItems = [
         </li>
       ))}
     </ul>
-
-    <div class="nav-spacer"></div>
   </div>
 </nav>
 
@@ -44,9 +42,9 @@ const navItems = [
     margin: 0 auto;
     padding: 0 24px;
     height: 80px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
   }
 
   .logo {
@@ -54,6 +52,7 @@ const navItems = [
     align-items: center;
     gap: 16px;
     text-decoration: none;
+    justify-self: start;
   }
 
   .logo-icon {
@@ -79,6 +78,7 @@ const navItems = [
     display: flex;
     list-style: none;
     gap: 40px;
+    justify-self: center;
   }
 
   .nav-link {
@@ -86,8 +86,10 @@ const navItems = [
     align-items: center;
     gap: 4px;
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 400;
+    letter-spacing: 0;
+    line-height: 16px;
     text-transform: uppercase;
     color: #A1A1AA;
     text-decoration: none;
@@ -104,10 +106,6 @@ const navItems = [
 
   .nav-link:hover .nav-num {
     color: white;
-  }
-
-  .nav-spacer {
-    width: 128px;
   }
 
   @media (max-width: 768px) {

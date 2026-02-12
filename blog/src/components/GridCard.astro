@@ -6,10 +6,11 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { title, subtitle, date, readTime, category } = post.data;
+const { title, subtitle, date, readTime, category, tags } = post.data;
+const tagsString = tags ? tags.join(',') : '';
 ---
 
-<article class="grid-card" data-category={category}>
+<article class="grid-card" data-category={category} data-tags={tagsString}>
   <a href={`/${post.slug}/`} class="card-link">
     <div class="card-meta">
       <span class="category">{category}</span>
@@ -36,12 +37,14 @@ const { title, subtitle, date, readTime, category } = post.data;
     border-radius: var(--radius-md);
     overflow: hidden;
     transition: all var(--transition-base);
+    transform: translateY(0);
   }
 
   .grid-card:hover {
     background: var(--bg-card-hover);
-    border-color: var(--border-hover);
-    transform: translateY(-2px);
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-4px);
   }
 
   .card-link {
