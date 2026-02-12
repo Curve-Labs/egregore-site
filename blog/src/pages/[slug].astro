@@ -24,8 +24,11 @@ const ogImage = `/og/${post.slug}.png`;
 // Filter to h2 and h3 only for TOC
 const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
 
-// Ensure date is a Date object
+// Ensure date is a Date object with validation
 const postDate = date instanceof Date ? date : new Date(date);
+if (isNaN(postDate.getTime())) {
+  console.error(`[slug].astro: Invalid date for post ${post.slug}:`, date);
+}
 
 // Build share text with hashtags
 const articleUrl = `https://blog.curvelabs.eu/${post.slug}`;
