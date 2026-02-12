@@ -4,12 +4,13 @@ import GridCard from './GridCard.astro';
 
 interface Props {
   posts: CollectionEntry<'posts'>[];
+  class?: string;
 }
 
-const { posts } = Astro.props;
+const { posts, class: className } = Astro.props;
 ---
 
-<div class="post-grid" data-layout="grid">
+<div class:list={['post-grid', className]} data-layout="grid">
   {posts.map((post) => (
     <GridCard post={post} />
   ))}

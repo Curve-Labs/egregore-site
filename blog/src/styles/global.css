@@ -1,5 +1,5 @@
 /* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=UnifrakturCook:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=UnifrakturMaguntia:wght@400&display=swap');
 
 /* Custom Fonts */
 @font-face {
@@ -25,7 +25,7 @@
 
   /* Text */
   --text: #e0e0e8;
-  --text-soft: #71717A;
+  --text-soft: #b4b4bc;
   --text-muted: #71717A;
   --text-dim: #71717A;
 
@@ -35,7 +35,7 @@
   --accent-glow: rgba(91, 191, 178, 0.08);
 
   /* Fonts */
-  --font-gothic: 'UnifrakturCook', cursive;
+  --font-gothic: 'UnifrakturMaguntia', cursive;
   --font-mono: 'IBM Plex Mono', monospace;
   --font-body: 'Gotham Book', sans-serif;
 
@@ -48,10 +48,10 @@
   --space-2xl: 3rem;
   --space-3xl: 4rem;
 
-  /* Border radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Border radius - square edges to match curvelabs.eu */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -168,6 +168,55 @@ code {
   font-family: var(--font-gothic);
 }
 
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.fade-out {
+  animation: fadeOut var(--transition-fast) ease forwards;
+}
+
+/* Staggered card animations - only on view toggle, not initial load */
+.stagger-animate.animate-now > * {
+  opacity: 0;
+  animation: fadeIn var(--transition-slow) ease forwards;
+}
+
+.stagger-animate.animate-now > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-animate.animate-now > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-animate.animate-now > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-animate.animate-now > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-animate.animate-now > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-animate.animate-now > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-animate.animate-now > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-animate.animate-now > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-animate.animate-now > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-animate.animate-now > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-animate.animate-now > *:nth-child(n+11) { animation-delay: 500ms; }
+
 /* Selection */
 ::selection {
   background: var(--accent);
@@ -186,7 +235,7 @@ code {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-hover);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {

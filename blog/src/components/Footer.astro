@@ -1,28 +1,36 @@
 ---
-const links = [
-  { label: 'Main Site', href: 'https://curvelabs.eu' },
-  { label: 'GitHub', href: 'https://github.com/Curve-Labs' },
-];
 ---
 
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <span class="footer-logo">Curve Labs</span>
-      <span class="footer-tagline">Venture Laboratory for Relational Technologies</span>
+      <span class="footer-logo">CURVE LABS</span>
+      <div class="footer-address">
+        <span>c/o Factory Works GmbH</span>
+        <span>Rheinsberger Str. 76/77</span>
+        <span>10115 Berlin</span>
+      </div>
     </div>
 
-    <nav class="footer-links">
-      {links.map((link) => (
-        <a href={link.href} class="footer-link">
-          {link.label}
-        </a>
-      ))}
-    </nav>
+    <div class="footer-links">
+      <div class="footer-section">
+        <span class="footer-heading">Product</span>
+        <a href="/">Blog</a>
+        <a href="https://curvelabs.eu" target="_blank" rel="noopener">Main Site</a>
+      </div>
 
-    <div class="footer-copy">
-      <span class="copyright">© 2020 CL Cybernetix GmbH.</span>
+      <div class="footer-section">
+        <span class="footer-heading">Connect</span>
+        <a href="https://x.com/curvelabs" target="_blank" rel="noopener">Twitter</a>
+        <a href="https://www.linkedin.com/company/curve-labs/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/Curve-Labs" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://blog.curvelabs.eu/" target="_blank" rel="noopener">Medium</a>
+      </div>
     </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2020 CL Cybernetix GmbH.</span>
   </div>
 </footer>
 
@@ -30,74 +38,99 @@ const links = [
   .footer {
     border-top: 1px solid var(--border);
     margin-top: var(--space-3xl);
+    padding: var(--space-3xl) var(--space-lg) var(--space-xl);
   }
 
   .footer-inner {
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
-    padding: var(--space-2xl) var(--space-lg);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-lg);
+    display: grid;
+    grid-template-columns: 1.5fr 2fr;
+    gap: var(--space-3xl);
   }
 
   .footer-brand {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
+    max-width: 320px;
   }
 
   .footer-logo {
-    font-family: var(--font-gothic);
-    font-size: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--text);
+    display: block;
+    margin-bottom: var(--space-md);
   }
 
-  .footer-tagline {
+  .footer-address {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-muted);
-    letter-spacing: 0.02em;
   }
 
   .footer-links {
     display: flex;
-    gap: var(--space-lg);
+    justify-content: flex-end;
+    gap: var(--space-3xl);
   }
 
-  .footer-link {
+  .footer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .footer-heading {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text);
+    margin-bottom: var(--space-sm);
+  }
+
+  .footer-section a {
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    color: var(--text-soft);
+    color: var(--text-muted);
     text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     transition: color var(--transition-fast);
   }
 
-  .footer-link:hover {
+  .footer-section a:hover {
     color: var(--accent);
   }
 
-  .footer-copy {
-    display: flex;
-    gap: var(--space-lg);
+  .footer-bottom {
+    max-width: 1000px;
+    margin: var(--space-2xl) auto 0;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border);
+    text-align: center;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
   }
 
   @media (max-width: 768px) {
     .footer-inner {
-      flex-direction: column;
-      align-items: flex-start;
+      grid-template-columns: 1fr;
+      gap: var(--space-2xl);
     }
 
-    .footer-copy {
-      flex-direction: column;
-      gap: var(--space-sm);
+    .footer-brand {
+      max-width: none;
+    }
+
+    .footer-links {
+      justify-content: flex-start;
+      gap: var(--space-2xl);
+      flex-wrap: wrap;
     }
   }
 </style>
