@@ -20,34 +20,41 @@ Input(meeting) → substance:Sonnet(transcript+scaffold+quests) → dynamics:Son
 | continuity | Decision evolution, recurring topics, open threads, meta-patterns | opus, sonnet, haiku | sonnet |
 | synthesis | Merge all agent outputs into coherent briefing + enriched artifacts | opus, sonnet | opus |
 
+## Input Resolution
+| Type | Command |
+|------|---------|
+| meeting | `bash bin/granola.sh get {id}` |
+
 ## Configs
 
+Each config maps slots to `{model}`. Prompt variants and params can be added per-slot when needed (see template).
+
 ### baseline
-substance: haiku, dynamics: haiku, continuity: haiku, synthesis: opus
+substance: {model: haiku}, dynamics: {model: haiku}, continuity: {model: haiku}, synthesis: {model: opus}
 _Cost floor. Minimum viable quality._
 
 ### current
-substance: sonnet, dynamics: sonnet, continuity: sonnet, synthesis: opus
+substance: {model: sonnet}, dynamics: {model: sonnet}, continuity: {model: sonnet}, synthesis: {model: opus}
 _Current production config._
 
 ### deep
-substance: sonnet, dynamics: opus, continuity: sonnet, synthesis: opus
+substance: {model: sonnet}, dynamics: {model: opus}, continuity: {model: sonnet}, synthesis: {model: opus}
 _Quality ceiling for high-stakes meetings._
 
 ### all-sonnet
-substance: sonnet, dynamics: sonnet, continuity: sonnet, synthesis: sonnet
+substance: {model: sonnet}, dynamics: {model: sonnet}, continuity: {model: sonnet}, synthesis: {model: sonnet}
 _Mid-tier everywhere. Tests whether Opus synthesis is worth it._
 
 ### substance-only
-substance: sonnet, dynamics: null, continuity: null, synthesis: opus
+substance: {model: sonnet}, dynamics: null, continuity: null, synthesis: {model: opus}
 _Ablation: is substance alone sufficient?_
 
 ### substance-dynamics
-substance: sonnet, dynamics: sonnet, continuity: null, synthesis: opus
+substance: {model: sonnet}, dynamics: {model: sonnet}, continuity: null, synthesis: {model: opus}
 _Ablation: what does continuity add?_
 
 ### substance-continuity
-substance: sonnet, dynamics: null, continuity: sonnet, synthesis: opus
+substance: {model: sonnet}, dynamics: null, continuity: {model: sonnet}, synthesis: {model: opus}
 _Ablation: what does dynamics add?_
 
 ## Eval Dimensions

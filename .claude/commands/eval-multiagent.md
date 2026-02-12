@@ -29,7 +29,9 @@ Read the eval spec from `eval-specs/{pipeline-id}.md`. Parse frontmatter (YAML b
 
 Extract:
 - **Slots**: Parse the `## Slots` table — slot name, role, options, default
-- **Configs**: Parse each `### <config-name>` under `## Configs` — extract model assignments per slot. A slot value of `null` means skip that agent (pass empty object to synthesis).
+- **Input Resolution**: Parse the `## Input Resolution` table — type → shell command with `{id}` placeholder
+- **Configs**: Parse each `### <config-name>` under `## Configs` — extract per-slot assignments. Each slot value is either `null` (skip agent) or `{model, prompt_variant?, params?}`. Only `model` is required. If the spec uses the short form (`slot: model_name`), treat it as `{model: model_name}`.
+- **Prompt Variants**: Parse `## Prompt Variants` if present — named prompt overrides per slot. Configs reference these by name.
 - **Input corpus**: Parse `## Input Corpus` — each line is `<type>:<id>`
 - **Dimensions**: Parse `## Eval Dimensions` — numbered list with `**name**`: description
 
@@ -37,14 +39,19 @@ If `--configs` flag is provided, filter to only those config names (comma-separa
 
 ### Step 1: Resolve inputs
 
-For each input in the corpus:
+For each input in the corpus, look up the input type in the spec's `## Input Resolution` table to find the shell command. Substitute `{id}` with the actual input ID.
 
-**meeting type**:
 ```bash
-bash bin/granola.sh get <doc-id>
+# Example: for "meeting:7df47eba-..." with resolution "bash bin/granola.sh get {id}"
+bash bin/granola.sh get 7df47eba-...
 ```
 
-Parse the output JSON. Extract the fields needed for each slot based on the pipeline architecture.
+If no Input Resolution table exists in the spec, fall back to type-based defaults:
+- `meeting` → `bash bin/granola.sh get {id}`
+- `document` → read the file at `{id}`
+- `query` → use `{id}` as inline text
+
+Parse the output. Extract the fields needed for each slot based on the pipeline architecture.
 
 ### Step 2: Execute configs
 
@@ -62,32 +69,33 @@ Create config output directory:
 mkdir -p .egregore/eval-runs/{pipeline-id}/run-{date}-{seq}/config-{config-name}
 ```
 
-**Decompose pipeline into sub-agents.** Every slot becomes a spawned Task agent with the config's model assignment. This ensures fair comparison — model tier actually varies per slot.
+<!-- ═══ PIPELINE-SPECIFIC: Execution logic ═══ -->
+<!-- This section is specific to the multiagent eval type (fan-out/fan-in topology). -->
+<!-- When adding new eval types (eval-prompt, eval-retrieval), this is what differs. -->
+<!-- The tournament engine, Elo computation, and reporting below are SHARED infrastructure. -->
 
-For the meeting pipeline:
-- **Substance sub-agent**: receives transcript + scaffold + open questions + quests. Returns `substance_analysis` JSON + `_raw_notes`.
-- **Dynamics sub-agent**: receives transcript + attendees. Returns `dynamics_analysis` JSON + `_raw_notes`.
-- **Continuity sub-agent**: receives panel + graph context + scaffold. Returns `continuity_analysis` JSON + `_raw_notes`.
-- **Synthesis sub-agent**: receives all agent outputs + panel + scaffold. Returns final briefing + enriched artifact list.
+**Decompose pipeline into sub-agents.** Every slot from the spec becomes a spawned Task agent with the config's model (and optional prompt_variant/params). This ensures fair comparison — model tier and prompt strategy actually vary per slot.
 
-For slots set to `null` in a config, skip the sub-agent entirely. Pass an empty object (`{}`) to the synthesis step for that slot's output.
+Read slot names, roles, and config assignments dynamically from the eval spec. Do NOT hardcode slot names — the spec defines them.
+
+For slots set to `null` in a config, skip the sub-agent entirely. Pass an empty object (`{}`) to downstream slots that depend on its output.
 
 **Sub-agent spawning**: Use the Task tool with:
 - `subagent_type: "general-purpose"`
-- `model`: the model specified in the config for that slot (e.g., "haiku", "sonnet", "opus")
+- `model`: from the config's slot assignment (e.g., `{model: haiku}` → `"haiku"`)
 
-Spawn independent slots in parallel (substance, dynamics, continuity can run concurrently). Synthesis must wait for all others.
+Determine execution order from the `## Architecture` line in the spec. Slots listed with `→` between them run sequentially (each feeds the next). Slots at the same level can run in parallel. The last slot (typically a compositor/synthesis) waits for all others.
 
 **For each slot sub-agent**, use this prompt template (substitute actual data):
 
 ```
-You are the {slot_name} agent in a meeting analysis pipeline.
+You are the {slot_name} agent in a {pipeline_title} pipeline.
 
 ## Your Role
-{slot_role_description from eval spec}
+{slot_role_description from Slots table — OR prompt_variant text if config specifies one}
 
 ## Input
-{actual input data for this slot}
+{actual input data for this slot — determined by pipeline architecture}
 
 ## Instructions
 Analyze the input according to your role. Return TWO sections:
@@ -102,6 +110,8 @@ These notes are valuable — they capture nuance that structured fields miss.
 Return the structured JSON first (wrapped in ```json blocks), then the raw notes.
 ```
 
+If the config specifies a `prompt_variant` for this slot, use the variant text from the spec's `## Prompt Variants` section instead of the default role description.
+
 **Capture metrics** for each sub-agent:
 - Token counts (input + output) from the Task tool response
 - Wall-clock latency (timestamp before and after Task call)
@@ -112,7 +122,7 @@ Return the structured JSON first (wrapped in ```json blocks), then the raw notes
 
 **Write outputs** for each config:
 
-`output.json`:
+`output.json` — slot keys come from the spec, not hardcoded:
 ```json
 {
   "pipeline_id": "{pipeline-id}",
@@ -120,10 +130,8 @@ Return the structured JSON first (wrapped in ```json blocks), then the raw notes
   "input": "{input-id}",
   "run_date": "{ISO datetime}",
   "slots": {
-    "substance": {"output": {...}, "model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "dynamics": {"output": {...}, "model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "continuity": {"output": {...}, "model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "synthesis": {"output": {...}, "model": "opus", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N}
+    "{slot_name}": {"output": {...}, "model": "...", "prompt_variant": "default", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
+    "...": "one entry per slot from the spec"
   },
   "total_tokens": N,
   "total_cost_usd": N,
@@ -131,21 +139,14 @@ Return the structured JSON first (wrapped in ```json blocks), then the raw notes
 }
 ```
 
-`_raw_notes.md`:
+`_raw_notes.md` — one section per slot, dynamically from spec:
 ```markdown
 # Raw Notes — {config-name} on {input-id}
 
-## Substance Agent ({model})
-{raw notes from substance agent}
+## {Slot Name} Agent ({model})
+{raw notes from this agent}
 
-## Dynamics Agent ({model})
-{raw notes from dynamics agent}
-
-## Continuity Agent ({model})
-{raw notes from continuity agent}
-
-## Synthesis Agent ({model})
-{raw notes from synthesis agent}
+(repeat for each slot in the spec)
 ```
 
 `meta.json`:
@@ -155,10 +156,8 @@ Return the structured JSON first (wrapped in ```json blocks), then the raw notes
   "input": "{input-id}",
   "run_date": "{ISO datetime}",
   "per_slot": {
-    "substance": {"model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "dynamics": {"model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "continuity": {"model": "sonnet", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
-    "synthesis": {"model": "opus", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N}
+    "{slot_name}": {"model": "...", "prompt_variant": "default", "tokens_in": N, "tokens_out": N, "cost_usd": N, "latency_ms": N},
+    "...": "one entry per slot"
   },
   "total_tokens": N,
   "total_cost_usd": N,
@@ -197,6 +196,14 @@ Where `runId` is `{pipeline-id}-{config}-{input-short}-{date}-{seq}`.
 ```
 
 ---
+
+<!-- ═══ SHARED INFRASTRUCTURE: Tournament, Elo, Reporting ═══ -->
+<!-- Everything below this line is eval-type-agnostic. It operates on outputs -->
+<!-- (output.json + _raw_notes.md) and dimensions (from the spec). When adding -->
+<!-- a new eval type, reuse this logic as-is — only the judge prompt template -->
+<!-- is topology-specific (fan-out/fan-in judges compare merged outputs; -->
+<!-- sequential chain judges might compare intermediate steps; iterative judges -->
+<!-- might evaluate convergence rate). Define judge prompts per eval type. -->
 
 ## Subcommand: `tournament`
 
