@@ -20,12 +20,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import (
     validate_api_key, generate_api_key, reload_configs, ORG_CONFIGS,
-    load_orgs_from_neo4j, exchange_github_code, GITHUB_CLIENT_ID,
+    load_orgs_from_neo4j, load_orgs, exchange_github_code, GITHUB_CLIENT_ID,
+    USE_SUPABASE,
 )
 from .models import (
     GraphQuery, GraphBatch, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
     OrgInvite, OrgAcceptInvite, UserProfileUpdate,
+    WaitlistAdd, WaitlistApprove,
 )
 from .services.graph import execute_query, execute_batch, execute_system_query, get_schema, test_connection
 from .services.notify import send_message, send_group, test_notify, generate_bot_invite_link, create_group_invite_link
@@ -54,17 +56,26 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    """Load org configs from Neo4j on startup."""
-    await load_orgs_from_neo4j()
+    """Load org configs on startup (from Supabase if enabled, else Neo4j)."""
+    await load_orgs()
 
 
 @app.post("/api/admin/reload")
 async def admin_reload(authorization: str = Header(...)):
-    """Reload ORG_CONFIGS from Neo4j. Requires any valid API key."""
+    """Reload ORG_CONFIGS. Requires any valid API key."""
     key = authorization.replace("Bearer ", "").strip()
-    if not any(org.get("api_key") == key for org in ORG_CONFIGS.values()):
+    # Check in-memory keys first
+    valid = any(org.get("api_key") == key for org in ORG_CONFIGS.values())
+    # If USE_SUPABASE, also validate via hash
+    if not valid and USE_SUPABASE:
+        try:
+            from .services.supabase import validate_api_key as sb_validate
+            valid = sb_validate(key) is not None
+        except Exception:
+            pass
+    if not valid:
         raise HTTPException(status_code=401, detail="Invalid API key")
-    await load_orgs_from_neo4j()
+    await load_orgs()
     return {"status": "ok", "orgs_loaded": len(ORG_CONFIGS)}
 
 
@@ -269,15 +280,35 @@ async def org_register(body: OrgRegister, authorization: str = Header(...)):
         "registered_by": github_user.get("login", ""),
     }
 
-    # Store in configs (in-memory for now; persistent storage is a later step)
+    # Persist to Supabase if enabled, then in-memory
+    if USE_SUPABASE:
+        try:
+            from .services import supabase as sb
+            sb.create_org(
+                slug=slug, name=body.org_name, github_org=body.github_org,
+                neo4j_host=default_neo4j_host, neo4j_user=default_neo4j_user,
+                neo4j_password=default_neo4j_password,
+                telegram_chat_id=body.telegram_chat_id,
+                created_by=github_user.get("login", ""),
+            )
+            sb.create_api_key(slug, api_key)
+            sb.upsert_user(github_user.get("login", ""), github_name=github_user.get("name"))
+            sb.add_membership(slug, github_user.get("login", ""), role="admin")
+        except Exception as e:
+            logger.error(f"Supabase org register failed: {e}")
+            raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+
     ORG_CONFIGS[slug] = new_org
 
-    # Create Org node in Neo4j
-    await execute_query(new_org, """
-        MERGE (o:Org {id: $_org})
-        SET o.name = $name, o.github_org = $github_org, o.created_by = $created_by
-        RETURN o.id
-    """, {"name": body.org_name, "github_org": body.github_org, "created_by": github_user.get("login", "")})
+    # Create Org node in Neo4j (keep for knowledge graph)
+    try:
+        await execute_query(new_org, """
+            MERGE (o:Org {id: $_org})
+            SET o.name = $name, o.github_org = $github_org, o.created_by = $created_by
+            RETURN o.id
+        """, {"name": body.org_name, "github_org": body.github_org, "created_by": github_user.get("login", "")})
+    except Exception as e:
+        logger.warning(f"Neo4j Org node creation failed (non-fatal with Supabase): {e}")
 
     logger.info(f"Registered new org: {slug} by {github_user.get('login')}")
 
@@ -465,22 +496,45 @@ async def org_setup(body: OrgSetup, authorization: str = Header(...)):
         "slug": slug,
     }
 
-    # 6. Persist Org node to Neo4j FIRST (before in-memory). If this fails, return 503.
+    # 6. Persist org — Supabase first (if enabled), then Neo4j, then in-memory
+    if USE_SUPABASE:
+        try:
+            from .services import supabase as sb
+            sb.create_org(
+                slug=slug, name=body.org_name, github_org=owner,
+                neo4j_host=default_neo4j_host, neo4j_user=default_neo4j_user,
+                neo4j_password=default_neo4j_password,
+                telegram_chat_id=body.telegram_chat_id,
+                created_by=user["login"],
+            )
+            sb.create_api_key(slug, api_key)
+            sb.upsert_user(user["login"], github_name=user.get("name"), avatar_url=user.get("avatar_url"))
+            sb.add_membership(slug, user["login"], role="admin")
+            logger.info(f"Supabase org bootstrapped for {slug}")
+        except Exception as e:
+            logger.error(f"Supabase org bootstrap failed: {e}")
+            raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+
     try:
         neo4j_result = await execute_query(new_org, """
             MERGE (o:Org {id: $_org})
             SET o.name = $name, o.github_org = $github_org, o.api_key = $api_key, o.created_by = $created_by
         """, {"name": body.org_name, "github_org": owner, "api_key": api_key, "created_by": user["login"]})
         if isinstance(neo4j_result, dict) and "error" in neo4j_result:
-            raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
-        logger.info(f"Neo4j Org node bootstrapped for {slug}")
+            if not USE_SUPABASE:
+                raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+            logger.warning(f"Neo4j Org node creation failed (non-fatal with Supabase): {neo4j_result}")
+        else:
+            logger.info(f"Neo4j Org node bootstrapped for {slug}")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Neo4j Org bootstrap exception: {e}")
-        raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+        if not USE_SUPABASE:
+            logger.error(f"Neo4j Org bootstrap exception: {e}")
+            raise HTTPException(status_code=503, detail="Failed to persist org. Please retry.")
+        logger.warning(f"Neo4j Org node creation failed (non-fatal with Supabase): {e}")
 
-    # Only add to memory after successful Neo4j write
+    # Add to memory after successful persistence
     ORG_CONFIGS[slug] = new_org
 
     # 7. Update egregore.json in the generated repo
@@ -840,7 +894,22 @@ async def org_telegram(body: OrgTelegram, authorization: str = Header(None)):
     if not org:
         raise HTTPException(status_code=404, detail=f"Unknown org: {slug}")
 
-    # Persist to Neo4j FIRST, then update in-memory
+    # Persist to Supabase first (if enabled), then Neo4j, then in-memory
+    if USE_SUPABASE:
+        try:
+            from .services import supabase as sb
+            update_fields = {"telegram_chat_id": body.chat_id}
+            if body.group_title:
+                update_fields["telegram_group_title"] = body.group_title
+            if body.group_username:
+                update_fields["telegram_group_username"] = body.group_username
+            sb.update_org(slug, **update_fields)
+            sb.log_telegram_event(slug, "group_connected", chat_id=body.chat_id, group_title=body.group_title)
+            logger.info(f"Supabase telegram config updated for {slug}")
+        except Exception as e:
+            logger.error(f"Supabase telegram persist failed: {e}")
+            raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+
     try:
         neo4j_params = {"chat_id": body.chat_id}
         set_clauses = ["o.telegram_chat_id = $chat_id"]
@@ -856,14 +925,18 @@ async def org_telegram(body: OrgTelegram, authorization: str = Header(None)):
             SET {', '.join(set_clauses)}
         """, neo4j_params)
         if isinstance(neo4j_result, dict) and "error" in neo4j_result:
-            raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+            if not USE_SUPABASE:
+                raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+            logger.warning(f"Neo4j telegram persist failed (non-fatal with Supabase): {neo4j_result}")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to persist telegram config: {e}")
-        raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+        if not USE_SUPABASE:
+            logger.error(f"Failed to persist telegram config: {e}")
+            raise HTTPException(status_code=503, detail="Failed to persist telegram config. Please retry.")
+        logger.warning(f"Neo4j telegram persist failed (non-fatal with Supabase): {e}")
 
-    # Only update in-memory after successful Neo4j write
+    # Update in-memory after persistence
     ORG_CONFIGS[slug]["telegram_chat_id"] = body.chat_id
     if body.group_title:
         ORG_CONFIGS[slug]["telegram_group_title"] = body.group_title
@@ -1443,13 +1516,207 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
 
 
 # =============================================================================
+# NEW SUPABASE-BACKED ENDPOINTS
+# =============================================================================
+
+
+@app.get("/api/user/orgs")
+async def user_orgs(authorization: str = Header(...)):
+    """Get all orgs a user belongs to.
+
+    Auth: GitHub token. Returns orgs with membership details.
+    """
+    import httpx
+
+    github_token = authorization.replace("Bearer ", "").strip()
+    if not github_token:
+        raise HTTPException(status_code=401, detail="Missing GitHub token")
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"token {github_token}"},
+            timeout=10.0,
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid GitHub token")
+
+    username = user_resp.json().get("login", "")
+
+    if USE_SUPABASE:
+        from .services import supabase as sb
+        memberships = sb.get_user_orgs(username)
+        return {
+            "github_username": username,
+            "orgs": [
+                {
+                    "slug": m["orgs"]["slug"],
+                    "name": m["orgs"]["name"],
+                    "github_org": m["orgs"]["github_org"],
+                    "role": m["role"],
+                    "has_telegram": bool(m["orgs"].get("telegram_chat_id")),
+                }
+                for m in memberships
+                if m.get("orgs")
+            ],
+        }
+
+    # Fallback: derive from ORG_CONFIGS (limited info)
+    return {
+        "github_username": username,
+        "orgs": [
+            {"slug": slug, "name": cfg.get("org_name", slug), "role": "member"}
+            for slug, cfg in ORG_CONFIGS.items()
+        ],
+    }
+
+
+@app.get("/api/org/{slug}/members")
+async def org_members(slug: str, org: dict = Depends(validate_api_key)):
+    """Get all members of an org.
+
+    Auth: API key. Returns member list with roles.
+    """
+    if org.get("slug") != slug:
+        raise HTTPException(status_code=403, detail="API key does not match org")
+
+    if USE_SUPABASE:
+        from .services import supabase as sb
+        members = sb.get_memberships(slug)
+        return {
+            "org_slug": slug,
+            "members": [
+                {
+                    "github_username": m["users"]["github_username"] if m.get("users") else None,
+                    "github_name": m["users"]["github_name"] if m.get("users") else None,
+                    "role": m["role"],
+                    "status": m["status"],
+                    "joined_at": m.get("joined_at"),
+                }
+                for m in members
+            ],
+        }
+
+    return {"org_slug": slug, "members": []}
+
+
+@app.post("/api/admin/waitlist")
+async def admin_waitlist_add(body: WaitlistAdd):
+    """Add to waitlist. No auth required (public endpoint)."""
+    if not USE_SUPABASE:
+        raise HTTPException(status_code=501, detail="Waitlist requires Supabase")
+
+    from .services import supabase as sb
+    entry = sb.waitlist_add(
+        email=body.email,
+        github_username=body.github_username,
+        source=body.source,
+    )
+    return {"status": "added", "id": entry.get("id")}
+
+
+@app.get("/api/admin/waitlist")
+async def admin_waitlist_list(
+    status: str = "pending",
+    org: dict = Depends(validate_api_key),
+):
+    """List waitlist entries. Auth: API key (admin only)."""
+    if not USE_SUPABASE:
+        raise HTTPException(status_code=501, detail="Waitlist requires Supabase")
+
+    from .services import supabase as sb
+    entries = sb.waitlist_list(status=status)
+    return {"entries": entries}
+
+
+@app.post("/api/admin/waitlist/approve")
+async def admin_waitlist_approve(
+    body: WaitlistApprove,
+    org: dict = Depends(validate_api_key),
+    authorization: str = Header(...),
+):
+    """Approve a waitlist entry. Auth: API key."""
+    if not USE_SUPABASE:
+        raise HTTPException(status_code=501, detail="Waitlist requires Supabase")
+
+    # Get approver username from ORG_CONFIGS context
+    from .services import supabase as sb
+    result = sb.waitlist_approve(body.waitlist_id, approved_by_username="admin")
+    if not result:
+        raise HTTPException(status_code=404, detail="Waitlist entry not found")
+    return {"status": "approved", "entry": result}
+
+
+@app.get("/api/internal/orgs")
+async def internal_orgs(authorization: str = Header(...)):
+    """Internal endpoint: list all orgs with their config.
+
+    Used by the Telegram bot to load org configs without Neo4j.
+    Auth: Bot token or dedicated bot secret.
+    """
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    bot_secret = os.environ.get("TELEGRAM_BOT_SECRET", "")
+    auth_value = authorization.replace("Bearer ", "").strip()
+
+    valid = (
+        (bot_secret and secrets.compare_digest(auth_value, bot_secret))
+        or (bot_token and secrets.compare_digest(auth_value, bot_token))
+    )
+    if not valid:
+        # Also accept any valid API key (in-memory or Supabase)
+        valid = any(org.get("api_key") == auth_value for org in ORG_CONFIGS.values())
+        if not valid and USE_SUPABASE:
+            try:
+                from .services.supabase import validate_api_key as sb_validate
+                valid = sb_validate(auth_value) is not None
+            except Exception:
+                pass
+        if not valid:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+    if USE_SUPABASE:
+        from .services import supabase as sb
+        orgs_list = sb.list_orgs()
+        result = []
+        for org_row in orgs_list:
+            result.append({
+                "slug": org_row["slug"],
+                "name": org_row["name"],
+                "github_org": org_row["github_org"],
+                "telegram_chat_id": org_row.get("telegram_chat_id"),
+                "telegram_group_title": org_row.get("telegram_group_title"),
+                "telegram_group_username": org_row.get("telegram_group_username"),
+                "neo4j_host": org_row.get("neo4j_host"),
+                "neo4j_user": org_row.get("neo4j_user"),
+                "neo4j_password": org_row.get("neo4j_password"),
+            })
+        return {"orgs": result}
+
+    # Fallback: return from in-memory ORG_CONFIGS
+    result = []
+    for slug, cfg in ORG_CONFIGS.items():
+        result.append({
+            "slug": slug,
+            "name": cfg.get("org_name", slug),
+            "github_org": cfg.get("github_org", slug),
+            "telegram_chat_id": cfg.get("telegram_chat_id"),
+            "telegram_group_title": cfg.get("telegram_group_title"),
+            "telegram_group_username": cfg.get("telegram_group_username"),
+            "neo4j_host": cfg.get("neo4j_host"),
+            "neo4j_user": cfg.get("neo4j_user"),
+            "neo4j_password": cfg.get("neo4j_password"),
+        })
+    return {"orgs": result}
+
+
+# =============================================================================
 # HEALTH
 # =============================================================================
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "egregore-api"}
+    return {"status": "ok", "service": "egregore-api", "supabase": USE_SUPABASE}
 
 
 if __name__ == "__main__":

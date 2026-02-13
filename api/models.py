@@ -100,3 +100,18 @@ class OrgAcceptInvite(BaseModel):
 class UserProfileUpdate(BaseModel):
     """Update user profile (Telegram handle)."""
     telegram_username: str
+
+
+# --- Waitlist models ---
+
+
+class WaitlistAdd(BaseModel):
+    """Add to waitlist."""
+    email: Optional[str] = None
+    github_username: Optional[str] = None
+    source: Optional[str] = None
+
+
+class WaitlistApprove(BaseModel):
+    """Approve a waitlist entry."""
+    waitlist_id: int
