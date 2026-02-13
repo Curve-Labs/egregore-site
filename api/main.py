@@ -26,7 +26,7 @@ from .auth import (
 from .models import (
     GraphQuery, GraphBatch, NotifySend, NotifyGroup, OrgRegister,
     OrgSetup, OrgJoin, OrgTelegram, GitHubCallback, SetupOrgsResponse,
-    OrgInvite, OrgAcceptInvite, UserProfileUpdate,
+    OrgInvite, OrgAcceptInvite, UserEnsure, UserProfileUpdate,
     WaitlistAdd, WaitlistApprove,
 )
 from .services.graph import execute_query, execute_batch, execute_system_query, get_schema, test_connection
@@ -135,6 +135,37 @@ async def activity_dashboard(
     """All activity dashboard queries in one call. Replaces 15+ client-side graph.sh calls."""
     from .services.activity import get_activity_dashboard
     return await get_activity_dashboard(org, github_username)
+
+
+# =============================================================================
+# USER SYNC
+# =============================================================================
+
+
+@app.post("/api/user/ensure")
+async def user_ensure(body: UserEnsure, org: dict = Depends(validate_api_key)):
+    """Ensure user + membership exist in Supabase. Idempotent.
+
+    Called by session-start.sh and /invite to sync Person creation to Supabase.
+    """
+    from .services.supabase import upsert_user, add_membership
+
+    if not USE_SUPABASE:
+        return {"status": "skipped", "reason": "supabase disabled"}
+
+    try:
+        user = upsert_user(
+            github_username=body.github_username,
+            github_name=body.github_name,
+        )
+        membership = add_membership(
+            org_slug=org["slug"],
+            github_username=body.github_username,
+        )
+        return {"status": "ok", "user_id": user.get("id"), "membership_id": membership.get("id")}
+    except Exception as e:
+        # Non-fatal — Neo4j is the source of truth, Supabase is supplementary
+        return {"status": "error", "detail": str(e)}
 
 
 # =============================================================================
