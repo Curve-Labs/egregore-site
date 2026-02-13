@@ -10,10 +10,16 @@ from .graph import execute_query
 
 
 async def _resolve_person_name(org: dict, github_username: str) -> str:
-    """Resolve Person.name from github username. Falls back to github_username."""
+    """Resolve Person.name from github username.
+
+    Tries: github property match → case-insensitive name match → raw fallback.
+    """
     result = await execute_query(org, """
-        MATCH (p:Person {github: $gh})
+        MATCH (p:Person)
+        WHERE p.github = $gh
+           OR toLower(p.name) = toLower($gh)
         RETURN p.name AS name
+        LIMIT 1
     """, {"gh": github_username})
     values = result.get("values", [])
     if values and values[0] and values[0][0]:
