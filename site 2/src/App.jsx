@@ -2,7 +2,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { C, font } from "./tokens";
 import { POSTS } from "./posts";
-import AsciiDecoration from "./AsciiDecoration";
+import wizardsWorking from "./wizards working.txt?raw";
+import egregoricIntelligence from "./egregoric_intelligence.txt?raw";
+import churchWindow from "./church_window.txt?raw";
+import egregoreMonster from "./egregore_monster.txt?raw";
+import egregoreLogo from "./egregore_logo.txt?raw";
+import leftHand from "./left_hand.txt?raw";
+import rightHand from "./right_hand.txt?raw";
+import oneSubstrate from "./one_subsrate.txt?raw";
+import contextGardening from "./context_gardening.txt?raw";
+import organizationalLearning from "./organizational_learning.txt?raw";
+import monsterOrnamentLeft from "./monster_ornament_left.txt?raw";
+import monsterOrnamentRight from "./monster_ornament_right.txt?raw";
+import theFuckingWizards from "./the_fucking_wizards.txt?raw";
 
 // ─── Utility Components ─────────────────────────────────────────
 const Divider = () => (
@@ -52,13 +64,9 @@ const Navigation = () => {
       borderBottom: scrolled ? `1px solid ${C.warmGray}` : "1px solid transparent",
       transition: "all 0.3s ease",
     }}>
-      <a href="#join" style={{ ...linkStyle, fontSize: "0.62rem", letterSpacing: "2px" }}>
-        Join the Game
-      </a>
       <a href="#top" style={{
         ...font.gothic, fontSize: "1.9rem", color: C.crimson,
-        textDecoration: "none", position: "absolute", left: "50%",
-        transform: "translateX(-50%)",
+        textDecoration: "none",
       }}>
         Egregore
       </a>
@@ -77,111 +85,129 @@ const Navigation = () => {
 };
 
 // ─── Section 1: Hero ────────────────────────────────────────────
-const Hero = ({ art }) => (
+const Hero = () => (
   <section id="top" style={{
-    minHeight: "100vh", display: "flex", flexDirection: "column",
-    justifyContent: "center", position: "relative", overflow: "hidden",
+    minHeight: "100vh", display: "flex", alignItems: "center",
+    position: "relative", overflow: "hidden",
     padding: "8rem 4rem 3rem",
   }}>
-    {art?.MONSTER && (
-      <AsciiDecoration
-        art={art.MONSTER}
-        color="rgba(200,165,90, 0.35)"
-        fontSize="clamp(1rem, 1.5vw, 1.8rem)"
-        style={{ position: "absolute", top: "42%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 0 }}
-        className="ascii-hide-mobile"
-      />
-    )}
-
-    <div style={{ position: "relative", zIndex: 2, maxWidth: 700 }}>
-      <h1 style={{
-        ...font.serif, fontSize: "clamp(2.2rem, 4.5vw, 3.6rem)",
-        fontWeight: 400, lineHeight: 1.08, color: C.ink,
-        marginBottom: "2rem", textTransform: "uppercase",
-        letterSpacing: "0.01em",
-      }}>
-        Shared cognition for<br />teams and agents
-      </h1>
-
-      <p style={{
-        ...font.serif, fontSize: "1.25rem", fontWeight: 400,
-        color: C.muted, maxWidth: 540, lineHeight: 1.65, marginBottom: "3rem",
-      }}>
-        A terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind.
-      </p>
-
-      <a href="#join" style={{
-        ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
-        display: "inline-block", textTransform: "uppercase",
-        background: C.ink, color: C.parchment, border: "none",
-        padding: "0.85rem 2.2rem", cursor: "pointer", textDecoration: "none",
-        transition: "background 0.2s ease",
-      }}>
-        Join the Waitlist
-      </a>
-
+    <Container style={{ width: "100%", maxWidth: "1400px" }}>
       <div style={{
-        ...font.mono, fontSize: "0.58rem", color: C.warmGray,
-        marginTop: "1rem", letterSpacing: "1.5px", textTransform: "uppercase",
+        display: "flex",
+        alignItems: "center",
+        gap: "4rem",
+        justifyContent: "space-between",
       }}>
-        Early access &middot; The circle is forming
+        {/* Left side - Text content */}
+        <div style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
+          <h1 style={{
+            ...font.serif, fontSize: "clamp(2.2rem, 4.5vw, 3.6rem)",
+            fontWeight: 400, lineHeight: 1.08, color: C.ink,
+            marginBottom: "2rem", textTransform: "uppercase",
+            letterSpacing: "0.01em",
+          }}>
+            summoning circle for<br />shared minds
+          </h1>
+
+          <p style={{
+            ...font.serif, fontSize: "1.25rem", fontWeight: 400,
+            color: C.muted, maxWidth: 540, lineHeight: 1.65, marginBottom: "3rem",
+          }}>
+            A terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind.
+          </p>
+
+          <a href="#join" style={{
+            ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
+            display: "inline-block", textTransform: "uppercase",
+            background: C.ink, color: C.parchment, border: "none",
+            padding: "0.85rem 2.2rem", cursor: "pointer", textDecoration: "none",
+            transition: "background 0.2s ease",
+          }}>
+            Join the Waitlist
+          </a>
+
+          <div style={{
+            ...font.mono, fontSize: "0.58rem", color: C.warmGray,
+            marginTop: "1rem", letterSpacing: "1.5px", textTransform: "uppercase",
+          }}>
+            Early access &middot; The circle is forming
+          </div>
+        </div>
+
+        {/* Right side - Wizards Working ASCII art */}
+        <div style={{
+          flex: "1",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          position: "relative",
+          zIndex: 1,
+        }}>
+          <pre
+            style={{
+              ...font.mono,
+              fontSize: "clamp(0.162rem, 0.225vw, 0.27rem)",
+              lineHeight: 1.05,
+              color: C.muted,
+              whiteSpace: "pre",
+              margin: 0,
+              overflow: "visible",
+            }}
+          >
+            {wizardsWorking}
+          </pre>
+        </div>
       </div>
-    </div>
+    </Container>
   </section>
 );
 
-// ─── Section 2: Egregoric Intelligence ──────────────────────────
-const EgregoricIntelligence = ({ art }) => {
+// ─── Section 2: Value Propositions ──────────────────────────────
+const ValueProps = () => {
   const cards = [
     {
       title: "UNIFIED SUBSTRATE",
       body: "Production and coordination are not separate activities. They happen in the same environment \u2014 eliminating the boundary between tools for doing work and tools for talking about work.",
-      icon: art?.ICON1,
+      ascii: oneSubstrate,
     },
     {
       title: "CONTEXT GARDENING",
       body: "The overhead of context engineering approaches zero. Context surfaces are pegged to the edges of the organization \u2014 and these edges multiply as the organization interacts.",
-      icon: art?.ICON2,
+      ascii: contextGardening,
     },
     {
       title: "ORGANIZATIONAL LEARNING",
       body: "As the system accumulates, patterns surface from repeated activity and emergent context. Egregore evolves according to the tools, workflows, and coordination patterns of the host organization.",
-      icon: art?.ICON3,
+      ascii: organizationalLearning,
     },
   ];
 
   return (
-    <section style={{ padding: "2rem 0 5rem", position: "relative" }}>
-      {art?.TOWER && (
-        <AsciiDecoration
-          art={art.TOWER}
-          color="rgba(200,165,90, 0.30)"
-          fontSize="clamp(0.6rem, 0.8vw, 0.95rem)"
-          className="ascii-hide-mobile"
-          style={{
-            position: "absolute", bottom: "52%", left: "50%",
-            transform: "translateX(-50%)", zIndex: 0,
-          }}
-        />
-      )}
+    <section style={{ padding: "3.5rem 0 6rem", position: "relative" }}>
       <Container style={{ position: "relative", zIndex: 1 }}>
-        <Divider />
-        <h2 style={{
-          ...font.gothic, fontSize: "2.6rem", color: C.crimson,
-          marginBottom: "1.5rem", lineHeight: 1.2,
-        }}>
-          Egregoric Intelligence
-        </h2>
-        <p style={{
-          ...font.serif, fontSize: "1.15rem",
-          color: C.muted, maxWidth: 640, marginBottom: "3.5rem", lineHeight: 1.75,
-        }}>
-          Production requires coordination. Coordination generates context. Context compounds into organizational learning &mdash; and feeds back into production. A shared substrate makes every coordination act context-rich &mdash; AI workflows operate with full organizational awareness.
-        </p>
-
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2.5rem" }}>
           {cards.map((card) => (
             <div key={card.title}>
+              {/* ASCII art above the card */}
+              <div style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: "1rem",
+              }}>
+                <pre style={{
+                  ...font.mono,
+                  fontSize: "0.06rem",
+                  lineHeight: 1.05,
+                  color: C.gold,
+                  whiteSpace: "pre",
+                  margin: 0,
+                  textAlign: "center",
+                }}>
+                  {card.ascii}
+                </pre>
+              </div>
+
               <div style={{ borderTop: `2px solid ${C.gold}`, paddingTop: "1.5rem" }}>
                 <h3 style={{
                   ...font.mono, fontSize: "0.88rem", fontWeight: 700,
@@ -195,24 +221,64 @@ const EgregoricIntelligence = ({ art }) => {
                   {card.body}
                 </p>
               </div>
-              {card.icon && (
-                <div style={{ width: "100%", overflow: "hidden", marginTop: "1.5rem" }}>
-                  <AsciiDecoration
-                    art={card.icon}
-                    color="rgba(200,165,90, 0.35)"
-                    fontSize="clamp(0.35rem, 0.5vw, 0.55rem)"
-                    className="ascii-hide-mobile"
-                    style={{
-                      position: "relative",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      display: "inline-block",
-                    }}
-                  />
-                </div>
-              )}
             </div>
           ))}
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+// ─── Section 3: Egregoric Intelligence ──────────────────────────
+const EgregoricIntelligence = () => {
+  return (
+    <section style={{ padding: "2rem 0 5rem", position: "relative" }}>
+      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px" }}>
+        <Divider />
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4rem",
+          justifyContent: "space-between",
+        }}>
+          {/* Left side - Text content */}
+          <div style={{ flex: "1", maxWidth: "640px" }}>
+            <h2 style={{
+              ...font.gothic, fontSize: "2.6rem", color: C.crimson,
+              marginBottom: "1.5rem", lineHeight: 1.2,
+            }}>
+              Egregoric Intelligence
+            </h2>
+            <p style={{
+              ...font.serif, fontSize: "1.15rem",
+              color: C.muted, lineHeight: 1.75,
+            }}>
+              Production requires coordination. Coordination generates context. Context compounds into organizational learning &mdash; and feeds back into production. A shared substrate makes every coordination act context-rich &mdash; AI workflows operate with full organizational awareness.
+            </p>
+          </div>
+
+          {/* Right side - Egregoric Intelligence ASCII art */}
+          <div style={{
+            flex: "1",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative",
+          }}>
+            <pre
+              style={{
+                ...font.mono,
+                fontSize: "clamp(0.09rem, 0.125vw, 0.15rem)",
+                lineHeight: 1.05,
+                color: C.muted,
+                whiteSpace: "pre",
+                margin: 0,
+                overflow: "visible",
+              }}
+            >
+              {egregoricIntelligence}
+            </pre>
+          </div>
         </div>
       </Container>
     </section>
@@ -466,7 +532,7 @@ function TerminalLine({ text, style, delay, visible }) {
 
 const PHASE = { IDLE: 0, TYPING: 1, THINKING: 2, RENDERING: 3 };
 
-const SeeItWork = ({ art }) => {
+const SeeItWork = () => {
   const [active, setActive] = useState(0);
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [runKey, setRunKey] = useState(0);
@@ -532,16 +598,47 @@ const SeeItWork = ({ art }) => {
   }, [hasStarted, startSequence]);
 
   return (
-    <section ref={sectionRef} style={{ padding: "3.5rem 0 6rem", background: C.ink, position: "relative", overflow: "hidden" }}>
-      {art?.CHURCH_WINDOW && (
-        <AsciiDecoration
-          art={art.CHURCH_WINDOW}
-          color="rgba(200,165,90, 0.20)"
-          fontSize="clamp(1rem, 1.6vw, 1.8rem)"
-          className="ascii-hide-tablet"
-          style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 0 }}
-        />
-      )}
+    <section ref={sectionRef} style={{ padding: "0", background: C.ink, position: "relative", overflow: "hidden" }}>
+      {/* Left ASCII decoration */}
+      <div style={{
+        position: "absolute",
+        left: "0",
+        top: "50%",
+        transform: "translateY(-50%)",
+        pointerEvents: "none",
+      }}>
+        <pre style={{
+          ...font.mono,
+          fontSize: "0.113rem",
+          lineHeight: 1.05,
+          color: "#ffffff",
+          whiteSpace: "pre",
+          margin: 0,
+        }}>
+          {churchWindow}
+        </pre>
+      </div>
+
+      {/* Right ASCII decoration */}
+      <div style={{
+        position: "absolute",
+        right: "0",
+        top: "50%",
+        transform: "translateY(-50%)",
+        pointerEvents: "none",
+      }}>
+        <pre style={{
+          ...font.mono,
+          fontSize: "0.113rem",
+          lineHeight: 1.05,
+          color: "#ffffff",
+          whiteSpace: "pre",
+          margin: 0,
+        }}>
+          {churchWindow}
+        </pre>
+      </div>
+
       <Container style={{ position: "relative", zIndex: 1 }}>
         <SectionLabel light>Coordination System</SectionLabel>
         <h2 style={{
@@ -655,7 +752,7 @@ const SeeItWork = ({ art }) => {
 };
 
 // ─── Section 4: The Session Cycle ───────────────────────────────
-const SessionCycle = ({ art }) => {
+const SessionCycle = () => {
   const commands = [
     { cmd: "/session", desc: "Connect an existing repo to seed the egregore with context, or start from scratch." },
     { cmd: "/invite", desc: "Bring humans and AI agents into the magic circle." },
@@ -839,6 +936,33 @@ const SessionCycle = ({ art }) => {
   );
 };
 
+// ─── Wizards Banner Section ─────────────────────────────────────
+const WizardsBanner = () => {
+  return (
+    <section style={{ padding: "3rem 0", background: C.parchment, position: "relative", overflow: "hidden" }}>
+      <Container style={{ position: "relative", zIndex: 1 }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}>
+          <pre style={{
+            ...font.mono,
+            fontSize: "clamp(0.2rem, 0.3vw, 0.4rem)",
+            lineHeight: 1.05,
+            color: C.ink,
+            whiteSpace: "pre",
+            margin: 0,
+            textAlign: "center",
+          }}>
+            {theFuckingWizards}
+          </pre>
+        </div>
+      </Container>
+    </section>
+  );
+};
+
 // ─── Section 5: Research ─────────────────────────────────────
 const Research = () => {
   const featured = POSTS.filter((p) => p.featured);
@@ -914,10 +1038,107 @@ const Research = () => {
   );
 };
 
+// ─── Monster Banner Section ─────────────────────────────────────
+const MonsterBanner = () => {
+  return (
+    <section style={{ padding: "1.4rem 0", background: "#1A1714", position: "relative", overflow: "hidden" }}>
+      {/* Left ASCII decoration */}
+      <div style={{
+        position: "absolute",
+        left: "0",
+        top: "50%",
+        transform: "translateY(-50%)",
+        pointerEvents: "none",
+      }}>
+        <pre style={{
+          ...font.mono,
+          fontSize: "0.105rem",
+          lineHeight: 1.05,
+          color: "#ffffff",
+          whiteSpace: "pre",
+          margin: 0,
+        }}>
+          {monsterOrnamentLeft}
+        </pre>
+      </div>
+
+      {/* Right ASCII decoration */}
+      <div style={{
+        position: "absolute",
+        right: "0",
+        top: "50%",
+        transform: "translateY(-50%)",
+        pointerEvents: "none",
+      }}>
+        <pre style={{
+          ...font.mono,
+          fontSize: "0.105rem",
+          lineHeight: 1.05,
+          color: "#ffffff",
+          whiteSpace: "pre",
+          margin: 0,
+        }}>
+          {monsterOrnamentRight}
+        </pre>
+      </div>
+
+      {/* Center monster ASCII */}
+      <Container style={{ position: "relative", zIndex: 1 }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}>
+          <pre style={{
+            ...font.mono,
+            fontSize: "clamp(0.06825rem, 0.1025vw, 0.1365rem)",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            whiteSpace: "pre",
+            margin: 0,
+            textAlign: "center",
+          }}>
+            {egregoreMonster}
+          </pre>
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+// ─── Logo Banner Section ─────────────────────────────────────────
+const LogoBanner = () => {
+  return (
+    <section style={{ padding: "0", background: C.parchment, position: "relative", overflow: "hidden" }}>
+      {/* Center logo ASCII */}
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0", position: "relative", zIndex: 1 }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}>
+          <pre style={{
+            ...font.mono,
+            fontSize: "clamp(0.22rem, 0.308vw, 0.385rem)",
+            lineHeight: 1.0,
+            color: C.ink,
+            whiteSpace: "pre",
+            margin: 0,
+            padding: 0,
+            textAlign: "center",
+          }}>
+            {egregoreLogo}
+          </pre>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // ─── Section 6: CTA ─────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 
-const WaitlistCTA = ({ art }) => {
+const WaitlistCTA = () => {
   const [form, setForm] = useState({ name: "", email: "", intent: "" });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -957,24 +1178,24 @@ const WaitlistCTA = ({ art }) => {
   };
 
   return (
-    <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative" }}>
-      {art?.BOTTOM_ICON1 && (
-        <AsciiDecoration
-          art={art.BOTTOM_ICON1}
-          color="rgba(200,165,90, 0.20)"
-          placement="footer-left"
-          className="ascii-hide-mobile"
-        />
-      )}
-      {art?.BOTTOM_ICON2 && (
-        <AsciiDecoration
-          art={art.BOTTOM_ICON2}
-          color="rgba(200,165,90, 0.20)"
-          placement="footer-right"
-          className="ascii-hide-mobile"
-        />
-      )}
-      <Container style={{ maxWidth: 480, position: "relative", zIndex: 1 }}>
+    <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "2rem", padding: "0 2rem" }}>
+        {/* Left ASCII decoration */}
+        <div style={{ flex: "0 0 auto" }}>
+          <pre style={{
+            ...font.mono,
+            fontSize: "0.128rem",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            whiteSpace: "pre",
+            margin: 0,
+          }}>
+            {leftHand}
+          </pre>
+        </div>
+
+        {/* Center form content */}
+        <Container style={{ maxWidth: 480, position: "relative", zIndex: 1, flex: "0 0 auto" }}>
         {!submitted ? (
           <>
             <div style={{ textAlign: "center", marginBottom: "3rem" }}>
@@ -1046,46 +1267,46 @@ const WaitlistCTA = ({ art }) => {
           <span>Berlin / The Graph</span>
         </div>
       </Container>
+
+        {/* Right ASCII decoration */}
+        <div style={{ flex: "0 0 auto" }}>
+          <pre style={{
+            ...font.mono,
+            fontSize: "0.128rem",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            whiteSpace: "pre",
+            margin: 0,
+          }}>
+            {rightHand}
+          </pre>
+        </div>
+      </div>
     </footer>
   );
 };
 
 // ─── Egregore Text Banner ────────────────────────────────────────
-const EgregoreTextBanner = ({ art }) => {
-  if (!art?.EGREGORE_TEXT) return null;
-  return (
-    <section style={{ padding: "4rem 0", overflow: "hidden", textAlign: "center" }}>
-      <div className="ascii-egregore-text" style={{ display: "inline-block" }}>
-        <AsciiDecoration
-          art={art.EGREGORE_TEXT}
-          color="rgba(122, 15, 27, 0.35)"
-          fontSize="clamp(0.18rem, 0.42vw, 0.5rem)"
-          style={{ display: "inline-block", textAlign: "left" }}
-        />
-      </div>
-    </section>
-  );
+const EgregoreTextBanner = () => {
+  return null;
 };
 
 // ─── App ────────────────────────────────────────────────────────
 export default function App() {
-  const [art, setArt] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    import("./ascii-art").then((m) => { if (!cancelled) setArt(m); });
-    return () => { cancelled = true; };
-  }, []);
-
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, overflowX: "hidden" }}>
       <Navigation />
-      <Hero art={art} />
-      <EgregoricIntelligence art={art} />
-      <SeeItWork art={art} />
-      <EgregoreTextBanner art={art} />
-      <SessionCycle art={art} />
+      <Hero />
+      <EgregoricIntelligence />
+      <ValueProps />
+      <SeeItWork />
+      <MonsterBanner />
+      <LogoBanner />
+      <EgregoreTextBanner />
+      <SessionCycle />
+      <WizardsBanner />
       <Research />
-      <WaitlistCTA art={art} />
+      <WaitlistCTA />
     </div>
   );
 }
