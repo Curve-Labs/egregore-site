@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import SetupFlow from "./components/SetupFlow";
-import { getGitHubAuthUrl } from "./api";
+import { getGitHubAuthUrl, joinWaitlist } from "./api";
 
 // ─── Palette & Tokens ───────────────────────────────────────────
 const C = {
@@ -784,42 +784,111 @@ const ResearchSection = () => {
 };
 
 // ─── Footer ─────────────────────────────────────────────────────
-const Footer = () => (
-  <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "5rem 0 3rem", textAlign: "center" }}>
-    <Container>
-      <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
-      <h2 style={{ ...font.serif, fontSize: "2rem", fontWeight: 400, marginBottom: "0.75rem" }}>
-        The memory is persistent.
-      </h2>
-      <p style={{ ...font.mono, fontSize: "0.8rem", color: "rgba(244,241,234,0.5)", marginBottom: "2.5rem" }}>
-        Start building shared intelligence today.
-      </p>
-      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "4rem" }}>
-        <a
-          href={getGitHubAuthUrl()}
-          style={{
-            ...font.mono, fontSize: "0.75rem", letterSpacing: "1px",
-            display: "inline-flex", alignItems: "center",
-            background: C.parchment, color: C.ink, border: "none",
-            padding: "0.85rem 2rem", textDecoration: "none",
-            transition: "background 0.2s ease",
-          }}
-        >
-          <GitHubIcon />
-          Get Started
-        </a>
-      </div>
-      <p style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.35)", marginBottom: "3rem" }}>
-        Or: <code>npx create-egregore@latest</code>
-      </p>
-      <div style={{ ...font.mono, fontSize: "0.6rem", color: "rgba(244,241,234,0.25)", borderTop: "1px solid rgba(244,241,234,0.1)", paddingTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-        <span>Egregore</span>
-        <span>MMXXVI</span>
-        <span>Berlin / The Graph</span>
-      </div>
-    </Container>
-  </footer>
-);
+const Footer = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | sending | done | error
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() && !email.trim()) return;
+    setStatus("sending");
+    try {
+      await joinWaitlist(name.trim(), email.trim());
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  const inputStyle = {
+    ...font.mono, fontSize: "0.75rem", letterSpacing: "0.5px",
+    background: "transparent", border: "none",
+    borderBottom: `1px solid rgba(244,241,234,0.3)`,
+    color: C.parchment, padding: "0.7rem 0", outline: "none",
+    width: "100%",
+    transition: "border-color 0.2s ease",
+  };
+
+  return (
+    <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "5rem 0 3rem", textAlign: "center" }}>
+      <Container>
+        <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
+        <h2 style={{ ...font.serif, fontSize: "2rem", fontWeight: 400, marginBottom: "0.75rem" }}>
+          The memory is persistent.
+        </h2>
+        <p style={{ ...font.mono, fontSize: "0.8rem", color: "rgba(244,241,234,0.5)", marginBottom: "2.5rem" }}>
+          Request early access.
+        </p>
+
+        {status === "done" ? (
+          <div style={{ marginBottom: "4rem" }}>
+            <p style={{ ...font.serif, fontSize: "1.4rem", fontWeight: 400 }}>You're on the list.</p>
+            <p style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.5)", marginTop: "0.75rem" }}>
+              We'll reach out soon.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ maxWidth: 480, margin: "0 auto 4rem", textAlign: "left" }}>
+            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderBottomColor = C.crimson}
+                  onBlur={(e) => e.target.style.borderBottomColor = "rgba(244,241,234,0.3)"}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderBottomColor = C.crimson}
+                  onBlur={(e) => e.target.style.borderBottomColor = "rgba(244,241,234,0.3)"}
+                />
+              </div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                style={{
+                  ...font.mono, fontSize: "0.75rem", letterSpacing: "1px",
+                  background: C.parchment, color: C.ink, border: "none",
+                  padding: "0.85rem 2rem", cursor: status === "sending" ? "wait" : "pointer",
+                  opacity: status === "sending" ? 0.6 : 1,
+                  transition: "opacity 0.2s ease",
+                }}
+              >
+                {status === "sending" ? "Sending..." : "Request Access"}
+              </button>
+              {status === "error" && (
+                <p style={{ ...font.mono, fontSize: "0.65rem", color: C.crimson, marginTop: "0.75rem" }}>
+                  Something went wrong. Try again.
+                </p>
+              )}
+            </div>
+          </form>
+        )}
+
+        <p style={{ ...font.mono, fontSize: "0.7rem", color: "rgba(244,241,234,0.35)", marginBottom: "3rem" }}>
+          Or: <code>npx create-egregore@latest</code>
+        </p>
+        <div style={{ ...font.mono, fontSize: "0.6rem", color: "rgba(244,241,234,0.25)", borderTop: "1px solid rgba(244,241,234,0.1)", paddingTop: "2rem", display: "flex", justifyContent: "space-between" }}>
+          <span>Egregore</span>
+          <span>MMXXVI</span>
+          <span>Berlin / The Graph</span>
+        </div>
+      </Container>
+    </footer>
+  );
+};
 
 // ─── App ────────────────────────────────────────────────────────
 export default function App() {

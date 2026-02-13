@@ -70,3 +70,7 @@ export async function getUserProfile(token) {
 export async function updateUserProfile(token, { telegram_username }) {
   return request("POST", "/api/user/profile", { token, body: { telegram_username } });
 }
+
+export async function joinWaitlist(name, email) {
+  return request("POST", "/api/admin/waitlist", { body: { name, email, source: "website" } });
+}
