@@ -97,6 +97,12 @@ class OrgAcceptInvite(BaseModel):
     invite_token: str
 
 
+class UserEnsure(BaseModel):
+    """Ensure a user + membership exist in Supabase."""
+    github_username: str
+    github_name: Optional[str] = None
+
+
 class UserProfileUpdate(BaseModel):
     """Update user profile (Telegram handle)."""
     telegram_username: str
