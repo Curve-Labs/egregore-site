@@ -123,17 +123,104 @@ if EGREGORE_CHANNEL_ID:
 
 
 def load_dynamic_orgs():
-    """Load org configs + allowed users from Neo4j on startup.
+    """Load org configs + allowed users on startup.
 
+    Tries API first (/api/internal/orgs), falls back to Neo4j.
     Populates ORG_CONFIG with orgs that have telegram_chat_id set.
-    Populates ALLOWED_CHAT_IDS with user telegram IDs from Person nodes.
+    Populates ALLOWED_CHAT_IDS with user telegram IDs.
     """
+    # Try loading from API first (Supabase-backed when USE_SUPABASE=true)
+    if EGREGORE_API_URL:
+        try:
+            headers = {}
+            if BOT_TOKEN:
+                headers["Authorization"] = f"Bearer {BOT_TOKEN}"
+            resp = httpx.get(
+                f"{EGREGORE_API_URL}/api/internal/orgs",
+                headers=headers,
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                org_count = 0
+                for org in data.get("orgs", []):
+                    chat_id_str = org.get("telegram_chat_id")
+                    if not chat_id_str:
+                        continue
+                    chat_id = int(chat_id_str)
+                    slug = org.get("slug", org.get("name", ""))
+
+                    if chat_id in ORG_CONFIG and ORG_CONFIG[chat_id].get("_static"):
+                        continue  # Don't overwrite hardcoded static config
+
+                    # Derive Neo4j URI from host if needed
+                    neo4j_host = org.get("neo4j_host", "")
+                    neo4j_uri = f"neo4j+s://{neo4j_host}" if neo4j_host else EGREGORE_NEO4J_URI
+
+                    ORG_CONFIG[chat_id] = {
+                        "name": slug,
+                        "neo4j_uri": neo4j_uri,
+                        "neo4j_user": org.get("neo4j_user", "neo4j"),
+                        "neo4j_password": org.get("neo4j_password", ""),
+                        "mcp_api_key": "",  # API keys are validated server-side
+                    }
+                    if chat_id not in ALLOWED_CHAT_IDS:
+                        ALLOWED_CHAT_IDS.append(chat_id)
+                    org_count += 1
+
+                # Also add all org chat_ids from static ORG_CONFIG
+                for cid in ORG_CONFIG:
+                    if cid not in ALLOWED_CHAT_IDS:
+                        ALLOWED_CHAT_IDS.append(cid)
+
+                logger.info(f"Loaded {org_count} org(s) from API")
+
+                # Still load allowed users from Neo4j (Person nodes with telegramId)
+                _load_allowed_users_from_neo4j()
+                return
+            else:
+                logger.warning(f"API org load failed ({resp.status_code}), falling back to Neo4j")
+        except Exception as e:
+            logger.warning(f"API org load failed: {e}, falling back to Neo4j")
+
+    # Fallback: load from Neo4j directly
+    _load_orgs_from_neo4j()
+
+
+def _load_allowed_users_from_neo4j():
+    """Load allowed user IDs from Person nodes in Neo4j."""
+    shared_uri = EGREGORE_NEO4J_URI or NEO4J_URI
+    shared_user = EGREGORE_NEO4J_USER if EGREGORE_NEO4J_URI else NEO4J_USER
+    shared_password = EGREGORE_NEO4J_PASSWORD if EGREGORE_NEO4J_URI else NEO4J_PASSWORD
+
+    if not shared_uri or not shared_password:
+        return
+
+    try:
+        driver = GraphDatabase.driver(shared_uri, auth=(shared_user, shared_password))
+        with driver.session() as session:
+            people = session.run(
+                "MATCH (p:Person) WHERE p.telegramId IS NOT NULL RETURN p.telegramId AS tid"
+            )
+            user_count = 0
+            for record in people:
+                tid = int(record["tid"])
+                if tid not in ALLOWED_CHAT_IDS:
+                    ALLOWED_CHAT_IDS.append(tid)
+                    user_count += 1
+            logger.info(f"Loaded {user_count} allowed user(s) from Neo4j")
+        driver.close()
+    except Exception as e:
+        logger.error(f"Failed to load allowed users from Neo4j: {e}")
+
+
+def _load_orgs_from_neo4j():
+    """Original Neo4j-based org loading (fallback)."""
     shared_uri = EGREGORE_NEO4J_URI
     shared_user = EGREGORE_NEO4J_USER
     shared_password = EGREGORE_NEO4J_PASSWORD
 
     if not shared_uri or not shared_password:
-        # Fall back to default Neo4j if shared not configured
         if NEO4J_URI and NEO4J_PASSWORD:
             shared_uri = NEO4J_URI
             shared_user = NEO4J_USER
@@ -145,7 +232,6 @@ def load_dynamic_orgs():
     try:
         driver = GraphDatabase.driver(shared_uri, auth=(shared_user, shared_password))
         with driver.session() as session:
-            # Load orgs with telegram groups
             result = session.run(
                 "MATCH (o:Org) WHERE o.telegram_chat_id IS NOT NULL "
                 "RETURN o.id AS id, o.name AS name, o.telegram_chat_id AS chat_id, o.api_key AS api_key"
@@ -155,12 +241,9 @@ def load_dynamic_orgs():
                 chat_id = int(record["chat_id"])
                 org_id = record["id"] or record["name"]
                 if chat_id in ORG_CONFIG:
-                    # If existing entry is from a stale org (different slug with same chat_id),
-                    # prefer the org that has an api_key (more likely to be current).
                     existing = ORG_CONFIG[chat_id]
                     if existing.get("_static"):
-                        continue  # Don't overwrite hardcoded static config
-                    # Allow overwrite if this org has an api_key and existing doesn't
+                        continue
                     if not record.get("api_key") and existing.get("mcp_api_key"):
                         continue
                     logger.info(f"Replacing org {existing.get('name')} with {org_id} for chat {chat_id}")
@@ -175,7 +258,6 @@ def load_dynamic_orgs():
                     ALLOWED_CHAT_IDS.append(chat_id)
                 org_count += 1
 
-            # Load allowed user IDs from Person nodes
             people = session.run(
                 "MATCH (p:Person) WHERE p.telegramId IS NOT NULL RETURN p.telegramId AS tid"
             )
@@ -186,7 +268,6 @@ def load_dynamic_orgs():
                     ALLOWED_CHAT_IDS.append(tid)
                     user_count += 1
 
-            # Also add all org chat_ids from static ORG_CONFIG
             for cid in ORG_CONFIG:
                 if cid not in ALLOWED_CHAT_IDS:
                     ALLOWED_CHAT_IDS.append(cid)
@@ -198,65 +279,38 @@ def load_dynamic_orgs():
 
 
 async def register_group(slug: str, chat_id: int, group_title: str = None, group_username: str = None) -> dict | None:
-    """Register a Telegram group with the API. Falls back to direct Neo4j write."""
-    # Try API first
-    if EGREGORE_API_URL:
-        headers = {"Content-Type": "application/json"}
-        if BOT_TOKEN:
-            headers["Authorization"] = f"Bearer {BOT_TOKEN}"
-
-        body = {"org_slug": slug, "chat_id": str(chat_id)}
-        if group_title:
-            body["group_title"] = group_title
-        if group_username:
-            body["group_username"] = group_username
-
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{EGREGORE_API_URL}/api/org/telegram",
-                    json=body,
-                    headers=headers,
-                    timeout=10.0,
-                )
-            if resp.status_code == 200:
-                data = resp.json()
-                logger.info(f"Registered group {chat_id} for org {slug} via API")
-                return data
-            else:
-                logger.warning(f"API registration failed: {resp.status_code} {resp.text}")
-        except Exception as e:
-            logger.warning(f"API registration failed: {e}")
-
-    # Fallback: write directly to Neo4j
-    neo4j_uri = EGREGORE_NEO4J_URI or NEO4J_URI
-    neo4j_user = EGREGORE_NEO4J_USER if EGREGORE_NEO4J_URI else NEO4J_USER
-    neo4j_password = EGREGORE_NEO4J_PASSWORD if EGREGORE_NEO4J_URI else NEO4J_PASSWORD
-
-    if not neo4j_uri or not neo4j_password:
-        logger.error("No Neo4j connection — cannot register group")
+    """Register a Telegram group with the API."""
+    if not EGREGORE_API_URL:
+        logger.error("No EGREGORE_API_URL configured — cannot register group")
         return None
 
+    headers = {"Content-Type": "application/json"}
+    if BOT_TOKEN:
+        headers["Authorization"] = f"Bearer {BOT_TOKEN}"
+
+    body = {"org_slug": slug, "chat_id": str(chat_id)}
+    if group_title:
+        body["group_title"] = group_title
+    if group_username:
+        body["group_username"] = group_username
+
     try:
-        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
-        with driver.session() as session:
-            result = session.run(
-                "MATCH (o:Org {id: $slug}) "
-                "SET o.telegram_chat_id = $chat_id "
-                "RETURN o.name AS name",
-                slug=slug, chat_id=str(chat_id),
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{EGREGORE_API_URL}/api/org/telegram",
+                json=body,
+                headers=headers,
+                timeout=10.0,
             )
-            record = result.single()
-            driver.close()
-            if record:
-                org_name = record["name"] or slug
-                logger.info(f"Registered group {chat_id} for org {slug} via Neo4j fallback")
-                return {"status": "connected", "org_slug": slug, "org_name": org_name}
-            else:
-                logger.error(f"Org {slug} not found in Neo4j")
-                return None
+        if resp.status_code == 200:
+            data = resp.json()
+            logger.info(f"Registered group {chat_id} for org {slug} via API")
+            return data
+        else:
+            logger.error(f"API registration failed: {resp.status_code} {resp.text}")
+            return None
     except Exception as e:
-        logger.error(f"Neo4j fallback registration failed: {e}")
+        logger.error(f"API registration failed: {e}")
         return None
 
 

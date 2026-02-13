@@ -10,6 +10,9 @@ from fastapi import HTTPException, Header
 
 logger = logging.getLogger(__name__)
 
+# Safety switch: set USE_SUPABASE=true to read from Supabase, false for Neo4j fallback
+USE_SUPABASE = os.environ.get("USE_SUPABASE", "false").lower() == "true"
+
 # GitHub OAuth App
 GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb"
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
@@ -63,15 +66,43 @@ def get_org_slug(api_key: str) -> str:
 
 
 async def validate_api_key(authorization: str = Header(...)) -> dict:
-    """Validate API key and return org config."""
+    """Validate API key and return org config.
+
+    When USE_SUPABASE is true, validates via hash comparison against Supabase.
+    Falls back to in-memory ORG_CONFIGS comparison.
+    """
     key = authorization.replace("Bearer ", "").strip()
 
     if not key.startswith("ek_"):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     slug = get_org_slug(key)
-    org = ORG_CONFIGS.get(slug)
 
+    if USE_SUPABASE:
+        try:
+            from .services.supabase import validate_api_key as sb_validate, get_org_by_slug
+            org_row = sb_validate(key)
+            if org_row:
+                # Build ORG_CONFIGS-compatible dict from Supabase row
+                default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+                return {
+                    "api_key": key,  # Caller has the key — validated via hash
+                    "org_name": org_row["name"],
+                    "github_org": org_row["github_org"],
+                    "neo4j_host": org_row["neo4j_host"],
+                    "neo4j_user": org_row["neo4j_user"],
+                    "neo4j_password": org_row["neo4j_password"],
+                    "telegram_bot_token": default_bot_token,
+                    "telegram_chat_id": org_row.get("telegram_chat_id") or "",
+                    "telegram_group_title": org_row.get("telegram_group_title") or "",
+                    "telegram_group_username": org_row.get("telegram_group_username") or "",
+                    "slug": slug,
+                }
+        except Exception as e:
+            logger.warning(f"Supabase API key validation failed, falling back to memory: {e}")
+
+    # Fallback: in-memory ORG_CONFIGS
+    org = ORG_CONFIGS.get(slug)
     if not org or not secrets.compare_digest(org.get("api_key", ""), key):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
@@ -88,6 +119,35 @@ def reload_configs():
     """Reload org configs from environment. Call after adding a new org."""
     global ORG_CONFIGS
     ORG_CONFIGS = load_org_configs()
+
+
+async def load_orgs_from_supabase():
+    """Load org configs from Supabase on startup.
+
+    Replaces load_orgs_from_neo4j(). Reads all orgs from the orgs table
+    and populates the in-memory ORG_CONFIGS dict.
+    """
+    try:
+        from .services.supabase import load_all_org_configs
+        supabase_configs = load_all_org_configs()
+        default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
+        for slug, config in supabase_configs.items():
+            if slug in ORG_CONFIGS:
+                # Update telegram fields from Supabase
+                for field in ("telegram_chat_id", "telegram_group_title", "telegram_group_username"):
+                    if config.get(field):
+                        ORG_CONFIGS[slug][field] = config[field]
+                if not ORG_CONFIGS[slug].get("telegram_bot_token"):
+                    ORG_CONFIGS[slug]["telegram_bot_token"] = default_bot_token
+                continue
+
+            ORG_CONFIGS[slug] = config
+            logger.info(f"Loaded org from Supabase: {slug}")
+
+        logger.info(f"Supabase org reload complete: {len(supabase_configs)} orgs")
+    except Exception as e:
+        logger.warning(f"Failed to load orgs from Supabase: {e}")
 
 
 async def load_orgs_from_neo4j():
@@ -213,6 +273,14 @@ async def load_orgs_from_neo4j():
 
     except Exception as e:
         logger.warning(f"Failed to load orgs from Neo4j: {e}")
+
+
+async def load_orgs():
+    """Load orgs from the configured backend (Supabase or Neo4j)."""
+    if USE_SUPABASE:
+        await load_orgs_from_supabase()
+    else:
+        await load_orgs_from_neo4j()
 
 
 async def exchange_github_code(code: str) -> str:
