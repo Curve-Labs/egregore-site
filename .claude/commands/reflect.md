@@ -21,6 +21,7 @@ Topic: $ARGUMENTS
 ## Execution rules
 
 **Neo4j-first.** All queries via `bash bin/graph.sh query "..."`. No MCP. No direct curl to Neo4j.
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` calls MUST capture output in a variable and only show formatted status lines.
 
 - 1 Bash call: `git config user.name`
 - 5-6 Neo4j queries for context gathering (run in parallel)
@@ -344,7 +345,7 @@ Show progress:
 
 Run the full `/save` flow:
 
-1. Commit changes in memory repo and push (contribution branch + PR + auto-merge)
+1. Commit changes in memory repo and push directly to main (pull-rebase-push with retry)
 2. Commit any egregore changes and push working branch + PR to develop
 
 This is the same flow as `/save`. Follow its logic exactly.

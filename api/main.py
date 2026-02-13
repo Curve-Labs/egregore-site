@@ -614,6 +614,8 @@ async def org_join(body: OrgJoin, authorization: str = Header(...)):
         "org_name": config.get("org_name", owner),
         "github_org": owner,
         "github_token": token,
+        "github_username": user["login"],
+        "github_name": user.get("name", user["login"]),
         "slug": slug,
         "repos": repos,
         "repo_name": body.repo_name,
@@ -1247,6 +1249,13 @@ async def org_invite(body: OrgInvite, authorization: str = Header(...)):
         if not mem_ok:
             logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{memory_repo_name}")
 
+        # Add as collaborator on managed repos
+        if is_personal:
+            for repo_name in repos:
+                repo_ok = await gh.add_repo_collaborator(token, owner, repo_name, body.github_username)
+                if not repo_ok:
+                    logger.warning(f"Failed to add {body.github_username} as collaborator to {owner}/{repo_name}")
+
     # Create invite token (7-day TTL)
     site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
     invite_token = create_invite_token({
@@ -1410,6 +1419,8 @@ async def org_invite_accept(invite_token: str, authorization: str = Header(...))
         "org_name": config.get("org_name", owner),
         "github_org": owner,
         "github_token": token,
+        "github_username": user["login"],
+        "github_name": user.get("name", user["login"]),
         "slug": slug,
         "repos": repos,
         "repo_name": invite_repo_name,

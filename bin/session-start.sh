@@ -8,9 +8,75 @@ cd "$SCRIPT_DIR"
 STATE_FILE="$SCRIPT_DIR/.egregore-state.json"
 DATE=$(date +%Y-%m-%d)
 
-# --- Determine author short name ---
-FULLNAME=$(git config user.name 2>/dev/null || echo "")
-AUTHOR=$(echo "$FULLNAME" | tr '[:upper:]' '[:lower:]' | cut -d' ' -f1)
+# --- Determine author identity ---
+# Priority: .egregore-state.json github_username > repo-local git config > GitHub API auto-detect > global git config
+ENV_FILE="$SCRIPT_DIR/.env"
+STORED_USERNAME=""
+FIRST_SESSION=""
+AUTHOR=""
+if [ -f "$STATE_FILE" ]; then
+  STORED_USERNAME=$(jq -r '.github_username // empty' "$STATE_FILE" 2>/dev/null)
+fi
+
+if [ -n "$STORED_USERNAME" ]; then
+  # Identity stored during setup — use it and ensure repo-local git config matches
+  AUTHOR="$STORED_USERNAME"
+  CURRENT_LOCAL=$(git config --local user.name 2>/dev/null || echo "")
+  if [ "$CURRENT_LOCAL" != "$STORED_USERNAME" ]; then
+    STORED_NAME=$(jq -r '.github_name // empty' "$STATE_FILE" 2>/dev/null)
+    git config user.name "${STORED_NAME:-$STORED_USERNAME}" 2>/dev/null || true
+    git config user.email "${STORED_USERNAME}@users.noreply.github.com" 2>/dev/null || true
+  fi
+else
+  # No stored identity — try GitHub API to auto-detect (self-healing for pre-fix installs)
+  if [ -f "$ENV_FILE" ]; then
+    GH_TOKEN=$(grep '^GITHUB_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
+    if [ -n "$GH_TOKEN" ]; then
+      GH_USER_JSON=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/user --max-time 5 2>/dev/null || echo "")
+      GH_LOGIN=$(echo "$GH_USER_JSON" | jq -r '.login // empty' 2>/dev/null)
+      GH_NAME=$(echo "$GH_USER_JSON" | jq -r '.name // empty' 2>/dev/null)
+      if [ -n "$GH_LOGIN" ]; then
+        AUTHOR="$GH_LOGIN"
+        # Set repo-local config and save to state for next time
+        git config user.name "${GH_NAME:-$GH_LOGIN}" 2>/dev/null || true
+        git config user.email "${GH_LOGIN}@users.noreply.github.com" 2>/dev/null || true
+        # Save to state file so we don't need API call next time
+        # Include onboarding_complete + name so it doesn't re-trigger onboarding
+        # Determine if founder or joiner: if github_username != github_org, they're a joiner
+        GITHUB_ORG_CFG=$(jq -r '.github_org // empty' "$SCRIPT_DIR/egregore.json" 2>/dev/null)
+        if [ -n "$GITHUB_ORG_CFG" ] && [ "$GH_LOGIN" != "$GITHUB_ORG_CFG" ]; then
+          USAGE_TYPE="joiner_group"
+        else
+          USAGE_TYPE="founder_group"
+        fi
+        if [ -f "$STATE_FILE" ]; then
+          jq --arg u "$GH_LOGIN" --arg n "${GH_NAME:-$GH_LOGIN}" --arg ut "$USAGE_TYPE" \
+            '.github_username = $u | .github_name = $n | .name = $n | .onboarding_complete = true | .usage_type = $ut' "$STATE_FILE" > "$STATE_FILE.tmp" \
+            && mv "$STATE_FILE.tmp" "$STATE_FILE"
+          FIRST_SESSION="false"
+        else
+          cat > "$STATE_FILE" << STATEEOF
+{
+  "github_username": "$GH_LOGIN",
+  "github_name": "${GH_NAME:-$GH_LOGIN}",
+  "name": "${GH_NAME:-$GH_LOGIN}",
+  "onboarding_complete": true,
+  "usage_type": "$USAGE_TYPE",
+  "first_session": true
+}
+STATEEOF
+          FIRST_SESSION="true"
+        fi
+      fi
+    fi
+  fi
+
+  # Final fallback: git config user.name (global or local)
+  if [ -z "$AUTHOR" ]; then
+    FULLNAME=$(git config user.name 2>/dev/null || echo "")
+    AUTHOR=$(echo "$FULLNAME" | tr '[:upper:]' '[:lower:]' | cut -d' ' -f1)
+  fi
+fi
 
 if [ -z "$AUTHOR" ]; then
   echo '{"error": "git user.name not set. Run: git config user.name \"Your Name\""}'
@@ -121,38 +187,26 @@ if git show-ref --verify --quiet refs/remotes/origin/main 2>/dev/null; then
   COMMITS_AHEAD=$(git rev-list origin/main..develop --count 2>/dev/null || echo "0")
 fi
 
-# --- Create or resume working branch ---
-ACTION="created"
-BRANCH=""
+# --- Resume working branch or stay on current ---
+# Branch creation is deferred to conversation — Claude creates a topic-based
+# branch (dev/{author}/{topic-slug}) when the user says what they're working on.
+# This avoids meaningless date-only branches and lets PRs have descriptive names.
+ACTION="ready"
+BRANCH="$CURRENT_BRANCH"
 
-if [[ "$CURRENT_BRANCH" == dev/* ]]; then
-  # Resume existing session branch — rebase onto develop
-  BRANCH="$CURRENT_BRANCH"
+if [[ "$CURRENT_BRANCH" == dev/* ]] || [[ "$CURRENT_BRANCH" == feature/* ]] || [[ "$CURRENT_BRANCH" == bugfix/* ]]; then
+  # Already on a working branch — rebase onto develop to stay current
   if git rebase develop --quiet 2>/dev/null; then
-    ACTION="rebased"
+    ACTION="resumed"
   else
     git rebase --abort 2>/dev/null || true
     git merge develop --quiet -m "Sync with develop" 2>/dev/null || true
-    ACTION="merged"
+    ACTION="resumed"
   fi
-else
-  # Create new session branch from develop
-  BRANCH="dev/$AUTHOR/$DATE-session"
-
-  # If branch already exists (same person, same day), use it
-  if git show-ref --verify --quiet "refs/heads/$BRANCH" 2>/dev/null; then
-    git checkout "$BRANCH" --quiet 2>/dev/null
-    if git rebase develop --quiet 2>/dev/null; then
-      ACTION="resumed"
-    else
-      git rebase --abort 2>/dev/null || true
-      git merge develop --quiet -m "Sync with develop" 2>/dev/null || true
-      ACTION="resumed"
-    fi
-  else
-    git checkout -b "$BRANCH" develop --quiet 2>/dev/null
-    ACTION="created"
-  fi
+elif [[ "$CURRENT_BRANCH" != "develop" ]]; then
+  # On main or some other branch — switch to develop so we're ready
+  git checkout develop --quiet 2>/dev/null || true
+  BRANCH="develop"
 fi
 
 # --- Sync memory ---
@@ -188,11 +242,22 @@ if [ -f "$CONFIG" ] && [ -f "$ENV_FILE" ]; then
         fi
 
         # Always ensure Person node exists (idempotent)
-        GIT_USER=$(git config user.name 2>/dev/null | tr '[:upper:]' '[:lower:]' | cut -d' ' -f1)
-        if [ -n "$GIT_USER" ]; then
+        # Match by github username first (stable across renames), fall back to name
+        if [ -n "$AUTHOR" ]; then
+          GH_USERNAME_STATE=""
+          GH_FULLNAME_STATE=""
+          if [ -f "$STATE_FILE" ]; then
+            GH_USERNAME_STATE=$(jq -r '.github_username // empty' "$STATE_FILE" 2>/dev/null)
+            GH_FULLNAME_STATE=$(jq -r '.github_name // empty' "$STATE_FILE" 2>/dev/null)
+          fi
+          PERSON_PARAMS=$(jq -n \
+            --arg name "$AUTHOR" \
+            --arg github "${GH_USERNAME_STATE:-$AUTHOR}" \
+            --arg fullName "${GH_FULLNAME_STATE:-}" \
+            '{name: $name, github: $github, fullName: $fullName}')
           bash "$SCRIPT_DIR/bin/graph.sh" query \
-            "MERGE (p:Person {name: \$name}) WITH p MATCH (o:Org {id: \$_org}) MERGE (p)-[:MEMBER_OF]->(o)" \
-            "{\"name\":\"$GIT_USER\"}" 2>/dev/null || true
+            "MERGE (p:Person {github: \$github}) ON CREATE SET p.name = \$name SET p.fullName = CASE WHEN \$fullName <> '' THEN \$fullName ELSE p.fullName END WITH p MATCH (o:Org {id: \$_org}) MERGE (p)-[:MEMBER_OF]->(o) RETURN p.name" \
+            "$PERSON_PARAMS" 2>/dev/null || true
         fi
       fi
     fi
@@ -212,26 +277,39 @@ cat << 'GREETING'
 GREETING
 
 # Status line
-if [ "$ACTION" = "created" ]; then
-  echo "  New session started."
-elif [ "$ACTION" = "resumed" ] || [ "$ACTION" = "rebased" ]; then
-  echo "  Session resumed."
+echo "  User: $AUTHOR"
+if [ "$ACTION" = "resumed" ]; then
+  echo "  Branch: $BRANCH (resumed)"
+else
+  echo "  Branch: $BRANCH"
 fi
-
-echo "  Branch: $BRANCH"
 echo "  Develop: synced"
 if [ "$MEMORY_SYNCED" = "true" ]; then echo "  Memory: synced"; fi
 if [ "$COMMITS_AHEAD" -gt 0 ] 2>/dev/null; then echo "  $COMMITS_AHEAD changes on develop since last release."; fi
 
-# --- Tutorial tip (if onboarding done but tutorial not) ---
-TUTORIAL_COMPLETE="true"
-if [ -f "$STATE_FILE" ]; then
-  TUTORIAL_COMPLETE=$(jq -r '.tutorial_complete // false' "$STATE_FILE" 2>/dev/null || echo "true")
+# --- First session welcome ---
+if [ -z "$FIRST_SESSION" ] && [ -f "$STATE_FILE" ]; then
+  FIRST_SESSION=$(jq -r '.first_session // false' "$STATE_FILE" 2>/dev/null)
 fi
 
-if [ "$TUTORIAL_COMPLETE" != "true" ]; then
-  echo "  Tip: Run /tutorial to learn the core loop."
-fi
+if [ "$FIRST_SESSION" = "true" ]; then
+  echo ""
+  echo "  Welcome! This is your first session."
+  echo ""
+  echo "IMPORTANT: Display the above greeting exactly as-is. Then ask the user if they'd like a quick onboarding tour (run /onboarding), or if they want to jump straight in."
+  # Clear the flag so it only shows once
+  jq '.first_session = false' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+else
+  # --- Tutorial tip (if onboarding done but tutorial not) ---
+  TUTORIAL_COMPLETE="true"
+  if [ -f "$STATE_FILE" ]; then
+    TUTORIAL_COMPLETE=$(jq -r '.tutorial_complete // false' "$STATE_FILE" 2>/dev/null || echo "true")
+  fi
 
-echo ""
-echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"
+  if [ "$TUTORIAL_COMPLETE" != "true" ]; then
+    echo "  Tip: Run /tutorial to learn the core loop."
+  fi
+
+  echo ""
+  echo "IMPORTANT: Display the above greeting to the user exactly as-is (preserve the ASCII art formatting) on their first message. Then ask: What are you working on?"
+fi

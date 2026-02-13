@@ -1,5 +1,9 @@
 Save your contributions to Egregore. Pushes working branch, creates PR to develop.
 
+## Execution rules
+
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` calls MUST capture output in a variable and only show formatted status lines (e.g. "Synced 2 sessions, 1 artifact to graph").
+
 ## What to do
 
 1. **Sync to Neo4j first** (CRITICAL):
@@ -13,18 +17,33 @@ Save your contributions to Egregore. Pushes working branch, creates PR to develo
    - Report: "Synced 2 sessions, 1 artifact to graph"
 
 2. **For memory repo** (artifacts, quests, handoffs):
-   - Pull latest from main
-   - Create contribution branch: `contrib/YYYY-MM-DD-[author]-[summary]`
-   - Commit all changes
-   - Create PR with auto-merge
-   - PR merges automatically
-   - User sees: "Contribution merged"
+   - Push directly to main (no PRs — memory is markdown-only, always safe to merge)
+   - Pull-rebase-push with retry to handle concurrent pushes from other users
+   ```bash
+   cd memory
+   git add -A
+   git commit -m "$COMMIT_MESSAGE"
+   # Retry loop: handles concurrent pushes from other users
+   for i in 1 2 3; do
+     git pull --rebase origin main --quiet && git push origin main --quiet && break
+     if [ $i -eq 3 ]; then
+       echo "Push failed after 3 attempts. Try /save again."
+       exit 1
+     fi
+     sleep 1
+   done
+   cd -
+   ```
+   - User sees: "Memory pushed"
 
 3. **For egregore** (commands, scripts, config):
-   - Ensure on a `dev/*` working branch. If not, create one from develop:
+   - Ensure on a working branch (`dev/*`, `feature/*`, or `bugfix/*`). If not (e.g. still on develop), create one:
+     - Derive a topic slug from the changes being saved (look at modified files, commit messages, or conversation context)
+     - Create branch: `dev/$AUTHOR/{topic-slug}` from develop
+     - If no clear topic, fall back to date: `dev/$AUTHOR/$(date +%Y-%m-%d)`
      ```bash
      git fetch origin develop --quiet
-     git checkout -b dev/$AUTHOR/$(date +%Y-%m-%d)-session origin/develop
+     git checkout -b dev/$AUTHOR/$TOPIC_SLUG origin/develop
      ```
    - Commit all changes to working branch
    - **Rebase onto latest develop before pushing** (prevents stale overwrites):
@@ -164,13 +183,12 @@ Saving to Egregore...
     handoffs/2026-02/07-oz-infra-fix.md (new)
     handoffs/index.md (modified)
 
-  Creating contribution...
-    git checkout -b contrib/2026-02-07-oz-infra-fix
+  Pushing to main...
     git commit -m "Add: handoff for infra fix"
-    gh pr create --title "Add: handoff for infra fix"
-    gh pr merge --auto --merge
+    git pull --rebase origin main
+    git push origin main
 
-  ✓ Contribution merged
+  ✓ Memory pushed
 
 [egregore]
   On branch: dev/oz/2026-02-07-session
@@ -188,7 +206,7 @@ Saving to Egregore...
 Done. Team sees your contribution on /activity.
 ```
 
-## Markdown-only PR (auto-merges)
+## Markdown-only egregore PR (auto-merges)
 
 ```
 [egregore]
@@ -214,9 +232,10 @@ No uncommitted changes.
 ## Why this flow?
 
 - Non-technical users never see git complexity
-- Markdown changes flow freely (auto-merge to develop)
+- Memory pushes directly to main (instant availability, no PR delay)
+- Pull-rebase-push retry handles concurrent users safely
+- Egregore markdown changes auto-merge to develop via PR
 - Code/config changes get reviewed before merging to develop
-- Each contribution is a discrete, revertable unit
 - `/activity` shows contributions clearly
 - `/release` controls what reaches main
 

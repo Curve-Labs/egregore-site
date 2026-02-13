@@ -117,13 +117,22 @@ async function interactiveFlow(api) {
   // 3. Build choices
   const choices = [];
 
-  // Orgs with egregore → join
+  // Orgs with egregore → show each instance to join + option to set up another
   for (const org of orgsData.orgs) {
     if (org.has_egregore) {
+      for (const inst of org.instances || []) {
+        choices.push({
+          label: `${org.name || org.login} — ${inst.org_name || inst.repo_name}`,
+          description: "Join existing",
+          action: "join",
+          login: org.login,
+          repo_name: inst.repo_name,
+        });
+      }
       choices.push({
-        label: org.name || org.login,
-        description: "Join existing",
-        action: "join",
+        label: `${org.name || org.login} — new instance`,
+        description: "Set up another",
+        action: "setup",
         login: org.login,
       });
     }
@@ -141,13 +150,23 @@ async function interactiveFlow(api) {
     }
   }
 
-  // Personal account
+  // Personal account — show join for each existing instance + setup for new
   if (orgsData.personal.has_egregore) {
+    for (const inst of orgsData.personal.instances || []) {
+      choices.push({
+        label: `${orgsData.user.login} (personal) — ${inst.org_name || inst.repo_name}`,
+        description: "Join existing",
+        action: "join",
+        login: orgsData.user.login,
+        repo_name: inst.repo_name,
+      });
+    }
     choices.push({
-      label: `${orgsData.user.login} (personal)`,
-      description: "Join existing",
-      action: "join",
+      label: `${orgsData.user.login} (personal) — new instance`,
+      description: "Set up another",
+      action: "setup",
       login: orgsData.user.login,
+      is_personal: true,
     });
   } else {
     choices.push({
@@ -180,6 +199,10 @@ async function setupFlow(api, githubToken, choice) {
   const orgName = await ui.prompt(`Organization display name [${choice.login}]:`);
   const name = orgName || choice.login;
 
+  // Instance name — determines repo names (egregore-{instance}, {instance}-memory)
+  const instanceInput = await ui.prompt(`Instance name (e.g. "ops", "research") [leave blank for default]:`);
+  const instanceName = instanceInput || undefined;
+
   // Repo picker — show org repos for selection
   let selectedRepos = [];
   try {
@@ -201,6 +224,7 @@ async function setupFlow(api, githubToken, choice) {
       org_name: name,
       is_personal: choice.is_personal || false,
       repos: selectedRepos,
+      instance_name: instanceName,
     });
     s.stop("Setup complete on GitHub");
 
@@ -220,10 +244,12 @@ async function setupFlow(api, githubToken, choice) {
 }
 
 async function joinFlow(api, githubToken, choice) {
-  const s = ui.spinner(`Joining ${ui.bold(choice.login)}...`);
+  const displayName = choice.repo_name ? `${choice.login} (${choice.repo_name})` : choice.login;
+  const s = ui.spinner(`Joining ${ui.bold(displayName)}...`);
   try {
     const result = await api.joinOrg(githubToken, {
       github_org: choice.login,
+      repo_name: choice.repo_name,
     });
     s.stop("Joined");
 

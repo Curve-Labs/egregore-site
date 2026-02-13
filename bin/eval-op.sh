@@ -31,6 +31,16 @@ case "$OP" in
     LATENCY="$8"
     [ -z "$RUN_ID" ] && echo '{"error":"missing runId"}' && exit 1
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n \
+      --arg runId "$RUN_ID" \
+      --arg pipelineId "$PIPELINE_ID" \
+      --arg config "$CONFIG" \
+      --arg input "$INPUT" \
+      --arg outputPath "$OUTPUT_PATH" \
+      --arg totalTokens "$TOTAL_TOKENS" \
+      --arg cost "$COST" \
+      --arg latency "$LATENCY" \
+      '{runId: $runId, pipelineId: $pipelineId, config: $config, input: $input, outputPath: $outputPath, totalTokens: $totalTokens, cost: $cost, latency: $latency}')
     bash "$GS" query "
       CREATE (er:EvalRun {
         id: \$runId,
@@ -44,7 +54,7 @@ case "$OP" in
         latencyMs: toInteger(\$latency)
       })
       RETURN er.id AS id, er.config AS config, er.runDate AS runDate
-    " "{\"runId\":\"$RUN_ID\",\"pipelineId\":\"$PIPELINE_ID\",\"config\":\"$CONFIG\",\"input\":\"$INPUT\",\"outputPath\":\"$OUTPUT_PATH\",\"totalTokens\":\"$TOTAL_TOKENS\",\"cost\":\"$COST\",\"latency\":\"$LATENCY\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   create-match)
@@ -60,6 +70,18 @@ case "$OP" in
     JUDGE_MODEL="${10}"
     [ -z "$MATCH_ID" ] && echo '{"error":"missing matchId"}' && exit 1
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n \
+      --arg matchId "$MATCH_ID" \
+      --arg pipelineId "$PIPELINE_ID" \
+      --arg configA "$CONFIG_A" \
+      --arg configB "$CONFIG_B" \
+      --arg input "$INPUT" \
+      --arg dimension "$DIMENSION" \
+      --arg winner "$WINNER" \
+      --arg confidence "$CONFIDENCE" \
+      --arg judgeModel "$JUDGE_MODEL" \
+      --arg reasoning "$REASONING" \
+      '{matchId: $matchId, pipelineId: $pipelineId, configA: $configA, configB: $configB, input: $input, dimension: $dimension, winner: $winner, confidence: $confidence, judgeModel: $judgeModel, reasoning: $reasoning}')
     bash "$GS" query "
       CREATE (em:EvalMatch {
         id: \$matchId,
@@ -75,7 +97,7 @@ case "$OP" in
         matchDate: datetime()
       })
       RETURN em.id AS id, em.winner AS winner, em.dimension AS dimension
-    " "{\"matchId\":\"$MATCH_ID\",\"pipelineId\":\"$PIPELINE_ID\",\"configA\":\"$CONFIG_A\",\"configB\":\"$CONFIG_B\",\"input\":\"$INPUT\",\"dimension\":\"$DIMENSION\",\"winner\":\"$WINNER\",\"confidence\":\"$CONFIDENCE\",\"judgeModel\":\"$JUDGE_MODEL\",\"reasoning\":\"$REASONING\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   create-report)
@@ -89,6 +111,17 @@ case "$OP" in
     MATCH_COUNT="$8"
     [ -z "$REPORT_ID" ] && echo '{"error":"missing reportId"}' && exit 1
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n \
+      --arg reportId "$REPORT_ID" \
+      --arg pipelineId "$PIPELINE_ID" \
+      --arg filePath "$FILE_PATH" \
+      --arg configs "$CONFIGS_JSON" \
+      --arg elo "$ELO_JSON" \
+      --arg bestConfig "$BEST_CONFIG" \
+      --arg bestEfficiency "$BEST_EFFICIENCY" \
+      --arg matchCount "$MATCH_COUNT" \
+      --arg author "${EGREGORE_USER:-cem}" \
+      '{reportId: $reportId, pipelineId: $pipelineId, filePath: $filePath, configs: $configs, elo: $elo, bestConfig: $bestConfig, bestEfficiency: $bestEfficiency, matchCount: $matchCount, author: $author}')
     bash "$GS" query "
       CREATE (rep:EvalReport {
         id: \$reportId,
@@ -107,12 +140,13 @@ case "$OP" in
         MERGE (rep)-[:CONTRIBUTED_BY]->(p)
       )
       RETURN rep.id AS id, rep.bestConfig AS bestConfig
-    " "{\"reportId\":\"$REPORT_ID\",\"pipelineId\":\"$PIPELINE_ID\",\"filePath\":\"$FILE_PATH\",\"configs\":\"$CONFIGS_JSON\",\"elo\":\"$ELO_JSON\",\"bestConfig\":\"$BEST_CONFIG\",\"bestEfficiency\":\"$BEST_EFFICIENCY\",\"matchCount\":\"$MATCH_COUNT\",\"author\":\"${EGREGORE_USER:-cem}\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   get-runs)
     PIPELINE_ID="$1"
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n --arg pipelineId "$PIPELINE_ID" '{pipelineId: $pipelineId}')
     bash "$GS" query "
       MATCH (er:EvalRun {pipelineId: \$pipelineId})
       RETURN er.id AS id, er.config AS config, er.input AS input,
@@ -121,12 +155,13 @@ case "$OP" in
              er.latencyMs AS latency
       ORDER BY er.runDate DESC
       LIMIT 100
-    " "{\"pipelineId\":\"$PIPELINE_ID\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   get-matches)
     PIPELINE_ID="$1"
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n --arg pipelineId "$PIPELINE_ID" '{pipelineId: $pipelineId}')
     bash "$GS" query "
       MATCH (em:EvalMatch {pipelineId: \$pipelineId})
       RETURN em.id AS id, em.configA AS configA, em.configB AS configB,
@@ -136,12 +171,13 @@ case "$OP" in
              em.matchDate AS matchDate
       ORDER BY em.matchDate DESC
       LIMIT 500
-    " "{\"pipelineId\":\"$PIPELINE_ID\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   get-latest-report)
     PIPELINE_ID="$1"
     [ -z "$PIPELINE_ID" ] && echo '{"error":"missing pipelineId"}' && exit 1
+    PARAMS=$(jq -n --arg pipelineId "$PIPELINE_ID" '{pipelineId: $pipelineId}')
     bash "$GS" query "
       MATCH (rep:EvalReport {pipelineId: \$pipelineId})
       RETURN rep.id AS id, rep.reportDate AS reportDate,
@@ -151,7 +187,7 @@ case "$OP" in
              rep.matchCount AS matchCount
       ORDER BY rep.reportDate DESC
       LIMIT 1
-    " "{\"pipelineId\":\"$PIPELINE_ID\"}" 2>/dev/null
+    " "$PARAMS" 2>/dev/null
     ;;
 
   *)

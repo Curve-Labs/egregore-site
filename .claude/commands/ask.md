@@ -30,8 +30,10 @@ Map to short name: "Oguzhan Yayla" → oz, "Cem Dagdelen" → cem, etc.
 
 Query context (all in parallel):
 
+**CRITICAL: Suppress raw output.** Never show raw JSON to the user. All `bin/graph.sh` and `bin/notify.sh` calls MUST capture output in a variable and only show formatted status lines.
+
 ```bash
-# My recent sessions
+# My recent sessions — capture output, don't display raw JSON
 bash bin/graph.sh query "MATCH (s:Session)-[:BY]->(p:Person {name: '$me'}) RETURN s.topic AS topic, s.summary AS summary ORDER BY s.date DESC LIMIT 5"
 
 # My active quests

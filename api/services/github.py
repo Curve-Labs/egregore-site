@@ -1,8 +1,11 @@
 """GitHub API operations for org setup."""
 
 import base64
+import logging
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 API_BASE = "https://api.github.com"
@@ -210,27 +213,33 @@ async def list_org_repos(token: str, org: str) -> list[dict]:
     """List repos for an org (or personal account), filtering out egregore/memory repos.
 
     Returns [{name, description, language, private}].
-    Falls back to /users/{org}/repos for personal accounts.
+    Uses /user/repos for personal accounts (includes private repos).
     """
     repos: list[dict] = []
     page = 1
+    is_personal = False
     while True:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            resp = await client.get(
-                f"{API_BASE}/orgs/{org}/repos",
-                headers=_headers(token),
-                params={"per_page": 100, "sort": "updated", "page": page},
-                timeout=15.0,
-            )
-        if resp.status_code == 404:
-            # Not an org — try as personal account
+        if is_personal:
+            # Personal account: /user/repos includes private repos
+            # (/users/{org}/repos only returns public for OAuth tokens)
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
-                    f"{API_BASE}/users/{org}/repos",
+                    f"{API_BASE}/user/repos",
                     headers=_headers(token),
-                    params={"per_page": 100, "sort": "updated", "page": page},
+                    params={"per_page": 100, "sort": "updated", "page": page, "affiliation": "owner"},
                     timeout=15.0,
                 )
+        else:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                resp = await client.get(
+                    f"{API_BASE}/orgs/{org}/repos",
+                    headers=_headers(token),
+                    params={"per_page": 100, "sort": "updated", "page": page, "type": "all"},
+                    timeout=15.0,
+                )
+            if resp.status_code == 404:
+                is_personal = True
+                continue  # Retry with /user/repos
         if resp.status_code != 200:
             break
         batch = resp.json()
@@ -317,11 +326,13 @@ async def list_egregore_instances(token: str, org: str) -> list[dict]:
                 timeout=15.0,
             )
         if resp.status_code == 404:
+            # Personal account: /orgs/ 404s. Use /user/repos (includes private repos)
+            # instead of /users/{org}/repos (public only for OAuth tokens).
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(
-                    f"{API_BASE}/users/{org}/repos",
+                    f"{API_BASE}/user/repos",
                     headers=_headers(token),
-                    params={"per_page": 100, "sort": "updated", "page": page},
+                    params={"per_page": 100, "sort": "updated", "page": page, "affiliation": "owner"},
                     timeout=15.0,
                 )
         if resp.status_code != 200:
@@ -409,16 +420,26 @@ async def check_org_membership(token: str, org: str, username: str) -> str:
     return "none"
 
 
-async def add_repo_collaborator(token: str, owner: str, repo: str, username: str) -> bool:
-    """Add a user as a collaborator to a repo. Returns True if successful."""
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.put(
-            f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
-            headers=_headers(token),
-            json={"permission": "push"},
-            timeout=10.0,
+async def add_repo_collaborator(token: str, owner: str, repo: str, username: str, retries: int = 2) -> bool:
+    """Add a user as a collaborator to a repo. Retries on failure. Returns True if successful."""
+    import asyncio
+    for attempt in range(1, retries + 1):
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            resp = await client.put(
+                f"{API_BASE}/repos/{owner}/{repo}/collaborators/{username}",
+                headers=_headers(token),
+                json={"permission": "push"},
+                timeout=10.0,
+            )
+        if resp.status_code in (200, 201, 204):
+            return True
+        logger.warning(
+            f"add_repo_collaborator {owner}/{repo} -> {username}: "
+            f"attempt {attempt}/{retries} HTTP {resp.status_code} {resp.text[:200]}"
         )
-    return resp.status_code in (200, 201, 204)
+        if attempt < retries:
+            await asyncio.sleep(1)
+    return False
 
 
 async def accept_org_invitation(token: str, org: str) -> bool:
