@@ -46,7 +46,12 @@ def init_org_configs():
         }
 
     # Egregore org (new standalone org)
+    # Derive URI from EGREGORE_NEO4J_HOST if EGREGORE_NEO4J_URI not set directly
     egregore_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
+    if not egregore_uri:
+        _host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+        if _host:
+            egregore_uri = f"neo4j+s://{_host}"
     if egregore_uri:
         ORG_BY_KEY["egregore"] = {
             "name": "egregore",
