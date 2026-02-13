@@ -275,10 +275,113 @@ async def load_orgs_from_neo4j():
         logger.warning(f"Failed to load orgs from Neo4j: {e}")
 
 
+async def _migrate_neo4j_orgs_to_supabase():
+    """Backfill: find orgs in Neo4j that aren't in Supabase and migrate them.
+
+    This catches orgs created before the Supabase migration. Runs on every
+    startup when USE_SUPABASE is true. Idempotent — upserts on conflict.
+    """
+    host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    if not host:
+        return
+
+    seed_org = {
+        "neo4j_host": host,
+        "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
+        "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
+        "slug": "__system__",
+    }
+
+    from .services.graph import execute_system_query
+
+    try:
+        result = await execute_system_query(
+            seed_org,
+            "MATCH (o:Org) RETURN o.id AS slug, o.name AS name, "
+            "o.github_org AS github_org, o.api_key AS api_key, "
+            "o.telegram_chat_id AS telegram_chat_id, "
+            "o.telegram_group_title AS telegram_group_title, "
+            "o.telegram_group_username AS telegram_group_username",
+            {},
+        )
+    except Exception as e:
+        logger.warning(f"Neo4j→Supabase migration: failed to query Neo4j: {e}")
+        return
+
+    values = result.get("values", [])
+    if not values:
+        return
+
+    from .services import supabase as sb
+
+    default_neo4j_host = seed_org["neo4j_host"]
+    default_neo4j_user = seed_org.get("neo4j_user", "neo4j")
+    default_neo4j_password = seed_org.get("neo4j_password", "")
+    default_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    migrated = 0
+
+    for row in values:
+        slug, name, github_org, api_key, telegram_chat_id, tg_title, tg_username = row
+        if not slug or not api_key:
+            continue
+
+        # Check if already in Supabase
+        existing = sb.get_org_by_slug(slug)
+        if existing:
+            # Org exists — just ensure API key is there too
+            existing_key = sb.get_active_api_key_hash(slug)
+            if not existing_key:
+                try:
+                    sb.create_api_key(slug, api_key)
+                    logger.info(f"Neo4j→Supabase: backfilled API key for {slug}")
+                except Exception as e:
+                    logger.warning(f"Neo4j→Supabase: failed to backfill API key for {slug}: {e}")
+            continue
+
+        # Migrate org to Supabase
+        try:
+            sb.create_org(
+                slug=slug,
+                name=name or slug,
+                github_org=github_org or slug,
+                neo4j_host=default_neo4j_host,
+                neo4j_user=default_neo4j_user,
+                neo4j_password=default_neo4j_password,
+                telegram_chat_id=telegram_chat_id,
+            )
+            sb.create_api_key(slug, api_key)
+            logger.info(f"Neo4j→Supabase: migrated org {slug}")
+            migrated += 1
+        except Exception as e:
+            logger.warning(f"Neo4j→Supabase: failed to migrate {slug}: {e}")
+
+        # Also load into in-memory ORG_CONFIGS
+        ORG_CONFIGS[slug] = {
+            "api_key": api_key,
+            "org_name": name or slug,
+            "github_org": github_org or slug,
+            "neo4j_host": default_neo4j_host,
+            "neo4j_user": default_neo4j_user,
+            "neo4j_password": default_neo4j_password,
+            "telegram_bot_token": default_bot_token,
+            "telegram_chat_id": telegram_chat_id or "",
+            "telegram_group_title": tg_title or "",
+            "telegram_group_username": tg_username or "",
+        }
+
+    if migrated:
+        logger.info(f"Neo4j→Supabase migration: {migrated} orgs migrated")
+
+
 async def load_orgs():
-    """Load orgs from the configured backend (Supabase or Neo4j)."""
+    """Load orgs from the configured backend (Supabase or Neo4j).
+
+    When Supabase is enabled, also backfills any Neo4j-only orgs into Supabase
+    so no org falls through the cracks regardless of when it was created.
+    """
     if USE_SUPABASE:
         await load_orgs_from_supabase()
+        await _migrate_neo4j_orgs_to_supabase()
     else:
         await load_orgs_from_neo4j()
 
