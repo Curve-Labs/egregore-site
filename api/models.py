@@ -113,6 +113,7 @@ class UserProfileUpdate(BaseModel):
 
 class WaitlistAdd(BaseModel):
     """Add to waitlist."""
+    name: Optional[str] = None
     email: Optional[str] = None
     github_username: Optional[str] = None
     source: Optional[str] = None

@@ -1654,10 +1654,31 @@ async def admin_waitlist_add(body: WaitlistAdd):
 
     from .services import supabase as sb
     entry = sb.waitlist_add(
+        name=body.name,
         email=body.email,
         github_username=body.github_username,
         source=body.source,
     )
+
+    # Notify CL Renaissance on Telegram (non-blocking)
+    try:
+        bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+        if bot_token and chat_id:
+            from .services.notify import _send_telegram
+            parts = ["New waitlist signup"]
+            if body.name:
+                parts[0] += f": {body.name}"
+            if body.email:
+                parts.append(f"Email: {body.email}")
+            if body.github_username:
+                parts.append(f"GitHub: {body.github_username}")
+            if body.source:
+                parts.append(f"Source: {body.source}")
+            await _send_telegram(bot_token, chat_id, "\n".join(parts))
+    except Exception:
+        pass  # signup succeeds even if notification fails
+
     return {"status": "added", "id": entry.get("id")}
 
 

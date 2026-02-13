@@ -360,12 +360,15 @@ def add_membership(
 
 
 def waitlist_add(
+    name: Optional[str] = None,
     email: Optional[str] = None,
     github_username: Optional[str] = None,
     source: Optional[str] = None,
 ) -> dict:
     """Add to waitlist."""
     data = {"status": "pending"}
+    if name:
+        data["name"] = name
     if email:
         data["email"] = email
     if github_username:
