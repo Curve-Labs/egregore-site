@@ -15,7 +15,7 @@ import secrets
 from dotenv import load_dotenv
 load_dotenv(override=False)
 
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import (
@@ -120,6 +120,21 @@ async def graph_test(org: dict = Depends(validate_api_key)):
     if result["status"] != "ok":
         raise HTTPException(status_code=503, detail=result.get("detail", "Connection failed"))
     return result
+
+
+# =============================================================================
+# ACTIVITY DASHBOARD
+# =============================================================================
+
+
+@app.get("/api/activity/dashboard")
+async def activity_dashboard(
+    github_username: str = Query(..., description="GitHub username to resolve Person"),
+    org: dict = Depends(validate_api_key),
+):
+    """All activity dashboard queries in one call. Replaces 15+ client-side graph.sh calls."""
+    from .services.activity import get_activity_dashboard
+    return await get_activity_dashboard(org, github_username)
 
 
 # =============================================================================
