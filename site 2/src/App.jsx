@@ -1139,17 +1139,17 @@ const LogoBanner = () => {
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 
 const WaitlistCTA = () => {
-  const [form, setForm] = useState({ name: "", email: "", intent: "" });
+  const [form, setForm] = useState({ name: "", email: "", source: "" });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.intent) return;
+    if (!form.name || !form.email || !form.source) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/waitlist`, {
+      const res = await fetch(`${API_URL}/api/admin/waitlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -1223,8 +1223,8 @@ const WaitlistCTA = () => {
               </div>
               <div style={{ marginBottom: "2.5rem" }}>
                 <label style={labelStyle}>Intent</label>
-                <textarea value={form.intent}
-                  onChange={(e) => setForm({ ...form, intent: e.target.value })}
+                <textarea value={form.source}
+                  onChange={(e) => setForm({ ...form, source: e.target.value })}
                   rows={2}
                   style={{ ...inputStyle, resize: "none", fontFamily: font.mono.fontFamily }}
                   placeholder="What do you want to use Egregore for?" />
