@@ -9,6 +9,35 @@ import asyncio
 from .graph import execute_query
 
 
+def _to_records(result: dict) -> list[dict]:
+    """Convert Neo4j {fields, values} format to array of objects.
+
+    {fields: ["a","b"], values: [[1,2],[3,4]]} → [{"a":1,"b":2}, {"a":3,"b":4}]
+    """
+    if isinstance(result, dict) and "fields" in result and "values" in result:
+        fields = result["fields"]
+        return [dict(zip(fields, row)) for row in result.get("values", [])]
+    if isinstance(result, dict) and result.get("error"):
+        return []
+    return result if isinstance(result, list) else []
+
+
+def _to_record(result: dict) -> dict:
+    """Convert Neo4j {fields, values} single-row result to a flat object.
+
+    {fields: ["count"], values: [[5]]} → {"count": 5}
+    """
+    if isinstance(result, dict) and "fields" in result and "values" in result:
+        fields = result["fields"]
+        values = result.get("values", [])
+        if values and values[0]:
+            return dict(zip(fields, values[0]))
+        return {f: None for f in fields}
+    if isinstance(result, dict) and result.get("error"):
+        return {"error": result["error"]}
+    return result if isinstance(result, dict) else {}
+
+
 async def _resolve_person_name(org: dict, github_username: str) -> str:
     """Resolve Person.name from github username.
 
@@ -297,28 +326,30 @@ async def get_activity_dashboard(org: dict, github_username: str) -> dict:
     # Unpack the sequential handoff pair
     handoff_pair = results[5]
     if isinstance(handoff_pair, Exception):
-        handoffs_to_me = {"error": str(handoff_pair)}
+        handoffs_to_me_raw = {"error": str(handoff_pair)}
     else:
-        handoffs_to_me = handoff_pair[1]
+        handoffs_to_me_raw = handoff_pair[1]
 
+    # Convert from Neo4j {fields, values} format to array-of-objects / flat objects.
+    # This makes the data trivial for the LLM to parse when rendering /activity.
     return {
         "me": me,
-        "my_sessions": safe(results[0]),
-        "team_sessions": safe(results[1]),
-        "quests": safe(results[2]),
-        "pending_questions": safe(results[3]),
-        "answered_questions": safe(results[4]),
-        "handoffs_to_me": handoffs_to_me,
-        "all_handoffs": safe(results[6]),
-        "checkins": safe(results[7]),
-        "todos_merged": safe(results[8]),
-        "knowledge_gap": safe(results[9]),
-        "orphans": safe(results[10]),
-        "focus_history": safe(results[11]),
+        "my_sessions": _to_records(safe(results[0])),
+        "team_sessions": _to_records(safe(results[1])),
+        "quests": _to_records(safe(results[2])),
+        "pending_questions": _to_records(safe(results[3])),
+        "answered_questions": _to_records(safe(results[4])),
+        "handoffs_to_me": _to_records(safe(handoffs_to_me_raw)),
+        "all_handoffs": _to_records(safe(results[6])),
+        "checkins": _to_records(safe(results[7])),
+        "todos_merged": _to_record(safe(results[8])),
+        "knowledge_gap": _to_record(safe(results[9])),
+        "orphans": _to_record(safe(results[10])),
+        "focus_history": _to_records(safe(results[11])),
         "trends": {
-            "cadence": safe(results[12]),
-            "resolution": safe(results[13]),
-            "throughput": safe(results[14]),
-            "capture": safe(results[15]),
+            "cadence": _to_records(safe(results[12])),
+            "resolution": _to_record(safe(results[13])),
+            "throughput": _to_record(safe(results[14])),
+            "capture": _to_record(safe(results[15])),
         },
     }
