@@ -13,9 +13,9 @@ async def _cadence(org: dict) -> dict:
     """AM1: Session cadence per person (4 weeks)."""
     return await execute_query(org, """
         MATCH (s:Session)-[:BY]->(p:Person)
-        WHERE s.date >= date() - duration('P28D')
+        WHERE date(s.date) >= date() - duration('P28D')
         WITH p.name AS person,
-             duration.inDays(s.date, date()).days / 7 AS weeksAgo,
+             duration.inDays(date(s.date), date()).days / 7 AS weeksAgo,
              count(s) AS sessions
         RETURN person, weeksAgo, sessions
         ORDER BY person, weeksAgo
@@ -26,10 +26,10 @@ async def _resolution(org: dict) -> dict:
     """AM2: Handoff resolution time distribution."""
     return await execute_query(org, """
         MATCH (s:Session)-[:HANDED_TO]->(p:Person)
-        WHERE s.handoffStatus = 'done' AND s.date >= date() - duration('P30D')
+        WHERE s.handoffStatus = 'done' AND date(s.date) >= date() - duration('P30D')
           AND s.handoffReadDate IS NOT NULL
         WITH p.name AS recipient,
-             duration.inDays(s.date, s.handoffReadDate).days AS resolutionDays
+             duration.inDays(date(s.date), date(s.handoffReadDate)).days AS resolutionDays
         RETURN recipient,
                avg(resolutionDays) AS avgDays,
                min(resolutionDays) AS minDays,
@@ -106,7 +106,7 @@ async def _capture_ratio(org: dict) -> dict:
     """AM7: Knowledge capture ratio — sessions with same-day artifacts / total (28d)."""
     return await execute_query(org, """
         MATCH (s:Session)-[:BY]->(p:Person)
-        WHERE s.date >= date() - duration('P28D')
+        WHERE date(s.date) >= date() - duration('P28D')
         OPTIONAL MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p)
         WHERE a.created >= datetime({year: s.date.year, month: s.date.month, day: s.date.day})
           AND a.created < datetime({year: s.date.year, month: s.date.month, day: s.date.day}) + duration('P1D')
@@ -139,7 +139,7 @@ async def _checkin_frequency(org: dict) -> dict:
     """AM9: Check-in frequency — check-ins per person with totals."""
     return await execute_query(org, """
         MATCH (c:CheckIn)-[:BY]->(p:Person)
-        WHERE c.date >= date() - duration('P28D')
+        WHERE date(c.date) >= date() - duration('P28D')
         RETURN p.name AS person, count(c) AS checkIns,
                sum(c.totalItems) AS totalReviewed
         ORDER BY person
