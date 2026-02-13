@@ -15,6 +15,7 @@ import os
 import json
 import logging
 import time
+import re
 from datetime import date
 from typing import Optional
 
@@ -316,12 +317,61 @@ def run_query(query: str, params: dict = None) -> list:
         return []
 
 
+def inject_org_scope(statement: str, org_slug: str) -> str:
+    """Inject org property into ALL labeled node patterns.
+
+    Same logic as api/services/graph.py — ensures tenant isolation.
+    Transforms:
+      (p:Person {name: $name}) → (p:Person {name: $name, org: $_org})
+      (s:Session)              → (s:Session {org: $_org})
+    Skips: CALL statements, nodes with org already set, system labels.
+    """
+    if statement.strip().upper().startswith("CALL"):
+        return statement
+
+    SYSTEM_LABELS = {"TelegramUser", "Org"}
+
+    def add_org_to_props(match):
+        full = match.group(0)
+        if "org:" in full or "org :" in full:
+            return full
+        label_match = re.search(r':([A-Z]\w*)', full)
+        if label_match and label_match.group(1) in SYSTEM_LABELS:
+            return full
+        return full.rstrip("}") + ", org: $_org}"
+
+    pattern_with_props = r'\([a-zA-Z_]\w*:[A-Z]\w*\s*\{[^}]*\}'
+    result = re.sub(pattern_with_props, add_org_to_props, statement)
+
+    def add_org_to_bare(match):
+        var = match.group(1)
+        label = match.group(2)
+        if label in SYSTEM_LABELS:
+            return match.group(0)
+        return f"({var}:{label} {{org: $_org}})"
+
+    result = re.sub(
+        r'\(([a-zA-Z_]\w*):([A-Z]\w*)\)(?!\s*\{)',
+        add_org_to_bare,
+        result,
+    )
+
+    return result
+
+
 def run_org_query(query: str, params: dict = None, org_config: dict = None) -> list:
-    """Run a Cypher query on org-specific Neo4j."""
+    """Run a Cypher query on org-specific Neo4j with org scoping."""
     driver = get_org_driver(org_config)
     if not driver:
         logger.warning("Neo4j not configured for org")
         return []
+
+    # Inject org scoping for tenant isolation
+    org_slug = org_config.get("name") if org_config else None
+    if org_slug:
+        query = inject_org_scope(query, org_slug)
+        params = dict(params or {})
+        params["_org"] = org_slug
 
     try:
         with driver.session() as session:
@@ -461,23 +511,37 @@ def track_telegram_membership(telegram_id: int, username: str, first_name: str, 
                 logger.info(f"Tracked leave: TelegramUser {telegram_id} from org {org_slug}")
                 return
 
-        # Person linking on org-specific driver
-        with org_driver.session() as session:
-            # Try linking by username → telegramUsername (set by API onboarding)
-            if username:
-                session.run(
-                    """
-                    MATCH (p:Person)
-                    WHERE p.telegramUsername = $username
-                    AND p.telegramId IS NULL
-                    SET p.telegramId = $tid
-                    """,
-                    {"tid": telegram_id, "username": username},
-                )
+        # Person linking — use run_org_query for org scoping
+        if username:
+            run_org_query(
+                """
+                MATCH (p:Person)
+                WHERE p.telegramUsername = $username
+                AND p.telegramId IS NULL
+                SET p.telegramId = $tid
+                """,
+                {"tid": telegram_id, "username": username},
+                org_config,
+            )
 
         logger.info(f"Tracked join: TelegramUser {telegram_id} ({first_name}) → org {org_slug}")
     except Exception as e:
         logger.error(f"Failed to track membership: {e}")
+
+
+def get_org_team_names(org_config: dict = None) -> list:
+    """Fetch team member names for an org from Neo4j."""
+    if not org_config:
+        return []
+    org_slug = org_config.get("name")
+    if not org_slug:
+        return []
+    results = run_org_query(
+        "MATCH (p:Person) RETURN p.name AS name ORDER BY p.name",
+        {},
+        org_config,
+    )
+    return [r["name"] for r in results if r.get("name")]
 
 
 # =============================================================================
@@ -723,7 +787,7 @@ def build_tools_schema() -> list:
     return tools
 
 
-async def agent_decide(question: str, conversation_context: str = "", sender_name: str = None) -> dict:
+async def agent_decide(question: str, conversation_context: str = "", sender_name: str = None, org_config: dict = None) -> dict:
     """LLM agent with tool use decides what to do.
 
     Returns dict with:
@@ -759,15 +823,18 @@ Examples for {sender_name}:
 
     today_str = date.today().isoformat()
 
-    system_prompt = f"""You are Egregore, the shared memory for Curve Labs - an INTERNAL tool for team members.
+    # Dynamic org context — fetch team members from Neo4j
+    org_name = org_config.get("name", "default") if org_config else "default"
+    team_names = get_org_team_names(org_config)
+    team_line = f"TEAM (lowercase for queries): {', '.join(team_names)}" if team_names else "TEAM: query all_people to discover team members"
+
+    system_prompt = f"""You are Egregore, the shared memory for {org_name} - an INTERNAL tool for team members.
 
 TODAY'S DATE: {today_str}
 When user says "today", use date parameter = "{today_str}"
 When user says "yesterday", use date parameter for the day before.
 
-IMPORTANT: Everyone works on the same projects (lace, tristero, infrastructure).
-Don't answer "working on" questions with just project names - that's not useful.
-Instead, show ACTIVITY: sessions, quests, artifacts.
+IMPORTANT: Show ACTIVITY (sessions, quests, artifacts), not just project names.
 {sender_info}
 QUERY PRIORITY for "what is X working on?" or "what's X doing?":
 1. query_person_sessions - shows their recent actual work/activity
@@ -781,18 +848,16 @@ DATE-SPECIFIC QUERIES:
 - "What did X do today?" -> query_person_sessions_on_date(name="x", date="{today_str}")
 - "What did X handoff to Y?" -> query_handoffs_to_person(recipient="y") then filter by sender
 
-TEAM (lowercase for queries): oz, ali, cem, pali, damla
+{team_line}
 {context_info}
 
 Examples:
-- "What is Cem working on?" -> query_person_sessions(name="cem")
-- "What's Oz been up to?" -> query_person_sessions(name="oz")
-- "What quests did Cem start?" -> query_person_quests(name="cem")
-- "What has Ali written?" -> query_person_artifacts(name="ali")
+- "What is X working on?" -> query_person_sessions(name="x")
+- "What quests did X start?" -> query_person_quests(name="x")
+- "What has X written?" -> query_person_artifacts(name="x")
 - "What's happening?" -> query_recent_activity
 - "What's happening today?" -> query_activity_on_date(date="{today_str}")
-- Single word "cem" -> query_person_sessions(name="cem")
-- "Tell me about lace" -> query_project_details(name="lace")
+- "Tell me about [project]" -> query_project_details(name="project")
 - "What is Egregore?" -> respond_directly (brief explanation)"""
 
     async with httpx.AsyncClient() as client:
@@ -851,7 +916,7 @@ Examples:
             return {"action": "respond", "message": "Something went wrong. Try asking differently?", "usage": {}, "latency_ms": 0}
 
 
-async def format_response(question: str, query_name: str, results: list, params: dict = None) -> tuple:
+async def format_response(question: str, query_name: str, results: list, params: dict = None, org_config: dict = None) -> tuple:
     """Use LLM to format query results as conversational text.
 
     Returns tuple of (response_text, usage_dict, latency_ms)
@@ -862,7 +927,8 @@ async def format_response(question: str, query_name: str, results: list, params:
     if not results:
         return "No results found.", {}, 0
 
-    system_prompt = """You are Egregore, shared memory for Curve Labs. Internal tool - everyone knows each other.
+    org_name = org_config.get("name", "the team") if org_config else "the team"
+    system_prompt = f"""You are Egregore, shared memory for {org_name}. Internal tool - everyone knows each other.
 
 FORMAT RULES:
 
@@ -986,7 +1052,7 @@ Quick reference:
 To add stuff: /add in Claude Code, then /save"""
 
 
-# Team info - kept brief for internal use
+# Legacy team info - only used as fallback for CL default org
 TEAM_INFO = {
     "oz": "lace, tristero, infrastructure - architecture side",
     "ali": "infrastructure, deployment, this bot",
@@ -1124,7 +1190,7 @@ async def handle_question(update: Update, context, question: str) -> None:
     conv_context = get_conversation_context(context)
 
     # Agent decides (tool use) - now returns usage and latency
-    decision = await agent_decide(question, conv_context, sender_name)
+    decision = await agent_decide(question, conv_context, sender_name, org_config)
 
     action = decision.get("action")
     decision_usage = decision.get("usage", {})
@@ -1193,7 +1259,7 @@ async def handle_question(update: Update, context, question: str) -> None:
             return
 
         # Format and send response (pass params for person context)
-        response, format_usage, format_latency = await format_response(question, query_name, results, params)
+        response, format_usage, format_latency = await format_response(question, query_name, results, params, org_config)
         await update.message.reply_text(response)
 
         # Store in context
@@ -1342,6 +1408,68 @@ async def debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text("\n".join(lines))
 
 
+async def isolation_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /isolation command — run live org isolation check."""
+    if not is_allowed(update):
+        return
+
+    chat_id = update.effective_chat.id
+    org_config = ORG_CONFIG.get(chat_id)
+
+    if not org_config:
+        await update.message.reply_text("No org config for this chat.")
+        return
+
+    org_name = org_config.get("name", "?")
+    lines = [f"Isolation test for org: {org_name}\n"]
+
+    # 1. Check team scoping — only this org's people
+    people = run_org_query("MATCH (p:Person) RETURN p.name AS name, p.org AS org", {}, org_config)
+    lines.append(f"People found: {len(people)}")
+    wrong_org = [p for p in people if p.get("org") and p["org"] != org_name]
+    if wrong_org:
+        lines.append(f"FAIL: {len(wrong_org)} person(s) from other orgs leaked!")
+        for p in wrong_org[:5]:
+            lines.append(f"  - {p['name']} (org: {p['org']})")
+    else:
+        lines.append("PASS: All people belong to this org")
+
+    # 2. Check sessions scoping
+    sessions = run_org_query(
+        "MATCH (s:Session) RETURN s.topic AS topic, s.org AS org LIMIT 20", {}, org_config
+    )
+    lines.append(f"\nSessions found: {len(sessions)}")
+    wrong_sessions = [s for s in sessions if s.get("org") and s["org"] != org_name]
+    if wrong_sessions:
+        lines.append(f"FAIL: {len(wrong_sessions)} session(s) from other orgs!")
+        for s in wrong_sessions[:3]:
+            lines.append(f"  - {s['topic']} (org: {s['org']})")
+    else:
+        lines.append("PASS: All sessions belong to this org")
+
+    # 3. Check artifacts scoping
+    artifacts = run_org_query(
+        "MATCH (a:Artifact) RETURN a.title AS title, a.org AS org LIMIT 20", {}, org_config
+    )
+    lines.append(f"\nArtifacts found: {len(artifacts)}")
+    wrong_artifacts = [a for a in artifacts if a.get("org") and a["org"] != org_name]
+    if wrong_artifacts:
+        lines.append(f"FAIL: {len(wrong_artifacts)} artifact(s) from other orgs!")
+    else:
+        lines.append("PASS: All artifacts belong to this org")
+
+    # 4. Fake org test — should return nothing
+    fake_config = dict(org_config)
+    fake_config["name"] = "__isolation_test_fake__"
+    fake_people = run_org_query("MATCH (p:Person) RETURN p.name", {}, fake_config)
+    if fake_people:
+        lines.append(f"\nFAIL: Fake org returned {len(fake_people)} person(s)!")
+    else:
+        lines.append("\nPASS: Fake org returns 0 results")
+
+    await update.message.reply_text("\n".join(lines))
+
+
 async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /onboard command — redirect to website."""
     site_url = os.environ.get("EGREGORE_SITE_URL", "https://egregore-core.netlify.app")
@@ -1383,16 +1511,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # NOTIFICATIONS
 # =============================================================================
 
-def get_telegram_id(name: str) -> Optional[int]:
+def get_telegram_id(name: str, org_config: dict = None) -> Optional[int]:
     """Look up Telegram ID by person name from Neo4j.
 
     Matches against name, fullName, or aliases (case-insensitive).
-    Examples: 'oz', 'oguzhan', 'Oz Broccoli' all resolve to oz's telegramId.
+    Uses org-scoped query to prevent cross-org person resolution.
     """
     name_lower = name.lower().strip()
+    _run = (lambda q, p: run_org_query(q, p, org_config)) if org_config else run_query
 
     # Try exact match on name first (fastest)
-    results = run_query(
+    results = _run(
         "MATCH (p:Person {name: $name}) WHERE p.telegramId IS NOT NULL RETURN p.telegramId AS telegramId",
         {"name": name_lower}
     )
@@ -1400,7 +1529,7 @@ def get_telegram_id(name: str) -> Optional[int]:
         return int(results[0]["telegramId"])
 
     # Try fuzzy match on fullName or aliases
-    results = run_query(
+    results = _run(
         """MATCH (p:Person)
            WHERE p.telegramId IS NOT NULL AND (
                toLower(p.fullName) CONTAINS $name
@@ -1416,9 +1545,9 @@ def get_telegram_id(name: str) -> Optional[int]:
     return None
 
 
-async def send_notification(bot, recipient: str, message: str, notification_type: str = "mention") -> bool:
+async def send_notification(bot, recipient: str, message: str, notification_type: str = "mention", org_config: dict = None) -> bool:
     """Send a notification to a team member."""
-    telegram_id = get_telegram_id(recipient)
+    telegram_id = get_telegram_id(recipient, org_config=org_config)
     if not telegram_id:
         logger.warning(f"No Telegram ID found for {recipient}")
         return False
@@ -1459,11 +1588,20 @@ async def handle_notify_request(request: Request) -> JSONResponse:
     recipient = data.get("recipient")
     message = data.get("message")
     notification_type = data.get("type", "mention")
+    org_slug = data.get("org")  # Optional: scope person lookup to an org
 
     if not recipient or not message:
         return JSONResponse({"error": "Missing recipient or message"}, status_code=400)
 
-    success = await send_notification(telegram_bot, recipient, message, notification_type)
+    # Resolve org config for scoped person lookup
+    notify_org_config = None
+    if org_slug:
+        for cid, cfg in ORG_CONFIG.items():
+            if cfg.get("name") == org_slug:
+                notify_org_config = cfg
+                break
+
+    success = await send_notification(telegram_bot, recipient, message, notification_type, org_config=notify_org_config)
 
     if success:
         return JSONResponse({"status": "sent", "recipient": recipient})
@@ -1828,6 +1966,7 @@ def main() -> None:
     ptb_app.add_handler(CommandHandler("start", start_command))
     ptb_app.add_handler(CommandHandler("activity", activity_command))
     ptb_app.add_handler(CommandHandler("debug", debug_command))
+    ptb_app.add_handler(CommandHandler("isolation", isolation_test_command))
     ptb_app.add_handler(CommandHandler("onboard", onboard_command))
     ptb_app.add_handler(ChatMemberHandler(handle_member_update, ChatMemberHandler.CHAT_MEMBER))
     ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
