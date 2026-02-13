@@ -629,7 +629,7 @@ QUERIES = {
         "params": [],
         "cypher": """
             MATCH (s:Session)-[:BY]->(p:Person)
-            WHERE s.date >= date() - duration('P7D')
+            WHERE s.date >= datetime() - duration('P7D')
             RETURN s.date AS date, s.topic AS topic, p.name AS person, s.summary AS summary
             ORDER BY s.date DESC LIMIT 10
         """
@@ -778,12 +778,12 @@ QUERIES = {
         "params": ["date"],
         "cypher": """
             MATCH (s:Session)-[:BY]->(p:Person)
-            WHERE s.date = date($date)
+            WHERE date(s.date) = date($date)
             RETURN 'session' AS type, s.topic AS title, p.name AS person, s.summary AS summary, s.date AS date
             UNION
-            MATCH (a:Artifact)-[:AUTHORED_BY]->(p:Person)
-            WHERE a.date = date($date)
-            RETURN 'artifact' AS type, a.title AS title, p.name AS person, a.summary AS summary, a.date AS date
+            MATCH (a:Artifact)-[:CONTRIBUTED_BY]->(p:Person)
+            WHERE date(a.date) = date($date)
+            RETURN 'artifact' AS type, a.name AS title, p.name AS person, NULL AS summary, a.date AS date
         """
     },
     "person_sessions_on_date": {
@@ -791,7 +791,7 @@ QUERIES = {
         "params": ["name", "date"],
         "cypher": """
             MATCH (s:Session)-[:BY]->(p:Person {name: $name})
-            WHERE s.date = date($date)
+            WHERE date(s.date) = date($date)
             RETURN s.date AS date, s.topic AS topic, s.summary AS summary
             ORDER BY s.date DESC
         """
