@@ -21,6 +21,10 @@ __pycache__
 .claude/settings.local.json
 .claude/commands/release.md
 .claude/commands/sync-public.md
+.claude/commands/docs.md
+egregore-ecosystem.html
+egregore-internals.html
+egregore-graph.html
 
 # CL-internal infrastructure
 api
