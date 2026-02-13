@@ -107,6 +107,7 @@ ORG_CONFIG = {
         "neo4j_user": os.environ.get("NEO4J_USER", "neo4j"),
         "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
         "mcp_api_key": os.environ.get("CURVELABS_MCP_KEY", "ek_curvelabs_default"),
+        "_static": True,
     },
 }
 
@@ -152,10 +153,19 @@ def load_dynamic_orgs():
             org_count = 0
             for record in result:
                 chat_id = int(record["chat_id"])
+                org_id = record["id"] or record["name"]
                 if chat_id in ORG_CONFIG:
-                    continue  # Don't overwrite static config
+                    # If existing entry is from a stale org (different slug with same chat_id),
+                    # prefer the org that has an api_key (more likely to be current).
+                    existing = ORG_CONFIG[chat_id]
+                    if existing.get("_static"):
+                        continue  # Don't overwrite hardcoded static config
+                    # Allow overwrite if this org has an api_key and existing doesn't
+                    if not record.get("api_key") and existing.get("mcp_api_key"):
+                        continue
+                    logger.info(f"Replacing org {existing.get('name')} with {org_id} for chat {chat_id}")
                 ORG_CONFIG[chat_id] = {
-                    "name": record["id"] or record["name"],
+                    "name": org_id,
                     "neo4j_uri": shared_uri,
                     "neo4j_user": shared_user,
                     "neo4j_password": shared_password,
