@@ -5,6 +5,12 @@ version: 1
 status: active
 created: 2026-02-12
 author: cem
+corpus_size: 2
+quick_configs:
+  - current
+  - all-sonnet
+  - deep
+dimensions_skip: []
 ---
 
 # Meeting Extraction Pipeline
@@ -70,3 +76,7 @@ _Ablation: what does dynamics add?_
 - meeting:7df47eba-a155-4a37-93a5-5528f0d8a68d
 - meeting:dbca2151-7730-473c-901e-b056abe640b2
 (Expand as meetings are processed)
+
+## Corpus Sampling
+
+When the input corpus grows beyond `corpus_size` (frontmatter), randomly sample `corpus_size` inputs per run using a deterministic seed (run date + seq number). This prevents eval cost from growing linearly with meeting history while maintaining reproducibility.
