@@ -78,6 +78,16 @@ SPIRIT_ADMIN_SECRET = os.environ.get("SPIRIT_ADMIN_SECRET", "")
 # Egregore API (for dynamic org registration)
 EGREGORE_API_URL = os.environ.get("EGREGORE_API_URL", "")
 
+# Shared customer Neo4j — derive URI from HOST if URI not set directly.
+# The API uses EGREGORE_NEO4J_HOST (hostname only), bot needs full URI for Python driver.
+EGREGORE_NEO4J_URI = os.environ.get("EGREGORE_NEO4J_URI", "")
+EGREGORE_NEO4J_USER = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
+EGREGORE_NEO4J_PASSWORD = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
+if not EGREGORE_NEO4J_URI:
+    _host = os.environ.get("EGREGORE_NEO4J_HOST", "")
+    if _host:
+        EGREGORE_NEO4J_URI = f"neo4j+s://{_host}"
+
 # Security: Allowed chats/users — loaded dynamically from Neo4j + ORG_CONFIG at startup.
 # Env override still works for manual additions.
 ALLOWED_CHAT_IDS = [
@@ -104,9 +114,9 @@ ORG_CONFIG = {
 if EGREGORE_CHANNEL_ID:
     ORG_CONFIG[EGREGORE_CHANNEL_ID] = {
         "name": "egregore",
-        "neo4j_uri": os.environ.get("EGREGORE_NEO4J_URI", ""),
-        "neo4j_user": os.environ.get("EGREGORE_NEO4J_USER", "neo4j"),
-        "neo4j_password": os.environ.get("EGREGORE_NEO4J_PASSWORD", ""),
+        "neo4j_uri": EGREGORE_NEO4J_URI,
+        "neo4j_user": EGREGORE_NEO4J_USER,
+        "neo4j_password": EGREGORE_NEO4J_PASSWORD,
         "mcp_api_key": os.environ.get("EGREGORE_MCP_KEY", "ek_egregore_default"),
     }
 
@@ -117,9 +127,9 @@ def load_dynamic_orgs():
     Populates ORG_CONFIG with orgs that have telegram_chat_id set.
     Populates ALLOWED_CHAT_IDS with user telegram IDs from Person nodes.
     """
-    shared_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
-    shared_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
-    shared_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
+    shared_uri = EGREGORE_NEO4J_URI
+    shared_user = EGREGORE_NEO4J_USER
+    shared_password = EGREGORE_NEO4J_PASSWORD
 
     if not shared_uri or not shared_password:
         # Fall back to default Neo4j if shared not configured
@@ -209,9 +219,9 @@ async def register_group(slug: str, chat_id: int, group_title: str = None, group
             logger.warning(f"API registration failed: {e}")
 
     # Fallback: write directly to Neo4j
-    neo4j_uri = os.environ.get("EGREGORE_NEO4J_URI", NEO4J_URI)
-    neo4j_user = os.environ.get("EGREGORE_NEO4J_USER", NEO4J_USER)
-    neo4j_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", NEO4J_PASSWORD)
+    neo4j_uri = EGREGORE_NEO4J_URI or NEO4J_URI
+    neo4j_user = EGREGORE_NEO4J_USER if EGREGORE_NEO4J_URI else NEO4J_USER
+    neo4j_password = EGREGORE_NEO4J_PASSWORD if EGREGORE_NEO4J_URI else NEO4J_PASSWORD
 
     if not neo4j_uri or not neo4j_password:
         logger.error("No Neo4j connection — cannot register group")
@@ -258,6 +268,7 @@ def get_org_for_chat(chat_id: int, user_id: int = None) -> dict:
 # Log startup config
 logger.info("=== Egregore Bot Starting ===")
 logger.info(f"NEO4J_URI: {'SET' if NEO4J_URI else 'NOT SET'}")
+logger.info(f"EGREGORE_NEO4J_URI: {'SET' if EGREGORE_NEO4J_URI else 'NOT SET'} (derived from {'EGREGORE_NEO4J_URI' if os.environ.get('EGREGORE_NEO4J_URI') else 'EGREGORE_NEO4J_HOST' if os.environ.get('EGREGORE_NEO4J_HOST') else 'NONE'})")
 logger.info(f"ANTHROPIC_API_KEY: {'SET' if ANTHROPIC_API_KEY else 'NOT SET'}")
 logger.info(f"ALLOWED_CHAT_IDS: {ALLOWED_CHAT_IDS}")
 
@@ -486,8 +497,8 @@ def track_telegram_membership(telegram_id: int, username: str, first_name: str, 
     org_driver = get_org_driver(org_config) if org_config else driver
 
     try:
-        # TelegramUser + IN_GROUP on default driver (global)
-        with driver.session() as session:
+        # TelegramUser + IN_GROUP — use org driver (Org node lives in org's DB)
+        with org_driver.session() as session:
             if action == "join":
                 session.run(
                     """
@@ -1322,10 +1333,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             result = await register_group(slug, chat_id, group_title=group_title, group_username=group_username)
             if result:
                 org_name = result.get("org_name", slug)
-                # Add to local config
-                shared_uri = os.environ.get("EGREGORE_NEO4J_URI", "")
-                shared_user = os.environ.get("EGREGORE_NEO4J_USER", "neo4j")
-                shared_password = os.environ.get("EGREGORE_NEO4J_PASSWORD", "")
+                # Add to local config (use module-level constants that derive URI from HOST)
+                shared_uri = EGREGORE_NEO4J_URI
+                shared_user = EGREGORE_NEO4J_USER
+                shared_password = EGREGORE_NEO4J_PASSWORD
                 ORG_CONFIG[chat_id] = {
                     "name": slug,
                     "neo4j_uri": shared_uri,
@@ -1417,20 +1428,29 @@ async def isolation_test_command(update: Update, context: ContextTypes.DEFAULT_T
     org_config = ORG_CONFIG.get(chat_id)
 
     if not org_config:
-        await update.message.reply_text("No org config for this chat.")
+        await update.message.reply_text(
+            f"No org config for chat {chat_id}.\n"
+            f"Known chats: {list(ORG_CONFIG.keys())}"
+        )
         return
 
     org_name = org_config.get("name", "?")
-    lines = [f"Isolation test for org: {org_name}\n"]
+    neo4j_uri = org_config.get("neo4j_uri", "")
+    lines = [f"Isolation test for org: {org_name}"]
+    lines.append(f"DB: {'shared' if neo4j_uri and 'c02b' not in neo4j_uri else 'CL-private' if neo4j_uri else 'NONE'}")
+    lines.append(f"Driver: {'OK' if get_org_driver(org_config) else 'FAILED'}\n")
 
     # 1. Check team scoping — only this org's people
     people = run_org_query("MATCH (p:Person) RETURN p.name AS name, p.org AS org", {}, org_config)
     lines.append(f"People found: {len(people)}")
+    if people:
+        names = [p.get("name") or "(unnamed)" for p in people[:8]]
+        lines.append(f"  Names: {', '.join(names)}")
     wrong_org = [p for p in people if p.get("org") and p["org"] != org_name]
     if wrong_org:
         lines.append(f"FAIL: {len(wrong_org)} person(s) from other orgs leaked!")
         for p in wrong_org[:5]:
-            lines.append(f"  - {p['name']} (org: {p['org']})")
+            lines.append(f"  - {p.get('name')} (org: {p.get('org')})")
     else:
         lines.append("PASS: All people belong to this org")
 
@@ -1443,7 +1463,7 @@ async def isolation_test_command(update: Update, context: ContextTypes.DEFAULT_T
     if wrong_sessions:
         lines.append(f"FAIL: {len(wrong_sessions)} session(s) from other orgs!")
         for s in wrong_sessions[:3]:
-            lines.append(f"  - {s['topic']} (org: {s['org']})")
+            lines.append(f"  - {s.get('topic')} (org: {s.get('org')})")
     else:
         lines.append("PASS: All sessions belong to this org")
 
