@@ -9,43 +9,51 @@ const ResearchPage = () => {
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav style={{
-        padding: "1.2rem 3rem",
+      <nav className="mobile-nav" style={{
+        position: "fixed", top: 0, width: "100%", zIndex: 900,
+        height: "80px",
+        padding: "0 4rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "rgba(244,241,234,0.95)",
+        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
+        transition: "all 0.3s ease",
       }}>
-        <Link to="/" style={{
+        <Link to="/" className="mobile-logo" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson,
           textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            borderBottom: `1px solid ${C.crimson}`, paddingBottom: "2px",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
+            borderBottom: `2px solid ${C.crimson}`,
           }}>
-            Research
+            /Research
           </Link>
           <Link to="/docs" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
           }}>
-            Docs
+            /Docs
           </Link>
-          <Link to="/#join" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
+          <Link to="/#join" className="mobile-button" style={{
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            border: `1px solid ${C.ink}`,
+            padding: "0.4rem 1.1rem",
           }}>
-            Waitlist
+            /Waitlist
           </Link>
         </div>
       </nav>
 
       {/* Header */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "5rem 2rem 2rem" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "8rem 2rem 2rem" }}>
         <div style={{
           ...font.mono, fontSize: "0.58rem", letterSpacing: "3.5px",
           textTransform: "uppercase", color: C.muted, marginBottom: "1rem",

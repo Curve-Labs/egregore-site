@@ -10,7 +10,7 @@ const ArticlePage = () => {
 
   if (!post) {
     return (
-      <div style={{ background: C.parchment, minHeight: "100vh", padding: "6rem 2rem", textAlign: "center" }}>
+      <div style={{ background: C.parchment, minHeight: "100vh", padding: "9rem 2rem 6rem", textAlign: "center" }}>
         <p style={{ ...font.serif, fontSize: "1.2rem", color: C.muted }}>Article not found.</p>
         <Link to="/research" style={{ ...font.mono, fontSize: "0.72rem", color: C.crimson, marginTop: "2rem", display: "inline-block" }}>
           Back to research
@@ -27,41 +27,49 @@ const ArticlePage = () => {
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav style={{
-        padding: "1.2rem 3rem",
+      <nav className="mobile-nav" style={{
+        position: "fixed", top: 0, width: "100%", zIndex: 900,
+        height: "80px",
+        padding: "0 4rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "rgba(244,241,234,0.95)",
+        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
+        transition: "all 0.3s ease",
       }}>
-        <Link to="/" style={{
+        <Link to="/" className="mobile-logo" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson, textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
           }}>
-            Research
+            /Research
           </Link>
           <Link to="/docs" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
           }}>
-            Docs
+            /Docs
           </Link>
-          <Link to="/#join" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
+          <Link to="/#join" className="mobile-button" style={{
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            border: `1px solid ${C.ink}`,
+            padding: "0.4rem 1.1rem",
           }}>
-            Waitlist
+            /Waitlist
           </Link>
         </div>
       </nav>
 
       {/* Article */}
-      <article style={{ maxWidth: 680, margin: "0 auto", padding: "4rem 2rem 3rem" }}>
+      <article style={{ maxWidth: 680, margin: "0 auto", padding: "7rem 2rem 3rem" }}>
         {/* Meta */}
         <Link to="/research" style={{
           ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",

@@ -222,39 +222,44 @@ const DocsPage = () => {
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
 
       {/* ─── Nav ─────────────────────────────────────────────── */}
-      <nav style={{
-        position: "sticky", top: 0, zIndex: 100,
-        padding: "0.9rem 2.5rem",
+      <nav className="mobile-nav" style={{
+        position: "fixed", top: 0, width: "100%", zIndex: 900,
+        height: "80px",
+        padding: "0 4rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        borderBottom: `1px solid ${C.warmGray}`,
-        background: "rgba(244,241,234,0.97)",
+        background: "rgba(244,241,234,0.95)",
         backdropFilter: "blur(10px)",
+        borderBottom: `1px solid ${C.warmGray}`,
+        transition: "all 0.3s ease",
       }}>
-        <Link to="/" style={{
-          ...font.gothic, fontSize: "1.4rem", color: C.crimson, textDecoration: "none",
+        <Link to="/" className="mobile-logo" style={{
+          ...font.gothic, fontSize: "1.9rem", color: C.crimson, textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div style={{ display: "flex", gap: "1.6rem", alignItems: "center" }}>
+        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.58rem", letterSpacing: "1.5px", textTransform: "uppercase",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
           }}>
-            Research
+            /Research
           </Link>
           <Link to="/docs" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.58rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            borderBottom: `1px solid ${C.crimson}`, paddingBottom: "2px",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
+            borderBottom: `2px solid ${C.crimson}`,
           }}>
-            Docs
+            /Docs
           </Link>
-          <Link to="/#join" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.58rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`, padding: "0.3rem 0.9rem",
+          <Link to="/#join" className="mobile-button" style={{
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            border: `1px solid ${C.ink}`,
+            padding: "0.4rem 1.1rem",
           }}>
-            Waitlist
+            /Waitlist
           </Link>
         </div>
       </nav>
@@ -264,7 +269,7 @@ const DocsPage = () => {
         onClick={() => setSidebarOpen(!sidebarOpen)}
         style={{
           display: "none",
-          position: "sticky", top: "44px", zIndex: 90,
+          position: "sticky", top: "80px", zIndex: 90,
           padding: "0.5rem 1.5rem",
           background: C.parchment,
           borderBottom: `1px solid ${C.warmGray}`,
@@ -277,15 +282,15 @@ const DocsPage = () => {
       </div>
 
       {/* ─── Layout ──────────────────────────────────────────── */}
-      <div style={{ display: "flex", maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ display: "flex", maxWidth: 960, margin: "0 auto", paddingTop: "80px" }}>
 
         {/* ─── Sidebar ─────────────────────────────────────── */}
         <aside
           className={`docs-sidebar${sidebarOpen ? " open" : ""}`}
           style={{
             width: 180, flexShrink: 0,
-            position: "sticky", top: "44px",
-            height: "calc(100vh - 44px)",
+            position: "sticky", top: "80px",
+            height: "calc(100vh - 80px)",
             overflowY: "auto",
             padding: "2rem 0 2rem 1.5rem",
             borderRight: `1px solid ${C.warmGray}`,

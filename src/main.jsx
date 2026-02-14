@@ -5,8 +5,8 @@ import { C } from './tokens'
 import App from './App.jsx'
 import ResearchPage from './ResearchPage.jsx'
 import ArticlePage from './ArticlePage.jsx'
-import DocsPage from './DocsPage.jsx'
 import SetupFlow from './components/SetupFlow.jsx'
+import DocsPage from './DocsPage.jsx'
 
 function GlobalStyles() {
   useEffect(() => {
@@ -16,7 +16,7 @@ function GlobalStyles() {
 
       @font-face {
         font-family: 'Slovic';
-        src: url('/src/fonts/Slovic_Demo-Historic.otf') format('opentype');
+        src: url('/fonts/Slovic_Demo-Historic.otf') format('opentype');
         font-weight: normal;
         font-style: normal;
         font-display: swap;
@@ -44,6 +44,29 @@ function GlobalStyles() {
       @media (max-width: 1200px) { .ascii-egregore-text { transform: scale(0.7) !important; } }
       @media (max-width: 768px) { .ascii-egregore-text { transform: scale(0.45) !important; } }
 
+      /* Mobile adjustments: 375px × 812px baseline */
+      @media (max-width: 480px) {
+        body { font-size: 16px; }
+        .mobile-container { padding: 0 5% !important; max-width: 100% !important; }
+        .mobile-section { height: auto !important; min-height: 600px !important; }
+        .mobile-section-padding { padding: 3rem 1.25rem !important; }
+        .mobile-nav { height: 70px !important; padding: 0 1.5rem !important; }
+        .mobile-logo { font-size: 1.4rem !important; }
+        .mobile-nav-links { gap: 1rem !important; font-size: 12px !important; }
+        .mobile-hide { display: none !important; }
+        .mobile-text-center { text-align: center !important; }
+        .mobile-gap-small { gap: 1.5rem !important; }
+        .mobile-flex-col { flex-direction: column !important; align-items: center !important; }
+        .mobile-hero-title { font-size: 32px !important; line-height: 1.1 !important; }
+        .mobile-section-title { font-size: 28px !important; line-height: 1.2 !important; }
+        .mobile-body-text { font-size: 16px !important; line-height: 1.65 !important; }
+        .mobile-card-title { font-size: 0.75rem !important; }
+        .mobile-button { padding: 0.7rem 1.5rem !important; font-size: 12px !important; min-height: 44px !important; }
+        .mobile-value-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
+        .mobile-session-grid { grid-template-columns: 1fr !important; gap: 2rem !important; }
+        .mobile-input { font-size: 16px !important; padding: 0.75rem !important; min-height: 44px !important; }
+      }
+
       /* Print: hide all decorative ASCII */
       @media print { pre[aria-hidden="true"], .ascii-hide-mobile, .ascii-hide-tablet, .ascii-egregore-text { display: none !important; } }
     `;
@@ -62,7 +85,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
-        <Route path="/setup" element={<SetupFlow />} />
+      <Route path="/setup" element={<SetupFlow />} />
         <Route path="/callback" element={<SetupFlow />} />
         <Route path="/join" element={<SetupFlow />} />
       </Routes>
