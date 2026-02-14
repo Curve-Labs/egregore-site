@@ -90,12 +90,27 @@ else
     "https://$GITHUB_TOKEN@github.com/$TARGET_REPO.git" "$TARGET_PATH"
 fi
 
-# Sync site contents
+# Sync site contents (preserve setup flow + auth files that live only in egregore-site)
 echo "Syncing files..." >&2
 rsync -a --delete \
   --exclude='.git' \
   --exclude='.git/' \
+  --exclude='src/components/SetupFlow.jsx' \
+  --exclude='src/api.js' \
+  --exclude='src/auth.js' \
+  --exclude='src/auth.test.js' \
+  --exclude='src/test/' \
   "$SOURCE_PATH/$SOURCE_DIR/" "$TARGET_PATH/"
+
+# Ensure setup flow routes exist in main.jsx
+if ! grep -q 'SetupFlow' "$TARGET_PATH/src/main.jsx" 2>/dev/null; then
+  echo "Injecting setup flow routes into main.jsx..." >&2
+  # Add import
+  sed -i.bak "s|^import DocsPage|import SetupFlow from './components/SetupFlow.jsx'\nimport DocsPage|" "$TARGET_PATH/src/main.jsx"
+  # Add routes before closing </Routes>
+  sed -i.bak "s|</Routes>|<Route path=\"/setup\" element={<SetupFlow />} />\n        <Route path=\"/callback\" element={<SetupFlow />} />\n        <Route path=\"/join\" element={<SetupFlow />} />\n      </Routes>|" "$TARGET_PATH/src/main.jsx"
+  rm -f "$TARGET_PATH/src/main.jsx.bak"
+fi
 
 # Check for changes
 cd "$TARGET_PATH"
