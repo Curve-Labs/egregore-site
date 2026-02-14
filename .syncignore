@@ -22,6 +22,7 @@ __pycache__
 .claude/commands/release.md
 .claude/commands/sync-public.md
 .claude/commands/docs.md
+.claude/commands/deploy-site.md
 
 # CL-only docs (not for public repo)
 egregore-internals.html
@@ -41,6 +42,7 @@ Dockerfile
 DEV.md
 TELEGRAM_BOT_PLAN.md
 bin/preflight.sh
+bin/deploy-site.sh
 bin/seeds
 
 # Generated / personal
