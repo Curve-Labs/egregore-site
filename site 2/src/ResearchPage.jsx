@@ -55,19 +55,19 @@ const ResearchPage = () => {
       {/* Header */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "8rem 2rem 2rem" }}>
         <div style={{
-          ...font.mono, fontSize: "0.58rem", letterSpacing: "3.5px",
+          ...font.ibmPlex, fontSize: "12px", letterSpacing: "0",
           textTransform: "uppercase", color: C.muted, marginBottom: "1rem",
         }}>
           Research
         </div>
         <h1 style={{
-          ...font.serif, fontSize: "clamp(2rem, 4vw, 3.2rem)",
+          ...font.slovic, fontSize: "36px", letterSpacing: "0",
           fontWeight: 400, color: C.ink, lineHeight: 1.15, marginBottom: "1rem",
         }}>
           Dispatches from the field.
         </h1>
         <p style={{
-          ...font.serif, fontSize: "1.15rem", color: C.muted,
+          ...font.courierPrime, fontSize: "14px", color: C.muted,
           maxWidth: 560, lineHeight: 1.7, marginBottom: "3rem",
         }}>
           On shared cognition, coordination infrastructure, and what emerges when organizations develop memory.
@@ -99,7 +99,7 @@ const ResearchPage = () => {
             >
               <div>
                 <div style={{
-                  ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
+                  ...font.ibmPlex, fontSize: "12px", letterSpacing: "0",
                   textTransform: "uppercase",
                   color: hoveredIdx === i ? C.gold : C.muted,
                   transition: "color 0.2s",
@@ -108,7 +108,7 @@ const ResearchPage = () => {
                   {post.tag}
                 </div>
                 <div style={{
-                  ...font.mono, fontSize: "0.58rem", color: C.warmGray, letterSpacing: "1px",
+                  ...font.ibmPlex, fontSize: "12px", color: C.warmGray, letterSpacing: "0",
                 }}>
                   {post.date}
                 </div>
@@ -116,7 +116,7 @@ const ResearchPage = () => {
 
               <div>
                 <h2 style={{
-                  ...font.serif, fontSize: "1.35rem", fontWeight: 600,
+                  ...font.ibmPlex, fontSize: "1.15rem", fontWeight: 700,
                   color: hoveredIdx === i ? C.crimson : C.ink,
                   transition: "color 0.2s",
                   marginBottom: "0.5rem", lineHeight: 1.3,
@@ -124,7 +124,7 @@ const ResearchPage = () => {
                   {post.title}
                 </h2>
                 <p style={{
-                  ...font.serif, fontSize: "0.98rem", color: C.muted,
+                  ...font.courierPrime, fontSize: "14px", color: C.muted,
                   lineHeight: 1.65, maxWidth: 560,
                 }}>
                   {post.excerpt}

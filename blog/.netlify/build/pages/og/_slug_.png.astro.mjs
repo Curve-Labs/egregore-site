@@ -1,0 +1,205 @@
+import { g as getCollection } from '../../chunks/_astro_content_CiI689C0.mjs';
+import satori from 'satori';
+import { Resvg } from '@resvg/resvg-js';
+export { renderers } from '../../renderers.mjs';
+
+async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => ({
+    params: { slug: post.slug }
+  }));
+}
+async function GET({ params }) {
+  const posts = await getCollection("posts");
+  const post = posts.find((p) => p.slug === params.slug);
+  if (!post) {
+    return new Response("Not found", { status: 404 });
+  }
+  let interFont;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5e3);
+    interFont = await fetch("https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf", {
+      signal: controller.signal
+    }).then((r) => {
+      clearTimeout(timeoutId);
+      if (!r.ok) throw new Error("Font fetch failed");
+      return r.arrayBuffer();
+    });
+  } catch (error) {
+    console.error("Font fetch failed:", error);
+    return new Response("OG image generation temporarily unavailable", {
+      status: 503,
+      headers: { "Retry-After": "60" }
+    });
+  }
+  const svg = await satori(
+    {
+      type: "div",
+      props: {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          width: "100%",
+          height: "100%",
+          padding: "60px",
+          background: "#0a0a0c",
+          color: "#e0e0e8"
+        },
+        children: [
+          // Header
+          {
+            type: "div",
+            props: {
+              style: {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between"
+              },
+              children: [
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "24px",
+                      color: "#5bbfb2"
+                    },
+                    children: "Curve Labs"
+                  }
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "16px",
+                      color: "#5a5a6a",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em"
+                    },
+                    children: post.data.category
+                  }
+                }
+              ]
+            }
+          },
+          // Content
+          {
+            type: "div",
+            props: {
+              style: {
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                justifyContent: "center"
+              },
+              children: [
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "56px",
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      marginBottom: "20px"
+                    },
+                    children: post.data.title
+                  }
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "24px",
+                      color: "#9898a8",
+                      lineHeight: 1.4
+                    },
+                    children: post.data.subtitle || ""
+                  }
+                }
+              ]
+            }
+          },
+          // Footer
+          {
+            type: "div",
+            props: {
+              style: {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between"
+              },
+              children: [
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "16px",
+                      color: "#5a5a6a"
+                    },
+                    children: `by ${post.data.author || "Curve Labs"}`
+                  }
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontFamily: "Inter",
+                      fontSize: "16px",
+                      color: "#5a5a6a"
+                    },
+                    children: (post.data.date instanceof Date ? post.data.date : new Date(post.data.date)).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
+                    })
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      width: 1200,
+      height: 630,
+      fonts: [
+        {
+          name: "Inter",
+          data: interFont,
+          weight: 400,
+          style: "normal"
+        }
+      ]
+    }
+  );
+  const resvg = new Resvg(svg, {
+    fitTo: {
+      mode: "width",
+      value: 1200
+    }
+  });
+  const pngBuffer = resvg.render().asPng();
+  return new Response(new Uint8Array(pngBuffer), {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=31536000, immutable"
+    }
+  });
+}
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  GET,
+  getStaticPaths
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

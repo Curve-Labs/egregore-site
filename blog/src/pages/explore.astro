@@ -1,0 +1,492 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+// Get all posts and extract unique tags
+const allPosts = (await getCollection('posts', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const allTags = Array.from(
+  new Set(allPosts.flatMap(post => post.data.tags || []))
+).sort();
+
+// Tag descriptions
+const tagDescriptions: Record<string, string> = {
+  'agents': 'Autonomous software entities capable of perception and action within a shared environment.',
+  'knowledge-graphs': 'Semantic networks that structure information into entities and relationships, enabling machine reasoning.',
+  'topology': 'The mathematical study of properties preserved through deformations, twistings, and stretchings.',
+  'governance': 'Cybernetic control systems for managing collective resources and decision-making processes.',
+  'cybernetics': 'The transdisciplinary study of circular causal systems with feedback loops.',
+  'scaling': 'Mechanisms for maintaining system coherence as node count increases.',
+  'interop': 'Protocols enabling distinct systems to exchange information without friction.',
+  'llm': 'Large-scale statistical models capable of generating human-like text and reasoning patterns.',
+  'protocol': 'A set of rules governing the exchange or transmission of data between devices.',
+  'economics': 'The study of value flows and resource allocation within constrained systems.',
+  'theory': 'Abstract frameworks for understanding system dynamics.',
+  'ux': 'The interface between human cognition and machine logic.',
+  'active-inference': 'A framework where agents minimize free energy by updating internal models to match sensory inputs.',
+  'design': 'Intentional creation of structures to solve specific problems.',
+  'recursion': 'The process of defining a function or object in terms of itself.',
+  'system-design': 'The architecture of complex systems and their inter-dependencies.',
+  'ai-agents': 'Artificial intelligence systems designed to act autonomously toward goals.',
+  'coordination': 'The organization of different elements of a complex body or activity.',
+  'memory': 'Systems for storing and retrieving information across time.',
+  'reflection': 'Mechanisms for self-observation and adaptive behavior.'
+};
+
+// Group posts by tag for quick lookup
+const postsByTag: Record<string, typeof allPosts> = {};
+allTags.forEach(tag => {
+  postsByTag[tag] = allPosts.filter(post => post.data.tags?.includes(tag));
+});
+---
+
+<Base
+  title="Explore"
+  description="Browse articles by topic and hashtag. Explore knowledge graphs, AI agents, cybernetics, and more."
+  keywords="Curve Labs, knowledge graphs, AI agents, topics, hashtags, research"
+>
+  <div class="explore-container">
+    <div class="explore-header">
+      <div class="header-left">
+        <span class="hash-icon">#</span>
+        <h2 class="header-title">Explore</h2>
+      </div>
+      <div class="header-right">
+        INDEX_SIZE: {allTags.length} // ACTIVE_NODE: <span id="active-node">NULL</span>
+      </div>
+    </div>
+
+    <div class="explore-grid">
+      <!-- Left: Tag Cloud -->
+      <div class="tag-cluster">
+        {allTags.map((tag) => {
+          const count = postsByTag[tag].length;
+          return (
+            <button
+              type="button"
+              class="tag-btn"
+              data-tag={tag}
+              data-count={count}
+              data-description={tagDescriptions[tag] || 'Semantic node detected in knowledge base. Analyzing vector relationships...'}
+            >
+              <span class="tag-hash">#</span>{tag}
+            </button>
+          );
+        })}
+      </div>
+
+      <!-- Right: Terminal Screen -->
+      <div class="terminal-screen">
+        <div class="terminal-header">
+          <div class="terminal-header-left">
+            <span class="terminal-icon">▸</span>
+            <span>/sys/analysis</span>
+          </div>
+          <div class="terminal-header-right">
+            <div class="status-indicator"></div>
+            <span id="terminal-status">IDLE</span>
+          </div>
+        </div>
+
+        <div class="terminal-content">
+          <div class="terminal-output" id="terminal-output">
+            > SYSTEM READY.<br/>
+            > AWAITING INPUT_VECTOR...<br/>
+            > SELECT A HASHTAG TO ANALYZE.
+          </div>
+          <div class="terminal-cursor"></div>
+
+          <div class="terminal-results" id="terminal-results"></div>
+        </div>
+
+        <div class="scanlines"></div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script is:inline define:vars={{ postsByTag, tagDescriptions }}>
+  document.addEventListener('DOMContentLoaded', function() {
+    var tagButtons = document.querySelectorAll('.tag-btn');
+    var terminalOutput = document.getElementById('terminal-output');
+    var terminalResults = document.getElementById('terminal-results');
+    var terminalStatus = document.getElementById('terminal-status');
+    var statusIndicator = document.querySelector('.status-indicator');
+    var activeNode = document.getElementById('active-node');
+    var cursor = document.querySelector('.terminal-cursor');
+
+    var activeTag = null;
+    var isTyping = false;
+
+    function typeText(text, callback) {
+      isTyping = true;
+      terminalStatus.textContent = 'COMPUTING';
+      statusIndicator.classList.add('active');
+      cursor.style.display = 'inline-block';
+
+      var index = 0;
+      terminalOutput.innerHTML = '';
+
+      var interval = setInterval(function() {
+        if (index < text.length) {
+          var char = text.charAt(index);
+          if (char === '\n') {
+            terminalOutput.innerHTML += '<br/>';
+          } else {
+            terminalOutput.innerHTML += char;
+          }
+          index++;
+        } else {
+          clearInterval(interval);
+          isTyping = false;
+          terminalStatus.textContent = 'IDLE';
+          statusIndicator.classList.remove('active');
+          cursor.style.display = 'none';
+          if (callback) callback();
+        }
+      }, 15);
+    }
+
+    function showResults(tag) {
+      var articles = postsByTag[tag] || [];
+
+      if (articles.length === 0) {
+        terminalResults.innerHTML = '<div class="no-results">> No published signals found for this node.<br/>> Topic is currently in active research phase.</div>';
+      } else {
+        var html = '';
+        articles.forEach(function(article) {
+          var date = new Date(article.data.date);
+          var formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+          html += '<a href="/' + article.slug + '/" class="result-item">' +
+            '<div class="result-content">' +
+              '<span class="result-title">' + article.data.title + '</span>' +
+              '<span class="result-meta">' + formattedDate + '</span>' +
+            '</div>' +
+            '<span class="result-arrow">→</span>' +
+          '</a>';
+        });
+        terminalResults.innerHTML = html;
+      }
+
+      terminalResults.style.opacity = '0';
+      setTimeout(function() {
+        terminalResults.style.transition = 'opacity 300ms ease';
+        terminalResults.style.opacity = '1';
+      }, 100);
+    }
+
+    tagButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        if (isTyping) return;
+
+        var tag = btn.dataset.tag;
+        var count = btn.dataset.count;
+        var description = btn.dataset.description;
+
+        // Update active state
+        tagButtons.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+
+        activeTag = tag;
+        activeNode.textContent = '#' + tag;
+        terminalResults.innerHTML = '';
+
+        var outputText = '> QUERY: #' + tag.toUpperCase() + '\n' +
+          '> DEFINITION: ' + description + '\n' +
+          '> SIGNAL_STRENGTH: ' + (count > 0 ? 'HIGH' : 'LATENT') + '\n' +
+          '> DETECTED_OBJECTS: ' + count + '\n\n' +
+          '> LISTING_RESULTS...';
+
+        typeText(outputText, function() {
+          showResults(tag);
+        });
+      });
+    });
+  });
+</script>
+
+<style>
+  .explore-container {
+    width: 100%;
+    background: var(--bg);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    padding: var(--space-3xl) 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .explore-header {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .hash-icon {
+    font-size: 1.125rem;
+    color: var(--accent);
+  }
+
+  .header-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .header-right {
+    font-size: 0.625rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+
+  #active-node {
+    color: var(--accent);
+  }
+
+  .explore-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: var(--space-3xl);
+    align-items: start;
+  }
+
+  .tag-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+
+  .tag-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tag-hash {
+    opacity: 0.5;
+  }
+
+  .tag-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .tag-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(91, 191, 178, 0.4);
+  }
+
+  .tag-btn.active .tag-hash {
+    opacity: 1;
+  }
+
+  .terminal-screen {
+    background: #000;
+    border: 1px solid var(--border-hover);
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-hover);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .terminal-header-left,
+  .terminal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .terminal-icon {
+    color: var(--accent);
+  }
+
+  .status-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-hover);
+    transition: all 200ms ease;
+  }
+
+  .status-indicator.active {
+    background: var(--accent);
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .terminal-content {
+    padding: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    position: relative;
+    z-index: 10;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .terminal-output {
+    color: var(--accent);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-weight: 300;
+    margin-bottom: 2rem;
+    min-height: 100px;
+  }
+
+  .terminal-cursor {
+    display: none;
+    width: 8px;
+    height: 16px;
+    background: var(--accent);
+    margin-left: 4px;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .terminal-results {
+    margin-top: auto;
+    border-top: 1px solid rgba(91, 191, 178, 0.1);
+    padding-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border: 1px solid var(--border-hover);
+    background: rgba(255, 255, 255, 0.02);
+    text-decoration: none;
+    transition: all 200ms ease;
+  }
+
+  .result-item:hover {
+    border-color: var(--accent);
+    background: rgba(91, 191, 178, 0.05);
+  }
+
+  .result-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .result-title {
+    color: var(--text-soft);
+    transition: color 200ms ease;
+  }
+
+  .result-item:hover .result-title {
+    color: var(--accent);
+  }
+
+  .result-meta {
+    font-size: 0.625rem;
+    color: var(--text-dim);
+  }
+
+  .result-arrow {
+    color: var(--text-dim);
+    transition: all 200ms ease;
+  }
+
+  .result-item:hover .result-arrow {
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .no-results {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    opacity: 0.2;
+    z-index: 20;
+  }
+
+  @media (max-width: 1024px) {
+    .explore-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .header-right {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .terminal-content {
+      padding: 1rem;
+    }
+
+    .terminal-output {
+      font-size: 0.75rem;
+    }
+  }
+</style>

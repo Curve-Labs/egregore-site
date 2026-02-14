@@ -59,8 +59,8 @@ const DocsPage = () => {
       case "p":
         return (
           <p key={i} style={{
-            ...font.serif, fontSize: "0.95rem", color: "#4a4640",
-            lineHeight: 1.75, marginBottom: "0.9rem",
+            ...font.courierPrime, fontSize: "14px", color: "#4a4640",
+            letterSpacing: "0", lineHeight: 1.75, marginBottom: "0.9rem",
           }}>
             {block.text}
           </p>
@@ -69,8 +69,8 @@ const DocsPage = () => {
       case "h3":
         return (
           <h3 key={i} style={{
-            ...font.mono, fontSize: "0.68rem", fontWeight: 700,
-            color: C.gold, letterSpacing: "1.5px", textTransform: "uppercase",
+            ...font.ibmPlex, fontSize: "14px", fontWeight: 700,
+            color: C.gold, letterSpacing: "0", textTransform: "uppercase",
             marginTop: "1.6rem", marginBottom: "0.5rem",
           }}>
             {block.text}
@@ -200,13 +200,13 @@ const DocsPage = () => {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          ...font.mono, fontSize: "0.65rem",
+          ...font.ibmPlex, fontSize: "12px",
           color: isActive ? C.crimson : hovered ? C.ink : C.muted,
           cursor: "pointer",
           padding: "0.2rem 0 0.2rem 0.8rem",
           borderLeft: isActive ? `1.5px solid ${C.crimson}` : "1.5px solid transparent",
           transition: "all 0.15s ease",
-          letterSpacing: "0.2px",
+          letterSpacing: "0",
         }}
       >
         {title}
@@ -299,8 +299,8 @@ const DocsPage = () => {
           {DOCS_NAV.map((group, gi) => (
             <div key={gi} style={{ marginBottom: "1.2rem" }}>
               <div style={{
-                ...font.mono, fontSize: "0.5rem", fontWeight: 700,
-                letterSpacing: "2px", textTransform: "uppercase",
+                ...font.ibmPlex, fontSize: "12px", fontWeight: 700,
+                letterSpacing: "0", textTransform: "uppercase",
                 color: C.warmGray, marginBottom: "0.35rem",
                 paddingLeft: "0.8rem",
               }}>
@@ -325,7 +325,7 @@ const DocsPage = () => {
               Documentation
             </div>
             <h1 style={{
-              ...font.serif, fontSize: "clamp(1.5rem, 3vw, 2.2rem)",
+              ...font.slovic, fontSize: "36px", letterSpacing: "0",
               fontWeight: 400, color: C.ink, lineHeight: 1.15, marginBottom: "0.8rem",
             }}>
               Command Reference
@@ -356,13 +356,13 @@ const DocsPage = () => {
                 }}
               >
                 <h2 style={{
-                  ...(isCommand ? font.mono : font.serif),
-                  fontSize: isCommand ? "1.05rem" : "1.3rem",
-                  fontWeight: isCommand ? 700 : 600,
+                  ...(isCommand ? font.ibmPlex : font.serif),
+                  fontSize: isCommand ? "14px" : "1.3rem",
+                  fontWeight: isCommand ? 700 : 400,
                   color: C.ink,
                   marginBottom: "0.7rem",
                   lineHeight: 1.3,
-                  letterSpacing: isCommand ? "-0.3px" : "0",
+                  letterSpacing: "0",
                 }}>
                   {section.title}
                 </h2>

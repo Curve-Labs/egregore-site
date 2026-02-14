@@ -101,10 +101,10 @@ const Hero = () => (
         {/* Left side - Text content */}
         <div className="mobile-hero-text" style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
           <h1 className="mobile-hero-title mobile-text-center" style={{
-            ...font.slovic, fontSize: "52px",
+            ...font.slovic, fontSize: "72px",
             fontWeight: 400, lineHeight: 1.0, color: C.ink,
             marginBottom: "2rem", textTransform: "uppercase",
-            letterSpacing: "0.01em",
+            letterSpacing: "0",
             fontStyle: "oblique 10deg",
             fontSynthesis: "style",
           }}>
@@ -112,7 +112,8 @@ const Hero = () => (
           </h1>
 
           <p className="mobile-body-text mobile-text-center" style={{
-            ...font.serif, fontSize: "1.25rem", fontWeight: 400,
+            ...font.courierPrime, fontSize: "20px", fontWeight: 400,
+            letterSpacing: "0",
             color: C.muted, maxWidth: 480, lineHeight: 1.75, marginBottom: "3rem",
           }}>
             A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
@@ -185,7 +186,7 @@ const ValueProps = () => {
   ];
 
   return (
-    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding" style={{ height: "700px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div className="mobile-value-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3.5rem" }}>
           {cards.map((card) => (
@@ -234,7 +235,7 @@ const ValueProps = () => {
 // ─── Section 3: Egregoric Intelligence ──────────────────────────
 const EgregoricIntelligence = () => {
   return (
-    <section className="mobile-section mobile-section-padding mobile-egregore-section" style={{ height: "1000px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding mobile-egregore-section" style={{ height: "700px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, maxWidth: "1600px", width: "100%" }}>
         <Divider />
         <div className="mobile-flex-col mobile-gap-small" style={{
@@ -627,6 +628,14 @@ const SeeItWork = () => {
         </pre>
       </div>
 
+      <div style={{
+        position: "absolute", top: "9rem", left: 0, right: 0,
+        textAlign: "center", zIndex: 2,
+        ...font.slovic, fontSize: "36px", letterSpacing: "0", color: C.parchment
+      }}>
+        MACHINATIONS
+      </div>
+
       <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{
@@ -760,16 +769,15 @@ const SessionCycle = () => {
     <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3rem 0 4rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px", width: "100%" }}>
         <Divider />
-        <SectionLabel>How it works</SectionLabel>
         <h2 style={{
-          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
-          textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
+          ...font.slovic, fontSize: "36px", fontWeight: 400,
+          textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2, letterSpacing: 0,
         }}>
           The Session Cycle
         </h2>
         <p style={{
-          ...font.serif, fontSize: "1.2rem", textAlign: "center",
-          color: C.muted, maxWidth: 600, margin: "0 auto 3.5rem", lineHeight: 1.7,
+          ...font.courierPrime, fontSize: "14px", textAlign: "center",
+          color: C.muted, maxWidth: 600, margin: "0 auto 3.5rem", lineHeight: 1.7, letterSpacing: 0,
         }}>
           Every interaction strengthens the shared context. The egregore remembers so individuals don't have to.
         </p>
@@ -783,10 +791,10 @@ const SessionCycle = () => {
                 borderBottom: i < commands.length - 1 ? `1px solid ${C.warmGray}` : "none",
                 alignItems: "baseline",
               }}>
-                <code style={{ ...font.mono, fontSize: "0.92rem", color: C.crimson, fontWeight: 700 }}>
+                <code style={{ ...font.ibmPlex, fontSize: "14px", color: C.crimson, fontWeight: 700 }}>
                   {c.cmd}
                 </code>
-                <p style={{ ...font.serif, fontSize: "1.1rem", color: "#5a5650", lineHeight: 1.6 }}>
+                <p style={{ ...font.courierPrime, fontSize: "14px", color: "#5a5650", lineHeight: 1.6, letterSpacing: 0 }}>
                   {c.desc}
                 </p>
               </div>
@@ -803,7 +811,7 @@ const SessionCycle = () => {
                 opacity: hovered !== null ? 0.3 : 1,
               }}>
                 <div style={{
-                  ...font.mono, fontSize: "0.55rem", letterSpacing: "2px",
+                  ...font.ibmPlex, fontSize: "14px", letterSpacing: "2px",
                   color: C.muted, textTransform: "uppercase", lineHeight: 1.6,
                 }}>
                   Knowledge<br />Graph +<br />Git Memory
@@ -884,7 +892,7 @@ const SessionCycle = () => {
                     }}
                   >
                     <div style={{
-                      ...font.mono, fontSize: "0.62rem", fontWeight: 700,
+                      ...font.ibmPlex, fontSize: "14px", fontWeight: 700,
                       color: isHovered ? C.crimson : C.ink,
                       letterSpacing: "1.5px",
                       transition: "color 0.2s",
@@ -892,7 +900,7 @@ const SessionCycle = () => {
                       {node.label}
                     </div>
                     <div style={{
-                      ...font.mono, fontSize: "0.55rem",
+                      ...font.ibmPlex, fontSize: "14px",
                       color: isHovered ? C.gold : C.crimson,
                       transition: "color 0.2s",
                     }}>
@@ -912,7 +920,7 @@ const SessionCycle = () => {
 // ─── Wizards Banner Section ─────────────────────────────────────
 const WizardsBanner = () => {
   return (
-    <section className="mobile-section mobile-section-padding mobile-hide" style={{ height: "1000px", padding: "3rem 0", background: C.parchment, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding mobile-hide" style={{ height: "640px", padding: "3rem 0px", background: C.parchment, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div style={{
           display: "flex",
