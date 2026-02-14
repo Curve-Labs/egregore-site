@@ -500,7 +500,77 @@ function RepoPicker({ token, org, onPick }) {
   );
 }
 
-function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceName }) {
+function TranscriptConsent({ onChoice }) {
+  const [enabled, setEnabled] = useState(true);
+
+  return (
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.5rem", textAlign: "center" }}>
+        Session transcripts
+      </p>
+      <p style={{ ...font.serif, fontSize: "1.1rem", textAlign: "center", marginBottom: "0.5rem" }}>
+        Build organizational memory
+      </p>
+      <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, textAlign: "center", marginBottom: "2rem", lineHeight: 1.6 }}>
+        Egregore can collect session transcripts to surface decisions, patterns, and handoffs across your team.
+        Transcripts are private to your org. Members can opt out individually.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2rem" }}>
+        {[
+          { value: true, label: "Enable transcript collection", desc: "Sessions are archived and used to build shared knowledge" },
+          { value: false, label: "Skip for now", desc: "You can enable this later in your org settings" },
+        ].map((opt) => (
+          <button
+            key={String(opt.value)}
+            onClick={() => setEnabled(opt.value)}
+            style={{
+              display: "flex", alignItems: "flex-start", gap: "0.75rem",
+              width: "100%", padding: "1rem 1.25rem",
+              background: enabled === opt.value ? "rgba(122,15,27,0.04)" : "transparent",
+              border: `1px solid ${enabled === opt.value ? C.crimson : C.warmGray}`,
+              cursor: "pointer", transition: "all 0.2s", textAlign: "left",
+            }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 2,
+              border: `1.5px solid ${enabled === opt.value ? C.crimson : C.warmGray}`,
+              background: enabled === opt.value ? C.crimson : "transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {enabled === opt.value && (
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />
+              )}
+            </div>
+            <div>
+              <span style={{ ...font.mono, fontSize: "0.85rem", color: C.ink, display: "block" }}>
+                {opt.label}
+              </span>
+              <span style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, display: "block", marginTop: "0.2rem" }}>
+                {opt.desc}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ textAlign: "right" }}>
+        <button
+          onClick={() => onChoice(enabled)}
+          style={{
+            ...font.mono, fontSize: "0.75rem",
+            background: C.ink, color: C.parchment,
+            border: "none", padding: "0.6rem 1.25rem", cursor: "pointer",
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceName, transcriptSharing = false }) {
   const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -515,6 +585,7 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
           is_personal: org.is_personal || false,
           repos,
           instance_name: instanceName || undefined,
+          transcript_sharing: transcriptSharing,
         });
 
     action
@@ -1109,6 +1180,7 @@ export default function SetupFlow() {
   const [profileDone, setProfileDone] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [selectedRepos, setSelectedRepos] = useState(null); // null = not picked yet, [] = skipped
+  const [transcriptConsent, setTranscriptConsent] = useState(null); // null = not asked, true/false = choice
   const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
   const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
   const [instanceName, setInstanceName] = useState(null); // name for new instance (when creatingNew)
@@ -1229,12 +1301,21 @@ export default function SetupFlow() {
     );
   }
 
+  // Transcript consent (after repos, before setup — only for new orgs, not joins)
+  if (githubToken && selectedOrg && !selectedOrg.has_egregore && transcriptConsent === null) {
+    return (
+      <SetupLayout>
+        <TranscriptConsent onChoice={setTranscriptConsent} />
+      </SetupLayout>
+    );
+  }
+
   // Setup in progress / complete
   if (githubToken && selectedOrg) {
     const orgForSetup = creatingNew ? { ...selectedOrg, has_egregore: false } : selectedOrg;
     return (
       <SetupLayout>
-        <SetupProgress token={githubToken} user={user} org={orgForSetup} repos={selectedRepos || []} instanceName={instanceName} />
+        <SetupProgress token={githubToken} user={user} org={orgForSetup} repos={selectedRepos || []} instanceName={instanceName} transcriptSharing={transcriptConsent || false} />
       </SetupLayout>
     );
   }
