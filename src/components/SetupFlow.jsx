@@ -653,9 +653,11 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
           </>
         ) : (
           <>
-            <p style={{ ...font.serif, fontSize: "0.95rem", color: "#5a5650", margin: 0, lineHeight: 1.5, marginBottom: "1rem" }}>
-              Create a Telegram group for your team. Notifications, handoffs, and questions will appear there.
-            </p>
+            <div style={{ ...font.mono, fontSize: "0.75rem", color: "#5a5650", lineHeight: 2, marginBottom: "1.25rem" }}>
+              <div><span style={{ color: C.crimson, fontWeight: 700 }}>1.</span> Open Telegram and create a new group</div>
+              <div><span style={{ color: C.crimson, fontWeight: 700 }}>2.</span> Name it (e.g. your team name)</div>
+              <div><span style={{ color: C.crimson, fontWeight: 700 }}>3.</span> Click below to add the Egregore bot</div>
+            </div>
             <a
               href={telegramInviteLink}
               target="_blank"
@@ -668,7 +670,7 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
                 transition: "all 0.2s", marginBottom: "1rem",
               }}
             >
-              <TelegramIcon /> Create Telegram group
+              <TelegramIcon /> Add bot to group
             </a>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
               <SmallSpinner />
@@ -677,7 +679,7 @@ function TelegramStep({ isFounder, telegramInviteLink, telegramGroupLink, telegr
               </p>
             </div>
             <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
-              Telegram will ask you to pick or create a group — choose "New Group", name it, and the bot connects automatically.
+              Select the group you just created. Notifications, handoffs, and questions will appear there.
             </p>
           </>
         )}
