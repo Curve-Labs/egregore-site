@@ -5,7 +5,7 @@ import { POSTS } from "./posts";
 import wizardsWorking from "./wizards working.txt?raw";
 import egregoricIntelligence from "./egregoric_intelligence.txt?raw";
 import egregoreMonster from "./egregore_monster.txt?raw";
-import terminalFrame from "./terminal_screen_latest.txt?raw";
+import terminalFrame from "./terminal_frame.txt?raw";
 import footerFlower from "./footer flower.txt?raw";
 import footerStar from "./footer_star_last.txt?raw";
 import oneSubstrate from "./one_subsrate.txt?raw";
@@ -17,10 +17,10 @@ import astro from "./astro.txt?raw";
 
 // ─── Utility Components ─────────────────────────────────────────
 const Divider = () => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "3rem 0", gap: "1rem" }}>
-    <div style={{ height: 1, width: 80, background: C.warmGray }} />
-    <div style={{ width: 6, height: 6, background: C.crimson, transform: "rotate(45deg)" }} />
-    <div style={{ height: 1, width: 80, background: C.warmGray }} />
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "3rem 0", gap: "1.5rem" }}>
+    <div style={{ height: 1, width: 120, background: C.warmGray }} />
+    <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)" }} />
+    <div style={{ height: 1, width: 120, background: C.warmGray }} />
   </div>
 );
 
@@ -35,7 +35,7 @@ const SectionLabel = ({ children, light }) => (
 );
 
 const Container = ({ children, style = {} }) => (
-  <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 2rem", ...style }}>{children}</div>
+  <div style={{ maxWidth: 1500, margin: "0 auto", padding: "0 3rem", ...style }}>{children}</div>
 );
 
 // ─── Navigation ─────────────────────────────────────────────────
@@ -56,7 +56,8 @@ const Navigation = () => {
   return (
     <nav style={{
       position: "fixed", top: 0, width: "100%", zIndex: 900,
-      padding: "1.2rem 3rem",
+      height: "80px",
+      padding: "0 4rem",
       display: "flex", justifyContent: "space-between", alignItems: "center",
       background: scrolled ? "rgba(244,241,234,0.95)" : "transparent",
       backdropFilter: scrolled ? "blur(10px)" : "none",
@@ -86,11 +87,11 @@ const Navigation = () => {
 // ─── Section 1: Hero ────────────────────────────────────────────
 const Hero = () => (
   <section id="top" style={{
-    minHeight: "100vh", display: "flex", alignItems: "center",
+    height: "1000px", display: "flex", alignItems: "center",
     position: "relative", overflow: "hidden",
     padding: "8rem 4rem 3rem",
   }}>
-    <Container style={{ width: "100%", maxWidth: "1400px" }}>
+    <Container style={{ width: "100%", maxWidth: "1600px" }}>
       <div style={{
         display: "flex",
         alignItems: "center",
@@ -98,9 +99,9 @@ const Hero = () => (
         justifyContent: "space-between",
       }}>
         {/* Left side - Text content */}
-        <div style={{ flex: "1", maxWidth: "520px", position: "relative", zIndex: 2 }}>
+        <div style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
           <h1 style={{
-            ...font.slovic, fontSize: "42px",
+            ...font.slovic, fontSize: "52px",
             fontWeight: 400, lineHeight: 1.0, color: C.ink,
             marginBottom: "2rem", textTransform: "uppercase",
             letterSpacing: "0.01em",
@@ -111,8 +112,8 @@ const Hero = () => (
           </h1>
 
           <p style={{
-            ...font.serif, fontSize: "1.15rem", fontWeight: 400,
-            color: C.muted, maxWidth: 400, lineHeight: 1.75, marginBottom: "3rem",
+            ...font.serif, fontSize: "1.25rem", fontWeight: 400,
+            color: C.muted, maxWidth: 480, lineHeight: 1.75, marginBottom: "3rem",
           }}>
             A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
           </p>
@@ -184,9 +185,9 @@ const ValueProps = () => {
   ];
 
   return (
-    <section style={{ padding: "3.5rem 0 6rem", position: "relative" }}>
-      <Container style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2.5rem" }}>
+    <section style={{ height: "1000px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
+      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3.5rem" }}>
           {cards.map((card) => (
             <div key={card.title}>
               {/* ASCII art above the card */}
@@ -211,13 +212,13 @@ const ValueProps = () => {
 
               <div style={{ borderTop: `2px solid ${C.gold}`, paddingTop: "1.5rem" }}>
                 <h3 style={{
-                  ...font.mono, fontSize: "0.88rem", fontWeight: 700,
+                  ...font.mono, fontSize: "0.95rem", fontWeight: 700,
                   color: C.gold, letterSpacing: "2px", marginBottom: "1rem",
                 }}>
                   {card.title}
                 </h3>
                 <p style={{
-                  ...font.serif, fontSize: "1.02rem", color: "#5a5650", lineHeight: 1.75,
+                  ...font.serif, fontSize: "1.15rem", color: "#5a5650", lineHeight: 1.75,
                 }}>
                   {card.body}
                 </p>
@@ -233,25 +234,25 @@ const ValueProps = () => {
 // ─── Section 3: Egregoric Intelligence ──────────────────────────
 const EgregoricIntelligence = () => {
   return (
-    <section style={{ padding: "2rem 0 5rem", position: "relative" }}>
-      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px" }}>
+    <section style={{ height: "1000px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
+      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1600px", width: "100%" }}>
         <Divider />
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: "4rem",
+          gap: "5rem",
           justifyContent: "space-between",
         }}>
           {/* Left side - Text content */}
-          <div style={{ flex: "1", maxWidth: "640px" }}>
+          <div style={{ flex: "1", maxWidth: "700px" }}>
             <h2 style={{
-              ...font.gothic, fontSize: "2.6rem", color: C.crimson,
+              ...font.gothic, fontSize: "3rem", color: C.crimson,
               marginBottom: "1.5rem", lineHeight: 1.2,
             }}>
               Egregoric Intelligence
             </h2>
             <p style={{
-              ...font.serif, fontSize: "1.15rem",
+              ...font.serif, fontSize: "1.25rem",
               color: C.muted, lineHeight: 1.75,
             }}>
               Production requires coordination. Coordination generates context. Context compounds into organizational learning &mdash; and feeds back into production. A shared substrate makes every coordination act context-rich &mdash; AI workflows operate with full organizational awareness.
@@ -599,7 +600,7 @@ const SeeItWork = () => {
   }, [hasStarted, startSequence]);
 
   return (
-    <section ref={sectionRef} style={{ padding: "6rem 0", background: C.ink, position: "relative", overflow: "hidden" }}>
+    <section ref={sectionRef} style={{ height: "1000px", padding: "0", background: C.ink, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
       {/* Terminal Frame Background */}
       <div style={{
         position: "absolute",
@@ -608,21 +609,25 @@ const SeeItWork = () => {
         transform: "translate(-50%, -50%)",
         pointerEvents: "none",
         opacity: 0.5,
+        width: "1440px",
+        height: "890px",
+        overflow: "hidden",
       }}>
         <pre style={{
           ...font.mono,
-          fontSize: "6.8px",
+          fontSize: "5.83px",
           lineHeight: 1.05,
           color: "#ffffff",
           whiteSpace: "pre",
           margin: 0,
+          textAlign: "center",
         }}>
           {terminalFrame}
         </pre>
       </div>
 
-      <Container style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{
             background: C.termBg, borderRadius: "10px",
             border: "1px solid #252320", overflow: "hidden",
@@ -656,7 +661,7 @@ const SeeItWork = () => {
             </div>
 
             <div ref={scrollRef} style={{
-              padding: "10px 14px 6px", height: 380,
+              padding: "10px 14px 6px", height: 390,
               overflowY: "auto", overflowX: "hidden",
               scrollbarWidth: "thin", scrollbarColor: "#2a2824 transparent",
             }}>
@@ -751,36 +756,36 @@ const SessionCycle = () => {
   const starEdges = nodes.map((_, i) => [i, (i + 2) % 5]);
 
   return (
-    <section style={{ padding: "3rem 0 4rem", position: "relative" }}>
-      <Container style={{ position: "relative", zIndex: 1 }}>
+    <section style={{ height: "1000px", padding: "3rem 0 4rem", position: "relative", display: "flex", alignItems: "center" }}>
+      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px", width: "100%" }}>
         <Divider />
         <SectionLabel>How it works</SectionLabel>
         <h2 style={{
-          ...font.serif, fontSize: "2.4rem", fontWeight: 400,
+          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
           textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
         }}>
           The Session Cycle
         </h2>
         <p style={{
-          ...font.serif, fontSize: "1.1rem", textAlign: "center",
-          color: C.muted, maxWidth: 550, margin: "0 auto 3rem", lineHeight: 1.7,
+          ...font.serif, fontSize: "1.2rem", textAlign: "center",
+          color: C.muted, maxWidth: 600, margin: "0 auto 3.5rem", lineHeight: 1.7,
         }}>
           Every interaction strengthens the shared context. The egregore remembers so individuals don't have to.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
           <div>
             {commands.map((c, i) => (
               <div key={i} style={{
-                display: "grid", gridTemplateColumns: "110px 1fr", gap: "1.5rem",
-                padding: "1.1rem 0",
+                display: "grid", gridTemplateColumns: "130px 1fr", gap: "2rem",
+                padding: "1.3rem 0",
                 borderBottom: i < commands.length - 1 ? `1px solid ${C.warmGray}` : "none",
                 alignItems: "baseline",
               }}>
-                <code style={{ ...font.mono, fontSize: "0.82rem", color: C.crimson, fontWeight: 700 }}>
+                <code style={{ ...font.mono, fontSize: "0.92rem", color: C.crimson, fontWeight: 700 }}>
                   {c.cmd}
                 </code>
-                <p style={{ ...font.serif, fontSize: "0.98rem", color: "#5a5650", lineHeight: 1.6 }}>
+                <p style={{ ...font.serif, fontSize: "1.1rem", color: "#5a5650", lineHeight: 1.6 }}>
                   {c.desc}
                 </p>
               </div>
@@ -906,8 +911,8 @@ const SessionCycle = () => {
 // ─── Wizards Banner Section ─────────────────────────────────────
 const WizardsBanner = () => {
   return (
-    <section style={{ padding: "3rem 0", background: C.parchment, position: "relative", overflow: "hidden" }}>
-      <Container style={{ position: "relative", zIndex: 1 }}>
+    <section style={{ height: "1000px", padding: "3rem 0", background: C.parchment, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
+      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div style={{
           display: "flex",
           justifyContent: "center",
@@ -934,28 +939,28 @@ const WizardsBanner = () => {
 const Research = () => {
   const featured = POSTS.filter((p) => p.featured);
   return (
-    <section id="research" style={{ padding: "3rem 0 5rem" }}>
-      <Container>
+    <section id="research" style={{ height: "1000px", padding: "3rem 0 5rem", display: "flex", alignItems: "center" }}>
+      <Container style={{ width: "100%" }}>
         <Divider />
         <SectionLabel>Research</SectionLabel>
         <h2 style={{
-          ...font.serif, fontSize: "2.4rem", fontWeight: 400,
+          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
           textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
         }}>
           From the field.
         </h2>
         <p style={{
-          ...font.serif, fontSize: "1.1rem", textAlign: "center",
-          color: C.muted, maxWidth: 520, margin: "0 auto 3rem", lineHeight: 1.7,
+          ...font.serif, fontSize: "1.2rem", textAlign: "center",
+          color: C.muted, maxWidth: 600, margin: "0 auto 3rem", lineHeight: 1.7,
         }}>
           Dispatches on shared cognition, coordination infrastructure, and what emerges when organizations develop memory.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3rem" }}>
           {featured.map((post) => (
             <Link key={post.slug} to={`/research/${post.slug}`} style={{
               textDecoration: "none", color: "inherit",
-              border: `1px solid ${C.warmGray}`, padding: "1.8rem 1.5rem",
+              border: `1px solid ${C.warmGray}`, padding: "2.2rem 2rem",
               display: "flex", flexDirection: "column",
               transition: "border-color 0.2s, transform 0.2s",
             }}
@@ -963,25 +968,25 @@ const Research = () => {
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.warmGray; e.currentTarget.style.transform = "translateY(0)"; }}
             >
               <div style={{
-                ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
+                ...font.mono, fontSize: "0.65rem", letterSpacing: "2px",
                 textTransform: "uppercase", color: C.gold, marginBottom: "0.8rem",
               }}>
                 {post.tag}
               </div>
               <h3 style={{
-                ...font.serif, fontSize: "1.2rem", fontWeight: 600,
+                ...font.serif, fontSize: "1.35rem", fontWeight: 600,
                 color: C.ink, marginBottom: "0.75rem", lineHeight: 1.3,
               }}>
                 {post.title}
               </h3>
               <p style={{
-                ...font.serif, fontSize: "0.92rem", color: C.muted,
+                ...font.serif, fontSize: "1.05rem", color: C.muted,
                 lineHeight: 1.65, flex: 1,
               }}>
                 {post.excerpt}
               </p>
               <div style={{
-                ...font.mono, fontSize: "0.58rem", color: C.warmGray,
+                ...font.mono, fontSize: "0.65rem", color: C.warmGray,
                 letterSpacing: "1px", marginTop: "1.2rem",
               }}>
                 {post.date}
@@ -1008,7 +1013,7 @@ const Research = () => {
 // ─── Monster Banner Section ─────────────────────────────────────
 const MonsterBanner = () => {
   return (
-    <section style={{ padding: "1.4rem 0", background: "#1A1714", position: "relative", overflow: "hidden" }}>
+    <section style={{ height: "1000px", padding: "1.4rem 0", background: "#1A1714", position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
       {/* Left ASCII decoration */}
       <div style={{
         position: "absolute",
@@ -1050,7 +1055,7 @@ const MonsterBanner = () => {
       </div>
 
       {/* Center monster ASCII */}
-      <Container style={{ position: "relative", zIndex: 1 }}>
+      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div style={{
           display: "flex",
           justifyContent: "center",
@@ -1116,8 +1121,8 @@ const WaitlistCTA = () => {
   };
 
   return (
-    <footer id="join" style={{ background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden" }}>
-      <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "2rem", padding: "0 2rem" }}>
+    <footer id="join" style={{ height: "1000px", background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ maxWidth: 1700, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "0 3rem" }}>
         {/* Left ASCII decoration */}
         <div style={{ flex: "0 0 auto" }}>
           <pre style={{
@@ -1133,15 +1138,15 @@ const WaitlistCTA = () => {
         </div>
 
         {/* Center form content */}
-        <Container style={{ maxWidth: 480, position: "relative", zIndex: 1, flex: "0 0 auto" }}>
+        <Container style={{ maxWidth: 550, position: "relative", zIndex: 1, flex: "0 0 auto" }}>
         {!submitted ? (
           <>
             <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-              <div style={{ width: 10, height: 10, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
-              <h2 style={{ ...font.serif, fontSize: "2.2rem", fontWeight: 400, marginBottom: "0.75rem", lineHeight: 1.2 }}>
+              <div style={{ width: 12, height: 12, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
+              <h2 style={{ ...font.serif, fontSize: "2.6rem", fontWeight: 400, marginBottom: "0.75rem", lineHeight: 1.2 }}>
                 The circle is forming.
               </h2>
-              <p style={{ ...font.mono, fontSize: "0.78rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.6 }}>
+              <p style={{ ...font.mono, fontSize: "0.88rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.6 }}>
                 Egregore is in early access. Speak your name and intent.
               </p>
             </div>

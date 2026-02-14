@@ -15,7 +15,7 @@ function GlobalStyles() {
 
       @font-face {
         font-family: 'Slovic';
-        src: url('/src/fonts/Slovic_Demo-Historic.otf') format('opentype');
+        src: url('/fonts/Slovic_Demo-Historic.otf') format('opentype');
         font-weight: normal;
         font-style: normal;
         font-display: swap;
