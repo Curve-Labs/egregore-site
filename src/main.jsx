@@ -6,6 +6,7 @@ import App from './App.jsx'
 import ResearchPage from './ResearchPage.jsx'
 import ArticlePage from './ArticlePage.jsx'
 import DocsPage from './DocsPage.jsx'
+import SetupFlow from './components/SetupFlow.jsx'
 
 function GlobalStyles() {
   useEffect(() => {
@@ -61,6 +62,9 @@ createRoot(document.getElementById('root')).render(
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/setup" element={<SetupFlow />} />
+        <Route path="/callback" element={<SetupFlow />} />
+        <Route path="/join" element={<SetupFlow />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
