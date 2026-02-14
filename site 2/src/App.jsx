@@ -71,7 +71,7 @@ const Navigation = () => {
       </a>
       <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>/Research</Link>
-        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={linkStyle}>/Docs</a>
+        <Link to="/docs" style={linkStyle}>/Docs</Link>
         <a href="#join" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
           padding: "0.4rem 1.1rem",
