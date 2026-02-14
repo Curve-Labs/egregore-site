@@ -1164,15 +1164,6 @@ export default function SetupFlow() {
     );
   }
 
-  // Profile step (after OAuth, before org picker — skipped for invite flow)
-  if (githubToken && !profileDone && !inviteToken) {
-    return (
-      <SetupLayout>
-        <ProfileStep token={githubToken} user={user} onContinue={() => setProfileDone(true)} />
-      </SetupLayout>
-    );
-  }
-
   // Admin gate — only admins can create new instances via /setup
   if (githubToken && !inviteToken && !isAdmin(user?.login)) {
     return (
