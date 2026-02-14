@@ -10,7 +10,16 @@ function GlobalStyles() {
   useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&family=IBM+Plex+Mono:wght@400;700&family=Courier+Prime:wght@400;700&display=swap');
+
+      @font-face {
+        font-family: 'Slovic';
+        src: url('/src/fonts/Slovic_Demo-Historic.otf') format('opentype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html { scroll-behavior: smooth; }
       body { background: ${C.parchment}; }

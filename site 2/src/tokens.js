@@ -12,4 +12,7 @@ export const font = {
   gothic: { fontFamily: "'UnifrakturMaguntia', cursive" },
   serif: { fontFamily: "'Cormorant Garamond', serif" },
   mono: { fontFamily: "'Space Mono', monospace" },
+  slovic: { fontFamily: "'Slovic', serif" },
+  ibmPlex: { fontFamily: "'IBM Plex Mono', monospace" },
+  courierPrime: { fontFamily: "'Courier Prime', monospace" },
 };

@@ -4,17 +4,16 @@ import { C, font } from "./tokens";
 import { POSTS } from "./posts";
 import wizardsWorking from "./wizards working.txt?raw";
 import egregoricIntelligence from "./egregoric_intelligence.txt?raw";
-import churchWindow from "./church_window.txt?raw";
 import egregoreMonster from "./egregore_monster.txt?raw";
-import egregoreLogo from "./egregore_logo.txt?raw";
-import leftHand from "./left_hand.txt?raw";
-import rightHand from "./right_hand.txt?raw";
+import terminalFrame from "./terminal_screen_latest.txt?raw";
+import footerFlower from "./footer flower.txt?raw";
+import footerStar from "./footer_star_last.txt?raw";
 import oneSubstrate from "./one_subsrate.txt?raw";
 import contextGardening from "./context_gardening.txt?raw";
-import organizationalLearning from "./organizational_learning.txt?raw";
+import organizationalLearning from "./new_organizational_learning.txt?raw";
 import monsterOrnamentLeft from "./monster_ornament_left.txt?raw";
 import monsterOrnamentRight from "./monster_ornament_right.txt?raw";
-import theFuckingWizards from "./the_fucking_wizards.txt?raw";
+import astro from "./astro.txt?raw";
 
 // ─── Utility Components ─────────────────────────────────────────
 const Divider = () => (
@@ -49,8 +48,8 @@ const Navigation = () => {
   }, []);
 
   const linkStyle = {
-    ...font.mono, color: C.ink, textDecoration: "none",
-    fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+    ...font.ibmPlex, color: C.ink, textDecoration: "none",
+    fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
     padding: "0.4rem 0",
   };
 
@@ -71,13 +70,13 @@ const Navigation = () => {
         Egregore
       </a>
       <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-        <Link to="/research" style={linkStyle}>Research</Link>
-        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={linkStyle}>Docs</a>
+        <Link to="/research" style={linkStyle}>/Research</Link>
+        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={linkStyle}>/Docs</a>
         <a href="#join" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
-          padding: "0.4rem 1.1rem", fontSize: "0.62rem",
+          padding: "0.4rem 1.1rem",
         }}>
-          Waitlist
+          /Waitlist
         </a>
       </div>
     </nav>
@@ -99,21 +98,23 @@ const Hero = () => (
         justifyContent: "space-between",
       }}>
         {/* Left side - Text content */}
-        <div style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
+        <div style={{ flex: "1", maxWidth: "520px", position: "relative", zIndex: 2 }}>
           <h1 style={{
-            ...font.serif, fontSize: "clamp(2.2rem, 4.5vw, 3.6rem)",
-            fontWeight: 400, lineHeight: 1.08, color: C.ink,
+            ...font.slovic, fontSize: "42px",
+            fontWeight: 400, lineHeight: 1.0, color: C.ink,
             marginBottom: "2rem", textTransform: "uppercase",
             letterSpacing: "0.01em",
+            fontStyle: "oblique 10deg",
+            fontSynthesis: "style",
           }}>
             summoning circle for<br />shared minds
           </h1>
 
           <p style={{
-            ...font.serif, fontSize: "1.25rem", fontWeight: 400,
-            color: C.muted, maxWidth: 540, lineHeight: 1.65, marginBottom: "3rem",
+            ...font.serif, fontSize: "1.15rem", fontWeight: 400,
+            color: C.muted, maxWidth: 400, lineHeight: 1.75, marginBottom: "3rem",
           }}>
-            A terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind.
+            A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
           </p>
 
           <a href="#join" style={{
@@ -199,7 +200,7 @@ const ValueProps = () => {
                   ...font.mono,
                   fontSize: "0.06rem",
                   lineHeight: 1.05,
-                  color: C.gold,
+                  color: "#8A8578",
                   whiteSpace: "pre",
                   margin: 0,
                   textAlign: "center",
@@ -598,64 +599,30 @@ const SeeItWork = () => {
   }, [hasStarted, startSequence]);
 
   return (
-    <section ref={sectionRef} style={{ padding: "0", background: C.ink, position: "relative", overflow: "hidden" }}>
-      {/* Left ASCII decoration */}
+    <section ref={sectionRef} style={{ padding: "6rem 0", background: C.ink, position: "relative", overflow: "hidden" }}>
+      {/* Terminal Frame Background */}
       <div style={{
         position: "absolute",
-        left: "0",
         top: "50%",
-        transform: "translateY(-50%)",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
         pointerEvents: "none",
+        opacity: 0.5,
       }}>
         <pre style={{
           ...font.mono,
-          fontSize: "0.113rem",
+          fontSize: "6.8px",
           lineHeight: 1.05,
           color: "#ffffff",
           whiteSpace: "pre",
           margin: 0,
         }}>
-          {churchWindow}
-        </pre>
-      </div>
-
-      {/* Right ASCII decoration */}
-      <div style={{
-        position: "absolute",
-        right: "0",
-        top: "50%",
-        transform: "translateY(-50%)",
-        pointerEvents: "none",
-      }}>
-        <pre style={{
-          ...font.mono,
-          fontSize: "0.113rem",
-          lineHeight: 1.05,
-          color: "#ffffff",
-          whiteSpace: "pre",
-          margin: 0,
-        }}>
-          {churchWindow}
+          {terminalFrame}
         </pre>
       </div>
 
       <Container style={{ position: "relative", zIndex: 1 }}>
-        <SectionLabel light>Coordination System</SectionLabel>
-        <h2 style={{
-          ...font.serif, fontSize: "2.4rem", fontWeight: 400,
-          textAlign: "center", color: C.parchment, marginBottom: "0.6rem", lineHeight: 1.2,
-        }}>
-          See it work.
-        </h2>
-        <p style={{
-          ...font.serif, fontSize: "1.1rem", textAlign: "center",
-          color: "rgba(244,241,234,0.45)", maxWidth: 520, margin: "0 auto 2rem", lineHeight: 1.7,
-        }}>
-          Slash commands are the pathways to AI-native coordination.<br />
-          Compose them to adapt your workflows.
-        </p>
-
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div style={{
             background: C.termBg, borderRadius: "10px",
             border: "1px solid #252320", overflow: "hidden",
@@ -689,7 +656,7 @@ const SeeItWork = () => {
             </div>
 
             <div ref={scrollRef} style={{
-              padding: "10px 14px 6px", height: 460,
+              padding: "10px 14px 6px", height: 380,
               overflowY: "auto", overflowX: "hidden",
               scrollbarWidth: "thin", scrollbarColor: "#2a2824 transparent",
             }}>
@@ -955,7 +922,7 @@ const WizardsBanner = () => {
             margin: 0,
             textAlign: "center",
           }}>
-            {theFuckingWizards}
+            {astro}
           </pre>
         </div>
       </Container>
@@ -1106,35 +1073,6 @@ const MonsterBanner = () => {
   );
 };
 
-// ─── Logo Banner Section ─────────────────────────────────────────
-const LogoBanner = () => {
-  return (
-    <section style={{ padding: "0", background: C.parchment, position: "relative", overflow: "hidden" }}>
-      {/* Center logo ASCII */}
-      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0", position: "relative", zIndex: 1 }}>
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}>
-          <pre style={{
-            ...font.mono,
-            fontSize: "clamp(0.22rem, 0.308vw, 0.385rem)",
-            lineHeight: 1.0,
-            color: C.ink,
-            whiteSpace: "pre",
-            margin: 0,
-            padding: 0,
-            textAlign: "center",
-          }}>
-            {egregoreLogo}
-          </pre>
-        </div>
-      </div>
-    </section>
-  );
-};
-
 // ─── Section 6: CTA ─────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 
@@ -1190,7 +1128,7 @@ const WaitlistCTA = () => {
             whiteSpace: "pre",
             margin: 0,
           }}>
-            {leftHand}
+            {footerFlower}
           </pre>
         </div>
 
@@ -1278,7 +1216,7 @@ const WaitlistCTA = () => {
             whiteSpace: "pre",
             margin: 0,
           }}>
-            {rightHand}
+            {footerStar}
           </pre>
         </div>
       </div>
@@ -1301,7 +1239,6 @@ export default function App() {
       <ValueProps />
       <SeeItWork />
       <MonsterBanner />
-      <LogoBanner />
       <EgregoreTextBanner />
       <SessionCycle />
       <WizardsBanner />
