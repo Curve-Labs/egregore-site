@@ -28,12 +28,12 @@ const ResearchPage = () => {
           }}>
             Research
           </Link>
-          <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={{
+          <Link to="/docs" style={{
             ...font.mono, color: C.ink, textDecoration: "none",
             fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
           }}>
             Docs
-          </a>
+          </Link>
           <Link to="/#join" style={{
             ...font.mono, color: C.ink, textDecoration: "none",
             fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
