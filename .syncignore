@@ -7,6 +7,7 @@
 .git/
 .env
 .env.local
+.env 2*
 .DS_Store
 .egregore-state.json
 egregore.json
@@ -25,11 +26,15 @@ __pycache__
 .claude/commands/deploy-site.md
 
 # CL-only docs (not for public repo)
+docs
 egregore-internals.html
+egregore-ecosystem.html
 egregore-graph.html
 *.png
 
 # CL-internal infrastructure
+site
+site 2
 api
 ascii-oracle
 blog
@@ -43,6 +48,8 @@ DEV.md
 TELEGRAM_BOT_PLAN.md
 bin/preflight.sh
 bin/deploy-site.sh
+bin/transcript-archive.sh
+bin/transcript-backfill.sh
 bin/seeds
 
 # Generated / personal
