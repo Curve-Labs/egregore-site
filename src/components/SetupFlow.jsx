@@ -1246,12 +1246,28 @@ export default function SetupFlow() {
     );
   }
 
-  // Fallback — shouldn't reach here normally
+  // Landing — user arrived at /setup without authenticating yet
   return (
     <SetupLayout>
-      <div style={{ textAlign: "center", padding: "4rem" }}>
-        <p style={{ ...font.serif, fontSize: "1.2rem", marginBottom: "1rem" }}>Let's get you set up.</p>
-        <a href="/" style={{ ...font.mono, fontSize: "0.8rem", color: C.crimson }}>Start from the beginning</a>
+      <div style={{ textAlign: "center", padding: "3rem 2rem" }}>
+        <p style={{ ...font.serif, fontSize: "1.3rem", marginBottom: "0.5rem" }}>
+          Set up Egregore
+        </p>
+        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, marginBottom: "2.5rem" }}>
+          Sign in with GitHub to get started.
+        </p>
+        <a
+          href={getGitHubAuthUrl()}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            ...font.mono, fontSize: "0.8rem",
+            background: C.ink, color: C.parchment,
+            padding: "0.85rem 2rem", textDecoration: "none",
+            border: "none", cursor: "pointer",
+          }}
+        >
+          <GitHubIcon /> Sign in with GitHub
+        </a>
       </div>
     </SetupLayout>
   );
