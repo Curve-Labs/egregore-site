@@ -51,7 +51,7 @@ const Navigation = () => {
       borderBottom: scrolled ? `1px solid ${C.warmGray}` : "1px solid transparent",
       transition: "all 0.3s ease",
     }}>
-      <a href="#join" style={{ ...linkStyle, fontSize: "0.62rem", letterSpacing: "2px" }}>
+      <a href="#join" onClick={() => window.sa_event?.("nav_join_the_game")} style={{ ...linkStyle, fontSize: "0.62rem", letterSpacing: "2px" }}>
         Join the Game
       </a>
       <a href="#top" style={{
@@ -63,8 +63,8 @@ const Navigation = () => {
       </a>
       <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>Research</Link>
-        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={linkStyle}>Docs</a>
-        <a href="#join" style={{
+        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" onClick={() => window.sa_event?.("click_docs")} style={linkStyle}>Docs</a>
+        <a href="#join" onClick={() => window.sa_event?.("nav_waitlist")} style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
           padding: "0.4rem 1.1rem", fontSize: "0.62rem",
         }}>
@@ -162,7 +162,7 @@ const Hero = () => (
         A terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind.
       </p>
 
-      <a href="#join" style={{
+      <a href="#join" onClick={() => window.sa_event?.("cta_join_waitlist")} style={{
         ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
         display: "inline-block", textTransform: "uppercase",
         background: C.ink, color: C.parchment, border: "none",
@@ -586,7 +586,7 @@ const SeeItWork = () => {
 
             <div style={{ display: "flex", padding: "8px 13px 0", borderBottom: "1px solid #1a1916" }}>
               {COMMANDS.map((c, i) => (
-                <button key={c.cmd} onClick={() => startSequence(i)} style={{
+                <button key={c.cmd} onClick={() => { startSequence(i); window.sa_event?.("demo_click_" + c.label); }} style={{
                   background: "none", border: "none",
                   borderBottom: active === i ? "1px solid #c8a55a" : "1px solid transparent",
                   color: active === i ? "#c8a55a" : "#44413c",
@@ -872,7 +872,7 @@ const Research = () => {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem" }}>
           {featured.map((post) => (
-            <Link key={post.slug} to={`/research/${post.slug}`} style={{
+            <Link key={post.slug} to={`/research/${post.slug}`} onClick={() => window.sa_event?.("click_research_" + post.slug)} style={{
               textDecoration: "none", color: "inherit",
               border: `1px solid ${C.warmGray}`, padding: "1.8rem 1.5rem",
               display: "flex", flexDirection: "column",
@@ -945,6 +945,7 @@ const WaitlistCTA = () => {
       });
       if (!res.ok) throw new Error("Failed to submit");
       setSubmitted(true);
+      window.sa_event?.("waitlist_submit");
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
