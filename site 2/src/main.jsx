@@ -5,6 +5,7 @@ import { C } from './tokens'
 import App from './App.jsx'
 import ResearchPage from './ResearchPage.jsx'
 import ArticlePage from './ArticlePage.jsx'
+import DocsPage from './DocsPage.jsx'
 
 function GlobalStyles() {
   useEffect(() => {
@@ -59,6 +60,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
+        <Route path="/docs" element={<DocsPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
