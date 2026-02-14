@@ -57,10 +57,12 @@ function GlobalStyles() {
         .mobile-gap-small { gap: 1.5rem !important; }
         .mobile-flex-col { flex-direction: column !important; align-items: center !important; }
         .mobile-hero-title { font-size: 32px !important; line-height: 1.1 !important; }
+        .mobile-section-title { font-size: 28px !important; line-height: 1.2 !important; }
         .mobile-body-text { font-size: 16px !important; line-height: 1.65 !important; }
         .mobile-card-title { font-size: 0.75rem !important; }
         .mobile-button { padding: 0.7rem 1.5rem !important; font-size: 12px !important; min-height: 44px !important; }
         .mobile-value-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
+        .mobile-session-grid { grid-template-columns: 1fr !important; gap: 2rem !important; }
         .mobile-input { font-size: 16px !important; padding: 0.75rem !important; min-height: 44px !important; }
       }
 

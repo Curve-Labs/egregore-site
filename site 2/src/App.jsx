@@ -234,24 +234,24 @@ const ValueProps = () => {
 // ─── Section 3: Egregoric Intelligence ──────────────────────────
 const EgregoricIntelligence = () => {
   return (
-    <section style={{ height: "1000px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, maxWidth: "1600px", width: "100%" }}>
         <Divider />
-        <div style={{
+        <div className="mobile-flex-col mobile-gap-small" style={{
           display: "flex",
           alignItems: "center",
           gap: "5rem",
           justifyContent: "space-between",
         }}>
           {/* Left side - Text content */}
-          <div style={{ flex: "1", maxWidth: "700px" }}>
-            <h2 style={{
+          <div className="mobile-text-center" style={{ flex: "1", maxWidth: "700px" }}>
+            <h2 className="mobile-section-title" style={{
               ...font.gothic, fontSize: "3rem", color: C.crimson,
               marginBottom: "1.5rem", lineHeight: 1.2,
             }}>
               Egregoric Intelligence
             </h2>
-            <p style={{
+            <p className="mobile-body-text" style={{
               ...font.serif, fontSize: "1.25rem",
               color: C.muted, lineHeight: 1.75,
             }}>
@@ -260,7 +260,7 @@ const EgregoricIntelligence = () => {
           </div>
 
           {/* Right side - Egregoric Intelligence ASCII art */}
-          <div style={{
+          <div className="mobile-hide" style={{
             flex: "1",
             display: "flex",
             justifyContent: "center",
@@ -756,7 +756,7 @@ const SessionCycle = () => {
   const starEdges = nodes.map((_, i) => [i, (i + 2) % 5]);
 
   return (
-    <section style={{ height: "1000px", padding: "3rem 0 4rem", position: "relative", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3rem 0 4rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px", width: "100%" }}>
         <Divider />
         <SectionLabel>How it works</SectionLabel>
@@ -773,7 +773,7 @@ const SessionCycle = () => {
           Every interaction strengthens the shared context. The egregore remembers so individuals don't have to.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
+        <div className="mobile-session-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
           <div>
             {commands.map((c, i) => (
               <div key={i} style={{
