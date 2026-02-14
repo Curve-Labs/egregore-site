@@ -1,5 +1,13 @@
 export const POSTS = [
   {
+    slug: "towards-shared-minds",
+    title: "Towards Shared Minds",
+    excerpt: "Magical times are upon us. Yet it somehow feels.. atomised. Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore.",
+    date: "Feb 2026",
+    tag: "Launch",
+    featured: true,
+  },
+  {
     slug: "machinations-of-egregore",
     title: "Machinations of Egregore",
     excerpt: "Not a tool Claude connects to \u2014 an environment Claude operates within. Each group receives a self-contained workspace distributed through GitHub: the codebase, the command protocol, the connection layer, and the collective memory. The environment evolves as a consequence of being used.",
