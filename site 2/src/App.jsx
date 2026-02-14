@@ -35,7 +35,7 @@ const SectionLabel = ({ children, light }) => (
 );
 
 const Container = ({ children, style = {} }) => (
-  <div style={{ maxWidth: 1500, margin: "0 auto", padding: "0 3rem", ...style }}>{children}</div>
+  <div className="mobile-container" style={{ maxWidth: 1500, margin: "0 auto", padding: "0 3rem", ...style }}>{children}</div>
 );
 
 // ─── Navigation ─────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const Navigation = () => {
   };
 
   return (
-    <nav style={{
+    <nav className="mobile-nav" style={{
       position: "fixed", top: 0, width: "100%", zIndex: 900,
       height: "80px",
       padding: "0 4rem",
@@ -64,16 +64,16 @@ const Navigation = () => {
       borderBottom: scrolled ? `1px solid ${C.warmGray}` : "1px solid transparent",
       transition: "all 0.3s ease",
     }}>
-      <a href="#top" style={{
+      <a href="#top" className="mobile-logo" style={{
         ...font.gothic, fontSize: "1.9rem", color: C.crimson,
         textDecoration: "none",
       }}>
         Egregore
       </a>
-      <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+      <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>/Research</Link>
         <Link to="/docs" style={linkStyle}>/Docs</Link>
-        <a href="#join" style={{
+        <a href="#join" className="mobile-button" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
           padding: "0.4rem 1.1rem",
         }}>
@@ -86,13 +86,13 @@ const Navigation = () => {
 
 // ─── Section 1: Hero ────────────────────────────────────────────
 const Hero = () => (
-  <section id="top" style={{
+  <section id="top" className="mobile-section mobile-section-padding" style={{
     height: "1000px", display: "flex", alignItems: "center",
     position: "relative", overflow: "hidden",
     padding: "8rem 4rem 3rem",
   }}>
     <Container style={{ width: "100%", maxWidth: "1600px" }}>
-      <div style={{
+      <div className="mobile-flex-col mobile-gap-small" style={{
         display: "flex",
         alignItems: "center",
         gap: "4rem",
@@ -100,7 +100,7 @@ const Hero = () => (
       }}>
         {/* Left side - Text content */}
         <div style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
-          <h1 style={{
+          <h1 className="mobile-hero-title mobile-text-center" style={{
             ...font.slovic, fontSize: "52px",
             fontWeight: 400, lineHeight: 1.0, color: C.ink,
             marginBottom: "2rem", textTransform: "uppercase",
@@ -111,14 +111,14 @@ const Hero = () => (
             summoning circle for<br />shared minds
           </h1>
 
-          <p style={{
+          <p className="mobile-body-text mobile-text-center" style={{
             ...font.serif, fontSize: "1.25rem", fontWeight: 400,
             color: C.muted, maxWidth: 480, lineHeight: 1.75, marginBottom: "3rem",
           }}>
             A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
           </p>
 
-          <a href="#join" style={{
+          <a href="#join" className="mobile-button" style={{
             ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
             display: "inline-block", textTransform: "uppercase",
             background: C.ink, color: C.parchment, border: "none",
@@ -137,7 +137,7 @@ const Hero = () => (
         </div>
 
         {/* Right side - Wizards Working ASCII art */}
-        <div style={{
+        <div className="mobile-hide" style={{
           flex: "1",
           display: "flex",
           justifyContent: "center",
@@ -185,9 +185,9 @@ const ValueProps = () => {
   ];
 
   return (
-    <section style={{ height: "1000px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
+    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
       <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3.5rem" }}>
+        <div className="mobile-value-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3.5rem" }}>
           {cards.map((card) => (
             <div key={card.title}>
               {/* ASCII art above the card */}
@@ -211,13 +211,13 @@ const ValueProps = () => {
               </div>
 
               <div style={{ borderTop: `2px solid ${C.gold}`, paddingTop: "1.5rem" }}>
-                <h3 style={{
+                <h3 className="mobile-card-title" style={{
                   ...font.mono, fontSize: "0.95rem", fontWeight: 700,
                   color: C.gold, letterSpacing: "2px", marginBottom: "1rem",
                 }}>
                   {card.title}
                 </h3>
-                <p style={{
+                <p className="mobile-body-text" style={{
                   ...font.serif, fontSize: "1.15rem", color: "#5a5650", lineHeight: 1.75,
                 }}>
                   {card.body}
@@ -1121,10 +1121,10 @@ const WaitlistCTA = () => {
   };
 
   return (
-    <footer id="join" style={{ height: "1000px", background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ maxWidth: 1700, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "0 3rem" }}>
+    <footer id="join" className="mobile-section mobile-section-padding" style={{ height: "1000px", background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="mobile-flex-col" style={{ maxWidth: 1700, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "0 3rem" }}>
         {/* Left ASCII decoration */}
-        <div style={{ flex: "0 0 auto" }}>
+        <div className="mobile-hide" style={{ flex: "0 0 auto" }}>
           <pre style={{
             ...font.mono,
             fontSize: "0.128rem",
@@ -1156,12 +1156,14 @@ const WaitlistCTA = () => {
                 <label style={labelStyle}>Name</label>
                 <input type="text" value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="mobile-input"
                   style={inputStyle} />
               </div>
               <div style={{ marginBottom: "1.8rem" }}>
                 <label style={labelStyle}>Email</label>
                 <input type="email" value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="mobile-input"
                   style={inputStyle} />
               </div>
               <div style={{ marginBottom: "2.5rem" }}>
@@ -1169,6 +1171,7 @@ const WaitlistCTA = () => {
                 <textarea value={form.source}
                   onChange={(e) => setForm({ ...form, source: e.target.value })}
                   rows={2}
+                  className="mobile-input"
                   style={{ ...inputStyle, resize: "none", fontFamily: font.mono.fontFamily }}
                   placeholder="What do you want to use Egregore for?" />
               </div>
@@ -1177,7 +1180,7 @@ const WaitlistCTA = () => {
                   {error}
                 </div>
               )}
-              <button onClick={handleSubmit} disabled={submitting} style={{
+              <button onClick={handleSubmit} disabled={submitting} className="mobile-button" style={{
                 ...font.mono, fontSize: "0.7rem", letterSpacing: "2px",
                 textTransform: "uppercase", width: "100%",
                 background: submitting ? C.muted : C.parchment, color: C.ink, border: "none",
@@ -1212,7 +1215,7 @@ const WaitlistCTA = () => {
       </Container>
 
         {/* Right ASCII decoration */}
-        <div style={{ flex: "0 0 auto" }}>
+        <div className="mobile-hide" style={{ flex: "0 0 auto" }}>
           <pre style={{
             ...font.mono,
             fontSize: "0.128rem",
