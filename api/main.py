@@ -45,7 +45,10 @@ app = FastAPI(
 
 # CORS: Only allow browser requests from known origins.
 # CLI tools (bin/graph.sh, bin/notify.sh, create-egregore) use curl, not browsers.
-_cors_origins = os.environ.get("CORS_ORIGINS", "https://egregore-core.netlify.app").split(",")
+_cors_origins = os.environ.get(
+    "CORS_ORIGINS",
+    "https://egregore-core.netlify.app,https://egregore.xyz,https://www.egregore.xyz"
+).split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
