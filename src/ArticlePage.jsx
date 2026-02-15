@@ -83,7 +83,7 @@ const ArticlePage = () => {
           ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
           textTransform: "uppercase", color: C.gold, marginBottom: "1rem",
         }}>
-          {post.tag} &middot; {post.date}
+          {post.tag ? <>{post.tag} &middot; </> : null}{post.date}
         </div>
 
         <h1 style={{
