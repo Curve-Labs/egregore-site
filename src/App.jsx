@@ -4,7 +4,7 @@ import { C, font } from "./tokens";
 import { POSTS } from "./posts";
 import wizardsWorking from "./wizards working.txt?raw";
 import egregoricIntelligence from "./egregoric_intelligence.txt?raw";
-import terminalFrame from "./terminal_screen_latest.txt?raw";
+import terminalFrame from "./terminal_frame.txt?raw";
 import footerFlower from "./footer flower.txt?raw";
 import footerStar from "./footer_star_last.txt?raw";
 import oneSubstrate from "./one_subsrate.txt?raw";
@@ -12,10 +12,7 @@ import contextGardening from "./context_gardening.txt?raw";
 import organizationalLearning from "./new_organizational_learning.txt?raw";
 import astro from "./astro.txt?raw";
 
-const terminalFrameSanitized = terminalFrame
-  .split("\n")
-  .filter((line) => !line.trimStart().startsWith("032222222222"))
-  .join("\n");
+const terminalFrameSanitized = terminalFrame;
 
 const wizardsWorkingSanitized = wizardsWorking.replace(/^\s*\n+/, "").replace(/\n+\s*$/, "");
 const astroSanitized = astro.replace(/^\s*\n+/, "").replace(/\n+\s*$/, "");
@@ -479,36 +476,41 @@ const SeeItWork = () => {
 
   return (
     <section className="mobile-section terminal-section" style={{
+      height: 1000,
       padding: 0,
       background: C.ink,
       position: "relative",
       overflow: "hidden",
+      display: "flex",
+      alignItems: "center",
     }}>
-      {/* ASCII arch frame — everything positions relative to this */}
       <div className="terminal-ascii-wrapper" style={{
-        position: "relative",
-        width: "100%",
-        maxWidth: 1440,
-        margin: "0 auto",
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
         pointerEvents: "none",
+        opacity: 0.5,
+        width: 1440,
+        height: 890,
+        overflow: "hidden",
       }}>
-        <pre className="terminal-ascii-art" style={{
-          ...font.mono,
-          fontSize: "5.83px",
-          lineHeight: 1.05,
-          color: "#ffffff",
-          whiteSpace: "pre",
-          margin: 0,
-          textAlign: "center",
-          opacity: 0.5,
-        }}>
-          {terminalFrameSanitized}
-        </pre>
+          <pre style={{
+            ...font.mono,
+            fontSize: "5.83px",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            whiteSpace: "pre",
+            margin: 0,
+            textAlign: "center",
+          }}>
+            {terminalFrameSanitized}
+          </pre>
+      </div>
 
-        {/* MACHINATIONS title — centered at arch apex */}
-        <div className="machinations-title" style={{
+      <div className="machinations-title" style={{
           position: "absolute",
-          top: "15.5%",
+          top: "9rem",
           left: 0,
           right: 0,
           textAlign: "center",
@@ -517,22 +519,19 @@ const SeeItWork = () => {
           fontSize: "36px",
           letterSpacing: 0,
           color: C.parchment,
-          pointerEvents: "none",
         }}>
-          MACHINATIONS
-        </div>
+        MACHINATIONS
+      </div>
 
-        {/* Terminal console — positioned inside the arch opening */}
-        <div className="terminal-console-anchor" style={{
-          position: "absolute",
-          top: "24%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "48%",
-          maxWidth: 700,
-          zIndex: 1,
-          pointerEvents: "auto",
-        }}>
+      <div className="mobile-container terminal-inner" style={{
+        maxWidth: 1500,
+        margin: "0 auto",
+        padding: "0 3rem",
+        position: "relative",
+        zIndex: 1,
+        width: "100%",
+      }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{
             background: C.termBg,
             borderRadius: "10px",
@@ -568,7 +567,7 @@ const SeeItWork = () => {
             </div>
 
             <div ref={scrollRef} className="terminal-scroll" style={{
-              padding: "10px 14px 6px", height: 300,
+              padding: "10px 14px 6px", height: 390,
               overflow: "hidden auto",
               scrollbarWidth: "thin", scrollbarColor: "#2a2824 transparent",
             }}>
