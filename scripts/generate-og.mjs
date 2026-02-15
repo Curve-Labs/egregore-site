@@ -1,6 +1,6 @@
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, readFileSync, mkdirSync } from "fs";
 
 const POSTS = [
   { slug: "towards-shared-minds", title: "Towards Shared Minds", excerpt: "Magical times are upon us. Yet it somehow feels atomised. Everyone with their workflows, their agents, their terminals — all they can share is stories of their single-player adventures.", tag: "Philosophy", date: "Feb 2026" },
@@ -13,108 +13,176 @@ const POSTS = [
   { slug: "economics-of-context", title: "The Economics of Organizational Memory", excerpt: "Why flat team pricing, what drives our costs, and how we think about building a sustainable business around context infrastructure.", tag: "Economics", date: "Jan 2026" },
 ];
 
-// Fetch Courier Prime from Google Fonts
+// Load ASCII art for background
+function loadAsciiArt() {
+  const raw = readFileSync("src/wizards working.txt", "utf-8");
+  // Take a center crop — lines 20-120, trimmed to fit
+  const lines = raw.split("\n").slice(20, 110);
+  // Trim each line to ~200 chars from the center portion
+  return lines.map((l) => {
+    const trimmed = l.slice(80, 340);
+    return trimmed || " ";
+  }).join("\n");
+}
+
 async function loadFont() {
   const url = "https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap";
   const css = await fetch(url).then((r) => r.text());
   const fontUrl = css.match(/src: url\(([^)]+)\)/)?.[1];
   if (!fontUrl) throw new Error("Could not find font URL");
-  const fontData = await fetch(fontUrl).then((r) => r.arrayBuffer());
-  return fontData;
+  return await fetch(fontUrl).then((r) => r.arrayBuffer());
 }
 
-function card(post) {
+async function loadSlovicFont() {
+  return readFileSync("public/fonts/Slovic_Demo-Historic.otf").buffer;
+}
+
+function card(post, asciiArt) {
   return {
     type: "div",
     props: {
       style: {
         width: "1200px",
         height: "630px",
-        background: "#F4F1EA",
+        background: "#0e0d0b",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "60px 70px",
+        position: "relative",
+        overflow: "hidden",
         fontFamily: "Courier Prime",
       },
       children: [
-        // Top: tag
+        // ASCII art background
         {
           type: "div",
           props: {
             style: {
-              fontSize: "16px",
-              letterSpacing: "3px",
-              textTransform: "uppercase",
-              color: "#c8a55a",
+              position: "absolute",
+              top: "-20px",
+              left: "-40px",
+              right: "-40px",
+              bottom: "-20px",
+              fontSize: "4.5px",
+              lineHeight: 1.05,
+              color: "rgba(244,241,234,0.07)",
+              fontFamily: "Courier Prime",
+              whiteSpace: "pre",
+              letterSpacing: "0px",
             },
-            children: post.tag,
+            children: asciiArt,
           },
         },
-        // Middle: title + excerpt
-        {
-          type: "div",
-          props: {
-            style: { display: "flex", flexDirection: "column", gap: "20px" },
-            children: [
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: "48px",
-                    fontWeight: 700,
-                    color: "#1a1714",
-                    lineHeight: 1.2,
-                  },
-                  children: post.title,
-                },
-              },
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: "20px",
-                    color: "#8a8578",
-                    lineHeight: 1.6,
-                  },
-                  children: post.excerpt,
-                },
-              },
-            ],
-          },
-        },
-        // Bottom: site name + date
+        // Large gothic E watermark
         {
           type: "div",
           props: {
             style: {
+              position: "absolute",
+              top: "50%",
+              right: "60px",
+              transform: "translateY(-50%)",
+              fontSize: "320px",
+              fontFamily: "Slovic",
+              color: "rgba(122,15,27,0.12)",
+              lineHeight: 1,
+            },
+            children: "E",
+          },
+        },
+        // Content overlay
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "relative",
               display: "flex",
+              flexDirection: "column",
               justifyContent: "space-between",
-              alignItems: "center",
-              borderTop: "1px solid #d4cfc5",
-              paddingTop: "20px",
+              padding: "55px 65px",
+              height: "100%",
             },
             children: [
+              // Tag
               {
                 type: "div",
                 props: {
                   style: {
-                    fontSize: "18px",
-                    color: "#7A0F1B",
-                    letterSpacing: "2px",
+                    fontSize: "14px",
+                    letterSpacing: "3px",
                     textTransform: "uppercase",
+                    color: "#c8a55a",
                   },
-                  children: "Egregore",
+                  children: post.tag,
                 },
               },
+              // Title + excerpt
+              {
+                type: "div",
+                props: {
+                  style: { display: "flex", flexDirection: "column", gap: "18px", maxWidth: "850px" },
+                  children: [
+                    {
+                      type: "div",
+                      props: {
+                        style: {
+                          fontSize: "46px",
+                          fontWeight: 700,
+                          color: "#F4F1EA",
+                          lineHeight: 1.15,
+                        },
+                        children: post.title,
+                      },
+                    },
+                    {
+                      type: "div",
+                      props: {
+                        style: {
+                          fontSize: "18px",
+                          color: "rgba(244,241,234,0.5)",
+                          lineHeight: 1.6,
+                          maxWidth: "750px",
+                        },
+                        children: post.excerpt,
+                      },
+                    },
+                  ],
+                },
+              },
+              // Bottom bar
               {
                 type: "div",
                 props: {
                   style: {
-                    fontSize: "16px",
-                    color: "#8a8578",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderTop: "1px solid rgba(244,241,234,0.1)",
+                    paddingTop: "18px",
                   },
-                  children: post.date,
+                  children: [
+                    {
+                      type: "div",
+                      props: {
+                        style: {
+                          fontSize: "16px",
+                          color: "#7A0F1B",
+                          letterSpacing: "3px",
+                          textTransform: "uppercase",
+                        },
+                        children: "Egregore",
+                      },
+                    },
+                    {
+                      type: "div",
+                      props: {
+                        style: {
+                          fontSize: "14px",
+                          color: "rgba(244,241,234,0.3)",
+                        },
+                        children: post.date,
+                      },
+                    },
+                  ],
                 },
               },
             ],
@@ -127,83 +195,106 @@ function card(post) {
 
 async function main() {
   console.log("Generating OG images...");
-  const fontData = await loadFont();
+  const [fontData, slovicFont] = await Promise.all([loadFont(), loadSlovicFont()]);
+  const asciiArt = loadAsciiArt();
+
+  const fonts = [
+    { name: "Courier Prime", data: fontData, weight: 400, style: "normal" },
+    { name: "Courier Prime", data: fontData, weight: 700, style: "normal" },
+    { name: "Slovic", data: slovicFont, weight: 400, style: "normal" },
+  ];
 
   mkdirSync("public/og", { recursive: true });
 
   for (const post of POSTS) {
-    const svg = await satori(card(post), {
-      width: 1200,
-      height: 630,
-      fonts: [
-        { name: "Courier Prime", data: fontData, weight: 400, style: "normal" },
-        { name: "Courier Prime", data: fontData, weight: 700, style: "normal" },
-      ],
-    });
-
-    const resvg = new Resvg(svg, {
-      fitTo: { mode: "width", value: 1200 },
-    });
-    const png = resvg.render().asPng();
+    const svg = await satori(card(post, asciiArt), { width: 1200, height: 630, fonts });
+    const png = new Resvg(svg, { fitTo: { mode: "width", value: 1200 } }).render().asPng();
     writeFileSync(`public/og/${post.slug}.png`, png);
     console.log(`  ✓ ${post.slug}.png`);
   }
 
-  // Default OG image for homepage
+  // Default OG image
   const defaultCard = {
     type: "div",
     props: {
       style: {
         width: "1200px",
         height: "630px",
-        background: "#F4F1EA",
+        background: "#0e0d0b",
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: "24px",
+        position: "relative",
+        overflow: "hidden",
         fontFamily: "Courier Prime",
       },
       children: [
+        // ASCII art background
         {
           type: "div",
           props: {
             style: {
-              fontSize: "64px",
-              fontWeight: 700,
-              color: "#1a1714",
-              letterSpacing: "4px",
+              position: "absolute",
+              top: "-20px",
+              left: "-40px",
+              right: "-40px",
+              bottom: "-20px",
+              fontSize: "4.5px",
+              lineHeight: 1.05,
+              color: "rgba(244,241,234,0.07)",
+              fontFamily: "Courier Prime",
+              whiteSpace: "pre",
+              letterSpacing: "0px",
             },
-            children: "EGREGORE",
+            children: asciiArt,
           },
         },
+        // Gothic Egregore watermark
         {
           type: "div",
           props: {
             style: {
-              fontSize: "22px",
-              color: "#8a8578",
-              textAlign: "center",
-              maxWidth: "700px",
-              lineHeight: 1.6,
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "16px",
             },
-            children: "Shared cognition for teams and agents.",
+            children: [
+              {
+                type: "div",
+                props: {
+                  style: {
+                    fontSize: "96px",
+                    fontFamily: "Slovic",
+                    color: "#F4F1EA",
+                    lineHeight: 1,
+                  },
+                  children: "Egregore",
+                },
+              },
+              {
+                type: "div",
+                props: {
+                  style: {
+                    fontSize: "18px",
+                    color: "rgba(244,241,234,0.4)",
+                    letterSpacing: "4px",
+                    textTransform: "uppercase",
+                  },
+                  children: "Shared cognition for teams and agents",
+                },
+              },
+            ],
           },
         },
       ],
     },
   };
 
-  const svg = await satori(defaultCard, {
-    width: 1200,
-    height: 630,
-    fonts: [
-      { name: "Courier Prime", data: fontData, weight: 400, style: "normal" },
-      { name: "Courier Prime", data: fontData, weight: 700, style: "normal" },
-    ],
-  });
-  const resvg = new Resvg(svg, { fitTo: { mode: "width", value: 1200 } });
-  writeFileSync("public/og/default.png", resvg.render().asPng());
+  const svg = await satori(defaultCard, { width: 1200, height: 630, fonts });
+  writeFileSync("public/og/default.png", new Resvg(svg, { fitTo: { mode: "width", value: 1200 } }).render().asPng());
   console.log("  ✓ default.png");
   console.log("Done.");
 }
