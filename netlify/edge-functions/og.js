@@ -61,6 +61,7 @@ function getMeta(request) {
         title: `${article.title} \u2014 Egregore`,
         description: article.description,
         url: `${SITE}/research/${slug}`,
+        image: `${SITE}/og/${slug}.png`,
         type: "article",
       };
     }
@@ -73,6 +74,7 @@ function getMeta(request) {
       title: page.title,
       description: page.description,
       url: `${SITE}${path}`,
+      image: `${SITE}/og/default.png`,
       type: "website",
     };
   }
@@ -87,9 +89,13 @@ function injectOgTags(html, meta) {
     <meta property="og:title" content="${meta.title}" />
     <meta property="og:description" content="${meta.description}" />
     <meta property="og:url" content="${meta.url}" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="${meta.image}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${meta.title}" />
-    <meta name="twitter:description" content="${meta.description}" />`;
+    <meta name="twitter:description" content="${meta.description}" />
+    <meta name="twitter:image" content="${meta.image}" />`;
 
   // Replace existing OG tags and title
   let result = html;
