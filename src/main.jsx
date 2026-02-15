@@ -81,7 +81,19 @@ function GlobalStyles() {
       .waitlist-title { font-size: 36px !important; line-height: 1.05 !important; }
       .waitlist-side-art pre { font-size: clamp(0.078rem, 0.14vw, 0.128rem) !important; }
 
+      /* Terminal / Machinations section responsive */
+      .terminal-ascii-art { font-size: 5.83px !important; }
+      .terminal-console-anchor {
+        top: 24% !important;
+        width: 48% !important;
+      }
+      .machinations-title { font-size: 36px !important; }
+
       @media (max-width: 1440px) {
+        .terminal-ascii-art { font-size: 5px !important; }
+        .terminal-console-anchor {
+          width: 52% !important;
+        }
         .site-nav { padding: 0 40px !important; }
         .hero-section { min-height: auto !important; padding: 126px 0 56px !important; }
         .hero-section > div { padding: 0 56px !important; }
@@ -117,6 +129,11 @@ function GlobalStyles() {
       }
 
       @media (max-width: 1280px) {
+        .terminal-ascii-art { font-size: 4.2px !important; }
+        .terminal-console-anchor {
+          width: 54% !important;
+        }
+        .machinations-title { font-size: 30px !important; }
         .hero-section { padding: 116px 0 52px !important; }
         .hero-section > div { padding: 0 24px !important; }
         .hero-layout {
@@ -195,11 +212,15 @@ function GlobalStyles() {
         }
 
         .terminal-section {
-          height: auto !important;
-          min-height: 860px !important;
-          padding: 72px 0 64px !important;
+          min-height: auto !important;
         }
-        .terminal-inner { padding: 0 24px !important; }
+        .terminal-ascii-art { font-size: 3.5px !important; }
+        .terminal-console-anchor {
+          width: 50% !important;
+          top: 22% !important;
+        }
+        .machinations-title { font-size: 24px !important; top: 13% !important; }
+        .terminal-scroll { height: 220px !important; }
 
         .session-cycle-section { padding: 84px 0 64px !important; }
         .session-cycle-section > div { padding: 0 24px !important; }
@@ -264,10 +285,30 @@ function GlobalStyles() {
         .egregoric-body { font-size: 18px !important; line-height: 26px !important; }
 
         .terminal-section {
-          min-height: 760px !important;
-          padding: 58px 0 52px !important;
+          min-height: auto !important;
         }
-        .terminal-inner { padding: 0 16px !important; }
+        .terminal-ascii-wrapper {
+          padding: 0 !important;
+        }
+        .terminal-ascii-art {
+          display: none !important;
+        }
+        .terminal-console-anchor {
+          position: relative !important;
+          top: auto !important;
+          left: auto !important;
+          transform: none !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 0 16px !important;
+        }
+        .machinations-title {
+          position: relative !important;
+          top: auto !important;
+          font-size: 28px !important;
+          padding: 48px 0 24px !important;
+        }
+        .terminal-scroll { height: 320px !important; }
 
         .session-cycle-section { padding: 56px 0 56px !important; }
         .session-cycle-section > div { padding: 0 16px !important; }

@@ -479,41 +479,36 @@ const SeeItWork = () => {
 
   return (
     <section className="mobile-section terminal-section" style={{
-      height: 1000,
       padding: 0,
       background: C.ink,
       position: "relative",
       overflow: "hidden",
-      display: "flex",
-      alignItems: "center",
     }}>
+      {/* ASCII arch frame — everything positions relative to this */}
       <div className="terminal-ascii-wrapper" style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
+        position: "relative",
+        width: "100%",
+        maxWidth: 1440,
+        margin: "0 auto",
         pointerEvents: "none",
-        opacity: 0.5,
-        width: 1440,
-        height: 890,
-        overflow: "hidden",
       }}>
-          <pre style={{
-            ...font.mono,
-            fontSize: "5.83px",
-            lineHeight: 1.05,
-            color: "#ffffff",
-            whiteSpace: "pre",
-            margin: 0,
-            textAlign: "center",
-          }}>
-            {terminalFrameSanitized}
-          </pre>
-      </div>
+        <pre className="terminal-ascii-art" style={{
+          ...font.mono,
+          fontSize: "5.83px",
+          lineHeight: 1.05,
+          color: "#ffffff",
+          whiteSpace: "pre",
+          margin: 0,
+          textAlign: "center",
+          opacity: 0.5,
+        }}>
+          {terminalFrameSanitized}
+        </pre>
 
-      <div style={{
+        {/* MACHINATIONS title — centered at arch apex */}
+        <div className="machinations-title" style={{
           position: "absolute",
-          top: "9rem",
+          top: "15.5%",
           left: 0,
           right: 0,
           textAlign: "center",
@@ -522,19 +517,22 @@ const SeeItWork = () => {
           fontSize: "36px",
           letterSpacing: 0,
           color: C.parchment,
+          pointerEvents: "none",
         }}>
-        MACHINATIONS
-      </div>
+          MACHINATIONS
+        </div>
 
-      <div className="mobile-container terminal-inner" style={{
-        maxWidth: 1500,
-        margin: "0 auto",
-        padding: "0 3rem",
-        position: "relative",
-        zIndex: 1,
-        width: "100%",
-      }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+        {/* Terminal console — positioned inside the arch opening */}
+        <div className="terminal-console-anchor" style={{
+          position: "absolute",
+          top: "24%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "48%",
+          maxWidth: 700,
+          zIndex: 1,
+          pointerEvents: "auto",
+        }}>
           <div style={{
             background: C.termBg,
             borderRadius: "10px",
@@ -570,7 +568,7 @@ const SeeItWork = () => {
             </div>
 
             <div ref={scrollRef} className="terminal-scroll" style={{
-              padding: "10px 14px 6px", height: 390,
+              padding: "10px 14px 6px", height: 300,
               overflow: "hidden auto",
               scrollbarWidth: "thin", scrollbarColor: "#2a2824 transparent",
             }}>
