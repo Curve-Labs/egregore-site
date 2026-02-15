@@ -1,4 +1,3 @@
-const SITE = "https://egregore.xyz";
 const SITE_NAME = "Egregore";
 
 const ARTICLES = {
@@ -49,6 +48,7 @@ const PAGES = {
 
 function getMeta(request) {
   const url = new URL(request.url);
+  const origin = url.origin;
   const path = url.pathname;
 
   // Article pages: /research/:slug
@@ -60,8 +60,8 @@ function getMeta(request) {
       return {
         title: `${article.title} \u2014 Egregore`,
         description: article.description,
-        url: `${SITE}/research/${slug}`,
-        image: `${SITE}/og/${slug}.png`,
+        url: `${origin}/research/${slug}`,
+        image: `${origin}/og/${slug}.png`,
         type: "article",
       };
     }
@@ -73,8 +73,19 @@ function getMeta(request) {
     return {
       title: page.title,
       description: page.description,
-      url: `${SITE}${path}`,
-      image: `${SITE}/og/default.png`,
+      url: `${origin}${path}`,
+      image: `${origin}/og/default.png`,
+      type: "website",
+    };
+  }
+
+  // Homepage
+  if (path === "/" || path === "") {
+    return {
+      title: "Egregore \u2014 Shared Cognition for Teams and Agents",
+      description: "A terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind.",
+      url: origin,
+      image: `${origin}/og/default.png`,
       type: "website",
     };
   }
@@ -108,7 +119,7 @@ function injectOgTags(html, meta) {
 
   // Replace existing OG/twitter meta block with new one
   result = result.replace(
-    /\s*<!-- Open Graph -->[\s\S]*?<!-- Twitter -->[\s\S]*?<meta name="twitter:description"[^>]*\/>/,
+    /\s*<!-- Open Graph -->[\s\S]*?<meta name="twitter:image"[^>]*\/>/,
     ogTags
   );
 
