@@ -858,16 +858,22 @@ const SessionCycle = () => {
                 {nodes.map((n, i) => {
                   const isHovered = hovered === i;
                   return (
-                    <g key={i}>
+                    <g key={i}
+                      onMouseEnter={() => setHovered(i)}
+                      onMouseLeave={() => setHovered(null)}
+                      style={{ cursor: "pointer" }}
+                    >
                       {isHovered && (
                         <circle cx={n.x} cy={n.y} r={12}
                           fill="none" stroke="rgba(122,15,27,0.15)" strokeWidth="1"
                           style={{ transition: "opacity 0.3s" }}
                         />
                       )}
+                      {/* Invisible hit area for easier hover */}
+                      <circle cx={n.x} cy={n.y} r={16} fill="transparent" />
                       <circle cx={n.x} cy={n.y} r={isHovered ? 6 : 4}
                         fill={C.crimson}
-                        style={{ transition: "r 0.2s", cursor: "pointer" }}
+                        style={{ transition: "r 0.2s" }}
                       />
                     </g>
                   );
