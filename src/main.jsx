@@ -119,7 +119,7 @@ function GlobalStyles() {
         }
         .terminal-section .terminal-scroll * { font-size: 10px !important; }
         .machinations-title {
-          top: 6rem !important;
+          top: 3rem !important;
           font-size: 24px !important;
         }
 
