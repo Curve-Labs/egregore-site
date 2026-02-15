@@ -957,14 +957,12 @@ const Research = () => {
     <section id="research" className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3rem 0 5rem", display: "flex", alignItems: "center" }}>
       <Container style={{ width: "100%" }}>
         <Divider />
-        <div style={{ ...font.mono, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "3.5px", marginBottom: "1rem", textAlign: "center", color: C.warmGray }}>
-          /Research
-        </div>
         <h2 className="mobile-section-title" style={{
-          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
+          ...font.slovic, fontSize: "3.2rem", fontWeight: 400,
           textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
+          textTransform: "uppercase", fontStyle: "oblique 10deg", fontSynthesis: "style",
         }}>
-          From the field.
+          Research
         </h2>
         <p className="mobile-body-text" style={{
           ...font.serif, fontSize: "1.2rem", textAlign: "center",
