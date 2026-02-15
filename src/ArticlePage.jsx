@@ -7,10 +7,20 @@ const ArticlePage = () => {
   const { slug } = useParams();
   const post = POSTS.find((p) => p.slug === slug);
   const content = ARTICLE_CONTENT[slug];
+  const navLinkStyle = {
+    ...font.ibmPlex,
+    color: C.ink,
+    textDecoration: "none",
+    fontSize: "12px",
+    letterSpacing: "0",
+    textTransform: "uppercase",
+    lineHeight: 1,
+    fontWeight: 400,
+  };
 
   if (!post) {
     return (
-      <div style={{ background: C.parchment, minHeight: "100vh", padding: "9rem 2rem 6rem", textAlign: "center" }}>
+      <div style={{ background: C.parchment, minHeight: "100vh", padding: "6rem 2rem", textAlign: "center" }}>
         <p style={{ ...font.serif, fontSize: "1.2rem", color: C.muted }}>Article not found.</p>
         <Link to="/research" style={{ ...font.mono, fontSize: "0.72rem", color: C.crimson, marginTop: "2rem", display: "inline-block" }}>
           Back to research
@@ -27,41 +37,26 @@ const ArticlePage = () => {
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav className="mobile-nav" style={{
-        position: "fixed", top: 0, width: "100%", zIndex: 900,
-        height: "80px",
-        padding: "0 4rem",
+      <nav style={{
+        padding: "1.2rem 3rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "rgba(244,241,234,0.95)",
-        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
-        transition: "all 0.3s ease",
       }}>
-        <Link to="/" className="mobile-logo" style={{
+        <Link to="/" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson, textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-          <Link to="/research" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
-          }}>
+        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+          <Link to="/research" style={navLinkStyle}>
             /Research
           </Link>
-          <Link to="/docs" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
-          }}>
+          <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={navLinkStyle}>
             /Docs
-          </Link>
-          <Link to="/#join" className="mobile-button" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`,
-            padding: "0.4rem 1.1rem",
+          </a>
+          <Link to="/#join" style={{
+            ...navLinkStyle,
+            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
           }}>
             /Waitlist
           </Link>
@@ -69,7 +64,7 @@ const ArticlePage = () => {
       </nav>
 
       {/* Article */}
-      <article style={{ maxWidth: 680, margin: "0 auto", padding: "7rem 2rem 3rem" }}>
+      <article style={{ maxWidth: 680, margin: "0 auto", padding: "4rem 2rem 3rem" }}>
         {/* Meta */}
         <Link to="/research" style={{
           ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
@@ -108,7 +103,7 @@ const ArticlePage = () => {
               if (block.type === "h2") {
                 return (
                   <h2 key={i} style={{
-                    ...font.serif, fontSize: "1.6rem", fontWeight: 600,
+                    ...font.serif, fontSize: "1.6rem", fontWeight: 400,
                     color: C.ink, marginTop: "2.5rem", marginBottom: "1rem", lineHeight: 1.3,
                   }}>
                     {block.text}

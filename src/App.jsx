@@ -4,78 +4,65 @@ import { C, font } from "./tokens";
 import { POSTS } from "./posts";
 import wizardsWorking from "./wizards working.txt?raw";
 import egregoricIntelligence from "./egregoric_intelligence.txt?raw";
-import egregoreMonster from "./egregore_monster.txt?raw";
-import terminalFrame from "./terminal_frame.txt?raw";
+import terminalFrame from "./terminal_screen_latest.txt?raw";
 import footerFlower from "./footer flower.txt?raw";
 import footerStar from "./footer_star_last.txt?raw";
 import oneSubstrate from "./one_subsrate.txt?raw";
 import contextGardening from "./context_gardening.txt?raw";
 import organizationalLearning from "./new_organizational_learning.txt?raw";
-import monsterOrnamentLeft from "./monster_ornament_left.txt?raw";
-import monsterOrnamentRight from "./monster_ornament_right.txt?raw";
 import astro from "./astro.txt?raw";
 
+const terminalFrameSanitized = terminalFrame
+  .split("\n")
+  .filter((line) => !line.trimStart().startsWith("032222222222"))
+  .join("\n");
+
+const wizardsWorkingSanitized = wizardsWorking.replace(/^\s*\n+/, "").replace(/\n+\s*$/, "");
+const astroSanitized = astro.replace(/^\s*\n+/, "").replace(/\n+\s*$/, "");
+
 // ─── Utility Components ─────────────────────────────────────────
-const Divider = () => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "3rem 0", gap: "1.5rem" }}>
-    <div style={{ height: 1, width: 120, background: C.warmGray }} />
-    <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)" }} />
-    <div style={{ height: 1, width: 120, background: C.warmGray }} />
+const Divider = ({ style = {} }) => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "3rem 0", gap: "1rem", ...style }}>
+    <div style={{ height: 1, width: 80, background: C.warmGray }} />
+    <div style={{ width: 6, height: 6, background: C.crimson, transform: "rotate(45deg)" }} />
+    <div style={{ height: 1, width: 80, background: C.warmGray }} />
   </div>
 );
 
-const SectionLabel = ({ children, light }) => (
-  <div style={{
-    ...font.mono, fontSize: "0.62rem", textTransform: "uppercase",
-    letterSpacing: "3.5px", marginBottom: "1rem", textAlign: "center",
-    color: light ? "rgba(244,241,234,0.35)" : C.muted,
-  }}>
-    {children}
-  </div>
-);
-
-const Container = ({ children, style = {} }) => (
-  <div className="mobile-container" style={{ maxWidth: 1500, margin: "0 auto", padding: "0 3rem", ...style }}>{children}</div>
+const Container = ({ children, maxWidth = 1100, paddingX = 32, style = {}, className }) => (
+  <div className={className} style={{ width: "100%", maxWidth, margin: "0 auto", padding: `0 ${paddingX}px`, ...style }}>{children}</div>
 );
 
 // ─── Navigation ─────────────────────────────────────────────────
 const Navigation = () => {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const linkStyle = {
     ...font.ibmPlex, color: C.ink, textDecoration: "none",
-    fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-    padding: "0.4rem 0",
+    fontSize: "12px", letterSpacing: "0", textTransform: "uppercase",
+    lineHeight: 1,
+    fontWeight: 400,
   };
 
   return (
-    <nav className="mobile-nav" style={{
-      position: "fixed", top: 0, width: "100%", zIndex: 900,
-      height: "80px",
-      padding: "0 4rem",
+    <nav className="site-nav" style={{
+      position: "fixed", top: 0, left: 0, width: "100%", zIndex: 900,
+      height: 80, padding: "0 64px",
       display: "flex", justifyContent: "space-between", alignItems: "center",
-      background: scrolled ? "rgba(244,241,234,0.95)" : "transparent",
-      backdropFilter: scrolled ? "blur(10px)" : "none",
-      borderBottom: scrolled ? `1px solid ${C.warmGray}` : "1px solid transparent",
-      transition: "all 0.3s ease",
+      background: C.parchment,
+      borderBottom: `1px solid ${C.warmGray}`,
     }}>
-      <a href="#top" className="mobile-logo" style={{
-        ...font.gothic, fontSize: "1.9rem", color: C.crimson,
+      <a href="#top" className="site-brand" style={{
+        ...font.gothic, fontSize: "2rem", color: C.crimson,
         textDecoration: "none",
       }}>
         Egregore
       </a>
-      <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+      <div className="site-nav-links" style={{ display: "flex", gap: "32px", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>/Research</Link>
-        <Link to="/docs" style={linkStyle}>/Docs</Link>
-        <a href="#join" className="mobile-button" style={{
+        <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={linkStyle}>/Docs</a>
+        <a href="#join" className="site-nav-waitlist" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
-          padding: "0.4rem 1.1rem",
+          width: 112.8, height: 37.17, display: "flex",
+          alignItems: "center", justifyContent: "center",
         }}>
           /Waitlist
         </a>
@@ -86,23 +73,28 @@ const Navigation = () => {
 
 // ─── Section 1: Hero ────────────────────────────────────────────
 const Hero = () => (
-  <section id="top" className="mobile-section mobile-section-padding mobile-hero-section" style={{
-    height: "1000px", display: "flex", alignItems: "center",
+  <section id="top" className="hero-section" style={{
+    minHeight: 1080, display: "flex", alignItems: "flex-start",
     position: "relative", overflow: "hidden",
-    padding: "8rem 4rem 3rem",
+    padding: "146px 0 60px",
   }}>
-    <Container style={{ width: "100%", maxWidth: "1600px" }}>
-      <div className="mobile-flex-col mobile-gap-small" style={{
+    <Container maxWidth={1654} paddingX={24} style={{ width: "100%" }}>
+      <div className="hero-layout" style={{
         display: "flex",
-        alignItems: "center",
-        gap: "4rem",
+        alignItems: "flex-start",
+        gap: 0,
         justifyContent: "space-between",
       }}>
         {/* Left side - Text content */}
-        <div className="mobile-hero-text" style={{ flex: "1", maxWidth: "600px", position: "relative", zIndex: 2 }}>
-          <h1 className="mobile-hero-title mobile-text-center" style={{
-            ...font.slovic, fontSize: "52px",
-            fontWeight: 400, lineHeight: 1.0, color: C.ink,
+        <div className="hero-copy" style={{
+          width: "clamp(460px, 34vw, 598px)",
+          marginTop: "clamp(120px, 12vw, 237px)",
+          position: "relative",
+          zIndex: 2,
+        }}>
+          <h1 className="hero-title" style={{
+            ...font.slovic, fontSize: "90px",
+            fontWeight: 400, lineHeight: 0.94, color: C.ink,
             marginBottom: "2rem", textTransform: "uppercase",
             letterSpacing: "0.01em",
             fontStyle: "oblique 10deg",
@@ -111,14 +103,21 @@ const Hero = () => (
             summoning circle for<br />shared minds
           </h1>
 
-          <p className="mobile-body-text mobile-text-center" style={{
-            ...font.serif, fontSize: "1.25rem", fontWeight: 400,
-            color: C.muted, maxWidth: 480, lineHeight: 1.75, marginBottom: "3rem",
+          <p className="hero-subcopy" style={{
+            ...font.courierPrime,
+            fontSize: "20px",
+            lineHeight: "28px",
+            letterSpacing: 0,
+            fontWeight: 400,
+            color: "#8A8578",
+            width: 612,
+            maxWidth: "100%",
+            marginBottom: "3rem",
           }}>
             A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
           </p>
 
-          <a href="#join" className="mobile-button" style={{
+          <a href="#join" style={{
             ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
             display: "inline-block", textTransform: "uppercase",
             background: C.ink, color: C.parchment, border: "none",
@@ -128,7 +127,7 @@ const Hero = () => (
             Join the Waitlist
           </a>
 
-          <div className="mobile-text-center" style={{
+          <div style={{
             ...font.mono, fontSize: "0.58rem", color: C.warmGray,
             marginTop: "1rem", letterSpacing: "1.5px", textTransform: "uppercase",
           }}>
@@ -137,18 +136,18 @@ const Hero = () => (
         </div>
 
         {/* Right side - Wizards Working ASCII art */}
-        <div className="mobile-hero-art" style={{
-          flex: "1",
+        <div className="hero-ascii" style={{
+          width: "clamp(720px, 62vw, 1056px)",
           display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
+          justifyContent: "flex-end",
+          alignItems: "flex-start",
           position: "relative",
           zIndex: 1,
         }}>
           <pre
             style={{
               ...font.mono,
-              fontSize: "clamp(0.162rem, 0.225vw, 0.27rem)",
+              fontSize: "clamp(0.17rem, 0.225vw, 0.29rem)",
               lineHeight: 1.05,
               color: C.muted,
               whiteSpace: "pre",
@@ -156,7 +155,7 @@ const Hero = () => (
               overflow: "visible",
             }}
           >
-            {wizardsWorking}
+            {wizardsWorkingSanitized}
           </pre>
         </div>
       </div>
@@ -185,17 +184,23 @@ const ValueProps = () => {
   ];
 
   return (
-    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3.5rem 0 6rem", position: "relative", display: "flex", alignItems: "center" }}>
-      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
-        <div className="mobile-value-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3.5rem" }}>
-          {cards.map((card) => (
-            <div key={card.title} className="mobile-value-card">
+    <section className="value-props-section" style={{ padding: "24px 0 88px", position: "relative" }}>
+      <Container maxWidth={1440} paddingX={48} style={{ position: "relative", zIndex: 1 }} className="value-props-container">
+        <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "86px" }}>
+          <div style={{ height: 1, flex: 1, background: C.warmGray }} />
+          <div style={{ width: 8, height: 8, background: C.crimson, transform: "rotate(45deg)" }} />
+          <div style={{ height: 1, flex: 1, background: C.warmGray }} />
+        </div>
+        <div className="value-props-grid" style={{ display: "grid", gridTemplateColumns: "379px 380px 379px", justifyContent: "space-between" }}>
+          {cards.map((card, i) => (
+            <div key={card.title} className="value-props-card" style={{ width: i === 1 ? 380 : 379, minHeight: "auto" }}>
               {/* ASCII art above the card */}
               <div style={{
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                marginBottom: "1rem",
+                minHeight: 165,
+                marginBottom: "16px",
               }}>
                 <pre style={{
                   ...font.mono,
@@ -211,14 +216,29 @@ const ValueProps = () => {
               </div>
 
               <div style={{ borderTop: `2px solid ${C.gold}`, paddingTop: "1.5rem" }}>
-                <h3 className="mobile-card-title" style={{
-                  ...font.mono, fontSize: "0.95rem", fontWeight: 700,
-                  color: C.gold, letterSpacing: "2px", marginBottom: "1rem",
+                <h3 style={{
+                  ...font.ibmPlex,
+                  fontSize: "16px",
+                  lineHeight: "22.5px",
+                  letterSpacing: "2px",
+                  fontWeight: 700,
+                  color: "#C8A55A",
+                  marginBottom: "1rem",
+                  textAlign: "center",
                 }}>
                   {card.title}
                 </h3>
-                <p className="mobile-body-text" style={{
-                  ...font.serif, fontSize: "1.15rem", color: "#5a5650", lineHeight: 1.75,
+                <p className="value-props-copy" style={{
+                  ...font.courierPrime,
+                  fontSize: "16px",
+                  lineHeight: "28px",
+                  letterSpacing: 0,
+                  fontWeight: 400,
+                  color: "#8A8578",
+                  width: i === 1 ? 380 : 379,
+                  maxWidth: "100%",
+                  textAlign: "center",
+                  margin: "0 auto",
                 }}>
                   {card.body}
                 </p>
@@ -234,37 +254,47 @@ const ValueProps = () => {
 // ─── Section 3: Egregoric Intelligence ──────────────────────────
 const EgregoricIntelligence = () => {
   return (
-    <section className="mobile-section mobile-section-padding mobile-egregore-section" style={{ height: "1000px", padding: "2rem 0 5rem", position: "relative", display: "flex", alignItems: "center" }}>
-      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1600px", width: "100%" }}>
-        <Divider />
-        <div className="mobile-flex-col mobile-gap-small" style={{
+    <section className="egregoric-section" style={{ padding: "80px 0 103px", position: "relative" }}>
+      <Container maxWidth={1440} paddingX={48} style={{ position: "relative", zIndex: 1 }}>
+        <Divider style={{ margin: "0 0 74px" }} />
+        <div className="egregoric-layout" style={{
           display: "flex",
-          alignItems: "center",
-          gap: "5rem",
+          alignItems: "flex-start",
+          gap: "116px",
           justifyContent: "space-between",
         }}>
           {/* Left side - Text content */}
-          <div className="mobile-text-center" style={{ flex: "1", maxWidth: "700px" }}>
-            <h2 className="mobile-section-title" style={{
-              ...font.gothic, fontSize: "3rem", color: C.crimson,
-              marginBottom: "1.5rem", lineHeight: 1.2,
+          <div className="egregoric-copy" style={{ width: 668 }}>
+            <h2 className="egregoric-title" style={{
+              ...font.gothic,
+              fontSize: "48px",
+              lineHeight: "57.6px",
+              letterSpacing: 0,
+              fontWeight: 400,
+              color: C.crimson,
+              width: 540,
+              marginBottom: "1.5rem",
             }}>
               Egregoric Intelligence
             </h2>
-            <p className="mobile-body-text" style={{
-              ...font.serif, fontSize: "1.25rem",
-              color: C.muted, lineHeight: 1.75,
+            <p className="egregoric-body" style={{
+              ...font.courierPrime,
+              fontSize: "20px",
+              lineHeight: "28px",
+              letterSpacing: 0,
+              color: C.muted,
+              width: 668,
             }}>
               Production requires coordination. Coordination generates context. Context compounds into organizational learning &mdash; and feeds back into production. A shared substrate makes every coordination act context-rich &mdash; AI workflows operate with full organizational awareness.
             </p>
           </div>
 
           {/* Right side - Egregoric Intelligence ASCII art */}
-          <div className="mobile-egregore-ascii" style={{
-            flex: "1",
+          <div className="egregoric-ascii" style={{
+            width: 585.43,
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
+            justifyContent: "flex-end",
+            alignItems: "flex-start",
             position: "relative",
           }}>
             <pre
@@ -282,7 +312,6 @@ const EgregoricIntelligence = () => {
             </pre>
           </div>
         </div>
-
       </Container>
     </section>
   );
@@ -426,30 +455,6 @@ const COMMANDS = [
   },
 ];
 
-const THINKING_MESSAGES = {
-  "/activity": [
-    "\u25C6 Loading session graph",
-    "\u25C6 Scanning 5 vessels, 14 active sessions",
-    "\u25C6 Resolving quest dependencies",
-  ],
-  "/handoff": [
-    "\u25C6 Serializing session context",
-    "\u25C6 Extracting decisions and open threads",
-    "\u25C6 Preparing transfer for Wren",
-  ],
-  "/ask": [
-    "\u25C6 Resolving context intersection",
-    "\u25C6 Vesper\u2019s handoff \u2192 Wren\u2019s draft \u2192 Cael\u2019s schema",
-    "\u25C6 Generating contextual questions",
-  ],
-  "/reflect": [
-    "\u25C6 Traversing knowledge graph",
-    "\u25C6 Cross-referencing 9 sessions, 3 workstreams",
-    "\u25C6 Pattern detected \u2014 convergence across members",
-    "\u25C6 Synthesizing",
-  ],
-};
-
 const TERM_STYLE_MAP = {
   header: { color: "#c8a55a", fontWeight: 700, letterSpacing: "0.03em" },
   section: { color: "#c8a55a", fontWeight: 600, letterSpacing: "0.05em", fontSize: "0.78rem" },
@@ -462,147 +467,26 @@ const TERM_STYLE_MAP = {
   blank: { color: "transparent", userSelect: "none" },
 };
 
-function ThinkingIndicator({ messages, active, onDone }) {
-  const [step, setStep] = useState(0);
-  const [dots, setDots] = useState("");
-
-  useEffect(() => {
-    if (!active) { setStep(0); setDots(""); return; }
-    setStep(0);
-    let s = 0;
-    const stepInterval = setInterval(() => {
-      s++;
-      if (s >= messages.length) {
-        clearInterval(stepInterval);
-        setTimeout(() => onDone(), 350);
-        return;
-      }
-      setStep(s);
-    }, 450);
-    return () => clearInterval(stepInterval);
-  }, [active, onDone, messages.length]);
-
-  useEffect(() => {
-    if (!active) return;
-    const dotInterval = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? "" : d + "."));
-    }, 280);
-    return () => clearInterval(dotInterval);
-  }, [active]);
-
-  if (!active) return null;
-
-  return (
-    <div style={{ padding: "4px 0" }}>
-      {messages.slice(0, step + 1).map((msg, i) => (
-        <div key={i} style={{
-          color: "#6b6860", fontSize: "0.78rem",
-          fontFamily: "'Berkeley Mono', 'JetBrains Mono', 'Fira Code', monospace",
-          lineHeight: "1.5em", whiteSpace: "pre",
-          opacity: i === step ? 0.85 : 0.35,
-          transition: "opacity 0.3s",
-        }}>
-          {"  "}{msg}{i === step ? dots : ""}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TerminalLine({ text, style, delay, visible }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (!visible) { setShow(false); return; }
-    const t = setTimeout(() => setShow(true), delay);
-    return () => clearTimeout(t);
-  }, [delay, visible]);
-
-  if (!show) return <div style={{ height: style === "blank" ? "0.45em" : "1.15em" }} />;
-  return (
-    <div style={{
-      ...TERM_STYLE_MAP[style],
-      height: style === "blank" ? "0.45em" : "auto",
-      lineHeight: "1.15em", whiteSpace: "pre",
-      fontFamily: "'Berkeley Mono', 'JetBrains Mono', 'Fira Code', monospace",
-      fontSize: "0.78rem",
-      transition: "opacity 0.2s ease",
-      opacity: show ? 1 : 0,
-    }}>
-      {text}
-    </div>
-  );
-}
-
-const PHASE = { IDLE: 0, TYPING: 1, THINKING: 2, RENDERING: 3 };
-
 const SeeItWork = () => {
   const [active, setActive] = useState(0);
-  const [phase, setPhase] = useState(PHASE.IDLE);
-  const [runKey, setRunKey] = useState(0);
-  const [typedText, setTypedText] = useState("");
-  const [typingDone, setTypingDone] = useState(false);
   const scrollRef = useRef(null);
-  const typeRef = useRef(null);
-  const sectionRef = useRef(null);
-  const [hasStarted, setHasStarted] = useState(false);
-
   const cmd = COMMANDS[active];
 
-  const startSequence = useCallback((i) => {
-    if (typeRef.current) clearInterval(typeRef.current);
+  const selectCommand = useCallback((i) => {
     setActive(i);
-    setRunKey((k) => k + 1);
-    setPhase(PHASE.TYPING);
-    setTypedText("");
-    setTypingDone(false);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-
-    const text = COMMANDS[i].cmd;
-    let ci = 0;
-    const delay = setTimeout(() => {
-      typeRef.current = setInterval(() => {
-        ci++;
-        setTypedText(text.slice(0, ci));
-        if (ci >= text.length) {
-          clearInterval(typeRef.current);
-          setTypingDone(true);
-        }
-      }, 50);
-    }, 200);
-
-    return () => { clearTimeout(delay); clearInterval(typeRef.current); };
   }, []);
-
-  useEffect(() => {
-    if (typingDone && phase === PHASE.TYPING) {
-      const t = setTimeout(() => setPhase(PHASE.THINKING), 350);
-      return () => clearTimeout(t);
-    }
-  }, [typingDone, phase]);
-
-  const handleThinkDone = useCallback(() => {
-    setPhase(PHASE.RENDERING);
-  }, []);
-
-  useEffect(() => {
-    if (hasStarted) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setHasStarted(true);
-          startSequence(0);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, [hasStarted, startSequence]);
 
   return (
-    <section ref={sectionRef} className="mobile-section terminal-section" style={{ height: "1000px", padding: "0", background: C.ink, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
-      {/* Terminal Frame Background */}
+    <section className="mobile-section terminal-section" style={{
+      height: 1000,
+      padding: 0,
+      background: C.ink,
+      position: "relative",
+      overflow: "hidden",
+      display: "flex",
+      alignItems: "center",
+    }}>
       <div className="terminal-ascii-wrapper" style={{
         position: "absolute",
         top: "50%",
@@ -610,29 +494,53 @@ const SeeItWork = () => {
         transform: "translate(-50%, -50%)",
         pointerEvents: "none",
         opacity: 0.5,
-        width: "1440px",
-        height: "890px",
+        width: 1440,
+        height: 890,
         overflow: "hidden",
       }}>
-        <pre style={{
-          ...font.mono,
-          fontSize: "5.83px",
-          lineHeight: 1.05,
-          color: "#ffffff",
-          whiteSpace: "pre",
-          margin: 0,
-          textAlign: "center",
-        }}>
-          {terminalFrame}
-        </pre>
+          <pre style={{
+            ...font.mono,
+            fontSize: "5.83px",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            whiteSpace: "pre",
+            margin: 0,
+            textAlign: "center",
+          }}>
+            {terminalFrameSanitized}
+          </pre>
       </div>
 
-      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
+      <div style={{
+          position: "absolute",
+          top: "9rem",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          zIndex: 2,
+          ...font.slovic,
+          fontSize: "36px",
+          letterSpacing: 0,
+          color: C.parchment,
+        }}>
+        MACHINATIONS
+      </div>
+
+      <div className="mobile-container terminal-inner" style={{
+        maxWidth: 1500,
+        margin: "0 auto",
+        padding: "0 3rem",
+        position: "relative",
+        zIndex: 1,
+        width: "100%",
+      }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{
-            background: C.termBg, borderRadius: "10px",
-            border: "1px solid #252320", overflow: "hidden",
-            boxShadow: "0 2px 80px rgba(200, 165, 90, 0.03), 0 16px 48px rgba(0,0,0,0.55)",
+            background: C.termBg,
+            borderRadius: "10px",
+            border: "1px solid #252320",
+            overflow: "hidden",
+            boxShadow: "0 2px 80px rgba(200, 165, 90, 0.03), 0 16px 48px rgba(0, 0, 0, 0.55)",
             fontFamily: "'Berkeley Mono', 'JetBrains Mono', 'Fira Code', monospace",
           }}>
             <div style={{ display: "flex", alignItems: "center", padding: "9px 13px 0", gap: 5 }}>
@@ -646,7 +554,7 @@ const SeeItWork = () => {
 
             <div style={{ display: "flex", padding: "8px 13px 0", borderBottom: "1px solid #1a1916" }}>
               {COMMANDS.map((c, i) => (
-                <button key={c.cmd} onClick={() => startSequence(i)} style={{
+                <button key={c.cmd} onClick={() => selectCommand(i)} style={{
                   background: "none", border: "none",
                   borderBottom: active === i ? "1px solid #c8a55a" : "1px solid transparent",
                   color: active === i ? "#c8a55a" : "#44413c",
@@ -663,46 +571,34 @@ const SeeItWork = () => {
 
             <div ref={scrollRef} className="terminal-scroll" style={{
               padding: "10px 14px 6px", height: 390,
-              overflowY: "auto", overflowX: "hidden",
+              overflow: "hidden auto",
               scrollbarWidth: "thin", scrollbarColor: "#2a2824 transparent",
             }}>
-              <div key={`${active}-${runKey}`}>
+              <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, height: "1.3em", marginBottom: 1 }}>
                   <span style={{ color: "#c8a55a", fontSize: "0.82rem" }}>{"\u276F"}</span>
                   <span style={{
                     color: "#d4d0c8", fontSize: "0.78rem",
                     fontFamily: "'Berkeley Mono', 'JetBrains Mono', 'Fira Code', monospace",
                   }}>
-                    {phase >= PHASE.TYPING ? typedText : ""}
-                    {phase === PHASE.TYPING && !typingDone && (
-                      <span style={{
-                        display: "inline-block", width: 5, height: 12,
-                        background: "#c8a55a", marginLeft: 1,
-                        verticalAlign: "text-bottom",
-                        animation: "blink 0.7s step-end infinite",
-                      }} />
-                    )}
+                    {cmd.cmd}
                   </span>
                 </div>
 
-                {phase === PHASE.THINKING && (
-                  <ThinkingIndicator
-                    messages={THINKING_MESSAGES[cmd.cmd]}
-                    active={true}
-                    onDone={handleThinkDone}
-                  />
-                )}
-
-                {phase === PHASE.RENDERING &&
-                  cmd.lines.map((line, i) => (
-                    <TerminalLine
-                      key={`${runKey}-${i}`}
-                      text={line.t}
-                      style={line.s}
-                      delay={i * 28}
-                      visible={true}
-                    />
-                  ))}
+                {cmd.lines.map((line, i) => (
+                  <div key={`${active}-${i}`} style={{
+                    ...TERM_STYLE_MAP[line.s],
+                    height: line.s === "blank" ? "0.45em" : "auto",
+                    lineHeight: "1.15em",
+                    whiteSpace: "pre",
+                    fontFamily: "'Berkeley Mono', 'JetBrains Mono', 'Fira Code', monospace",
+                    fontSize: "0.78rem",
+                    transition: "opacity 0.2s",
+                    opacity: 1,
+                  }}>
+                    {line.t}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -719,7 +615,7 @@ const SeeItWork = () => {
             </div>
           </div>
         </div>
-      </Container>
+      </div>
     </section>
   );
 };
@@ -745,7 +641,9 @@ const SessionCycle = () => {
   const [hovered, setHovered] = useState(null);
 
   // Compute node positions
-  const r = 125, cx = 160, cy = 160;
+  const diagramWidth = 472;
+  const diagramHeight = 412.58;
+  const r = 158, cx = 236, cy = 206;
   const nodes = cycleSteps.map((step) => ({
     ...step,
     x: cx + r * Math.cos((step.angle * Math.PI) / 180),
@@ -757,44 +655,68 @@ const SessionCycle = () => {
   const starEdges = nodes.map((_, i) => [i, (i + 2) % 5]);
 
   return (
-    <section className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3rem 0 4rem", position: "relative", display: "flex", alignItems: "center" }}>
-      <Container style={{ position: "relative", zIndex: 1, maxWidth: "1400px", width: "100%" }}>
-        <Divider />
-        <SectionLabel>How it works</SectionLabel>
+    <section className="session-cycle-section" style={{ padding: "48px 0 56px", position: "relative" }}>
+      <Container maxWidth={1306} paddingX={0} style={{ position: "relative", zIndex: 1 }}>
+        <Divider style={{ margin: "0 0 26px" }} />
         <h2 style={{
-          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
-          textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
+          ...font.slovic, fontSize: "36px", fontWeight: 400,
+          textAlign: "center", color: C.ink, marginBottom: "10px", lineHeight: 1.05, textTransform: "uppercase",
         }}>
           The Session Cycle
         </h2>
-        <p style={{
-          ...font.serif, fontSize: "1.2rem", textAlign: "center",
-          color: C.muted, maxWidth: 600, margin: "0 auto 3.5rem", lineHeight: 1.7,
+        <p className="session-cycle-intro" style={{
+          ...font.courierPrime,
+          fontSize: "20px",
+          lineHeight: "28px",
+          letterSpacing: 0,
+          fontWeight: 400,
+          textAlign: "center",
+          color: "#8A8578",
+          width: 648,
+          minHeight: 64,
+          margin: "0 auto 74px",
         }}>
           Every interaction strengthens the shared context. The egregore remembers so individuals don't have to.
         </p>
 
-        <div className="mobile-session-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
+        <div className="session-cycle-layout" style={{ display: "grid", gridTemplateColumns: "660px 472px", justifyContent: "space-between", alignItems: "start" }}>
           <div>
             {commands.map((c, i) => (
-              <div key={i} style={{
-                display: "grid", gridTemplateColumns: "130px 1fr", gap: "2rem",
-                padding: "1.3rem 0",
+              <div key={i} className="session-command-row" style={{
+                display: "grid", gridTemplateColumns: "110px 1fr", gap: "16px",
+                minHeight: 54,
+                padding: "14px 0 10px",
                 borderBottom: i < commands.length - 1 ? `1px solid ${C.warmGray}` : "none",
-                alignItems: "baseline",
+                alignItems: "start",
               }}>
-                <code style={{ ...font.mono, fontSize: "0.92rem", color: C.crimson, fontWeight: 700 }}>
+                <code style={{
+                  ...font.ibmPlex,
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  letterSpacing: 0,
+                  color: C.crimson,
+                  fontWeight: 700,
+                }}>
                   {c.cmd}
                 </code>
-                <p style={{ ...font.serif, fontSize: "1.1rem", color: "#5a5650", lineHeight: 1.6 }}>
+                <p className="session-command-desc" style={{
+                  ...font.courierPrime,
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  letterSpacing: 0,
+                  fontWeight: 400,
+                  color: "#8A8578",
+                  width: 441,
+                  minHeight: 50,
+                }}>
                   {c.desc}
                 </p>
               </div>
             ))}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <div style={{ position: "relative", width: 320, height: 320 }}>
+          <div className="session-cycle-diagram-col" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <div className="session-cycle-diagram" style={{ position: "relative", width: diagramWidth, height: diagramHeight }}>
               {/* Center label */}
               <div style={{
                 position: "absolute", top: "50%", left: "50%",
@@ -803,14 +725,14 @@ const SessionCycle = () => {
                 opacity: hovered !== null ? 0.3 : 1,
               }}>
                 <div style={{
-                  ...font.mono, fontSize: "0.55rem", letterSpacing: "2px",
+                  ...font.mono, fontSize: "0.63rem", letterSpacing: "2px",
                   color: C.muted, textTransform: "uppercase", lineHeight: 1.6,
                 }}>
                   Knowledge<br />Graph +<br />Git Memory
                 </div>
               </div>
 
-              <svg viewBox="0 0 320 320" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
+              <svg viewBox={`0 0 ${diagramWidth} ${diagramHeight}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
                 <defs>
                   <marker id="arrow" viewBox="0 0 10 8" refX="8" refY="4"
                     markerWidth="6" markerHeight="5" orient="auto-start-reverse">
@@ -868,7 +790,7 @@ const SessionCycle = () => {
 
               {/* Labels with hover zones */}
               {nodes.map((node, i) => {
-                const labelR = 158;
+                const labelR = 196;
                 const lx = cx + labelR * Math.cos((node.angle * Math.PI) / 180);
                 const ly = cy + labelR * Math.sin((node.angle * Math.PI) / 180);
                 const isHovered = hovered === i;
@@ -884,7 +806,7 @@ const SessionCycle = () => {
                     }}
                   >
                     <div style={{
-                      ...font.mono, fontSize: "0.62rem", fontWeight: 700,
+                      ...font.mono, fontSize: "0.7rem", fontWeight: 700,
                       color: isHovered ? C.crimson : C.ink,
                       letterSpacing: "1.5px",
                       transition: "color 0.2s",
@@ -892,7 +814,7 @@ const SessionCycle = () => {
                       {node.label}
                     </div>
                     <div style={{
-                      ...font.mono, fontSize: "0.55rem",
+                      ...font.mono, fontSize: "0.58rem",
                       color: isHovered ? C.gold : C.crimson,
                       transition: "color 0.2s",
                     }}>
@@ -912,26 +834,22 @@ const SessionCycle = () => {
 // ─── Wizards Banner Section ─────────────────────────────────────
 const WizardsBanner = () => {
   return (
-    <section className="mobile-section mobile-section-padding mobile-hide" style={{ height: "1000px", padding: "3rem 0", background: C.parchment, position: "relative", overflow: "hidden", display: "flex", alignItems: "center" }}>
-      <Container style={{ position: "relative", zIndex: 1, width: "100%" }}>
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}>
-          <pre style={{
+    <section className="wizards-banner-section" style={{ minHeight: 641, padding: "12px 0 20px", background: C.parchment, position: "relative", overflow: "hidden" }}>
+      <div style={{ width: "min(1920px, 100%)", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ minHeight: 552, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+          <pre className="wizards-artwork" style={{
             ...font.mono,
-            fontSize: "clamp(0.2rem, 0.3vw, 0.4rem)",
+            fontSize: "5.8px",
             lineHeight: 1.05,
-            color: C.ink,
+            color: "#8A8578",
             whiteSpace: "pre",
             margin: 0,
             textAlign: "center",
           }}>
-            {astro}
+            {astroSanitized}
           </pre>
         </div>
-      </Container>
+      </div>
     </section>
   );
 };
@@ -940,57 +858,67 @@ const WizardsBanner = () => {
 const Research = () => {
   const featured = POSTS.filter((p) => p.featured);
   return (
-    <section id="research" className="mobile-section mobile-section-padding" style={{ height: "1000px", padding: "3rem 0 5rem", display: "flex", alignItems: "center" }}>
-      <Container style={{ width: "100%" }}>
-        <Divider />
-        <div style={{ ...font.mono, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "3.5px", marginBottom: "1rem", textAlign: "center", color: C.warmGray }}>
-          /Research
-        </div>
-        <h2 className="mobile-section-title" style={{
-          ...font.serif, fontSize: "2.8rem", fontWeight: 400,
-          textAlign: "center", color: C.ink, marginBottom: "0.8rem", lineHeight: 1.2,
+    <section id="research" className="research-section" style={{ padding: "0 0 72px", minHeight: 744.47 }}>
+      <Container maxWidth={1500} paddingX={48}>
+        <Divider style={{ margin: "0 0 26px" }} />
+        <h2 style={{
+          ...font.slovic, fontSize: "36px", fontWeight: 400,
+          textAlign: "center", color: C.ink, marginBottom: "12px", lineHeight: 1.05, textTransform: "uppercase",
         }}>
-          From the field.
+          Research
         </h2>
-        <p className="mobile-body-text" style={{
-          ...font.serif, fontSize: "1.2rem", textAlign: "center",
-          color: C.muted, maxWidth: 600, margin: "0 auto 3rem", lineHeight: 1.7,
+        <p className="research-intro" style={{
+          ...font.courierPrime, fontSize: "20px", textAlign: "center",
+          color: C.muted, maxWidth: 738, margin: "0 auto 45px", lineHeight: "28px",
         }}>
           Dispatches on shared cognition, coordination infrastructure, and what emerges when organizations develop memory.
         </p>
 
-        <div className="mobile-research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3rem" }}>
+        <div className="research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 436px)", justifyContent: "space-between", gap: "48px" }}>
           {featured.map((post) => (
-            <Link key={post.slug} to={`/research/${post.slug}`} style={{
+            <Link key={post.slug} to={`/research/${post.slug}`} className="research-card" style={{
               textDecoration: "none", color: "inherit",
-              border: `1px solid ${C.warmGray}`, padding: "2.2rem 2rem",
+              border: `1px solid ${C.warmGray}`, padding: "36px 33px",
               display: "flex", flexDirection: "column",
+              minHeight: 371.63,
               transition: "border-color 0.2s, transform 0.2s",
             }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.transform = "translateY(-2px)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.warmGray; e.currentTarget.style.transform = "translateY(0)"; }}
             >
               <div style={{
-                ...font.mono, fontSize: "0.65rem", letterSpacing: "2px",
-                textTransform: "uppercase", color: C.gold, marginBottom: "0.8rem",
+                ...font.mono, fontSize: "0.68rem", letterSpacing: "1.6px",
+                textTransform: "uppercase", color: C.gold, marginBottom: "18px",
               }}>
                 {post.tag}
               </div>
               <h3 style={{
-                ...font.serif, fontSize: "1.35rem", fontWeight: 600,
-                color: C.ink, marginBottom: "0.75rem", lineHeight: 1.3,
+                ...font.courierPrime,
+                fontSize: "21.6px",
+                lineHeight: "28.1px",
+                letterSpacing: 0,
+                fontWeight: 400,
+                color: C.ink,
+                marginBottom: "18px",
+                display: "inline-block",
               }}>
                 {post.title}
               </h3>
-              <p style={{
-                ...font.serif, fontSize: "1.05rem", color: C.muted,
-                lineHeight: 1.65, flex: 1,
+              <p className="research-card-excerpt" style={{
+                ...font.courierPrime,
+                fontSize: "16px",
+                lineHeight: "28px",
+                letterSpacing: 0,
+                color: "#8A8578",
+                width: 369.18,
+                maxWidth: "100%",
+                flex: 1,
               }}>
                 {post.excerpt}
               </p>
               <div style={{
-                ...font.mono, fontSize: "0.65rem", color: C.warmGray,
-                letterSpacing: "1px", marginTop: "1.2rem",
+                ...font.mono, fontSize: "0.66rem", color: C.warmGray,
+                letterSpacing: "1px", marginTop: "28px",
               }}>
                 {post.date}
               </div>
@@ -998,9 +926,9 @@ const Research = () => {
           ))}
         </div>
 
-        <div style={{ textAlign: "center", marginTop: "2.5rem" }}>
+        <div style={{ textAlign: "center", marginTop: "40px" }}>
           <Link to="/research" style={{
-            ...font.mono, fontSize: "0.67rem", letterSpacing: "1.5px",
+            ...font.mono, fontSize: "0.7rem", letterSpacing: "1.6px",
             textTransform: "uppercase", color: C.crimson,
             textDecoration: "none", borderBottom: `1px solid ${C.crimson}`,
             paddingBottom: "2px",
@@ -1013,11 +941,6 @@ const Research = () => {
   );
 };
 
-// ─── Monster Banner Section ─────────────────────────────────────
-const MonsterBanner = () => {
-  return null;
-};
-
 // ─── Section 6: CTA ─────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 
@@ -1026,6 +949,14 @@ const WaitlistCTA = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  const footerMono = {
+    ...font.ibmPlex,
+    fontSize: "14px",
+    lineHeight: "20px",
+    letterSpacing: 0,
+    fontWeight: 400,
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.source) return;
@@ -1047,29 +978,29 @@ const WaitlistCTA = () => {
   };
 
   const inputStyle = {
-    ...font.mono, fontSize: "0.78rem",
+    ...footerMono,
     background: "transparent", border: "none",
     borderBottom: "1px solid rgba(244,241,234,0.2)",
     color: C.parchment, padding: "0.6rem 0", width: "100%",
-    outline: "none", letterSpacing: "0.5px",
+    outline: "none",
   };
 
   const labelStyle = {
-    ...font.mono, fontSize: "0.58rem", letterSpacing: "2.5px",
+    ...footerMono,
     textTransform: "uppercase", color: "rgba(244,241,234,0.3)",
     marginBottom: "0.3rem", display: "block",
   };
 
   return (
-    <footer id="join" className="mobile-section mobile-section-padding join-section" style={{ height: "1000px", background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div className="mobile-flex-col" style={{ maxWidth: 1700, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "0 3rem" }}>
+    <footer id="join" className="waitlist-section" style={{ background: C.ink, color: C.parchment, minHeight: 1000, padding: "132px 0 132px", position: "relative", overflow: "hidden" }}>
+      <div className="waitlist-layout" style={{ width: "min(1700px, calc(100% - 96px))", margin: "0 auto", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24 }}>
         {/* Left ASCII decoration */}
-        <div className="mobile-hide" style={{ flex: "0 0 auto" }}>
+        <div className="waitlist-side-art waitlist-left-art" style={{ flex: "0 0 497px", display: "flex", justifyContent: "flex-start" }}>
           <pre style={{
-            ...font.mono,
+            ...font.ibmPlex,
             fontSize: "0.128rem",
             lineHeight: 1.05,
-            color: "#ffffff",
+            color: "#7b756d",
             whiteSpace: "pre",
             margin: 0,
           }}>
@@ -1078,89 +1009,86 @@ const WaitlistCTA = () => {
         </div>
 
         {/* Center form content */}
-        <Container style={{ maxWidth: 550, position: "relative", zIndex: 1, flex: "0 0 auto" }}>
-          {!submitted ? (
-            <>
-              <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-                <div style={{ width: 12, height: 12, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
-                <h2 style={{ ...font.serif, fontSize: "2.6rem", fontWeight: 400, marginBottom: "0.75rem", lineHeight: 1.2 }}>
-                  The circle is forming.
-                </h2>
-                <p style={{ ...font.mono, fontSize: "0.88rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.6 }}>
-                  Egregore is in early access. Speak your name and intent.
-                </p>
-              </div>
-
-              <div>
-                <div style={{ marginBottom: "1.8rem" }}>
-                  <label style={labelStyle}>Name</label>
-                  <input type="text" value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="mobile-input"
-                    style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: "1.8rem" }}>
-                  <label style={labelStyle}>Email</label>
-                  <input type="email" value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="mobile-input"
-                    style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: "2.5rem" }}>
-                  <label style={labelStyle}>Intent</label>
-                  <textarea value={form.source}
-                    onChange={(e) => setForm({ ...form, source: e.target.value })}
-                    rows={2}
-                    className="mobile-input"
-                    style={{ ...inputStyle, resize: "none", fontFamily: font.mono.fontFamily }}
-                    placeholder="What do you want to use Egregore for?" />
-                </div>
-                {error && (
-                  <div style={{ ...font.mono, fontSize: "0.68rem", color: C.crimson, marginBottom: "1rem", textAlign: "center" }}>
-                    {error}
-                  </div>
-                )}
-                <button onClick={handleSubmit} disabled={submitting} className="mobile-button" style={{
-                  ...font.mono, fontSize: "0.7rem", letterSpacing: "2px",
-                  textTransform: "uppercase", width: "100%",
-                  background: submitting ? C.muted : C.parchment, color: C.ink, border: "none",
-                  padding: "0.9rem 1.5rem", cursor: submitting ? "wait" : "pointer",
-                  transition: "opacity 0.2s",
-                }}>
-                  {submitting ? "Submitting..." : "Join the Circle"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <div style={{ textAlign: "center", padding: "4rem 0" }}>
-              <div style={{ ...font.serif, fontSize: "1.6rem", marginBottom: "1.2rem", color: C.gold }}>
-                {"\u2726"} Received.
-              </div>
-              <p style={{ ...font.mono, fontSize: "0.8rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.7 }}>
-                You'll know when the gates open.
+        <div className="waitlist-center" style={{ width: 550, position: "relative", zIndex: 1 }}>
+        {!submitted ? (
+          <>
+            <div style={{ textAlign: "center", marginBottom: "48px" }}>
+              <div style={{ width: 16.97, height: 16.97, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 28px" }} />
+              <h2 className="waitlist-title" style={{ ...font.slovic, fontSize: "36px", letterSpacing: 0, color: C.parchment, fontWeight: 400, marginBottom: "14px", lineHeight: 1.05 }}>
+                THE CIRCLE IS FORMING.
+              </h2>
+              <p style={{ ...footerMono, color: "rgba(244,241,234,0.45)", maxWidth: 415, margin: "0 auto" }}>
+                Egregore is in early access. Speak your name and intent.
               </p>
             </div>
-          )}
 
-          <div className="footer-bottom-text" style={{
-            ...font.mono, fontSize: "0.55rem", color: "rgba(244,241,234,0.2)",
-            borderTop: "1px solid rgba(244,241,234,0.08)",
-            paddingTop: "2rem", marginTop: "4rem",
-            display: "flex", justifyContent: "space-between", letterSpacing: "1px",
-          }}>
-            <span>Egregore Systems</span>
-            <span>MMXXVI</span>
-            <span>Berlin / The Graph</span>
+            <div className="waitlist-form" style={{ width: 454, margin: "0 auto" }}>
+              <div style={{ marginBottom: "28px" }}>
+                <label style={labelStyle}>Name</label>
+                <input type="text" value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: "28px" }}>
+                <label style={labelStyle}>Email</label>
+                <input type="email" value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: "40px" }}>
+                <label style={labelStyle}>Intent</label>
+                <textarea value={form.source}
+                  onChange={(e) => setForm({ ...form, source: e.target.value })}
+                  rows={2}
+                  style={{ ...inputStyle, resize: "none", fontFamily: font.ibmPlex.fontFamily }}
+                  placeholder="What do you want to use Egregore for?" />
+              </div>
+              {error && (
+                <div style={{ ...footerMono, color: C.crimson, marginBottom: "1rem", textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <button onClick={handleSubmit} disabled={submitting} style={{
+                ...footerMono,
+                textTransform: "uppercase", width: "100%",
+                background: submitting ? C.muted : C.parchment, color: C.ink, border: "none",
+                minHeight: 45.78, padding: "0.9rem 1.5rem", cursor: submitting ? "wait" : "pointer",
+                transition: "opacity 0.2s",
+              }}>
+                {submitting ? "Submitting..." : "Join the Circle"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="waitlist-form" style={{ width: 454, textAlign: "center", padding: "4rem 0", margin: "0 auto" }}>
+            <div style={{ ...font.serif, fontSize: "1.6rem", marginBottom: "1.2rem", color: C.gold }}>
+              {"\u2726"} Received.
+            </div>
+            <p style={{ ...footerMono, color: "rgba(244,241,234,0.45)" }}>
+              You'll know when the gates open.
+            </p>
           </div>
-        </Container>
+        )}
+
+        <div className="waitlist-meta" style={{
+          ...footerMono, color: "rgba(244,241,234,0.2)",
+          borderTop: "1px solid rgba(244,241,234,0.08)",
+          width: 454, margin: "49px auto 0", paddingTop: "14px",
+          display: "flex", justifyContent: "space-between",
+        }}>
+          <span>Egregore Systems</span>
+          <span>MMXXVI</span>
+          <span>Berlin / The Graph</span>
+        </div>
+      </div>
 
         {/* Right ASCII decoration */}
-        <div className="mobile-hide" style={{ flex: "0 0 auto" }}>
+        <div className="waitlist-side-art waitlist-right-art" style={{ flex: "0 0 497px", display: "flex", justifyContent: "flex-end" }}>
           <pre style={{
-            ...font.mono,
+            ...font.ibmPlex,
             fontSize: "0.128rem",
             lineHeight: 1.05,
-            color: "#ffffff",
+            color: "#7b756d",
             whiteSpace: "pre",
             margin: 0,
           }}>
@@ -1186,7 +1114,6 @@ export default function App() {
       <EgregoricIntelligence />
       <ValueProps />
       <SeeItWork />
-      <MonsterBanner />
       <EgregoreTextBanner />
       <SessionCycle />
       <WizardsBanner />

@@ -5,47 +5,44 @@ import { C, font } from "./tokens";
 
 const ResearchPage = () => {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const navLinkStyle = {
+    ...font.ibmPlex,
+    color: C.ink,
+    textDecoration: "none",
+    fontSize: "12px",
+    letterSpacing: "0",
+    textTransform: "uppercase",
+    lineHeight: 1,
+    fontWeight: 400,
+  };
 
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav className="mobile-nav" style={{
-        position: "fixed", top: 0, width: "100%", zIndex: 900,
-        height: "80px",
-        padding: "0 4rem",
+      <nav style={{
+        padding: "1.2rem 3rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "rgba(244,241,234,0.95)",
-        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
-        transition: "all 0.3s ease",
       }}>
-        <Link to="/" className="mobile-logo" style={{
+        <Link to="/" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson,
           textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
-            borderBottom: `2px solid ${C.crimson}`,
+            ...navLinkStyle,
+            borderBottom: `1px solid ${C.crimson}`, paddingBottom: "2px",
           }}>
             /Research
           </Link>
-          <Link to="/docs" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
-          }}>
+          <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={navLinkStyle}>
             /Docs
-          </Link>
-          <Link to="/#join" className="mobile-button" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`,
-            padding: "0.4rem 1.1rem",
+          </a>
+          <Link to="/#join" style={{
+            ...navLinkStyle,
+            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
           }}>
             /Waitlist
           </Link>
@@ -53,7 +50,7 @@ const ResearchPage = () => {
       </nav>
 
       {/* Header */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "8rem 2rem 2rem" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "5rem 2rem 2rem" }}>
         <div style={{
           ...font.mono, fontSize: "0.58rem", letterSpacing: "3.5px",
           textTransform: "uppercase", color: C.muted, marginBottom: "1rem",
@@ -116,7 +113,7 @@ const ResearchPage = () => {
 
               <div>
                 <h2 style={{
-                  ...font.serif, fontSize: "1.35rem", fontWeight: 600,
+                  ...font.serif, fontSize: "1.35rem", fontWeight: 400,
                   color: hoveredIdx === i ? C.crimson : C.ink,
                   transition: "color 0.2s",
                   marginBottom: "0.5rem", lineHeight: 1.3,
