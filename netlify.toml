@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[[edge_functions]]
+  function = "og"
+  path = "/*"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
