@@ -1107,8 +1107,8 @@ const WaitlistCTA = () => {
   };
 
   const hintStyle = {
-    ...font.mono, fontSize: "0.65rem", letterSpacing: "1.5px",
-    color: "rgba(244,241,234,0.2)", textAlign: "center",
+    ...font.mono, fontSize: "0.85rem", letterSpacing: "1.5px",
+    color: "rgba(244,241,234,0.3)", textAlign: "center",
     marginTop: "1.5rem",
   };
 
