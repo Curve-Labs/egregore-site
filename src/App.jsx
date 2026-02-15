@@ -1030,10 +1030,17 @@ const MonsterBanner = () => {
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 
 const WaitlistCTA = () => {
+  const [step, setStep] = useState(0); // 0=button, 1=name, 2=email, 3=intent, 4=done
   const [form, setForm] = useState({ name: "", email: "", source: "" });
-  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (step >= 1 && step <= 3 && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [step]);
 
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.source) return;
@@ -1046,7 +1053,7 @@ const WaitlistCTA = () => {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Failed to submit");
-      setSubmitted(true);
+      setStep(4);
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
@@ -1054,22 +1061,59 @@ const WaitlistCTA = () => {
     }
   };
 
-  const inputStyle = {
-    ...font.mono, fontSize: "0.78rem",
-    background: "transparent", border: "none",
-    borderBottom: "1px solid rgba(244,241,234,0.2)",
-    color: C.parchment, padding: "0.6rem 0", width: "100%",
-    outline: "none", letterSpacing: "0.5px",
+  const handleKeyDown = (e) => {
+    if (step === 1 && e.key === "Enter" && form.name.trim()) {
+      e.preventDefault();
+      setStep(2);
+    } else if (step === 2 && e.key === "Enter" && form.email.trim()) {
+      e.preventDefault();
+      setStep(3);
+    } else if (step === 3 && (e.metaKey || e.ctrlKey) && e.key === "Enter" && form.source.trim()) {
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === "Escape" && step > 0 && step < 4) {
+      e.preventDefault();
+      setStep(0);
+    }
   };
 
-  const labelStyle = {
-    ...font.mono, fontSize: "0.58rem", letterSpacing: "2.5px",
-    textTransform: "uppercase", color: "rgba(244,241,234,0.3)",
-    marginBottom: "0.3rem", display: "block",
+  const fadeIn = {
+    animation: "joinFadeIn 0.5s ease forwards",
+  };
+
+  const dimTextStyle = {
+    ...font.mono, fontSize: "0.78rem", color: "rgba(244,241,234,0.25)",
+    textAlign: "center", lineHeight: 1.8,
+  };
+
+  const stepLabelStyle = {
+    ...font.ibmPlex, fontSize: "0.72rem", letterSpacing: "3px",
+    textTransform: "uppercase", color: C.gold,
+    textAlign: "center", marginBottom: "1.5rem",
+  };
+
+  const inputStyle = {
+    ...font.mono, fontSize: "1.1rem",
+    background: "transparent", border: "none",
+    borderBottom: `1px solid ${C.gold}`,
+    color: C.parchment, padding: "0.8rem 0", width: "100%",
+    outline: "none", letterSpacing: "0.5px", textAlign: "center",
+  };
+
+  const hintStyle = {
+    ...font.mono, fontSize: "0.65rem", letterSpacing: "1.5px",
+    color: "rgba(244,241,234,0.2)", textAlign: "center",
+    marginTop: "1.5rem",
   };
 
   return (
     <footer id="join" className="mobile-section mobile-section-padding join-section" style={{ height: "1000px", background: C.ink, color: C.parchment, padding: "6rem 0 3rem", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{`
+        @keyframes joinFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div className="mobile-flex-col" style={{ maxWidth: 1700, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: "3rem", padding: "0 3rem" }}>
         {/* Left ASCII decoration */}
         <div className="mobile-hide" style={{ flex: "0 0 auto" }}>
@@ -1087,60 +1131,103 @@ const WaitlistCTA = () => {
 
         {/* Center form content */}
         <Container style={{ maxWidth: 550, position: "relative", zIndex: 1, flex: "0 0 auto" }}>
-          {!submitted ? (
-            <>
-              <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-                <div style={{ width: 12, height: 12, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
-                <h2 style={{ ...font.serif, fontSize: "2.6rem", fontWeight: 400, marginBottom: "0.75rem", lineHeight: 1.2 }}>
-                  The circle is forming.
-                </h2>
-                <p style={{ ...font.mono, fontSize: "0.88rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.6 }}>
-                  Egregore is in early access. Speak your name and intent.
-                </p>
-              </div>
+          {/* Header — always visible, dims after step 0 */}
+          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+            <div style={{ width: 14, height: 14, background: C.gold, transform: "rotate(45deg)", margin: "0 auto 2rem" }} />
+            <h2 style={{
+              ...font.serif, fontSize: "2.6rem", fontWeight: 400,
+              marginBottom: "0.75rem", lineHeight: 1.2,
+              opacity: step === 0 ? 1 : 0.25, transition: "opacity 0.5s ease",
+            }}>
+              The circle is forming.
+            </h2>
+            {step === 0 && (
+              <p style={{ ...font.mono, fontSize: "0.88rem", color: "rgba(244,241,234,0.45)", lineHeight: 1.6 }}>
+                Egregore is in early access. Speak your name and intent.
+              </p>
+            )}
+          </div>
 
-              <div>
-                <div style={{ marginBottom: "1.8rem" }}>
-                  <label style={labelStyle}>Name</label>
-                  <input type="text" value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="mobile-input"
-                    style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: "1.8rem" }}>
-                  <label style={labelStyle}>Email</label>
-                  <input type="email" value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="mobile-input"
-                    style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: "2.5rem" }}>
-                  <label style={labelStyle}>Intent</label>
-                  <textarea value={form.source}
-                    onChange={(e) => setForm({ ...form, source: e.target.value })}
-                    rows={2}
-                    className="mobile-input"
-                    style={{ ...inputStyle, resize: "none", fontFamily: font.mono.fontFamily }}
-                    placeholder="What do you want to use Egregore for?" />
-                </div>
-                {error && (
-                  <div style={{ ...font.mono, fontSize: "0.68rem", color: C.crimson, marginBottom: "1rem", textAlign: "center" }}>
-                    {error}
-                  </div>
-                )}
-                <button onClick={handleSubmit} disabled={submitting} className="mobile-button" style={{
-                  ...font.mono, fontSize: "0.7rem", letterSpacing: "2px",
-                  textTransform: "uppercase", width: "100%",
-                  background: submitting ? C.muted : C.parchment, color: C.ink, border: "none",
-                  padding: "0.9rem 1.5rem", cursor: submitting ? "wait" : "pointer",
-                  transition: "opacity 0.2s",
-                }}>
-                  {submitting ? "Submitting..." : "Join the Circle"}
-                </button>
+          {/* Step 0: Join button */}
+          {step === 0 && (
+            <div style={fadeIn}>
+              <button onClick={() => setStep(1)} className="mobile-button" style={{
+                ...font.mono, fontSize: "0.7rem", letterSpacing: "2px",
+                textTransform: "uppercase", width: "100%",
+                background: C.parchment, color: C.ink, border: "none",
+                padding: "1rem 1.5rem", cursor: "pointer",
+                transition: "opacity 0.2s",
+              }}>
+                Join the Circle
+              </button>
+            </div>
+          )}
+
+          {/* Step 1: Name */}
+          {step === 1 && (
+            <div style={fadeIn} onKeyDown={handleKeyDown}>
+              <div style={stepLabelStyle}>Speak your name</div>
+              <input
+                ref={inputRef}
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="your name..."
+                className="mobile-input"
+                style={inputStyle}
+              />
+              <div style={hintStyle}>enter to proceed &middot; esc to withdraw</div>
+            </div>
+          )}
+
+          {/* Step 2: Email */}
+          {step === 2 && (
+            <div style={fadeIn} onKeyDown={handleKeyDown}>
+              <div style={stepLabelStyle}>Mail</div>
+              <div style={dimTextStyle}>{form.name}</div>
+              <input
+                ref={inputRef}
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="your@signal.freq"
+                className="mobile-input"
+                style={inputStyle}
+              />
+              <div style={hintStyle}>enter to proceed</div>
+            </div>
+          )}
+
+          {/* Step 3: Intent */}
+          {step === 3 && (
+            <div style={fadeIn} onKeyDown={handleKeyDown}>
+              <div style={stepLabelStyle}>State your intent</div>
+              <div style={dimTextStyle}>
+                {form.name}<br />{form.email}
               </div>
-            </>
-          ) : (
-            <div style={{ textAlign: "center", padding: "4rem 0" }}>
+              <textarea
+                ref={inputRef}
+                value={form.source}
+                onChange={(e) => setForm({ ...form, source: e.target.value })}
+                rows={2}
+                className="mobile-input"
+                placeholder="What do you seek from shared cognition?"
+                style={{ ...inputStyle, resize: "none", textAlign: "left", fontSize: "1rem", lineHeight: 1.7 }}
+              />
+              {error && (
+                <div style={{ ...font.mono, fontSize: "0.68rem", color: C.crimson, marginTop: "0.8rem", textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <div style={hintStyle}>
+                {submitting ? "sealing..." : "\u2318+enter to seal"}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Done */}
+          {step === 4 && (
+            <div style={{ ...fadeIn, textAlign: "center", padding: "2rem 0" }}>
               <div style={{ ...font.serif, fontSize: "1.6rem", marginBottom: "1.2rem", color: C.gold }}>
                 {"\u2726"} Received.
               </div>
