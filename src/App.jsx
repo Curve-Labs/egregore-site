@@ -1047,7 +1047,7 @@ const WaitlistCTA = () => {
   }, [step]);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.source) return;
+    if (!form.name || !form.email || !form.source || !isValidEmail(form.email.trim())) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -1066,12 +1066,15 @@ const WaitlistCTA = () => {
     }
   };
 
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleKeyDown = (e) => {
     if (step === 1 && e.key === "Enter" && form.name.trim()) {
       e.preventDefault();
       setStep(2);
     } else if (step === 2 && e.key === "Enter" && form.email.trim()) {
       e.preventDefault();
+      if (!isValidEmail(form.email.trim())) return;
       setStep(3);
     } else if (step === 3 && e.key === "Enter" && form.source.trim()) {
       e.preventDefault();
