@@ -44,7 +44,7 @@ function card(post, asciiArt) {
       style: {
         width: "1200px",
         height: "630px",
-        background: "#0e0d0b",
+        background: "#F4F1EA",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -64,7 +64,7 @@ function card(post, asciiArt) {
               bottom: "-20px",
               fontSize: "4.5px",
               lineHeight: 1.05,
-              color: "rgba(244,241,234,0.07)",
+              color: "rgba(26,23,20,0.06)",
               fontFamily: "Courier Prime",
               whiteSpace: "pre",
               letterSpacing: "0px",
@@ -127,7 +127,7 @@ function card(post, asciiArt) {
                         style: {
                           fontSize: "46px",
                           fontWeight: 700,
-                          color: "#F4F1EA",
+                          color: "#1a1714",
                           lineHeight: 1.15,
                         },
                         children: post.title,
@@ -138,7 +138,7 @@ function card(post, asciiArt) {
                       props: {
                         style: {
                           fontSize: "18px",
-                          color: "rgba(244,241,234,0.5)",
+                          color: "#8a8578",
                           lineHeight: 1.6,
                           maxWidth: "750px",
                         },
@@ -156,7 +156,7 @@ function card(post, asciiArt) {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    borderTop: "1px solid rgba(244,241,234,0.1)",
+                    borderTop: "1px solid #d4cfc5",
                     paddingTop: "18px",
                   },
                   children: [
@@ -177,7 +177,7 @@ function card(post, asciiArt) {
                       props: {
                         style: {
                           fontSize: "14px",
-                          color: "rgba(244,241,234,0.3)",
+                          color: "#8a8578",
                         },
                         children: post.date,
                       },
@@ -220,7 +220,7 @@ async function main() {
       style: {
         width: "1200px",
         height: "630px",
-        background: "#0e0d0b",
+        background: "#F4F1EA",
         display: "flex",
         position: "relative",
         overflow: "hidden",
@@ -239,7 +239,7 @@ async function main() {
               bottom: "-20px",
               fontSize: "4.5px",
               lineHeight: 1.05,
-              color: "rgba(244,241,234,0.07)",
+              color: "rgba(26,23,20,0.06)",
               fontFamily: "Courier Prime",
               whiteSpace: "pre",
               letterSpacing: "0px",
@@ -268,7 +268,7 @@ async function main() {
                   style: {
                     fontSize: "96px",
                     fontFamily: "Slovic",
-                    color: "#F4F1EA",
+                    color: "#7A0F1B",
                     lineHeight: 1,
                   },
                   children: "Egregore",
@@ -279,7 +279,7 @@ async function main() {
                 props: {
                   style: {
                     fontSize: "18px",
-                    color: "rgba(244,241,234,0.4)",
+                    color: "#8a8578",
                     letterSpacing: "4px",
                     textTransform: "uppercase",
                   },
