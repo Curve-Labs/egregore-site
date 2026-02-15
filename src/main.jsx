@@ -84,7 +84,7 @@ function GlobalStyles() {
           text-align: center !important;
         }
         .mobile-session-grid { grid-template-columns: 1fr !important; gap: 3.5rem !important; }
-        .mobile-session-grid > div:last-child { transform: scale(1.15); transform-origin: top center; }
+        .mobile-session-grid > div:last-child { transform: scale(0.85); transform-origin: top center; margin-top: -1rem; }
         .mobile-research-grid { grid-template-columns: 1fr !important; gap: 2rem !important; }
         .mobile-input { font-size: 16px !important; padding: 0.75rem !important; min-height: 44px !important; }
 
