@@ -37,7 +37,7 @@ export const ARTICLE_CONTENT = {
   ],
 
   "context-gardening": [
-    { type: "quote", text: "Why the best AI context isn\u2019t engineered \u2014 it\u2019s grown." },
+    { type: "quote", text: "What liberates us is the knowledge of who we were, what we became, where we were, whereinto we have been thrown, whereto we speed, where from we are redeemed, what birth is and what rebirth.\n\u2014 Theodotus" },
     { type: "p", text: "The prevailing term in AI tooling right now is \u201Ccontext engineering\u201D \u2014 the idea that if you\u2019re methodical enough, you can assemble the optimal set of information for a model to work with. Curate the right documents, structure the right prompts, retrieve the right chunks. Engineering implies a known target state: you design, you build, you ship." },
     { type: "p", text: "But this framing carries a quiet assumption that doesn\u2019t survive contact with real organizations. It assumes one person \u2014 or one system \u2014 can know in advance what the relevant context is. That relevance is a property of documents rather than a property of situations. That the right information can be selected before the moment it\u2019s needed." },
     { type: "p", text: "In practice, context doesn\u2019t work like that. Context emerges." },
