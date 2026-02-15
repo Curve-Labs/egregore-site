@@ -118,6 +118,10 @@ function GlobalStyles() {
           font-weight: 300 !important;
         }
         .terminal-section .terminal-scroll * { font-size: 10px !important; }
+        .machinations-title {
+          top: 6rem !important;
+          font-size: 24px !important;
+        }
 
         .join-section {
           height: 730px !important;

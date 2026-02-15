@@ -628,7 +628,7 @@ const SeeItWork = () => {
         </pre>
       </div>
 
-      <div style={{
+      <div className="machinations-title" style={{
         position: "absolute", top: "9rem", left: 0, right: 0,
         textAlign: "center", zIndex: 2,
         ...font.slovic, fontSize: "36px", letterSpacing: "0", color: C.parchment
