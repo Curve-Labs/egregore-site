@@ -1074,7 +1074,7 @@ const WaitlistCTA = () => {
     } else if (step === 2 && e.key === "Enter" && form.email.trim()) {
       e.preventDefault();
       setStep(3);
-    } else if (step === 3 && (e.metaKey || e.ctrlKey) && e.key === "Enter" && form.source.trim()) {
+    } else if (step === 3 && e.key === "Enter" && form.source.trim()) {
       e.preventDefault();
       handleSubmit();
     } else if (e.key === "Escape" && step > 0 && step < 4) {
@@ -1226,7 +1226,7 @@ const WaitlistCTA = () => {
                 </div>
               )}
               <div style={hintStyle}>
-                {submitting ? "sealing..." : "\u2318+enter to seal"}
+                {submitting ? "sealing..." : "enter to seal"}
               </div>
             </div>
           )}
