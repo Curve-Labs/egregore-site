@@ -880,10 +880,8 @@ const SessionCycle = () => {
                 const lx = cx + labelR * Math.cos((node.angle * Math.PI) / 180);
                 const ly = cy + labelR * Math.sin((node.angle * Math.PI) / 180);
                 const isHovered = hovered === i;
-                const labelClass = lx < 80 ? "cycle-label-left" : lx > 240 ? "cycle-label-right" : "";
                 return (
                   <div key={i}
-                    className={labelClass}
                     onMouseEnter={() => setHovered(i)}
                     onMouseLeave={() => setHovered(null)}
                     style={{

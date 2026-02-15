@@ -84,9 +84,7 @@ function GlobalStyles() {
           text-align: center !important;
         }
         .mobile-session-grid { grid-template-columns: 1fr !important; gap: 3.5rem !important; }
-        .mobile-session-grid > div:last-child { transform: scale(0.85); transform-origin: top center; margin-top: -1rem; }
-        .cycle-label-left { transform: translate(0%, -50%) !important; text-align: left !important; }
-        .cycle-label-right { transform: translate(-100%, -50%) !important; text-align: right !important; }
+        .mobile-session-grid > div:last-child { transform: scale(0.75); transform-origin: top center; margin-top: -1rem; margin-bottom: -3rem; }
         .mobile-research-grid { grid-template-columns: 1fr !important; gap: 2rem !important; }
         .mobile-input { font-size: 16px !important; padding: 0.75rem !important; min-height: 44px !important; }
 
