@@ -973,7 +973,7 @@ const Research = () => {
           Dispatches on shared cognition, coordination infrastructure, and what emerges when organizations develop memory.
         </p>
 
-        <div className="mobile-research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3rem" }}>
+        <div className="mobile-research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "3rem", maxWidth: "750px", margin: "0 auto" }}>
           {featured.map((post) => (
             <Link key={post.slug} to={`/research/${post.slug}`} onClick={() => window.sa_event?.("click_research_" + post.slug)} style={{
               textDecoration: "none", color: "inherit",
