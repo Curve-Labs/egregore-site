@@ -72,7 +72,7 @@ const Navigation = () => {
       </a>
       <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>/Research</Link>
-        <Link to="/docs" style={linkStyle}>/Docs</Link>
+        <a href="https://egregore.xyz/docs" style={linkStyle}>/Docs</a>
         <a href="#join" className="mobile-button" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
           padding: "0.4rem 1.1rem",
@@ -1158,7 +1158,7 @@ const WaitlistCTA = () => {
             paddingTop: "2rem", marginTop: "4rem",
             display: "flex", justifyContent: "space-between", letterSpacing: "1px",
           }}>
-            <span>Egregore Systems</span>
+            <a href="https://www.curvelabs.eu/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Curve Labs</a>
             <span>MMXXVI</span>
             <span>Berlin / The Graph</span>
           </div>

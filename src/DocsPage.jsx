@@ -245,14 +245,14 @@ const DocsPage = () => {
           }}>
             /Research
           </Link>
-          <Link to="/docs" style={{
+          <a href="https://egregore.xyz/docs" style={{
             ...font.ibmPlex, color: C.ink, textDecoration: "none",
             fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
             padding: "0.4rem 0",
             borderBottom: `2px solid ${C.crimson}`,
           }}>
             /Docs
-          </Link>
+          </a>
           <Link to="/#join" className="mobile-button" style={{
             ...font.ibmPlex, color: C.ink, textDecoration: "none",
             fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
@@ -380,7 +380,7 @@ const DocsPage = () => {
           borderTop: `1px solid ${C.warmGray}`, paddingTop: "1.5rem",
           display: "flex", justifyContent: "space-between", letterSpacing: "1px",
         }}>
-          <span>Egregore Systems</span>
+          <a href="https://www.curvelabs.eu/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Curve Labs</a>
           <span>MMXXVI</span>
           <span>Berlin / The Graph</span>
         </div>
