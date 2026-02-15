@@ -72,8 +72,8 @@ const Navigation = () => {
       </a>
       <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <Link to="/research" style={linkStyle}>/Research</Link>
-        <a href="https://egregore.xyz/docs" style={linkStyle}>/Docs</a>
-        <a href="#join" className="mobile-button" style={{
+        <a href="https://egregore.xyz/docs" onClick={() => window.sa_event?.("click_docs")} style={linkStyle}>/Docs</a>
+        <a href="#join" onClick={() => window.sa_event?.("nav_waitlist")} className="mobile-button" style={{
           ...linkStyle, border: `1px solid ${C.ink}`,
           padding: "0.4rem 1.1rem",
         }}>
@@ -119,7 +119,7 @@ const Hero = () => (
             A terminal-native platform where humans and AI agents <span style={{ color: C.gold }}>share</span> persistent context and work together as a single organizational mind.
           </p>
 
-          <a href="#join" className="mobile-button" style={{
+          <a href="#join" onClick={() => window.sa_event?.("cta_join_waitlist")} className="mobile-button" style={{
             ...font.mono, fontSize: "0.72rem", letterSpacing: "1.5px",
             display: "inline-block", textTransform: "uppercase",
             background: C.ink, color: C.parchment, border: "none",
@@ -655,7 +655,7 @@ const SeeItWork = () => {
 
             <div style={{ display: "flex", padding: "8px 13px 0", borderBottom: "1px solid #1a1916" }}>
               {COMMANDS.map((c, i) => (
-                <button key={c.cmd} onClick={() => startSequence(i)} style={{
+                <button key={c.cmd} onClick={() => { startSequence(i); window.sa_event?.("demo_click_" + c.label); }} style={{
                   background: "none", border: "none",
                   borderBottom: active === i ? "1px solid #c8a55a" : "1px solid transparent",
                   color: active === i ? "#c8a55a" : "#44413c",
@@ -975,7 +975,7 @@ const Research = () => {
 
         <div className="mobile-research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "3rem" }}>
           {featured.map((post) => (
-            <Link key={post.slug} to={`/research/${post.slug}`} style={{
+            <Link key={post.slug} to={`/research/${post.slug}`} onClick={() => window.sa_event?.("click_research_" + post.slug)} style={{
               textDecoration: "none", color: "inherit",
               border: `1px solid ${C.warmGray}`, padding: "2.2rem 2rem",
               display: "flex", flexDirection: "column",
@@ -1060,6 +1060,7 @@ const WaitlistCTA = () => {
       });
       if (!res.ok) throw new Error("Failed to submit");
       setStep(4);
+      window.sa_event?.("waitlist_submit");
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
