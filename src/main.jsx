@@ -6,6 +6,7 @@ import App from './App.jsx'
 import ResearchPage from './ResearchPage.jsx'
 import ArticlePage from './ArticlePage.jsx'
 import DocsPage from './DocsPage.jsx'
+import SetupFlow from './components/SetupFlow.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -150,6 +151,9 @@ createRoot(document.getElementById('root')).render(
       <GlobalStyles />
       <Routes>
         <Route path="/" element={<App />} />
+        <Route path="/setup" element={<SetupFlow />} />
+        <Route path="/join" element={<SetupFlow />} />
+        <Route path="/callback" element={<SetupFlow />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
