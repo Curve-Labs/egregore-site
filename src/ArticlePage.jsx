@@ -87,8 +87,8 @@ const ArticlePage = () => {
         </div>
 
         <h1 style={{
-          ...font.serif, fontSize: "clamp(2rem, 4vw, 3rem)",
-          fontWeight: 400, color: C.ink, lineHeight: 1.15, marginBottom: "1.5rem",
+          ...font.slovic, fontSize: "clamp(2rem, 4vw, 3rem)",
+          fontWeight: 400, color: C.crimson, lineHeight: 1.15, marginBottom: "1.5rem",
         }}>
           {post.title}
         </h1>
