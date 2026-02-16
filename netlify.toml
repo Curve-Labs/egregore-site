@@ -9,6 +9,16 @@
   function = "og"
   path = "/*"
 
+[[headers]]
+  for = "/llms.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
+[[headers]]
+  for = "/llms-full.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
