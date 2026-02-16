@@ -9,57 +9,65 @@ const ResearchPage = () => {
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav style={{
-        padding: "1.2rem 3rem",
+      <nav className="mobile-nav" style={{
+        position: "fixed", top: 0, width: "100%", zIndex: 900,
+        height: "80px",
+        padding: "0 4rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "rgba(244,241,234,0.95)",
+        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
+        transition: "all 0.3s ease",
       }}>
-        <Link to="/" style={{
+        <Link to="/" className="mobile-logo" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson,
           textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            borderBottom: `1px solid ${C.crimson}`, paddingBottom: "2px",
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
+            borderBottom: `2px solid ${C.crimson}`,
           }}>
-            Research
+            /Research
           </Link>
-          <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+          <a href="https://egregore.xyz/docs" style={{
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            padding: "0.4rem 0",
           }}>
-            Docs
+            /Docs
           </a>
-          <Link to="/#join" style={{
-            ...font.mono, color: C.ink, textDecoration: "none",
-            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
+          <Link to="/#join" className="mobile-button" style={{
+            ...font.ibmPlex, color: C.ink, textDecoration: "none",
+            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
+            border: `1px solid ${C.ink}`,
+            padding: "0.4rem 1.1rem",
           }}>
-            Waitlist
+            /Waitlist
           </Link>
         </div>
       </nav>
 
       {/* Header */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "5rem 2rem 2rem" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "8rem 2rem 2rem" }}>
         <div style={{
-          ...font.mono, fontSize: "0.58rem", letterSpacing: "3.5px",
+          ...font.ibmPlex, fontSize: "12px", letterSpacing: "0",
           textTransform: "uppercase", color: C.muted, marginBottom: "1rem",
         }}>
           Research
         </div>
         <h1 style={{
-          ...font.serif, fontSize: "clamp(2rem, 4vw, 3.2rem)",
+          ...font.slovic, fontSize: "36px", letterSpacing: "0",
           fontWeight: 400, color: C.ink, lineHeight: 1.15, marginBottom: "1rem",
         }}>
           Dispatches from the field.
         </h1>
         <p style={{
-          ...font.serif, fontSize: "1.15rem", color: C.muted,
+          ...font.courierPrime, fontSize: "14px", color: C.muted,
           maxWidth: 560, lineHeight: 1.7, marginBottom: "3rem",
         }}>
           On shared cognition, coordination infrastructure, and what emerges when organizations develop memory.
@@ -91,7 +99,7 @@ const ResearchPage = () => {
             >
               <div>
                 <div style={{
-                  ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
+                  ...font.ibmPlex, fontSize: "12px", letterSpacing: "0",
                   textTransform: "uppercase",
                   color: hoveredIdx === i ? C.gold : C.muted,
                   transition: "color 0.2s",
@@ -100,7 +108,7 @@ const ResearchPage = () => {
                   {post.tag}
                 </div>
                 <div style={{
-                  ...font.mono, fontSize: "0.58rem", color: C.warmGray, letterSpacing: "1px",
+                  ...font.ibmPlex, fontSize: "12px", color: C.warmGray, letterSpacing: "0",
                 }}>
                   {post.date}
                 </div>
@@ -108,7 +116,7 @@ const ResearchPage = () => {
 
               <div>
                 <h2 style={{
-                  ...font.serif, fontSize: "1.35rem", fontWeight: 600,
+                  ...font.ibmPlex, fontSize: "1.15rem", fontWeight: 700,
                   color: hoveredIdx === i ? C.crimson : C.ink,
                   transition: "color 0.2s",
                   marginBottom: "0.5rem", lineHeight: 1.3,
@@ -116,7 +124,7 @@ const ResearchPage = () => {
                   {post.title}
                 </h2>
                 <p style={{
-                  ...font.serif, fontSize: "0.98rem", color: C.muted,
+                  ...font.courierPrime, fontSize: "14px", color: C.muted,
                   lineHeight: 1.65, maxWidth: 560,
                 }}>
                   {post.excerpt}
@@ -137,7 +145,7 @@ const ResearchPage = () => {
           paddingTop: "2rem",
           display: "flex", justifyContent: "space-between", letterSpacing: "1px",
         }}>
-          <span>Egregore Systems</span>
+          <a href="https://www.curvelabs.eu/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Curve Labs</a>
           <span>MMXXVI</span>
           <span>Berlin / The Graph</span>
         </div>

@@ -9,7 +9,10 @@ export const C = {
 };
 
 export const font = {
-  gothic: { fontFamily: "'UnifrakturMaguntia', cursive" },
-  serif: { fontFamily: "'Cormorant Garamond', serif" },
+  gothic: { fontFamily: "'UnifrakturMaguntia', 'Slovic_Demo', serif" },
+  serif: { fontFamily: "'Courier Prime', monospace", fontWeight: 400 },
   mono: { fontFamily: "'Space Mono', monospace" },
+  slovic: { fontFamily: "'Slovic_Demo', serif" },
+  ibmPlex: { fontFamily: "'IBM Plex Mono', monospace" },
+  courierPrime: { fontFamily: "'Courier Prime', monospace", fontWeight: 400 },
 };
