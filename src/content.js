@@ -4,8 +4,7 @@
 export const ARTICLE_CONTENT = {
 
   "towards-shared-minds": [
-    { type: "quote", text: "Magical times are upon us. Yet it somehow feels.. atomised." },
-    { type: "p", text: "Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore." },
+    { type: "lead", text: "Magical times are upon us. Yet it somehow feels atomised. Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore." },
     { type: "divider" },
     { type: "p", text: "What started as an AI-native OS for our lab quickly turned into an internal obsession. Shortly after, we knew this was what we needed to build \u2014 and build it through it." },
     { type: "p", text: "We are excited to share what culminated since then and some thoughts on why we think this matters for the present-future and a few mental models which we developed to think about this paradigm." },

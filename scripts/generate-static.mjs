@@ -28,6 +28,9 @@ function blocksToMarkdown(blocks) {
       case "h3":
         lines.push(`### ${block.text}`, "");
         break;
+      case "lead":
+        lines.push(`*${block.text}*`, "");
+        break;
       case "p":
         lines.push(block.text, "");
         break;

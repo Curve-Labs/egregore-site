@@ -466,9 +466,7 @@ Walks you through the session loop step by step: /activity to see context, /refl
 ## Towards Shared Minds
 By Cem Dagdelen | Feb 2026
 
-> Magical times are upon us. Yet it somehow feels.. atomised.
-
-Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore.
+*Magical times are upon us. Yet it somehow feels atomised. Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore.*
 
 ---
 

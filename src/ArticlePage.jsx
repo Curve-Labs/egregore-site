@@ -114,6 +114,16 @@ const ArticlePage = () => {
         {content ? (
           <div>
             {content.map((block, i) => {
+              if (block.type === "lead") {
+                return (
+                  <p key={i} style={{
+                    ...font.serif, fontSize: "1.15rem", fontStyle: "italic",
+                    color: C.muted, lineHeight: 1.8, marginBottom: "1.2rem",
+                  }}>
+                    {block.text}
+                  </p>
+                );
+              }
               if (block.type === "h2") {
                 return (
                   <h2 key={i} style={{
