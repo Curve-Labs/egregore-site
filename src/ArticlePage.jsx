@@ -10,7 +10,7 @@ const ArticlePage = () => {
 
   if (!post) {
     return (
-      <div style={{ background: C.parchment, minHeight: "100vh", padding: "9rem 2rem 6rem", textAlign: "center" }}>
+      <div style={{ background: C.parchment, minHeight: "100vh", padding: "6rem 2rem", textAlign: "center" }}>
         <p style={{ ...font.serif, fontSize: "1.2rem", color: C.muted }}>Article not found.</p>
         <Link to="/research" style={{ ...font.mono, fontSize: "0.72rem", color: C.crimson, marginTop: "2rem", display: "inline-block" }}>
           Back to research
@@ -27,49 +27,41 @@ const ArticlePage = () => {
   return (
     <div style={{ background: C.parchment, color: C.ink, ...font.serif, lineHeight: 1.6, minHeight: "100vh" }}>
       {/* Nav */}
-      <nav className="mobile-nav" style={{
-        position: "fixed", top: 0, width: "100%", zIndex: 900,
-        height: "80px",
-        padding: "0 4rem",
+      <nav style={{
+        padding: "1.2rem 3rem",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "rgba(244,241,234,0.95)",
-        backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.warmGray}`,
-        transition: "all 0.3s ease",
       }}>
-        <Link to="/" className="mobile-logo" style={{
+        <Link to="/" style={{
           ...font.gothic, fontSize: "1.9rem", color: C.crimson, textDecoration: "none",
         }}>
           Egregore
         </Link>
-        <div className="mobile-nav-links" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           <Link to="/research" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
+            ...font.mono, color: C.ink, textDecoration: "none",
+            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
           }}>
-            /Research
+            Research
           </Link>
-          <a href="https://egregore.xyz/docs" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            padding: "0.4rem 0",
+          <a href="https://github.com/Curve-Labs/egregore-core" target="_blank" rel="noopener noreferrer" style={{
+            ...font.mono, color: C.ink, textDecoration: "none",
+            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
           }}>
-            /Docs
+            Docs
           </a>
-          <Link to="/#join" className="mobile-button" style={{
-            ...font.ibmPlex, color: C.ink, textDecoration: "none",
-            fontSize: "14px", letterSpacing: "0", textTransform: "uppercase",
-            border: `1px solid ${C.ink}`,
-            padding: "0.4rem 1.1rem",
+          <Link to="/#join" style={{
+            ...font.mono, color: C.ink, textDecoration: "none",
+            fontSize: "0.67rem", letterSpacing: "1.5px", textTransform: "uppercase",
+            border: `1px solid ${C.ink}`, padding: "0.4rem 1.1rem",
           }}>
-            /Waitlist
+            Waitlist
           </Link>
         </div>
       </nav>
 
       {/* Article */}
-      <article style={{ maxWidth: 680, margin: "0 auto", padding: "7rem 2rem 3rem" }}>
+      <article style={{ maxWidth: 680, margin: "0 auto", padding: "4rem 2rem 3rem" }}>
         {/* Meta */}
         <Link to="/research" style={{
           ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
@@ -83,7 +75,7 @@ const ArticlePage = () => {
           ...font.mono, fontSize: "0.58rem", letterSpacing: "2px",
           textTransform: "uppercase", color: C.gold, marginBottom: "1rem",
         }}>
-          {post.tag ? <>{post.tag} &middot; </> : null}{post.date}
+          {post.tag} &middot; {post.date}
         </div>
 
         <h1 style={{
@@ -95,27 +87,11 @@ const ArticlePage = () => {
 
         <p style={{
           ...font.serif, fontSize: "1.2rem", color: C.muted,
-          lineHeight: 1.7, marginBottom: "2rem",
+          lineHeight: 1.7, marginBottom: "3rem",
+          borderBottom: `1px solid ${C.warmGray}`, paddingBottom: "2rem",
         }}>
           {post.excerpt}
         </p>
-
-        {post.author && (
-          <div style={{
-            borderBottom: `1px solid ${C.warmGray}`, paddingBottom: "2rem", marginBottom: "3rem",
-          }}>
-            <div style={{
-              ...font.mono, fontSize: "0.62rem", letterSpacing: "2px",
-              textTransform: "uppercase", color: C.muted,
-            }}>
-              {post.author}
-            </div>
-          </div>
-        )}
-
-        {!post.author && (
-          <div style={{ borderBottom: `1px solid ${C.warmGray}`, paddingBottom: "0", marginBottom: "3rem" }} />
-        )}
 
         {/* Body */}
         {content ? (
@@ -227,7 +203,7 @@ const ArticlePage = () => {
           borderTop: `1px solid ${C.warmGray}`, paddingTop: "2rem",
           display: "flex", justifyContent: "space-between", letterSpacing: "1px",
         }}>
-          <a href="https://www.curvelabs.eu/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Curve Labs</a>
+          <span>Egregore Systems</span>
           <span>MMXXVI</span>
           <span>Berlin / The Graph</span>
         </div>
