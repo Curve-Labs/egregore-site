@@ -117,6 +117,12 @@ function injectOgTags(html, meta) {
     `<title>${meta.title}</title>`
   );
 
+  // Replace <meta name="description">
+  result = result.replace(
+    /<meta name="description" content="[^"]*" \/>/,
+    `<meta name="description" content="${meta.description}" />`
+  );
+
   // Replace existing OG/twitter meta block with new one
   result = result.replace(
     /\s*<!-- Open Graph -->[\s\S]*?<meta name="twitter:image"[^>]*\/>/,

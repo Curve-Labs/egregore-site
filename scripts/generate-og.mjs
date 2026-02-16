@@ -102,19 +102,6 @@ function card(post, asciiArt) {
               height: "100%",
             },
             children: [
-              // Tag
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: "14px",
-                    letterSpacing: "3px",
-                    textTransform: "uppercase",
-                    color: "#c8a55a",
-                  },
-                  children: post.tag,
-                },
-              },
               // Title + excerpt
               {
                 type: "div",
@@ -126,8 +113,8 @@ function card(post, asciiArt) {
                       props: {
                         style: {
                           fontSize: "46px",
-                          fontWeight: 700,
-                          color: "#1a1714",
+                          fontFamily: "Slovic",
+                          color: "#7A0F1B",
                           lineHeight: 1.15,
                         },
                         children: post.title,
