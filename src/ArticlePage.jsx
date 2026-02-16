@@ -93,13 +93,6 @@ const ArticlePage = () => {
           {post.title}
         </h1>
 
-        <p style={{
-          ...font.serif, fontSize: "1.2rem", color: C.muted,
-          lineHeight: 1.7, marginBottom: "2rem",
-        }}>
-          {post.excerpt}
-        </p>
-
         {post.author && (
           <div style={{
             borderBottom: `1px solid ${C.warmGray}`, paddingBottom: "2rem", marginBottom: "3rem",
