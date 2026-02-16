@@ -1,0 +1,572 @@
+# Egregore
+> Egregore is a shared intelligence layer for organizations using Claude Code. It gives teams persistent memory, async handoffs, and accumulated knowledge across sessions and people.
+
+Terminal-native platform where humans and AI agents share persistent context and work together as a single organizational mind. Built on Claude Code, Git-based shared memory, and a Neo4j knowledge graph.
+
+---
+
+# Documentation
+
+## Overview
+
+Egregore is a shared intelligence layer for organizations using Claude Code. It gives teams persistent memory, async handoffs, and accumulated knowledge across sessions and people.
+
+It is not a chatbot wrapper. It does not add a GUI on top of an LLM. Egregore is an environment architecture — a way of structuring what Claude sees, what Claude can do, and what persists between sessions so that AI can function as a genuine participant in collective work.
+
+---
+
+### How it works
+
+Each organization gets a self-contained workspace distributed through GitHub. When you join an Egregore, your machine receives the full environment: the codebase, the command protocol, the connection layer, and the collective memory. Claude Code reads this environment at session start and becomes your group’s AI — aware of who’s working on what, what decisions were made, and what needs attention.
+
+### The Stack
+
+- Claude Code — The runtime. Every interaction happens in the terminal.
+- CLAUDE.md — The system prompt. Living tissue that evolves with the group.
+- Slash Commands — The coordination protocol. Markdown files that define actions.
+- Neo4j — The knowledge graph. Entities, relationships, and session traces.
+- GitHub — The distribution layer. Forks, branches, PRs, and memory repos.
+- Telegram — Notifications for handoffs, invites, and team alerts (optional).
+
+### Core Loop
+
+Open terminal → type egregore → /activity to see what happened → work → /save or /handoff when done. Every session leaves a trace. The graph accumulates. The next person inherits the collective state.
+
+
+## Installation
+
+Egregore is installed via a single terminal command. You get this command after signing up through the waitlist or receiving an invite.
+
+### Requirements
+
+| --- | --- |
+| Claude Code | Anthropic CLI — install from claude.ai/code |
+| GitHub | Account with org access (or personal account) |
+| Node.js | v20+ for the installer |
+| Shell | Bash, Zsh, or Fish |
+
+> **Note:** Egregore runs entirely through Claude Code. There is no separate app, no web dashboard, no IDE plugin. Your terminal is the interface.
+
+---
+
+### Founders — creating a new Egregore
+
+After signing up on the waitlist, you receive a personalized install command:
+
+```
+npx create-egregore --token ek_your_token
+```
+
+The installer authenticates with GitHub, forks the environment to your org, creates your shared memory repo, and configures everything. It also:
+
+- Sets up a shell alias so you can type egregore from any terminal
+- Creates a Telegram group for your team (optional)
+- Lets you choose which repos to manage through Egregore (optional)
+- Runs an interactive tutorial to walk you through the core loop
+
+When you’re ready to add teammates, run /invite — it generates a link they can use to join.
+
+---
+
+### Joiners — accepting an invite
+
+When someone invites you, you receive a link. Open it, sign in with GitHub, and you’ll get your own install command:
+
+```
+npx create-egregore --token ek_your_token
+```
+
+The installer connects you to the existing Egregore — same environment, same memory, same graph. Your shell alias is set up automatically. Open a new terminal and type egregore to start.
+
+
+## First Session
+
+Open a new terminal and type egregore. The session-start hook fires automatically, syncing your branch and memory. You see the greeting:
+
+```
+  ███████╗ ██████╗ ██████╗ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+  ██╔════╝██╔════╝ ██╔══██╗██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝
+  █████╗  ██║  ███╗██████╔╝█████╗  ██║  ███╗██║   ██║██████╔╝█████╗
+  ██╔══╝  ██║   ██║██╔══██╗██╔══╝  ██║   ██║██║   ██║██╔══██╗██╔══╝
+  ███████╗╚██████╔╝██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗
+  ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
+
+  New session started.
+  Branch: dev/oz/2026-02-07-session
+  Develop: synced
+  Memory: synced
+```
+
+Claude asks: “What are you working on?” Tell it. A topic-based branch is created automatically. Work normally — Claude has full context of your organization’s memory, recent activity, and open threads.
+
+When you’re done, run /save to checkpoint your work, or /handoff to transfer context to someone specific. You never need to touch git directly — Egregore handles branching, commits, PRs, and merges behind the scenes.
+
+
+## /activity
+
+See what happened since your last session. Pulls from the knowledge graph to show recent sessions, decisions, handoffs directed at you, and open threads.
+
+```
+> /activity
+```
+
+Displays a formatted dashboard with:
+
+- Recent sessions by all team members (last 7 days)
+- Open handoffs directed at you (with status icons)
+- Recent decisions and artifacts
+- Active quests and their momentum
+
+Handoffs directed at you show with status indicators: ● pending (unread), ◐ read but open, ○ resolved. Select a numbered item to read the full handoff.
+
+> **Note:** Run /activity at the start of every session to catch up on what happened while you were away.
+
+
+## /save
+
+Checkpoint your contributions. Syncs to the knowledge graph, commits, pushes, and creates PRs — all in one command. You never need to run git commands directly.
+
+```
+> /save
+```
+
+### What it does
+
+- Syncs new handoffs, artifacts, and quests to the knowledge graph
+- Pushes memory changes directly to main (markdown-only, always safe)
+- Ensures you’re on a working branch (creates one if needed)
+- Rebases onto latest develop, pushes, creates PR
+- Auto-merges markdown-only PRs; leaves code PRs for review
+
+### Managed repos
+
+If your org has managed repos in egregore.json, /save scans them all for uncommitted changes and handles each one with the same workflow.
+
+
+## /handoff
+
+End a session with a summary for the next person. Packages your session context, creates a handoff file, updates the knowledge graph, and notifies the recipient.
+
+```
+> /handoff mcp auth to oz
+
+> /handoff          ← triages open handoffs first
+```
+
+### With a recipient
+
+Specify a topic and who it’s for. The recipient gets a Telegram notification (if your org has Telegram enabled) and sees the handoff on their next /activity. The handoff file includes a session summary, key decisions, open threads, and entry points for picking up the work.
+
+### Triage mode
+
+Run bare /handoff with no arguments to triage open handoffs directed at you. Walk through each one and mark them as done, still open, or not relevant. Then optionally create a new handoff.
+
+### What gets created
+
+- Handoff file in memory/handoffs/
+- Session node in the knowledge graph (with HANDED_TO relationship)
+- Index entry in memory/handoffs/index.md
+- Telegram notification to recipient (if enabled)
+
+Auto-saves after creating the handoff — no need to run /save separately.
+
+
+## /reflect
+
+Capture insights from your work. The system queries the knowledge graph to surface what’s worth reflecting on, asks Socratic follow-ups, and auto-classifies what emerges into decisions, findings, or patterns.
+
+### Three modes
+
+| --- | --- |
+| /reflect | Deep — full Socratic flow with graph context |
+| /reflect [content] | Quick — rapid capture, auto-classify |
+| /reflect about [topic] | Focused — deep but pre-seeded on a topic |
+
+### Category override
+
+```
+> /reflect decision: use stdio for MCP
+> /reflect finding: Neo4j HTTP faster than Bolt
+> /reflect pattern: agents as individual PMF
+```
+
+Prefix with a category to skip classification. Artifacts are saved to memory/knowledge/ and indexed in the knowledge graph with topic tags and quest links.
+
+> **Note:** You never pick a category manually. The system auto-classifies from language cues, structural signals, and graph context.
+
+
+## /add
+
+Ingest an artifact with minimal friction. Tell it what you’re adding and the system suggests relations — which quest it belongs to, what topics apply, and which existing artifacts it connects to.
+
+```
+> /add competitive analysis of cursor vs egregore
+> /add meeting notes from investor call
+```
+
+Creates the artifact file in memory, indexes it in the knowledge graph with topic tags, and links it to relevant quests and existing artifacts.
+
+
+## /note
+
+Save a personal note. Private by default — never shared, never pushed. You choose what to share later.
+
+```
+> /note the pricing model needs to account for team size
+```
+
+Notes live locally (gitignored). They’re visible only to you. Use /reflect or /add to promote a note to shared knowledge when you’re ready.
+
+
+## /ask
+
+Ask questions — to yourself, the org, or a specific person. Context-aware and graph-backed.
+
+```
+> /ask what did we decide about pricing?
+> /ask oz what's the status of the MCP auth?
+> /ask how does the session-start hook work?
+```
+
+Queries the knowledge graph for relevant decisions, artifacts, and session history. If directed at a person, checks their recent sessions and handoffs. If the answer isn’t in the graph, tells you honestly and suggests who might know.
+
+
+## /quest
+
+Manage quests — open-ended explorations that anyone can contribute to. Quests are larger than tasks: they’re named investigations that accumulate artifacts over time.
+
+```
+> /quest                         ← list active quests
+> /quest new grants pipeline     ← create a quest
+> /quest grants                  ← view quest details
+```
+
+### How quests work
+
+- Quests live in memory/quests/ as markdown files
+- Artifacts link to quests via PART_OF relationships in the graph
+- Topic signatures are derived from linked artifacts automatically
+- Quests have priority levels and status (active/completed/archived)
+- /activity shows quest momentum based on recent artifact activity
+
+
+## /todo
+
+Manage personal todos — lightweight intent capture that flows into quests, asks, and activity.
+
+```
+> /todo review ali's PR on auth flow
+> /todo                          ← show open todos
+> /todo done 3                   ← mark #3 complete
+```
+
+Todos are personal and local. They’re not shared with the team. When a todo grows into something bigger, promote it to a quest with /quest.
+
+
+## /project
+
+Show project status — linked quests, recent artifacts, and entry points.
+
+```
+> /project
+```
+
+Queries the knowledge graph for all quests, artifacts, and sessions related to the current project. Shows momentum, recent activity, and who’s working on what.
+
+
+## /invite
+
+Invite someone to your Egregore. Generates a personalized join link they can use to get set up in one step.
+
+```
+> /invite ali
+```
+
+### What it does
+
+- Sends a GitHub org invitation (if org account)
+- Generates a join link with pre-filled configuration
+- Creates a Person node in the knowledge graph
+- Notifies via Telegram (if enabled)
+
+The invited person opens the link, signs in with GitHub, and receives their own npx install command. After running it, they’re in the same Egregore — shared memory, shared graph, ready to work.
+
+
+## /meeting
+
+Ingest meeting knowledge from Granola. Uses a multi-dimensional analysis pipeline with three analyst agents plus synthesis to extract rich artifacts from meetings.
+
+```
+> /meeting
+```
+
+Paste your Granola meeting transcript and the system extracts decisions, action items, findings, and creates corresponding artifacts in memory and the knowledge graph. Participants are linked automatically.
+
+
+## Shared Memory
+
+Memory is a Git repository shared by all team members. It stores everything the organization accumulates: handoffs, artifacts, decisions, findings, patterns, and quests.
+
+### Structure
+
+```
+memory/
+  people/           ← who’s involved, roles, interests
+  handoffs/         ← session handoffs and index
+  knowledge/
+    decisions/      ← decisions with rationale
+    findings/       ← discoveries and observations
+    patterns/       ← recurring patterns worth naming
+  quests/           ← open-ended explorations
+```
+
+Memory is set up automatically during installation. Changes push directly to main (no PRs needed) since it’s all markdown. A retry loop handles concurrent pushes from other team members.
+
+### How it accumulates
+
+Every /save syncs new files to the knowledge graph. Every /handoff creates a session trace. Every /reflect produces an artifact. Over time, the memory repo becomes a living record of everything the organization knows — searchable both through files and through the graph.
+
+
+## Knowledge Graph
+
+Neo4j is the query layer over shared memory. It stores entities, relationships, temporal layers, and session traces. Commands like /activity, /reflect, and /ask query the graph automatically — you never need to write queries yourself.
+
+### Schema
+
+| --- | --- |
+| Person | Team members with names and roles |
+| Session | Individual work sessions with topics and summaries |
+| Artifact | Decisions, findings, patterns, and other knowledge |
+| Quest | Open-ended explorations that accumulate artifacts |
+| Project | Named projects that quests and sessions relate to |
+
+### Relationships
+
+```
+(Session)-[:BY]->(Person)
+(Session)-[:HANDED_TO]->(Person)
+(Artifact)-[:CONTRIBUTED_BY]->(Person)
+(Artifact)-[:PART_OF]->(Quest)
+(Artifact)-[:RELATES_TO]->(Artifact)
+```
+
+The graph is provisioned automatically for each organization. All queries route through the API gateway — no database credentials needed locally.
+
+
+## Hooks
+
+Hooks are shell commands that execute automatically in response to Claude Code events. Egregore uses one primary hook that makes the whole system work.
+
+### Session Start
+
+The SessionStart hook fires before your first message in every session. It:
+
+- Syncs the develop branch from remote
+- Resumes your working branch (or stays on develop until you start working)
+- Pulls latest shared memory
+- Outputs the greeting with ASCII art and status
+
+This hook is pre-configured during installation. It’s what makes typing egregore feel like launching an app rather than opening a terminal.
+
+### Custom hooks
+
+Organizations can add custom hooks for events like PreToolUse, PostToolUse, and Stop. These can enforce policies, log activity, or trigger integrations. Configured in .claude/settings.json.
+
+
+## Git Workflow
+
+Egregore handles all git operations behind the scenes. You never need to run git commands directly — /save manages branching, commits, rebasing, pushing, and PR creation automatically.
+
+### Branch structure
+
+```
+main           ← stable releases
+  develop      ← integration (PRs land here)
+    dev/oz/... ← working branches (auto-created)
+```
+
+### Flow
+
+- On launch: syncs develop + memory automatically
+- When you say what you’re working on: creates a topic-based branch
+- /save: commits, rebases, pushes, creates PR to develop
+- Markdown-only PRs auto-merge; code PRs are left for review
+
+### Managed repos
+
+Teams can add their own repos to egregore.json. These follow the same branching strategy and /save scans all of them for changes.
+
+
+## egregore.json
+
+The main configuration file. Committed to git. Contains non-secret org config only — set up automatically during installation.
+
+```
+{
+  "org_name": "Acme Corp",
+  "github_org": "acme-corp",
+  "memory_repo": "https://github.com/acme-corp/acme-corp-memory.git",
+  "api_url": "https://api.egregore.xyz",
+  "slug": "acme",
+  "repos": ["frontend", "backend"]
+}
+```
+
+| --- | --- |
+| org_name | Display name of the organization |
+| github_org | GitHub org or username |
+| memory_repo | URL of the shared memory repository |
+| api_url | Egregore API gateway URL |
+| slug | Short identifier for the org |
+| repos | Managed repos (optional, cloned as siblings) |
+
+> **Note:** Never put secrets in egregore.json. Tokens and API keys go in .env (gitignored).
+
+
+## .env
+
+Personal secrets file. Gitignored — never committed. Created automatically during installation.
+
+```
+GITHUB_TOKEN=ghp_...
+EGREGORE_API_KEY=ek_...
+```
+
+| --- | --- |
+| GITHUB_TOKEN | Personal access token — created via GitHub device flow during setup |
+| EGREGORE_API_KEY | Org API key — provisioned automatically or provided by your team admin |
+
+
+## /update
+
+Update your local Egregore environment. Syncs framework updates from upstream and pulls all repos.
+
+```
+> /update
+```
+
+Fetches the latest commands, hooks, and configuration from upstream, merges into your fork, and pulls all managed repos. Safe to run anytime — your org’s customizations are preserved.
+
+
+## /tutorial
+
+Interactive walkthrough of Egregore’s core loop. Runs automatically after installation. Run anytime to revisit.
+
+```
+> /tutorial
+```
+
+Walks you through the session loop step by step: /activity to see context, /reflect to capture an insight, /handoff to transfer context. Creates real artifacts in your knowledge graph as you go.
+
+
+---
+
+# Research
+
+## Towards Shared Minds
+By Cem Dagdelen | Feb 2026
+
+> Magical times are upon us. Yet it somehow feels.. atomised.
+
+Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore.
+
+---
+
+What started as an AI-native OS for our lab quickly turned into an internal obsession. Shortly after, we knew this was what we needed to build — and build it through it.
+
+We are excited to share what culminated since then and some thoughts on why we think this matters for the present-future and a few mental models which we developed to think about this paradigm.
+
+As Alan Kay put it, “the computer is an instrument whose music is ideas” — and the interface determines which ideas are playable. The terminal makes AI composable in a way no other interface does. Egregore turns running AI in your terminal (currently Claude Code) into a multiplayer experience by using a shared memory system and specific commands which facilitate coordination workflows. This base capability has a few key implications:
+
+• context generation becomes a byproduct of organizational flows
+• workspace and coordination space are unified in the most AI-native form factor, massively reducing switching and transaction costs
+• organizational learning and adaptability which yields emergent capabilities downstream of needs
+
+---
+
+## Mental Models
+
+Since this is all genuinely new territory, let me share a few mental models for those who want to experiment with this. First off, Egregore is a relational context engine which proactively engages with your processes. Let it ask questions — presets for user responses are contextually generated but typing (or even better, speaking) your response will always yield better results.
+
+I refer to this as context gardening (as opposed to engineering): the overhead approaches zero as context surfaces are pegged to the edges of the organization, and these edges multiply as the organization interacts.
+
+Second, Egregore, with Claude Code, lives and operates on your file system. Make sure you sandbox the specific repositories you want to share with fellow egregorians. It is the living infrastructure of your group. Both its body and its soul will change through use. Lean into this and find ways to inscribe yourselves into the substrate for enhanced bi-directional sensing.
+
+Egregore uses commands like /activity, /handoff, /save and /reflect to crystallize specific workflows to reduce cognitive load (both tokens and neuroelectric) of coordinated work. They are heteronoetic schelling points — crystallized for speed and cohesion, but designed to be mutated and composed for variety and evolution.
+
+---
+
+## Beyond Single-Player
+
+AI massively empowers solo users, however, it is clear to us — after a month building Egregore with Egregore — that groups who share context and frontier capabilities will be the most significant force in AI-native production. Today’s AI discourse overfits everything to its priors debating whether your company is a file system or not, while the consequences of this for AI-induced organizational cybernetics are much wider.
+
+Beyond the determinacy of enterprise or startup logic, such pluri-cognitive substrate could have profound political impact by facilitating social choice aggregation with unprecedented granularity, constituting very credible evolutive routes for “democracy”. Egregoric substrates could become primary media through which open-source agentic capabilities are ported and shared, selected through generations of experimentation. The path that Hugging Face charted for OS models will be extended to agentic development and learning by Egregore. With radical generalizability, solo-entrepreneurs with many-agents can use their Egregores as a compounding memory and coordination surface utilising the cutting edge practices from the community.
+
+Egregore is an organizational substrate of co-learning and selection — an environment whose primary output isn’t decisions or products but an expanding variety of possible configurations, coordination patterns, and capabilities. The wider the gene pool such organizational space maintains, the more of the future it can metabolise.
+
+---
+
+## Sobriety
+
+Having said that, it is worth microdosing a bit of sobriety along with the utopian delirium. Egregore works best with daily organic usage across work and research contexts. The ability to work with the frontier model in Claude Code through long sessions is currently a privilege few can afford. These costs, both on the model side and Egregore optimizations, are bound to come down rather quickly — but we need to be frank that being an Egregore power user is currently most suitable for Claude Max users (which costs >100$/m). For instance while building Egregore, daily >100$ bills from Anthropic weren’t uncommon.
+
+Besides the costs, the other challenge we should face is cognitive security. AI is already a pitch-dark forest, with adversarial techniques popping up as fast as new capabilities. As interfacing with AI becomes a collective enterprise, the attack surface increases together with the network effects. This is something we need to engage with proactively, hopefully as a community of builders.
+
+---
+
+## Origin
+
+Before Egregore had a name, Oguzhan (Oz) and I had been experimenting for almost a year with dynamic knowledge graphs and emergent ontologies. Things we built somehow lacked a critical piece, which was hard to see at first. At some point we decided to radically recalibrate — to stop thinking about product, and to remodel how we think and work from scratch, without overly attaching to any form factor. Simply play – together.
+
+A few days later, at a cafe in Kreuzberg, we were deploying our AI-native “lab OS”, unsure where it would take us. Within a week we were exchanging handoffs every day, asking for context across workstreams, logging research. The magic hit fast. Every time we did something outside of Egregore we started questioning why — why pass on the opportunity to generate collective context?
+
+What followed was an insanely animated month for me, Oguzhan (Oz) and the Curve Labs team, obsessively dogfooding and shipping features. We can’t wait to finally push this out, whether that means validating our visions or delusions.
+
+---
+
+We are starting with an alpha testing phase through a waitlist. We will engage with design partners who are capable builders, open to sharing their experiences and genuinely excited about what Egregore can become and what they can do with it. Hopefully in the near future we will get to a public release.
+
+Til next time.
+
+
+## Context Gardening
+By Cem Dagdelen | Feb 2026
+
+> What liberates us is the knowledge of who we were, what we became, where we were, whereinto we have been thrown, whereto we speed, where from we are redeemed, what birth is and what rebirth.
+> — Theodotus
+
+The prevailing term in AI tooling right now is “context engineering” — the idea that if you’re methodical enough, you can assemble the optimal set of information for a model to work with. Curate the right documents, structure the right prompts, retrieve the right chunks. Engineering implies a known target state: you design, you build, you ship.
+
+But this framing carries a quiet assumption that doesn’t survive contact with real organizations. It assumes one person — or one system — can know in advance what the relevant context is. That relevance is a property of documents rather than a property of situations. That the right information can be selected before the moment it’s needed.
+
+In practice, context doesn’t work like that. Context emerges.
+
+---
+
+## What Emergence Knows
+
+Context gardening starts from a different premise: you don’t manufacture context, you cultivate the conditions for it to grow. You set the soil — the environment, the capture methodologies, the tooling — and then you let the organic practice of teams working together produce the context that matters.
+
+The difference is not cosmetic. Engineering is top-down: someone decides what’s relevant, builds a pipeline to surface it, and hopes the selection holds. Gardening is bottom-up: priorities emerge from interactions, from the actual texture of work, from what teams repeatedly reach for and what they let fall away. No one has to synthetically tell the model what matters. The model discovers what matters by being embedded in a space where real work is happening.
+
+This is closer to how institutional knowledge actually forms. Nobody writes the definitive document on “how we make decisions here.” Instead, patterns accumulate. Certain references become load-bearing. Informal agreements harden into defaults. The organization develops a sense — distributed across people, artifacts, and habits — of what its context actually is.
+
+---
+
+## Egregore as a Context Garden
+
+When teams work inside an Egregore environment, every session contributes to a growing substrate of organizational intelligence. The knowledge graph doesn’t start from a schema designed by an administrator — it grows from the actual patterns of collaboration. What teams discuss, what they reference, what they build on, what they contradict — all of this feeds the soil.
+
+The result is that AI systems plugged into an Egregore workspace don’t operate on a static retrieval set. They operate on living context — context that reflects real priorities, real tensions, real momentum. The difference shows up immediately in output quality. Materials produced within this environment are not generically competent. They are tailor-made, because the context they draw from was tailor-grown by the people who will use them.
+
+This is where the gardening metaphor earns its weight. A garden doesn’t produce the same thing every season. It responds to what you plant, how you tend it, what the conditions are. An Egregore environment does the same — it becomes more aware, more attuned, more useful as the team’s work deepens.
+
+---
+
+## What This Means in Practice
+
+Context gardening shifts the burden of AI effectiveness away from prompt engineering and retrieval optimization and toward something more fundamental: the quality of the collaborative environment itself.
+
+If your team works in fragmented tools with no shared substrate, there is no garden — only scattered seeds. If your team works inside a persistent, accumulative environment, context grows whether or not anyone is explicitly tending it. The capture happens at the level of practice, not process.
+
+The most powerful context for AI is the one that no single person designed — the kind that can only emerge from the collective intelligence of the people who produced it. Egregore is the environment where that emergence happens.

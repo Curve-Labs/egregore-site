@@ -12,7 +12,7 @@ export const POSTS = [
     slug: "context-gardening",
     title: "Context Gardening",
     author: "Cem Dagdelen",
-    excerpt: "Engineering is top-down. Gardening is bottom-up. The best context engineering is already being delegated to AI \u2014 the right move is to let it do the engineering, give it the tools, and get out of its way. What grows on a well-tended substrate is organizational intelligence that no one planted deliberately.",
+    excerpt: "Engineering is top-down. Gardening is bottom-up. The best context engineering is already being delegated to AI — the right move is to let it do the engineering, give it the tools, and get out of its way. What grows on a well-tended substrate is organizational intelligence that no one planted deliberately.",
     date: "Feb 2026",
     tag: "",
     featured: true,

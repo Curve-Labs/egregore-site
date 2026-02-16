@@ -1,0 +1,34 @@
+# Egregore
+> Egregore is a shared intelligence layer for organizations using Claude Code. It gives teams persistent memory, async handoffs, and accumulated knowledge across sessions and people.
+
+## Docs
+- [Overview](https://egregore.xyz/docs#overview): Egregore is a shared intelligence layer for organizations using Claude Code.
+- [Installation](https://egregore.xyz/docs#installation): Egregore is installed via a single terminal command.
+- [First Session](https://egregore.xyz/docs#first-session): Open a new terminal and type egregore.
+- [/activity](https://egregore.xyz/docs#activity): See what happened since your last session.
+- [/save](https://egregore.xyz/docs#save): Checkpoint your contributions.
+- [/handoff](https://egregore.xyz/docs#handoff): End a session with a summary for the next person.
+- [/reflect](https://egregore.xyz/docs#reflect): Capture insights from your work.
+- [/add](https://egregore.xyz/docs#add): Ingest an artifact with minimal friction.
+- [/note](https://egregore.xyz/docs#note): Save a personal note.
+- [/ask](https://egregore.xyz/docs#ask): Ask questions — to yourself, the org, or a specific person.
+- [/quest](https://egregore.xyz/docs#quest): Manage quests — open-ended explorations that anyone can contribute to.
+- [/todo](https://egregore.xyz/docs#todo): Manage personal todos — lightweight intent capture that flows into quests, asks, and activity.
+- [/project](https://egregore.xyz/docs#project): Show project status — linked quests, recent artifacts, and entry points.
+- [/invite](https://egregore.xyz/docs#invite): Invite someone to your Egregore.
+- [/meeting](https://egregore.xyz/docs#meeting): Ingest meeting knowledge from Granola.
+- [Shared Memory](https://egregore.xyz/docs#memory): Memory is a Git repository shared by all team members.
+- [Knowledge Graph](https://egregore.xyz/docs#graph): Neo4j is the query layer over shared memory.
+- [Hooks](https://egregore.xyz/docs#hooks): Hooks are shell commands that execute automatically in response to Claude Code events.
+- [Git Workflow](https://egregore.xyz/docs#git-workflow): Egregore handles all git operations behind the scenes.
+- [egregore.json](https://egregore.xyz/docs#egregore-json): The main configuration file.
+- [.env](https://egregore.xyz/docs#env-file): Personal secrets file.
+- [/update](https://egregore.xyz/docs#update): Update your local Egregore environment.
+- [/tutorial](https://egregore.xyz/docs#tutorial): Interactive walkthrough of Egregore’s core loop.
+
+## Research
+- [Towards Shared Minds](https://egregore.xyz/research/towards-shared-minds): Magical times are upon us.
+- [Context Gardening](https://egregore.xyz/research/context-gardening): Engineering is top-down.
+
+## Optional
+- [Full content](https://egregore.xyz/llms-full.txt)
