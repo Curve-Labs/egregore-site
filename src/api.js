@@ -74,3 +74,22 @@ export async function updateUserProfile(token, { telegram_username }) {
 export async function joinWaitlist(name, email) {
   return request("POST", "/api/admin/waitlist", { body: { name, email, source: "website" } });
 }
+
+export async function getAdminDashboard(token) {
+  return request("GET", "/api/admin/dashboard", { token });
+}
+
+export async function getAdminOrgDetail(token, slug) {
+  return request("GET", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
+}
+
+export async function getAdminTelemetry(token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.org_slug) params.set("org_slug", filters.org_slug);
+  if (filters.event_type) params.set("event_type", filters.event_type);
+  if (filters.user_handle) params.set("user_handle", filters.user_handle);
+  if (filters.since) params.set("since", filters.since);
+  if (filters.limit) params.set("limit", String(filters.limit));
+  const qs = params.toString();
+  return request("GET", `/api/admin/telemetry${qs ? `?${qs}` : ""}`, { token });
+}
