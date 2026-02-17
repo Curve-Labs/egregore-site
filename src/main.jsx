@@ -1,4 +1,4 @@
-import { StrictMode, useEffect } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { C } from './tokens'
@@ -146,6 +146,24 @@ function GlobalStyles() {
   return null;
 }
 
+function CallbackRouter() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (sessionStorage.getItem("admin_auth_pending")) {
+      sessionStorage.removeItem("admin_auth_pending");
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        window.location.replace(`/admin?code=${encodeURIComponent(code)}`);
+        return;
+      }
+    }
+    setReady(true);
+  }, []);
+  if (!ready) return null;
+  return <SetupFlow />;
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
@@ -154,7 +172,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />} />
         <Route path="/setup" element={<SetupFlow />} />
         <Route path="/join" element={<SetupFlow />} />
-        <Route path="/callback" element={<SetupFlow />} />
+        <Route path="/callback" element={<CallbackRouter />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />

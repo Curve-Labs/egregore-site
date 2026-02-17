@@ -770,7 +770,10 @@ export default function AdminDashboard() {
           EGREGORE ADMIN
         </div>
         {authError && <div style={{ color: C.crimson, fontSize: 13 }}>{authError}</div>}
-        <button style={s.loginBtn} onClick={() => (window.location.href = getGitHubAuthUrl())}>
+        <button style={s.loginBtn} onClick={() => {
+          sessionStorage.setItem("admin_auth_pending", "1");
+          window.location.href = getGitHubAuthUrl();
+        }}>
           Sign in with GitHub
         </button>
       </div>
