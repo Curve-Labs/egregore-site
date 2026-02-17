@@ -319,74 +319,58 @@ function OverviewView({ data, onSelectOrg }) {
       <table style={s.table}>
         <thead>
           <tr>
-            <th style={s.th}>Org</th>
+            <th style={s.th}>Slug</th>
+            <th style={s.th}>Name</th>
             <th style={s.th}>Members</th>
-            <th style={s.th}>Telegram</th>
             <th style={s.th}>Sessions</th>
             <th style={s.th}>Last Active</th>
-            <th style={s.th}>Status</th>
+            <th style={s.th}>Neo4j</th>
+            <th style={s.th}>Supabase Key</th>
+            <th style={s.th}>Graph Key</th>
+            <th style={s.th}>Health</th>
           </tr>
         </thead>
         <tbody>
-          {orgs.map((org) => {
-            const hasIssues = org.health.some(
-              (h) => h.severity === "critical" || h.severity === "warning"
-            );
-            const statusColor = hasIssues ? C.crimson : org.health.length > 0 ? C.gold : "#4a4";
-            return (
-              <tr
-                key={org.slug}
-                style={s.row}
-                onClick={() => onSelectOrg(org.slug)}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(200,165,90,0.05)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                <td style={{ ...s.td, color: C.gold, fontWeight: 700 }}>
-                  {org.slug}
-                  <div style={{ color: C.muted, fontWeight: 400, fontSize: 10, marginTop: 2 }}>
-                    {org.github_org}
-                  </div>
-                </td>
-                <td style={s.td}>
-                  <span style={{ color: C.gold, fontWeight: 700, marginRight: 4 }}>{org.member_count}</span>
-                  {(org.members || []).length > 0 && (
-                    <div style={{ color: C.muted, fontSize: 10, marginTop: 2 }}>
-                      {org.members.join(", ")}
-                    </div>
-                  )}
-                </td>
-                <td style={s.td}>
-                  {org.telegram_connected ? (
-                    <span>
-                      <span style={s.dot("#4a4")} />
-                      {org.telegram_group_title || "connected"}
+          {orgs.map((org) => (
+            <tr
+              key={org.slug}
+              style={s.row}
+              onClick={() => onSelectOrg(org.slug)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(200,165,90,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <td style={{ ...s.td, color: C.gold, fontWeight: 700 }}>{org.slug}</td>
+              <td style={s.td}>{org.name}</td>
+              <td style={s.td}>{org.member_count}</td>
+              <td style={s.td}>{org.session_count}</td>
+              <td style={{ ...s.td, color: C.muted }}>{timeAgo(org.last_activity)}</td>
+              <td style={s.td}>
+                <span style={s.dot(org.neo4j_host ? "#4a4" : "#666")} />
+                <span style={{ fontSize: 10, color: C.muted }}>{org.neo4j_host || "none"}</span>
+              </td>
+              <td style={s.td}>
+                <span style={s.dot(org.has_active_key ? "#4a4" : C.crimson)} />
+                {org.key_prefix || "none"}
+              </td>
+              <td style={s.td}>
+                <span style={s.dot(
+                  org.neo4j_has_key ? "#4a4" : org.neo4j_org_node ? C.gold : C.crimson
+                )} />
+                {org.neo4j_has_key ? "yes" : org.neo4j_org_node ? "missing key" : "no node"}
+              </td>
+              <td style={s.td}>
+                {org.health.length === 0 ? (
+                  <span style={{ color: "#4a4" }}>OK</span>
+                ) : (
+                  org.health.map((h, i) => (
+                    <span key={i} style={s.badge(h.severity)}>
+                      {h.type.replace(/_/g, " ")}
                     </span>
-                  ) : (
-                    <span style={{ color: "#666" }}>—</span>
-                  )}
-                </td>
-                <td style={s.td}>{org.session_count}</td>
-                <td style={{ ...s.td, color: C.muted }}>{timeAgo(org.last_activity)}</td>
-                <td style={s.td}>
-                  <span style={s.dot(statusColor)} />
-                  {org.health.length === 0 ? (
-                    <span style={{ color: "#4a4" }}>healthy</span>
-                  ) : (
-                    <span>
-                      {org.health.filter((h) => h.severity !== "info").map((h, i) => (
-                        <span key={i} style={s.badge(h.severity)}>
-                          {h.type.replace(/_/g, " ")}
-                        </span>
-                      ))}
-                      {org.health.every((h) => h.severity === "info") && (
-                        <span style={{ color: "#4a4" }}>healthy</span>
-                      )}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
+                  ))
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -409,15 +393,7 @@ function OrgDetailView({ token, slug, onBack }) {
   if (error) return <div style={{ color: C.crimson }}>Error: {error}</div>;
   if (!data) return <div style={{ color: C.muted }}>Loading {slug}...</div>;
 
-  const { config, members, graph_persons, api_keys, telemetry, neo4j_stats, neo4j_org_node, isolation, health } = data;
-
-  // Graph-only users: in Neo4j but not in Supabase memberships
-  const memberUsernames = new Set((members || []).map(m => (m.github_username || "").toLowerCase()));
-  const graphOnly = (graph_persons || []).filter(p => {
-    const name = (p.name || "").toLowerCase();
-    const github = (p.github || "").toLowerCase();
-    return !memberUsernames.has(name) && !memberUsernames.has(github);
-  });
+  const { config, members, api_keys, telemetry, neo4j_stats, neo4j_org_node, isolation, health } = data;
 
   return (
     <div>
@@ -449,7 +425,7 @@ function OrgDetailView({ token, slug, onBack }) {
 
       {/* Members */}
       <div style={s.card}>
-        <div style={s.cardTitle}>Members ({members.length}{graphOnly.length > 0 ? ` + ${graphOnly.length} graph-only` : ""})</div>
+        <div style={s.cardTitle}>Members ({members.length})</div>
         <table style={s.table}>
           <thead>
             <tr>
@@ -477,27 +453,6 @@ function OrgDetailView({ token, slug, onBack }) {
             ))}
           </tbody>
         </table>
-        {graphOnly.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-              Graph-only users ({graphOnly.length}) — in Neo4j but not onboarded
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {graphOnly.map((p, i) => (
-                <span key={i} style={{
-                  padding: "3px 10px",
-                  background: "rgba(200,165,90,0.08)",
-                  border: "1px solid rgba(200,165,90,0.15)",
-                  borderRadius: 4,
-                  fontSize: 12,
-                  color: C.parchment,
-                }}>
-                  {p.name}{p.github && p.github !== p.name ? ` (${p.github})` : ""}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Neo4j stats */}
