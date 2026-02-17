@@ -7,6 +7,7 @@ import ResearchPage from './ResearchPage.jsx'
 import ArticlePage from './ArticlePage.jsx'
 import DocsPage from './DocsPage.jsx'
 import SetupFlow from './components/SetupFlow.jsx'
+import AdminDashboard from './AdminDashboard.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -157,6 +158,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
