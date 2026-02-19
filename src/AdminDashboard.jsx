@@ -836,6 +836,25 @@ function HealthView({ token, dashboardData }) {
         </div>
       )}
 
+      {/* Org Telegram groups */}
+      {data?.org_info && Object.keys(data.org_info).length > 0 && (
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={s.cardTitle}>Telegram Groups</div>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            {Object.entries(data.org_info).map(([slug, info]) => (
+              <span key={slug} style={{ fontSize: 12 }}>
+                <span style={{ color: C.gold, marginRight: 6 }}>{slug}</span>
+                {info.telegram_group_title ? (
+                  <span style={{ color: "#4a4" }}>{info.telegram_group_title}</span>
+                ) : (
+                  <span style={{ color: C.muted }}>not connected</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Check-ins table */}
       {data === null ? (
         <div style={{ color: C.muted }}>Loading...</div>
@@ -847,6 +866,7 @@ function HealthView({ token, dashboardData }) {
             <tr>
               <th style={s.th}>User</th>
               <th style={s.th}>Org</th>
+              <th style={s.th}>Telegram</th>
               <th style={s.th}>Key</th>
               <th style={s.th}>Memory</th>
               <th style={s.th}>Git</th>
@@ -869,6 +889,9 @@ function HealthView({ token, dashboardData }) {
                 <tr key={i} style={notCheckedIn ? { opacity: 0.5 } : {}}>
                   <td style={{ ...s.td, color: C.gold }}>{c.github_username}</td>
                   <td style={s.td}>{c.org_slug}</td>
+                  <td style={{ ...s.td, color: c.telegram_group ? C.parchment : C.muted, fontSize: 11 }}>
+                    {c.telegram_group || "—"}
+                  </td>
                   {notCheckedIn ? (
                     <>
                       <td colSpan={6} style={{ ...s.td, color: C.muted, fontStyle: "italic" }}>
