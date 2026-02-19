@@ -858,43 +858,56 @@ function HealthView({ token, dashboardData }) {
           </thead>
           <tbody>
             {data.checkins.map((c, i) => {
+              const notCheckedIn = c.checked_in === false;
               const keyOk = c.key_valid !== false;
               const memOk = c.memory_linked !== false;
               const gitOk = c.git_synced !== false;
               const errors = c.errors || [];
+              const dimStyle = { ...s.td, color: "rgba(200,165,90,0.3)" };
 
               return (
-                <tr key={i}>
+                <tr key={i} style={notCheckedIn ? { opacity: 0.5 } : {}}>
                   <td style={{ ...s.td, color: C.gold }}>{c.github_username}</td>
                   <td style={s.td}>{c.org_slug}</td>
-                  <td style={s.td}>
-                    <span style={s.dot(keyOk ? "#4a4" : C.crimson)} />
-                    {keyOk ? "valid" : `mismatch (${c.key_slug})`}
-                  </td>
-                  <td style={s.td}>
-                    <span style={s.dot(memOk ? "#4a4" : C.gold)} />
-                    {memOk ? "linked" : "missing"}
-                  </td>
-                  <td style={s.td}>
-                    <span style={s.dot(gitOk ? "#4a4" : C.gold)} />
-                    {gitOk ? "synced" : "behind"}
-                  </td>
-                  <td style={{ ...s.td, color: C.muted }}>{c.framework_version || "\u2014"}</td>
-                  <td style={{ ...s.td, color: C.muted }}>{c.branch || "\u2014"}</td>
-                  <td style={{ ...s.td, color: C.muted, whiteSpace: "nowrap" }}>
-                    {timeAgo(c.checked_in_at)}
-                  </td>
-                  <td style={s.td}>
-                    {errors.length === 0 ? (
-                      <span style={{ color: "#4a4" }}>{"—"}</span>
-                    ) : (
-                      errors.map((e, j) => (
-                        <span key={j} style={s.badge("warning")}>
-                          {String(e).replace(/_/g, " ")}
-                        </span>
-                      ))
-                    )}
-                  </td>
+                  {notCheckedIn ? (
+                    <>
+                      <td colSpan={6} style={{ ...s.td, color: C.muted, fontStyle: "italic" }}>
+                        not checked in
+                      </td>
+                      <td style={s.td}>{"—"}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={s.td}>
+                        <span style={s.dot(keyOk ? "#4a4" : C.crimson)} />
+                        {keyOk ? "valid" : `mismatch (${c.key_slug})`}
+                      </td>
+                      <td style={s.td}>
+                        <span style={s.dot(memOk ? "#4a4" : C.gold)} />
+                        {memOk ? "linked" : "missing"}
+                      </td>
+                      <td style={s.td}>
+                        <span style={s.dot(gitOk ? "#4a4" : C.gold)} />
+                        {gitOk ? "synced" : "behind"}
+                      </td>
+                      <td style={{ ...s.td, color: C.muted }}>{c.framework_version || "—"}</td>
+                      <td style={{ ...s.td, color: C.muted }}>{c.branch || "—"}</td>
+                      <td style={{ ...s.td, color: C.muted, whiteSpace: "nowrap" }}>
+                        {timeAgo(c.checked_in_at)}
+                      </td>
+                      <td style={s.td}>
+                        {errors.length === 0 ? (
+                          <span style={{ color: "#4a4" }}>{"—"}</span>
+                        ) : (
+                          errors.map((e, j) => (
+                            <span key={j} style={s.badge("warning")}>
+                              {String(e).replace(/_/g, " ")}
+                            </span>
+                          ))
+                        )}
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
