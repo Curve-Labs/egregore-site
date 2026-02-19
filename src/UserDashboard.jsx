@@ -300,13 +300,17 @@ function OrgCard({ org }) {
     <div style={s.card}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ ...font.ibmPlex, fontSize: 16, fontWeight: 700, color: C.gold }}>
-          {org.name}
-        </span>
-        <span style={s.roleBadge(org.role)}>{org.role}</span>
-        <span style={{ marginLeft: "auto", fontSize: 11, color: C.muted }}>
-          {org.slug}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ ...font.ibmPlex, fontSize: 16, fontWeight: 700, color: C.gold }}>
+              {org.slug}
+            </span>
+            <span style={s.roleBadge(org.role)}>{org.role}</span>
+          </div>
+          <span style={{ fontSize: 11, color: C.muted }}>
+            {org.github_org}{org.name && org.name !== org.github_org ? ` · ${org.name}` : ""}
+          </span>
+        </div>
       </div>
 
       {/* Health Status */}
