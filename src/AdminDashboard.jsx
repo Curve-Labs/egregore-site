@@ -886,7 +886,7 @@ function HealthView({ token, dashboardData }) {
                   </td>
                   <td style={s.td}>
                     {errors.length === 0 ? (
-                      <span style={{ color: "#4a4" }}>\u2014</span>
+                      <span style={{ color: "#4a4" }}>{"—"}</span>
                     ) : (
                       errors.map((e, j) => (
                         <span key={j} style={s.badge("warning")}>
