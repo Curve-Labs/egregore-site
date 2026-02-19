@@ -8,6 +8,7 @@ import ArticlePage from './ArticlePage.jsx'
 import DocsPage from './DocsPage.jsx'
 import SetupFlow from './components/SetupFlow.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
+import UserDashboard from './UserDashboard.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -149,12 +150,19 @@ function GlobalStyles() {
 function CallbackRouter() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
     if (sessionStorage.getItem("admin_auth_pending")) {
       sessionStorage.removeItem("admin_auth_pending");
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
       if (code) {
         window.location.replace(`/admin?code=${encodeURIComponent(code)}`);
+        return;
+      }
+    }
+    if (sessionStorage.getItem("dash_auth_pending")) {
+      sessionStorage.removeItem("dash_auth_pending");
+      if (code) {
+        window.location.replace(`/dashboard?code=${encodeURIComponent(code)}`);
         return;
       }
     }
@@ -176,6 +184,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>

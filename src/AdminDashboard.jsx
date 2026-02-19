@@ -6,6 +6,7 @@ import {
   getAdminDashboard,
   getAdminOrgDetail,
   getAdminTelemetry,
+  getAdminHealth,
 } from "./api";
 
 const ADMIN_USERS = ["oguzhan", "fcdagdelen"];
@@ -733,11 +734,182 @@ function TelemetryView({ token, dashboardData }) {
   );
 }
 
+// ─── Health View ──────────────────────────────────────────────────
+
+function HealthView({ token, dashboardData }) {
+  const [data, setData] = useState(null);
+  const [filters, setFilters] = useState({});
+  const [error, setError] = useState(null);
+
+  const orgSlugs = dashboardData?.orgs?.map((o) => o.slug) || [];
+
+  const fetchHealth = useCallback(() => {
+    if (!token) return;
+    getAdminHealth(token, filters)
+      .then(setData)
+      .catch((e) => setError(e.message));
+  }, [token, filters]);
+
+  useEffect(() => {
+    fetchHealth();
+  }, [fetchHealth]);
+
+  const criticalAlerts = data?.alerts?.filter((a) => a.severity === "critical") || [];
+  const warningAlerts = data?.alerts?.filter((a) => a.severity === "warning") || [];
+
+  return (
+    <div>
+      {/* Filters */}
+      <div style={s.filterRow}>
+        <select
+          style={s.select}
+          value={filters.org_slug || ""}
+          onChange={(e) => setFilters({ ...filters, org_slug: e.target.value || undefined })}
+        >
+          <option value="">All orgs</option>
+          {orgSlugs.map((slug) => (
+            <option key={slug} value={slug}>{slug}</option>
+          ))}
+        </select>
+        <button style={s.btn} onClick={fetchHealth}>Refresh</button>
+        {data && (
+          <span style={{ fontSize: 11, color: C.muted }}>
+            {data.total_users} user(s) checked in
+          </span>
+        )}
+      </div>
+
+      {error && <div style={{ color: C.crimson, marginBottom: 12 }}>Error: {error}</div>}
+
+      {/* Alerts bar */}
+      {(criticalAlerts.length > 0 || warningAlerts.length > 0) && (
+        <div style={{ marginBottom: 16 }}>
+          {criticalAlerts.length > 0 && (
+            <div style={s.alertBar}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                {criticalAlerts.length} Critical
+              </div>
+              {criticalAlerts.map((a, i) => (
+                <div key={i} style={{ marginBottom: 2 }}>
+                  <span style={{ color: C.parchment, marginRight: 8 }}>{a.user}</span>
+                  <span style={{ color: C.muted, marginRight: 8 }}>{a.org}</span>
+                  {a.detail}
+                </div>
+              ))}
+            </div>
+          )}
+          {warningAlerts.length > 0 && (
+            <div style={{
+              background: "rgba(200,165,90,0.08)",
+              border: `1px solid rgba(200,165,90,0.3)`,
+              padding: "10px 16px",
+              fontSize: 12,
+              color: C.gold,
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                {warningAlerts.length} Warning{warningAlerts.length > 1 ? "s" : ""}
+              </div>
+              {warningAlerts.map((a, i) => (
+                <div key={i} style={{ marginBottom: 2 }}>
+                  <span style={{ color: C.parchment, marginRight: 8 }}>{a.user || "system"}</span>
+                  <span style={{ color: C.muted, marginRight: 8 }}>{a.org}</span>
+                  {a.detail}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Version spread */}
+      {data?.versions && Object.keys(data.versions).length > 0 && (
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={s.cardTitle}>Framework Versions</div>
+          <div style={{ display: "flex", gap: 16 }}>
+            {Object.entries(data.versions).map(([v, count]) => (
+              <span key={v} style={{ fontSize: 12 }}>
+                <span style={{ color: C.gold, marginRight: 4 }}>v{v}</span>
+                <span style={{ color: C.muted }}>{count} user(s)</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Check-ins table */}
+      {data === null ? (
+        <div style={{ color: C.muted }}>Loading...</div>
+      ) : data.checkins.length === 0 ? (
+        <div style={{ color: C.muted }}>No health check-ins recorded yet</div>
+      ) : (
+        <table style={s.table}>
+          <thead>
+            <tr>
+              <th style={s.th}>User</th>
+              <th style={s.th}>Org</th>
+              <th style={s.th}>Key</th>
+              <th style={s.th}>Memory</th>
+              <th style={s.th}>Git</th>
+              <th style={s.th}>Version</th>
+              <th style={s.th}>Branch</th>
+              <th style={s.th}>Last Check-in</th>
+              <th style={s.th}>Errors</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.checkins.map((c, i) => {
+              const keyOk = c.key_valid !== false;
+              const memOk = c.memory_linked !== false;
+              const gitOk = c.git_synced !== false;
+              const errors = c.errors || [];
+
+              return (
+                <tr key={i}>
+                  <td style={{ ...s.td, color: C.gold }}>{c.github_username}</td>
+                  <td style={s.td}>{c.org_slug}</td>
+                  <td style={s.td}>
+                    <span style={s.dot(keyOk ? "#4a4" : C.crimson)} />
+                    {keyOk ? "valid" : `mismatch (${c.key_slug})`}
+                  </td>
+                  <td style={s.td}>
+                    <span style={s.dot(memOk ? "#4a4" : C.gold)} />
+                    {memOk ? "linked" : "missing"}
+                  </td>
+                  <td style={s.td}>
+                    <span style={s.dot(gitOk ? "#4a4" : C.gold)} />
+                    {gitOk ? "synced" : "behind"}
+                  </td>
+                  <td style={{ ...s.td, color: C.muted }}>{c.framework_version || "\u2014"}</td>
+                  <td style={{ ...s.td, color: C.muted }}>{c.branch || "\u2014"}</td>
+                  <td style={{ ...s.td, color: C.muted, whiteSpace: "nowrap" }}>
+                    {timeAgo(c.checked_in_at)}
+                  </td>
+                  <td style={s.td}>
+                    {errors.length === 0 ? (
+                      <span style={{ color: "#4a4" }}>\u2014</span>
+                    ) : (
+                      errors.map((e, j) => (
+                        <span key={j} style={s.badge("warning")}>
+                          {String(e).replace(/_/g, " ")}
+                        </span>
+                      ))
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────
 
 export default function AdminDashboard() {
   const { token, user, error: authError, loading: authLoading, logout } = useAuth();
-  const [view, setView] = useState("overview"); // "overview" | "telemetry"
+  const [view, setView] = useState("overview"); // "overview" | "telemetry" | "health"
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [dashError, setDashError] = useState(null);
@@ -844,6 +1016,12 @@ export default function AdminDashboard() {
             >
               Telemetry
             </button>
+            <button
+              style={{ ...s.btn, ...(view === "health" ? s.btnActive : {}) }}
+              onClick={() => setView("health")}
+            >
+              Health
+            </button>
           </div>
         )}
 
@@ -856,6 +1034,8 @@ export default function AdminDashboard() {
           />
         ) : view === "overview" ? (
           <OverviewView data={dashboardData} onSelectOrg={setSelectedOrg} />
+        ) : view === "health" ? (
+          <HealthView token={token} dashboardData={dashboardData} />
         ) : (
           <TelemetryView token={token} dashboardData={dashboardData} />
         )}

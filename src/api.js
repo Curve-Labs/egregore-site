@@ -75,6 +75,17 @@ export async function joinWaitlist(name, email) {
   return request("POST", "/api/admin/waitlist", { body: { name, email, source: "website" } });
 }
 
+export async function getMyEgregores(token) {
+  return request("GET", "/api/me/egregores", { token });
+}
+
+export async function getAdminHealth(token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.org_slug) params.set("org_slug", filters.org_slug);
+  const qs = params.toString();
+  return request("GET", `/api/admin/health${qs ? `?${qs}` : ""}`, { token });
+}
+
 export async function getAdminDashboard(token) {
   return request("GET", "/api/admin/dashboard", { token });
 }
