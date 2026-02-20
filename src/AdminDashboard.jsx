@@ -442,7 +442,7 @@ function OrgDetailView({ token, slug, onBack }) {
             {members.map((m, i) => (
               <tr key={i}>
                 <td style={{ ...s.td, color: C.gold }}>{m.github_username || "—"}</td>
-                <td style={s.td}>{m.github_name || "—"}</td>
+                <td style={s.td}>{m.display_name || m.github_name || "—"}</td>
                 <td style={s.td}>{m.role}</td>
                 <td style={s.td}>
                   <span style={s.dot(m.status === "active" ? "#4a4" : "#666")} />
@@ -887,7 +887,7 @@ function HealthView({ token, dashboardData }) {
 
               return (
                 <tr key={i} style={notCheckedIn ? { opacity: 0.5 } : {}}>
-                  <td style={{ ...s.td, color: C.gold }}>{c.github_username}</td>
+                  <td style={{ ...s.td, color: C.gold }}>{c.display_name || c.github_name || c.github_username}</td>
                   <td style={s.td}>{c.org_slug}</td>
                   <td style={{ ...s.td, color: c.telegram_group ? C.parchment : C.muted, fontSize: 11 }}>
                     {c.telegram_group || "—"}
