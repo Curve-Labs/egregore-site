@@ -380,7 +380,7 @@ function OrgCard({ org }) {
           {org.members.map((m, i) => (
             <tr key={i}>
               <td style={{ ...s.td, color: C.gold }}>{m.github_username || "\u2014"}</td>
-              <td style={s.td}>{m.github_name || "\u2014"}</td>
+              <td style={s.td}>{m.display_name || m.github_name || "\u2014"}</td>
               <td style={s.td}>{m.role}</td>
               <td style={s.td}>
                 <span style={s.dot(m.status === "active" ? "#4a4" : C.muted)} />
