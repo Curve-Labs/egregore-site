@@ -980,7 +980,7 @@ export default function AdminDashboard() {
         {authError && <div style={{ color: C.crimson, fontSize: 13 }}>{authError}</div>}
         <button style={s.loginBtn} onClick={() => {
           sessionStorage.setItem("admin_auth_pending", "1");
-          window.location.href = getGitHubAuthUrl();
+          window.location.href = getGitHubAuthUrl("admin");
         }}>
           Sign in with GitHub
         </button>

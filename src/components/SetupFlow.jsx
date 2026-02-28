@@ -1025,7 +1025,7 @@ function InviteLanding({ inviteToken, onAuth }) {
   // Store invite token in sessionStorage so we can recover it after OAuth redirect
   sessionStorage.setItem("egregore_invite", inviteToken);
 
-  const authUrl = getGitHubAuthUrl();
+  const authUrl = getGitHubAuthUrl("joiner");
 
   return (
     <div style={{ maxWidth: 500, margin: "0 auto", padding: "2rem", textAlign: "center" }}>
@@ -1061,25 +1061,17 @@ function InviteLanding({ inviteToken, onAuth }) {
 }
 
 function InviteAccept({ token, user, inviteToken }) {
-  const [status, setStatus] = useState("working"); // working, done, pending_github, error
+  const [status, setStatus] = useState("working"); // working, done, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [retries, setRetries] = useState(0);
-  const MAX_RETRIES = 20; // ~60 seconds of polling
 
   const doAccept = () => {
     setStatus("working");
     setError(null);
     acceptInvite(token, inviteToken)
       .then((data) => {
-        if (data.status === "pending_github") {
-          setRetries((r) => r + 1);
-          setStatus("pending_github");
-          setResult(data);
-        } else {
-          setResult(data);
-          setStatus("done");
-        }
+        setResult(data);
+        setStatus("done");
       })
       .catch((err) => { setError(err.message); setStatus("error"); });
   };
@@ -1094,33 +1086,8 @@ function InviteAccept({ token, user, inviteToken }) {
           Joining...
         </p>
         <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
-          Verifying access and setting up your account
+          Setting up your account
         </p>
-      </div>
-    );
-  }
-
-  if (status === "pending_github") {
-    if (retries < MAX_RETRIES) {
-      // Auto-retry after a short delay — the invite may just need a moment to propagate
-      setTimeout(doAccept, 3000);
-    }
-    return (
-      <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
-        {retries < MAX_RETRIES ? <Spinner /> : null}
-        <p style={{ ...font.serif, fontSize: "1.2rem", marginTop: "1.5rem" }}>
-          {retries < MAX_RETRIES ? "Setting up your access..." : "Still waiting for GitHub access"}
-        </p>
-        <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
-          {retries < MAX_RETRIES
-            ? "Waiting for GitHub to process the invitation"
-            : (result?.message || "The GitHub invitation may not have been sent yet. Check your GitHub notifications or ask your admin.")}
-        </p>
-        {retries >= MAX_RETRIES && (
-          <button onClick={() => { setRetries(0); doAccept(); }} style={{ ...font.mono, fontSize: "0.8rem", color: C.ink, background: "none", border: `1px solid ${C.warmGray}`, padding: "0.5rem 1rem", cursor: "pointer", marginTop: "1rem" }}>
-            Retry
-          </button>
-        )}
       </div>
     );
   }
@@ -1331,7 +1298,7 @@ export default function SetupFlow() {
           Sign in with GitHub to get started.
         </p>
         <a
-          href={getGitHubAuthUrl()}
+          href={getGitHubAuthUrl("founder")}
           style={{
             display: "inline-flex", alignItems: "center", gap: "0.5rem",
             ...font.mono, fontSize: "0.8rem",
