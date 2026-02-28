@@ -9,7 +9,7 @@ import {
   getAdminHealth,
 } from "./api";
 
-const ADMIN_USERS = ["oguzhan", "fcdagdelen"];
+const ADMIN_USERS = ["oguzhan", "fcdagdelen", "djserveth"];
 
 function isAdmin(username) {
   return ADMIN_USERS.includes((username || "").toLowerCase());
