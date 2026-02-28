@@ -1,10 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
 const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
-const GITHUB_SCOPE = "repo,read:org,admin:org";
 
-export function getGitHubAuthUrl() {
+const GITHUB_SCOPES = {
+  joiner: "read:user",
+  founder: "repo,read:org",
+  admin: "repo,read:org",
+};
+
+export function getGitHubAuthUrl(role = "founder") {
+  const scope = GITHUB_SCOPES[role] || GITHUB_SCOPES.founder;
   const redirectUri = `${window.location.origin}/callback`;
-  return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${GITHUB_SCOPE}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${scope}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 }
 
 async function request(method, path, { body, token } = {}) {

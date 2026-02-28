@@ -439,7 +439,7 @@ export default function UserDashboard() {
         {authError && <div style={{ color: C.crimson, fontSize: 13 }}>{authError}</div>}
         <button style={s.loginBtn} onClick={() => {
           sessionStorage.setItem("dash_auth_pending", "1");
-          window.location.href = getGitHubAuthUrl();
+          window.location.href = getGitHubAuthUrl("joiner");
         }}>
           Sign in with GitHub
         </button>
