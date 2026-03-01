@@ -100,6 +100,10 @@ export async function getAdminOrgDetail(token, slug) {
   return request("GET", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
 }
 
+export async function removeMember(token, slug, username, mode = "revoke") {
+  return request("DELETE", `/api/org/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}?mode=${mode}`, { token });
+}
+
 export async function getAdminTelemetry(token, filters = {}) {
   const params = new URLSearchParams();
   if (filters.org_slug) params.set("org_slug", filters.org_slug);
