@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -293,8 +293,78 @@ function HealthStatus({ checkin }) {
 
 // ─── Org Card ─────────────────────────────────────────────────────
 
-function OrgCard({ org }) {
+function RemoveMemberDialog({ member, slug, token, onClose, onRemoved }) {
+  const [mode, setMode] = useState("revoke");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await removeMember(token, slug, member.github_username, mode);
+      onRemoved();
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }} onClick={onClose}>
+      <div style={{
+        background: C.termBg, border: `1px solid ${C.gold}`, borderRadius: 8,
+        padding: 24, maxWidth: 420, width: "90%", ...font.mono, fontSize: 13,
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ ...font.ibmPlex, fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 16 }}>
+          Remove {member.display_name || member.github_username}
+        </div>
+        <div style={{ color: C.parchment, marginBottom: 16 }}>
+          This will remove <strong style={{ color: C.gold }}>{member.github_username}</strong> from <strong>{slug}</strong>.
+        </div>
+
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", marginBottom: 12, color: C.parchment }}>
+          <input type="radio" name="mode" value="revoke" checked={mode === "revoke"} onChange={() => setMode("revoke")}
+            style={{ marginTop: 3 }} />
+          <div>
+            <div style={{ fontWeight: 600 }}>Revoke access only</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Remove GitHub access and deactivate membership. Keeps their contributions in the knowledge graph.</div>
+          </div>
+        </label>
+
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", marginBottom: 20, color: C.parchment }}>
+          <input type="radio" name="mode" value="full" checked={mode === "full"} onChange={() => setMode("full")}
+            style={{ marginTop: 3 }} />
+          <div>
+            <div style={{ fontWeight: 600 }}>Remove and delete their data</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Revoke access and erase their sessions, profile, and telemetry from the system.</div>
+          </div>
+        </label>
+
+        {error && <div style={{ color: C.crimson, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} disabled={loading} style={{
+            ...font.mono, background: "transparent", color: C.muted, border: `1px solid ${C.muted}`,
+            padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+          }}>Cancel</button>
+          <button onClick={handleConfirm} disabled={loading} style={{
+            ...font.mono, background: C.crimson, color: "#fff", border: "none",
+            padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12, opacity: loading ? 0.6 : 1,
+          }}>{loading ? "Removing..." : "Remove"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrgCard({ org, token, currentUser, onRefresh }) {
   const [showKey, setShowKey] = useState(false);
+  const [removingMember, setRemovingMember] = useState(null);
+  const isAdmin = org.role === "admin";
 
   return (
     <div style={s.card}>
@@ -374,22 +444,47 @@ function OrgCard({ org }) {
             <th style={s.th}>Name</th>
             <th style={s.th}>Role</th>
             <th style={s.th}>Status</th>
+            {isAdmin && <th style={s.th}></th>}
           </tr>
         </thead>
         <tbody>
-          {org.members.map((m, i) => (
-            <tr key={i}>
-              <td style={{ ...s.td, color: C.gold }}>{m.github_username || "\u2014"}</td>
-              <td style={s.td}>{m.display_name || m.github_name || "\u2014"}</td>
-              <td style={s.td}>{m.role}</td>
-              <td style={s.td}>
-                <span style={s.dot(m.status === "active" ? "#4a4" : C.muted)} />
-                {m.status}
-              </td>
-            </tr>
-          ))}
+          {org.members.map((m, i) => {
+            const isSelf = currentUser && m.github_username?.toLowerCase() === currentUser.toLowerCase();
+            const canRemove = isAdmin && !isSelf && m.role !== "admin" && m.status === "active";
+            return (
+              <tr key={i}>
+                <td style={{ ...s.td, color: C.gold }}>{m.github_username || "\u2014"}</td>
+                <td style={s.td}>{m.display_name || m.github_name || "\u2014"}</td>
+                <td style={s.td}>{m.role}</td>
+                <td style={s.td}>
+                  <span style={s.dot(m.status === "active" ? "#4a4" : C.muted)} />
+                  {m.status}
+                </td>
+                {isAdmin && (
+                  <td style={s.td}>
+                    {canRemove && (
+                      <button onClick={() => setRemovingMember(m)} style={{
+                        ...font.mono, background: "transparent", color: C.crimson, border: `1px solid ${C.crimson}`,
+                        padding: "2px 8px", borderRadius: 3, cursor: "pointer", fontSize: 10,
+                      }}>Remove</button>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+
+      {removingMember && (
+        <RemoveMemberDialog
+          member={removingMember}
+          slug={org.slug}
+          token={token}
+          onClose={() => setRemovingMember(null)}
+          onRemoved={() => { setRemovingMember(null); onRefresh && onRefresh(); }}
+        />
+      )}
 
       {/* Info row */}
       <div style={{ marginTop: 12, fontSize: 11, color: C.muted, display: "flex", gap: 16 }}>
@@ -493,7 +588,9 @@ export default function UserDashboard() {
             </div>
           </div>
         ) : (
-          data.egregores.map((org) => <OrgCard key={org.slug} org={org} />)
+          data.egregores.map((org) => (
+            <OrgCard key={org.slug} org={org} token={token} currentUser={user?.login} onRefresh={fetchData} />
+          ))
         )}
       </div>
     </div>
