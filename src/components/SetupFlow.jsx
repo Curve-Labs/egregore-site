@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys } from "../api";
 import { isAdmin } from "../auth";
 
 const C = {
@@ -98,6 +98,352 @@ function InstallCommand({ setupToken, label = "Install" }) {
           : "No Node.js needed. Paste in your terminal."
         }
       </p>
+    </div>
+  );
+}
+
+const BrowserIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8, flexShrink: 0 }}>
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+  </svg>
+);
+
+const TerminalIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8, flexShrink: 0 }}>
+    <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
+  </svg>
+);
+
+const KeyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0 }}>
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  </svg>
+);
+
+function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get started" }) {
+  const [hostingInfo, setHostingInfo] = useState(null);
+  const [showLocal, setShowLocal] = useState(false);
+  const [keyStep, setKeyStep] = useState(null); // null | "checking" | "needed" | "saving" | "done"
+  const [keyInput, setKeyInput] = useState("");
+  const [keyError, setKeyError] = useState(null);
+
+  useEffect(() => {
+    if (orgSlug && githubToken) {
+      getHostingInfo(githubToken, orgSlug)
+        .then(setHostingInfo)
+        .catch(() => setHostingInfo({ hosting_enabled: false }));
+    } else {
+      setHostingInfo({ hosting_enabled: false });
+    }
+  }, [orgSlug, githubToken]);
+
+  // When user clicks "Open in browser", check if key is set first
+  const handleHostedClick = async (e) => {
+    e.preventDefault();
+    setKeyStep("checking");
+    setKeyError(null);
+    try {
+      const keys = await getUserKeys(githubToken);
+      if (keys.anthropic_api_key) {
+        // Key already set — go straight to Coder
+        window.open(hostingInfo.coder_url, "_blank");
+        setKeyStep("done");
+      } else {
+        // Need key first
+        setKeyStep("needed");
+      }
+    } catch {
+      // Can't check — ask for key to be safe
+      setKeyStep("needed");
+    }
+  };
+
+  const handleKeySave = async () => {
+    if (!keyInput.trim()) return;
+    setKeyStep("saving");
+    setKeyError(null);
+    try {
+      await updateUserKeys(githubToken, { anthropic_api_key: keyInput.trim() });
+      setKeyStep("done");
+      // Key saved — redirect to Coder
+      window.open(hostingInfo.coder_url, "_blank");
+    } catch (err) {
+      setKeyError(err.message || "Failed to save key");
+      setKeyStep("needed");
+    }
+  };
+
+  // Still loading
+  if (!hostingInfo) {
+    return <InstallCommand setupToken={setupToken} label={label} />;
+  }
+
+  // No remote hosting — show install command only
+  if (!hostingInfo.hosting_enabled) {
+    return <InstallCommand setupToken={setupToken} label={label} />;
+  }
+
+  // Dual path: hosted + local
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
+        {label}
+      </p>
+
+      {/* Primary: Hosted Egregore */}
+      <button
+        onClick={handleHostedClick}
+        disabled={keyStep === "checking" || keyStep === "saving"}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
+          background: C.ink, color: C.parchment, border: "none",
+          ...font.mono, fontSize: "0.85rem", cursor: "pointer",
+          marginBottom: "0.75rem",
+          opacity: (keyStep === "checking" || keyStep === "saving") ? 0.6 : 1,
+          transition: "opacity 0.2s",
+        }}
+        onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = (keyStep === "checking" || keyStep === "saving") ? "0.6" : "1"; }}
+      >
+        <BrowserIcon />
+        {keyStep === "checking" ? "Checking..." : keyStep === "done" ? "Opened in browser" : "Open in browser"}
+      </button>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: keyStep === "needed" ? "0rem" : "1.5rem" }}>
+        Hosted Egregore — zero install, full terminal in your browser.
+      </p>
+
+      {/* Key input step — shown between clicking "Open in browser" and redirect */}
+      {keyStep === "needed" && (
+        <div style={{
+          border: `1px solid ${C.warmGray}`,
+          padding: "1rem 1.25rem",
+          marginTop: "0.75rem",
+          marginBottom: "1.5rem",
+          background: "rgba(26,23,20,0.02)",
+        }}>
+          <p style={{ ...font.mono, fontSize: "0.72rem", color: C.ink, marginBottom: "0.5rem", display: "flex", alignItems: "center" }}>
+            <KeyIcon /> Your Anthropic API key
+          </p>
+          <p style={{ ...font.mono, fontSize: "0.62rem", color: C.muted, marginBottom: "0.75rem", lineHeight: 1.5 }}>
+            Each person uses their own key for Claude Code.{" "}
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+              style={{ color: C.crimson, textDecoration: "none" }}>
+              Get one at console.anthropic.com
+            </a>
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="password"
+              placeholder="sk-ant-..."
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleKeySave()}
+              autoFocus
+              style={{
+                flex: 1,
+                padding: "0.5rem 0.75rem",
+                border: `1px solid ${C.warmGray}`,
+                background: "white",
+                ...font.mono, fontSize: "0.8rem",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={handleKeySave}
+              disabled={!keyInput.trim()}
+              style={{
+                padding: "0.5rem 1rem",
+                background: C.ink, color: C.parchment,
+                border: "none", ...font.mono, fontSize: "0.75rem",
+                cursor: keyInput.trim() ? "pointer" : "default",
+                opacity: keyInput.trim() ? 1 : 0.4,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Save & open
+            </button>
+          </div>
+          {keyError && (
+            <p style={{ ...font.mono, fontSize: "0.65rem", color: C.crimson, marginTop: "0.5rem" }}>{keyError}</p>
+          )}
+          <p style={{ ...font.mono, fontSize: "0.58rem", color: C.muted, marginTop: "0.5rem" }}>
+            Encrypted at rest. You can rotate it anytime at{" "}
+            <a href="/settings" style={{ color: C.muted, textDecoration: "underline" }}>egregore.xyz/settings</a>.
+          </p>
+        </div>
+      )}
+
+      {keyStep === "done" && (
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: "#2d8a4e", marginBottom: "1.5rem" }}>
+          Key saved. Your workspace is opening — create a workspace from the Coder dashboard.
+        </p>
+      )}
+
+      {/* Secondary: Install locally (collapsed by default) */}
+      <button
+        onClick={() => setShowLocal(!showLocal)}
+        style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "none", border: "none", cursor: "pointer",
+          ...font.mono, fontSize: "0.7rem", color: C.muted,
+          padding: 0, marginBottom: showLocal ? "0.75rem" : 0,
+        }}
+      >
+        <TerminalIcon />
+        {showLocal ? "Hide" : "Or install locally"}
+        <svg
+          width="10" height="10" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: showLocal ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {showLocal && (
+        <>
+          <InstallCommand setupToken={setupToken} label="Local Egregore" />
+          <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "0.25rem" }}>
+            Requires terminal, git, and Claude Code. You'll set your API key locally.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
+  const [keyStep, setKeyStep] = useState("checking"); // checking | needed | saving | done
+  const [keyInput, setKeyInput] = useState("");
+  const [keyError, setKeyError] = useState(null);
+
+  useEffect(() => {
+    getUserKeys(githubToken)
+      .then((keys) => {
+        if (keys.anthropic_api_key) {
+          setKeyStep("done");
+        } else {
+          setKeyStep("needed");
+        }
+      })
+      .catch(() => setKeyStep("needed"));
+  }, [githubToken]);
+
+  const handleSave = async () => {
+    if (!keyInput.trim()) return;
+    setKeyStep("saving");
+    setKeyError(null);
+    try {
+      await updateUserKeys(githubToken, { anthropic_api_key: keyInput.trim() });
+      setKeyStep("done");
+    } catch (err) {
+      setKeyError(err.message || "Failed to save key");
+      setKeyStep("needed");
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
+        Step 1 — Your API key
+      </p>
+
+      {keyStep === "checking" && (
+        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted }}>Checking key status...</p>
+      )}
+
+      {keyStep === "needed" && (
+        <div style={{
+          border: `1px solid ${C.warmGray}`,
+          padding: "1.25rem 1.5rem",
+          marginBottom: "1.5rem",
+          background: "rgba(26,23,20,0.02)",
+        }}>
+          <p style={{ ...font.mono, fontSize: "0.75rem", color: C.ink, marginBottom: "0.5rem", display: "flex", alignItems: "center" }}>
+            <KeyIcon /> Anthropic API key
+          </p>
+          <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "0.75rem", lineHeight: 1.5 }}>
+            Each person uses their own key for Claude Code.{" "}
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+              style={{ color: C.crimson, textDecoration: "none" }}>
+              Get one at console.anthropic.com
+            </a>
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="password"
+              placeholder="sk-ant-..."
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              autoFocus
+              style={{
+                flex: 1,
+                padding: "0.5rem 0.75rem",
+                border: `1px solid ${C.warmGray}`,
+                background: "white",
+                ...font.mono, fontSize: "0.8rem",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={handleSave}
+              disabled={!keyInput.trim()}
+              style={{
+                padding: "0.5rem 1rem",
+                background: C.ink, color: C.parchment,
+                border: "none", ...font.mono, fontSize: "0.75rem",
+                cursor: keyInput.trim() ? "pointer" : "default",
+                opacity: keyInput.trim() ? 1 : 0.4,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Save key
+            </button>
+          </div>
+          {keyError && (
+            <p style={{ ...font.mono, fontSize: "0.65rem", color: C.crimson, marginTop: "0.5rem" }}>{keyError}</p>
+          )}
+          <p style={{ ...font.mono, fontSize: "0.58rem", color: C.muted, marginTop: "0.5rem" }}>
+            Encrypted at rest. Rotate anytime at{" "}
+            <a href="/settings" style={{ color: C.muted, textDecoration: "underline" }}>egregore.xyz/settings</a>.
+          </p>
+        </div>
+      )}
+
+      {keyStep === "saving" && (
+        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, marginBottom: "1.5rem" }}>Saving key...</p>
+      )}
+
+      {/* Step 2 — Open workspace (enabled once key is set) */}
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
+        Step 2 — Open your workspace
+      </p>
+      <a
+        href={keyStep === "done" ? coderUrl : undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => { if (keyStep !== "done") e.preventDefault(); }}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
+          background: keyStep === "done" ? C.ink : C.warmGray,
+          color: keyStep === "done" ? C.parchment : C.muted,
+          textDecoration: "none",
+          ...font.mono, fontSize: "0.85rem",
+          cursor: keyStep === "done" ? "pointer" : "default",
+          marginBottom: "0.75rem",
+          transition: "all 0.2s",
+        }}
+      >
+        <BrowserIcon />
+        {keyStep === "done" ? "Open workspace" : "Set your API key first"}
+      </a>
+      {keyStep === "done" && (
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: "#2d8a4e", marginBottom: "0.5rem" }}>
+          Create a workspace from the Coder dashboard, then open the terminal.
+        </p>
+      )}
     </div>
   );
 }
@@ -570,11 +916,82 @@ function TranscriptConsent({ onChoice }) {
   );
 }
 
-function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceName, transcriptSharing = false }) {
-  const [status, setStatus] = useState("working"); // working, done, error
+function DeploymentChoice({ onChoice }) {
+  const [hovered, setHovered] = useState(null);
+
+  return (
+    <div style={{ maxWidth: 520, margin: "0 auto", padding: "2rem", textAlign: "center" }}>
+      <h2 style={{ ...font.serif, fontSize: "1.8rem", fontWeight: 400, marginBottom: "0.5rem" }}>
+        How will your team use Egregore?
+      </h2>
+      <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginBottom: "2.5rem" }}>
+        You can switch later. Both paths share the same data.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* Hosted */}
+        <button
+          onClick={() => onChoice("hosted")}
+          onMouseEnter={() => setHovered("hosted")}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            display: "flex", alignItems: "flex-start", gap: "1rem",
+            padding: "1.25rem 1.5rem", textAlign: "left",
+            background: hovered === "hosted" ? "rgba(26,23,20,0.04)" : "white",
+            border: `1px solid ${hovered === "hosted" ? C.ink : C.warmGray}`,
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          <BrowserIcon />
+          <div>
+            <div style={{ ...font.mono, fontSize: "0.85rem", fontWeight: 700, color: C.ink, marginBottom: "0.25rem" }}>
+              Hosted Egregore
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.68rem", color: C.muted, lineHeight: 1.5 }}>
+              We provision a server for your team. Everyone opens a terminal in their browser. Zero install, zero dependencies.
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "0.5rem", opacity: 0.7 }}>
+              Takes ~2 minutes to provision
+            </div>
+          </div>
+        </button>
+
+        {/* Local */}
+        <button
+          onClick={() => onChoice("local")}
+          onMouseEnter={() => setHovered("local")}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            display: "flex", alignItems: "flex-start", gap: "1rem",
+            padding: "1.25rem 1.5rem", textAlign: "left",
+            background: hovered === "local" ? "rgba(26,23,20,0.04)" : "white",
+            border: `1px solid ${hovered === "local" ? C.ink : C.warmGray}`,
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          <TerminalIcon />
+          <div>
+            <div style={{ ...font.mono, fontSize: "0.85rem", fontWeight: 700, color: C.ink, marginBottom: "0.25rem" }}>
+              Local Egregore
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.68rem", color: C.muted, lineHeight: 1.5 }}>
+              Each person installs on their own machine. Requires terminal, git, and Claude Code.
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceName, transcriptSharing = false, hosting = false }) {
+  const [status, setStatus] = useState("working"); // working, done, provisioning, ready, error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [telegramConnected, setTelegramConnected] = useState(false);
+  const [provisionProgress, setProvisionProgress] = useState(""); // status text while provisioning
 
   useEffect(() => {
     const action = org.has_egregore
@@ -586,12 +1003,53 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
           repos,
           instance_name: instanceName || undefined,
           transcript_sharing: transcriptSharing,
+          hosting,
         });
 
     action
-      .then((data) => { setResult(data); setStatus("done"); })
+      .then((data) => {
+        setResult(data);
+        if (data.hosting_status === "provisioning") {
+          setStatus("provisioning");
+        } else if (data.hosting_status === "failed") {
+          // Setup succeeded but hosting failed — show setup success with warning
+          setStatus("done");
+        } else {
+          setStatus("done");
+        }
+      })
       .catch((err) => { setError(err.message); setStatus("error"); });
   }, []);
+
+  // Poll hosting status until Coder is ready
+  useEffect(() => {
+    if (status !== "provisioning" || !result?.org_slug) return;
+    setProvisionProgress("VPS is booting up...");
+
+    const id = setInterval(async () => {
+      try {
+        const s = await getHostingStatus(token, result.org_slug);
+        if (s.coder_ready) {
+          clearInterval(id);
+          // Update result with the final coder_url
+          setResult(prev => ({
+            ...prev,
+            hosting_coder_url: s.coder_url || prev.hosting_coder_url,
+            hosting_status: "ready",
+          }));
+          setStatus("done");
+        } else if (s.status === "running") {
+          setProvisionProgress("Server is running, installing Coder...");
+        } else if (s.status === "initializing") {
+          setProvisionProgress("Server is initializing...");
+        }
+      } catch {
+        // Keep polling
+      }
+    }, 5000);
+
+    return () => clearInterval(id);
+  }, [status, result?.org_slug]);
 
   // Poll telegram status after setup
   useEffect(() => {
@@ -605,16 +1063,40 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
     return () => clearInterval(id);
   }, [result?.org_slug]);
 
-  if (status === "working") {
+  if (status === "working" || status === "provisioning") {
     return (
       <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
         <Spinner />
         <p style={{ ...font.serif, fontSize: "1.2rem", marginTop: "1.5rem" }}>
-          {org.has_egregore ? "Joining" : "Setting up Egregore for"} {org.name || org.login}...
+          {status === "provisioning"
+            ? `Provisioning server for ${org.name || org.login}...`
+            : org.has_egregore ? "Joining" : `Setting up Egregore for ${org.name || org.login}...`}
         </p>
         <p style={{ ...font.mono, fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem" }}>
-          {org.has_egregore ? "Verifying access" : "Creating repo, setting up memory, bootstrapping graph"}
+          {status === "provisioning"
+            ? provisionProgress || "This takes about 2 minutes"
+            : org.has_egregore ? "Verifying access" : "Creating repo, setting up memory, bootstrapping graph"}
         </p>
+        {status === "provisioning" && (
+          <div style={{
+            marginTop: "2rem",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
+          }}>
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
+              <span style={{ color: "#2d8a4e" }}>&#10003;</span> Repo created
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
+              <span style={{ color: "#2d8a4e" }}>&#10003;</span> Memory initialized
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted }}>
+              <span style={{ color: "#2d8a4e" }}>&#10003;</span> Graph bootstrapped
+            </div>
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, border: `2px solid ${C.warmGray}`, borderTopColor: C.crimson, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              Server provisioning...
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -640,8 +1122,28 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
         </h2>
       </div>
 
-      {/* Step 1: Install command */}
-      <InstallCommand setupToken={result.setup_token} label="Step 1 — Install" />
+      {/* Step 1: Get started — show hosted path or local path based on founder's choice */}
+      {hosting && result.hosting_status !== "failed" ? (
+        <HostedGetStarted
+          coderUrl={result.hosting_coder_url}
+          githubToken={token}
+          setupToken={result.setup_token}
+        />
+      ) : (
+        <DualPathInstall setupToken={result.setup_token} orgSlug={result.org_slug} githubToken={token} label="Step 1 — Get started" />
+      )}
+
+      {/* Hosting provisioning warning if it failed */}
+      {hosting && result.hosting_status === "failed" && (
+        <div style={{
+          border: `1px solid ${C.crimson}`,
+          padding: "0.75rem 1rem",
+          marginBottom: "1.5rem",
+          ...font.mono, fontSize: "0.7rem", color: C.crimson,
+        }}>
+          Server provisioning failed: {result.hosting_error || "Unknown error"}. You can install locally for now and enable hosting later.
+        </div>
+      )}
 
       {/* Step 2: Telegram */}
       <TelegramStep
@@ -659,7 +1161,10 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
           After install
         </p>
         <p style={{ ...font.serif, fontSize: "1rem", color: "#5a5650", lineHeight: 1.7 }}>
-          Type <code style={{ ...font.mono, fontSize: "0.85rem", color: C.crimson }}>egregore</code> in any terminal to launch. Your shared memory, graph, and notifications are all connected.
+          {hosting && result.hosting_status !== "failed"
+            ? <>Open your workspace and type <code style={{ ...font.mono, fontSize: "0.85rem", color: C.crimson }}>claude</code> to start. Your shared memory, graph, and notifications are all connected.</>
+            : <>Type <code style={{ ...font.mono, fontSize: "0.85rem", color: C.crimson }}>egregore</code> in any terminal to launch. Your shared memory, graph, and notifications are all connected.</>
+          }
         </p>
       </div>
     </div>
@@ -1115,7 +1620,7 @@ function InviteAccept({ token, user, inviteToken }) {
         </h2>
       </div>
 
-      <InstallCommand setupToken={result.setup_token} />
+      <DualPathInstall setupToken={result.setup_token} orgSlug={result.org_slug} githubToken={token} />
 
       {/* Telegram */}
       <TelegramStep
@@ -1151,6 +1656,7 @@ export default function SetupFlow() {
   const [joinInstance, setJoinInstance] = useState(null); // instance to join (from instance picker)
   const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
   const [instanceName, setInstanceName] = useState(null); // name for new instance (when creatingNew)
+  const [hostingChoice, setHostingChoice] = useState(null); // null = not asked, "hosted" | "local"
 
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
@@ -1277,12 +1783,21 @@ export default function SetupFlow() {
     );
   }
 
+  // Deployment choice (after consent, before setup — only for new orgs, not joins)
+  if (githubToken && selectedOrg && !selectedOrg.has_egregore && hostingChoice === null) {
+    return (
+      <SetupLayout>
+        <DeploymentChoice onChoice={setHostingChoice} />
+      </SetupLayout>
+    );
+  }
+
   // Setup in progress / complete
   if (githubToken && selectedOrg) {
     const orgForSetup = creatingNew ? { ...selectedOrg, has_egregore: false } : selectedOrg;
     return (
       <SetupLayout>
-        <SetupProgress token={githubToken} user={user} org={orgForSetup} repos={selectedRepos || []} instanceName={instanceName} transcriptSharing={transcriptConsent || false} />
+        <SetupProgress token={githubToken} user={user} org={orgForSetup} repos={selectedRepos || []} instanceName={instanceName} transcriptSharing={transcriptConsent || false} hosting={hostingChoice === "hosted"} />
       </SetupLayout>
     );
   }
