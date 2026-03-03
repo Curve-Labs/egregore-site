@@ -9,6 +9,7 @@ import DocsPage from './DocsPage.jsx'
 import SetupFlow from './components/SetupFlow.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
 import UserDashboard from './UserDashboard.jsx'
+import SettingsPage from './SettingsPage.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -166,6 +167,13 @@ function CallbackRouter() {
         return;
       }
     }
+    if (sessionStorage.getItem("settings_auth_pending")) {
+      sessionStorage.removeItem("settings_auth_pending");
+      if (code) {
+        window.location.replace(`/settings?code=${encodeURIComponent(code)}`);
+        return;
+      }
+    }
     setReady(true);
   }, []);
   if (!ready) return null;
@@ -185,6 +193,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/research/:slug" element={<ArticlePage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/dashboard" element={<UserDashboard />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>

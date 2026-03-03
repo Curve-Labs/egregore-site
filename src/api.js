@@ -40,8 +40,8 @@ export async function getOrgRepos(token, org) {
   return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
 }
 
-export async function setupOrg(token, { github_org, org_name, is_personal, repos = [], instance_name, transcript_sharing = false }) {
-  const body = { github_org, org_name, is_personal, repos, transcript_sharing };
+export async function setupOrg(token, { github_org, org_name, is_personal, repos = [], instance_name, transcript_sharing = false, hosting = false }) {
+  const body = { github_org, org_name, is_personal, repos, transcript_sharing, hosting };
   if (instance_name) body.instance_name = instance_name;
   return request("POST", "/api/org/setup", { token, body });
 }
@@ -102,6 +102,28 @@ export async function getAdminOrgDetail(token, slug) {
 
 export async function removeMember(token, slug, username, mode = "revoke") {
   return request("DELETE", `/api/org/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}?mode=${mode}`, { token });
+}
+
+export async function getHostingInfo(token, slug) {
+  return request("GET", `/api/hosting/info/${encodeURIComponent(slug)}`, { token });
+}
+
+export async function getHostingStatus(token, slug) {
+  return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
+}
+
+// ─── User API Keys ──────────────────────────────────────────────
+
+export async function getUserKeys(token) {
+  return request("GET", "/api/user/keys", { token });
+}
+
+export async function updateUserKeys(token, keys) {
+  return request("PUT", "/api/user/keys", { token, body: keys });
+}
+
+export async function deleteUserKey(token, keyName) {
+  return request("DELETE", `/api/user/keys/${encodeURIComponent(keyName)}`, { token });
 }
 
 export async function getAdminTelemetry(token, filters = {}) {
