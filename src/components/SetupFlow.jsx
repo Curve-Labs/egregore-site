@@ -123,9 +123,10 @@ const KeyIcon = () => (
 function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get started" }) {
   const [hostingInfo, setHostingInfo] = useState(null);
   const [showLocal, setShowLocal] = useState(false);
-  const [keyStep, setKeyStep] = useState(null); // null | "checking" | "needed" | "saving" | "done"
+  const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [keyError, setKeyError] = useState(null);
+  const [keySaved, setKeySaved] = useState(false);
 
   useEffect(() => {
     if (orgSlug && githubToken) {
@@ -137,39 +138,19 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
   }, [orgSlug, githubToken]);
 
-  // When user clicks "Open in browser", check if key is set first
-  const handleHostedClick = async (e) => {
-    e.preventDefault();
-    setKeyStep("checking");
-    setKeyError(null);
-    try {
-      const keys = await getUserKeys(githubToken);
-      if (keys.anthropic_api_key) {
-        // Key already set — go straight to Coder
-        window.open(hostingInfo.coder_url, "_blank");
-        setKeyStep("done");
-      } else {
-        // Need key first
-        setKeyStep("needed");
-      }
-    } catch {
-      // Can't check — ask for key to be safe
-      setKeyStep("needed");
-    }
+  const handleHostedClick = () => {
+    window.open(hostingInfo.coder_url, "_blank");
   };
 
   const handleKeySave = async () => {
     if (!keyInput.trim()) return;
-    setKeyStep("saving");
     setKeyError(null);
     try {
       await updateUserKeys(githubToken, { anthropic_api_key: keyInput.trim() });
-      setKeyStep("done");
-      // Key saved — redirect to Coder
-      window.open(hostingInfo.coder_url, "_blank");
+      setKeySaved(true);
+      setKeyInput("");
     } catch (err) {
       setKeyError(err.message || "Failed to save key");
-      setKeyStep("needed");
     }
   };
 
@@ -190,47 +171,63 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
         {label}
       </p>
 
-      {/* Primary: Hosted Egregore */}
+      {/* Primary: Hosted Egregore — always enabled, no key gate */}
       <button
         onClick={handleHostedClick}
-        disabled={keyStep === "checking" || keyStep === "saving"}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
           background: C.ink, color: C.parchment, border: "none",
           ...font.mono, fontSize: "0.85rem", cursor: "pointer",
           marginBottom: "0.75rem",
-          opacity: (keyStep === "checking" || keyStep === "saving") ? 0.6 : 1,
           transition: "opacity 0.2s",
         }}
-        onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = "0.85"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = (keyStep === "checking" || keyStep === "saving") ? "0.6" : "1"; }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
       >
         <BrowserIcon />
-        {keyStep === "checking" ? "Checking..." : keyStep === "done" ? "Opened in browser" : "Open in browser"}
+        Open in browser
       </button>
-      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: keyStep === "needed" ? "0rem" : "1.5rem" }}>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
         Hosted Egregore — zero install, full terminal in your browser.
       </p>
 
-      {/* Key input step — shown between clicking "Open in browser" and redirect */}
-      {keyStep === "needed" && (
+      {/* Optional: API key (collapsed by default) */}
+      <button
+        onClick={() => setShowKey(!showKey)}
+        style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "none", border: "none", cursor: "pointer",
+          ...font.mono, fontSize: "0.65rem", color: C.muted,
+          padding: 0, marginBottom: showKey ? "0.75rem" : "1rem",
+        }}
+      >
+        <KeyIcon />
+        {keySaved ? "API key saved" : showKey ? "Hide API key setup" : "Have an Anthropic API key?"}
+        {!keySaved && (
+          <svg
+            width="10" height="10" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: showKey ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
+      </button>
+      {showKey && !keySaved && (
         <div style={{
           border: `1px solid ${C.warmGray}`,
           padding: "1rem 1.25rem",
-          marginTop: "0.75rem",
           marginBottom: "1.5rem",
           background: "rgba(26,23,20,0.02)",
         }}>
-          <p style={{ ...font.mono, fontSize: "0.72rem", color: C.ink, marginBottom: "0.5rem", display: "flex", alignItems: "center" }}>
-            <KeyIcon /> Your Anthropic API key
-          </p>
           <p style={{ ...font.mono, fontSize: "0.62rem", color: C.muted, marginBottom: "0.75rem", lineHeight: 1.5 }}>
-            Each person uses their own key for Claude Code.{" "}
+            Using Claude Max? Just open and authenticate when prompted — no key needed.
+            Otherwise, enter your{" "}
             <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
               style={{ color: C.crimson, textDecoration: "none" }}>
-              Get one at console.anthropic.com
-            </a>
+              Anthropic API key
+            </a>.
           </p>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <input
@@ -261,23 +258,13 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
                 whiteSpace: "nowrap",
               }}
             >
-              Save & open
+              Save key
             </button>
           </div>
           {keyError && (
             <p style={{ ...font.mono, fontSize: "0.65rem", color: C.crimson, marginTop: "0.5rem" }}>{keyError}</p>
           )}
-          <p style={{ ...font.mono, fontSize: "0.58rem", color: C.muted, marginTop: "0.5rem" }}>
-            Encrypted at rest. You can rotate it anytime at{" "}
-            <a href="/settings" style={{ color: C.muted, textDecoration: "underline" }}>egregore.xyz/settings</a>.
-          </p>
         </div>
-      )}
-
-      {keyStep === "done" && (
-        <p style={{ ...font.mono, fontSize: "0.65rem", color: "#2d8a4e", marginBottom: "1.5rem" }}>
-          Key saved. Your workspace is opening — create a workspace from the Coder dashboard.
-        </p>
       )}
 
       {/* Secondary: Install locally (collapsed by default) */}
@@ -313,62 +300,87 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
 }
 
 function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
-  const [keyStep, setKeyStep] = useState("checking"); // checking | needed | saving | done
+  const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [keyError, setKeyError] = useState(null);
-
-  useEffect(() => {
-    getUserKeys(githubToken)
-      .then((keys) => {
-        if (keys.anthropic_api_key) {
-          setKeyStep("done");
-        } else {
-          setKeyStep("needed");
-        }
-      })
-      .catch(() => setKeyStep("needed"));
-  }, [githubToken]);
+  const [keySaved, setKeySaved] = useState(false);
 
   const handleSave = async () => {
     if (!keyInput.trim()) return;
-    setKeyStep("saving");
     setKeyError(null);
     try {
       await updateUserKeys(githubToken, { anthropic_api_key: keyInput.trim() });
-      setKeyStep("done");
+      setKeySaved(true);
+      setKeyInput("");
     } catch (err) {
       setKeyError(err.message || "Failed to save key");
-      setKeyStep("needed");
     }
   };
 
   return (
     <div style={{ marginBottom: "2.5rem" }}>
+      {/* Primary: Open workspace — always enabled */}
       <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
-        Step 1 — Your API key
+        Step 1 — Open your workspace
+      </p>
+      <a
+        href={coderUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
+          background: C.ink, color: C.parchment, textDecoration: "none",
+          ...font.mono, fontSize: "0.85rem", cursor: "pointer",
+          marginBottom: "0.75rem",
+          transition: "opacity 0.2s",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+      >
+        <BrowserIcon />
+        Open workspace
+      </a>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
+        Your workspace is ready. Egregore auto-starts when you open the terminal.
       </p>
 
-      {keyStep === "checking" && (
-        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted }}>Checking key status...</p>
-      )}
+      {/* Optional: API key (collapsed by default) */}
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
+        Optional — API key
+      </p>
+      <button
+        onClick={() => setShowKey(!showKey)}
+        style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "none", border: "none", cursor: "pointer",
+          ...font.mono, fontSize: "0.65rem", color: C.muted,
+          padding: 0, marginBottom: showKey ? "0.75rem" : "0.5rem",
+        }}
+      >
+        <KeyIcon />
+        {keySaved ? "API key saved" : showKey ? "Hide" : "Have an Anthropic API key? Set it now."}
+        {!keySaved && (
+          <svg
+            width="10" height="10" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: showKey ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
+      </button>
+      <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginBottom: showKey ? "0.75rem" : "0.5rem" }}>
+        Using Claude Max? Just open and authenticate when prompted — no key needed.
+      </p>
 
-      {keyStep === "needed" && (
+      {showKey && !keySaved && (
         <div style={{
           border: `1px solid ${C.warmGray}`,
-          padding: "1.25rem 1.5rem",
-          marginBottom: "1.5rem",
+          padding: "1rem 1.25rem",
+          marginBottom: "1rem",
           background: "rgba(26,23,20,0.02)",
         }}>
-          <p style={{ ...font.mono, fontSize: "0.75rem", color: C.ink, marginBottom: "0.5rem", display: "flex", alignItems: "center" }}>
-            <KeyIcon /> Anthropic API key
-          </p>
-          <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "0.75rem", lineHeight: 1.5 }}>
-            Each person uses their own key for Claude Code.{" "}
-            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
-              style={{ color: C.crimson, textDecoration: "none" }}>
-              Get one at console.anthropic.com
-            </a>
-          </p>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <input
               type="password"
@@ -404,45 +416,7 @@ function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
           {keyError && (
             <p style={{ ...font.mono, fontSize: "0.65rem", color: C.crimson, marginTop: "0.5rem" }}>{keyError}</p>
           )}
-          <p style={{ ...font.mono, fontSize: "0.58rem", color: C.muted, marginTop: "0.5rem" }}>
-            Encrypted at rest. Rotate anytime at{" "}
-            <a href="/settings" style={{ color: C.muted, textDecoration: "underline" }}>egregore.xyz/settings</a>.
-          </p>
         </div>
-      )}
-
-      {keyStep === "saving" && (
-        <p style={{ ...font.mono, fontSize: "0.75rem", color: C.muted, marginBottom: "1.5rem" }}>Saving key...</p>
-      )}
-
-      {/* Step 2 — Open workspace (enabled once key is set) */}
-      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
-        Step 2 — Open your workspace
-      </p>
-      <a
-        href={keyStep === "done" ? coderUrl : undefined}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => { if (keyStep !== "done") e.preventDefault(); }}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
-          background: keyStep === "done" ? C.ink : C.warmGray,
-          color: keyStep === "done" ? C.parchment : C.muted,
-          textDecoration: "none",
-          ...font.mono, fontSize: "0.85rem",
-          cursor: keyStep === "done" ? "pointer" : "default",
-          marginBottom: "0.75rem",
-          transition: "all 0.2s",
-        }}
-      >
-        <BrowserIcon />
-        {keyStep === "done" ? "Open workspace" : "Set your API key first"}
-      </a>
-      {keyStep === "done" && (
-        <p style={{ ...font.mono, fontSize: "0.65rem", color: "#2d8a4e", marginBottom: "0.5rem" }}>
-          Create a workspace from the Coder dashboard, then open the terminal.
-        </p>
       )}
     </div>
   );
