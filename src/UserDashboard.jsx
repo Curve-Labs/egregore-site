@@ -383,6 +383,32 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
         </div>
       </div>
 
+      {/* Hosted: Open in browser */}
+      {org.hosting_enabled && org.hosting_coder_url && (
+        <a
+          href={org.hosting_coder_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 8, width: "100%", padding: "10px 16px",
+            background: C.gold, color: C.termBg, textDecoration: "none",
+            ...font.mono, fontSize: 12, fontWeight: 700,
+            marginBottom: 12, cursor: "pointer",
+            transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          Open in browser
+        </a>
+      )}
+
       {/* Health Status */}
       <HealthStatus checkin={org.latest_checkin} />
 
