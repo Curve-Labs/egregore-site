@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, enableHosting, getHostingStatus } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, enableHosting, getHostingStatus, deleteOrg } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -361,9 +361,84 @@ function RemoveMemberDialog({ member, slug, token, onClose, onRemoved }) {
   );
 }
 
+function DeleteOrgDialog({ slug, token, onClose, onDeleted }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteOrg(token, slug);
+      onDeleted();
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }} onClick={onClose}>
+      <div style={{
+        background: C.termBg, border: `1px solid ${C.crimson}`, borderRadius: 8,
+        padding: 24, maxWidth: 420, width: "90%", ...font.mono, fontSize: 13,
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ ...font.ibmPlex, fontSize: 15, fontWeight: 700, color: C.crimson, marginBottom: 16 }}>
+          Delete Egregore
+        </div>
+        <div style={{ color: C.parchment, marginBottom: 12 }}>
+          This will permanently delete <strong style={{ color: C.gold }}>{slug}</strong> and all its data:
+        </div>
+        <ul style={{ color: C.muted, fontSize: 12, marginBottom: 16, paddingLeft: 20 }}>
+          <li>All memberships</li>
+          <li>API keys</li>
+          <li>Telemetry and event data</li>
+          <li>Graph node</li>
+        </ul>
+        <div style={{ color: C.muted, fontSize: 11, marginBottom: 16 }}>
+          GitHub repos and memory repos are not deleted — remove those manually if needed.
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: C.parchment, marginBottom: 6 }}>
+            Type <strong style={{ color: C.crimson }}>{slug}</strong> to confirm:
+          </div>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={slug}
+            style={{
+              width: "100%", padding: "6px 10px", background: "rgba(0,0,0,0.3)",
+              border: `1px solid rgba(200,165,90,0.2)`, color: C.parchment,
+              ...font.mono, fontSize: 12, boxSizing: "border-box",
+            }}
+          />
+        </div>
+        {error && <div style={{ color: C.crimson, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} disabled={loading} style={{
+            ...font.mono, background: "transparent", color: C.muted, border: `1px solid ${C.muted}`,
+            padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+          }}>Cancel</button>
+          <button onClick={handleDelete} disabled={loading || confirmText !== slug} style={{
+            ...font.mono, background: C.crimson, color: "#fff", border: "none",
+            padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+            opacity: (loading || confirmText !== slug) ? 0.4 : 1,
+          }}>{loading ? "Deleting..." : "Delete forever"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrgCard({ org, token, currentUser, onRefresh }) {
   const [showKey, setShowKey] = useState(false);
   const [removingMember, setRemovingMember] = useState(null);
+  const [showDeleteOrg, setShowDeleteOrg] = useState(false);
   const [terminalLoading, setTerminalLoading] = useState(false);
   const [hostingState, setHostingState] = useState(null); // null | "enabling" | "provisioning" | "ready" | "error"
   const [hostingError, setHostingError] = useState(null);
@@ -622,11 +697,32 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
         />
       )}
 
-      {/* Info row */}
-      <div style={{ marginTop: 12, fontSize: 11, color: C.muted, display: "flex", gap: 16 }}>
-        <span>GitHub: {org.github_org}</span>
-        <span>Telegram: {org.has_telegram ? "connected" : "not connected"}</span>
+      {/* Info row + delete */}
+      <div style={{ marginTop: 12, fontSize: 11, color: C.muted, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 16 }}>
+          <span>GitHub: {org.github_org}</span>
+          <span>Telegram: {org.has_telegram ? "connected" : "not connected"}</span>
+        </div>
+        {isAdmin && (
+          <button onClick={() => setShowDeleteOrg(true)} style={{
+            ...font.mono, background: "transparent", color: C.crimson, border: `1px solid rgba(122,15,27,0.3)`,
+            padding: "2px 8px", borderRadius: 3, cursor: "pointer", fontSize: 10,
+            opacity: 0.6, transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
+          >Delete Egregore</button>
+        )}
       </div>
+
+      {showDeleteOrg && (
+        <DeleteOrgDialog
+          slug={org.slug}
+          token={token}
+          onClose={() => setShowDeleteOrg(false)}
+          onDeleted={() => { setShowDeleteOrg(false); onRefresh && onRefresh(); }}
+        />
+      )}
     </div>
   );
 }

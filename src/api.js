@@ -104,6 +104,10 @@ export async function removeMember(token, slug, username, mode = "revoke") {
   return request("DELETE", `/api/org/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}?mode=${mode}`, { token });
 }
 
+export async function deleteOrg(token, slug) {
+  return request("DELETE", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
+}
+
 export async function getHostingInfo(token, slug) {
   return request("GET", `/api/hosting/info/${encodeURIComponent(slug)}`, { token });
 }
