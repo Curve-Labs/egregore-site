@@ -1781,8 +1781,8 @@ export default function SetupFlow() {
     );
   }
 
-  // Transcript consent (after repos, before setup — only for new orgs, not joins)
-  if (githubToken && selectedOrg && !selectedOrg.has_egregore && transcriptConsent === null) {
+  // Transcript consent (after repos, before setup — for new orgs or creating new instance)
+  if (githubToken && selectedOrg && (!selectedOrg.has_egregore || creatingNew) && transcriptConsent === null) {
     return (
       <SetupLayout>
         <TranscriptConsent onChoice={setTranscriptConsent} />
@@ -1790,8 +1790,8 @@ export default function SetupFlow() {
     );
   }
 
-  // Deployment choice (after consent, before setup — only for new orgs, not joins)
-  if (githubToken && selectedOrg && !selectedOrg.has_egregore && hostingChoice === null) {
+  // Deployment choice (after consent, before setup — for new orgs or creating new instance)
+  if (githubToken && selectedOrg && (!selectedOrg.has_egregore || creatingNew) && hostingChoice === null) {
     return (
       <SetupLayout>
         <DeploymentChoice onChoice={setHostingChoice} />
