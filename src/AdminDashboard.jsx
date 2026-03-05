@@ -230,9 +230,9 @@ function shortDate(iso) {
 // ─── Auth Gate ────────────────────────────────────────────────────
 
 function useAuth() {
-  const [token, setToken] = useState(() => sessionStorage.getItem("admin_gh_token"));
+  const [token, setToken] = useState(() => localStorage.getItem("admin_gh_token"));
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem("admin_gh_user")); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("admin_gh_user")); } catch { return null; }
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -256,8 +256,8 @@ function useAuth() {
             setLoading(false);
             return;
           }
-          sessionStorage.setItem("admin_gh_token", ghToken);
-          sessionStorage.setItem("admin_gh_user", JSON.stringify(ghUser));
+          localStorage.setItem("admin_gh_token", ghToken);
+          localStorage.setItem("admin_gh_user", JSON.stringify(ghUser));
           setToken(ghToken);
           setUser(ghUser);
           setLoading(false);
@@ -270,8 +270,8 @@ function useAuth() {
   }, [token]);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem("admin_gh_token");
-    sessionStorage.removeItem("admin_gh_user");
+    localStorage.removeItem("admin_gh_token");
+    localStorage.removeItem("admin_gh_user");
     setToken(null);
     setUser(null);
   }, []);
