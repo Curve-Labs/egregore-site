@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -364,7 +364,21 @@ function RemoveMemberDialog({ member, slug, token, onClose, onRemoved }) {
 function OrgCard({ org, token, currentUser, onRefresh }) {
   const [showKey, setShowKey] = useState(false);
   const [removingMember, setRemovingMember] = useState(null);
+  const [terminalLoading, setTerminalLoading] = useState(false);
   const isAdmin = org.role === "admin";
+
+  const openTerminal = async () => {
+    setTerminalLoading(true);
+    try {
+      const { url } = await getTerminalUrl(token, org.slug);
+      window.open(url, "_blank");
+    } catch (e) {
+      // Fallback to direct URL
+      window.open(org.hosting_workspace_url || org.hosting_coder_url, "_blank");
+    } finally {
+      setTerminalLoading(false);
+    }
+  };
 
   return (
     <div style={s.card}>
@@ -384,28 +398,28 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
       </div>
 
       {/* Hosted: Open in browser */}
-      {org.hosting_enabled && (org.hosting_workspace_url || org.hosting_coder_url) && (
-        <a
-          href={org.hosting_workspace_url || org.hosting_coder_url}
-          target="_blank"
-          rel="noopener noreferrer"
+      {org.hosting_enabled && (
+        <button
+          onClick={openTerminal}
+          disabled={terminalLoading}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center",
             gap: 8, width: "100%", padding: "10px 16px",
-            background: C.gold, color: C.termBg, textDecoration: "none",
+            background: C.gold, color: C.termBg, border: "none",
             ...font.mono, fontSize: 12, fontWeight: 700,
-            marginBottom: 12, cursor: "pointer",
+            marginBottom: 12, cursor: terminalLoading ? "wait" : "pointer",
+            opacity: terminalLoading ? 0.7 : 1,
             transition: "opacity 0.2s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onMouseEnter={(e) => { if (!terminalLoading) e.currentTarget.style.opacity = "0.85"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="4 17 10 11 4 5" />
             <line x1="12" y1="19" x2="20" y2="19" />
           </svg>
-          Open in Browser
-        </a>
+          {terminalLoading ? "Connecting..." : "Open in Browser"}
+        </button>
       )}
 
       {/* Health Status */}

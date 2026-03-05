@@ -108,6 +108,10 @@ export async function getHostingInfo(token, slug) {
   return request("GET", `/api/hosting/info/${encodeURIComponent(slug)}`, { token });
 }
 
+export async function getTerminalUrl(token, slug) {
+  return request("GET", `/api/hosting/terminal/${encodeURIComponent(slug)}`, { token });
+}
+
 export async function getHostingStatus(token, slug) {
   return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
 }
