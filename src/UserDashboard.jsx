@@ -219,9 +219,9 @@ function CopyButton({ text, label = "Copy" }) {
 // ─── Auth Hook ────────────────────────────────────────────────────
 
 function useAuth() {
-  const [token, setToken] = useState(() => sessionStorage.getItem("dash_gh_token"));
+  const [token, setToken] = useState(() => localStorage.getItem("dash_gh_token"));
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem("dash_gh_user")); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("dash_gh_user")); } catch { return null; }
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -239,8 +239,8 @@ function useAuth() {
         .then((data) => {
           const ghToken = data.github_token;
           const ghUser = data.user;
-          sessionStorage.setItem("dash_gh_token", ghToken);
-          sessionStorage.setItem("dash_gh_user", JSON.stringify(ghUser));
+          localStorage.setItem("dash_gh_token", ghToken);
+          localStorage.setItem("dash_gh_user", JSON.stringify(ghUser));
           setToken(ghToken);
           setUser(ghUser);
           setLoading(false);
@@ -253,8 +253,8 @@ function useAuth() {
   }, [token]);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem("dash_gh_token");
-    sessionStorage.removeItem("dash_gh_user");
+    localStorage.removeItem("dash_gh_token");
+    localStorage.removeItem("dash_gh_user");
     setToken(null);
     setUser(null);
   }, []);

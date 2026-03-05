@@ -218,7 +218,7 @@ export default function SettingsPage() {
 
   // Auth
   useEffect(() => {
-    const stored = sessionStorage.getItem("gh_token");
+    const stored = localStorage.getItem("gh_token");
     if (stored) {
       setToken(stored);
       return;
@@ -229,7 +229,7 @@ export default function SettingsPage() {
       window.history.replaceState({}, "", "/settings");
       exchangeCode(code)
         .then((data) => {
-          sessionStorage.setItem("gh_token", data.access_token);
+          localStorage.setItem("gh_token", data.access_token);
           setToken(data.access_token);
         })
         .catch(() => setLoading(false));
@@ -332,7 +332,7 @@ export default function SettingsPage() {
         <div style={s.headerRight}>
           {user && <span>{user.github_username || user.login}</span>}
           <a href="/dashboard" style={{ ...s.btn, textDecoration: "none" }}>Dashboard</a>
-          <button style={s.btn} onClick={() => { sessionStorage.removeItem("gh_token"); setToken(null); }}>
+          <button style={s.btn} onClick={() => { localStorage.removeItem("gh_token"); setToken(null); }}>
             Sign out
           </button>
         </div>
