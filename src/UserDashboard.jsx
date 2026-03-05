@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, enableHosting, getHostingStatus } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -365,7 +365,39 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
   const [showKey, setShowKey] = useState(false);
   const [removingMember, setRemovingMember] = useState(null);
   const [terminalLoading, setTerminalLoading] = useState(false);
+  const [hostingState, setHostingState] = useState(null); // null | "enabling" | "provisioning" | "ready" | "error"
+  const [hostingError, setHostingError] = useState(null);
+  const [hostingIp, setHostingIp] = useState(null);
+  const pollRef = useRef(null);
   const isAdmin = org.role === "admin";
+
+  // Clean up polling on unmount
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const handleEnableHosting = async () => {
+    setHostingState("enabling");
+    setHostingError(null);
+    try {
+      const res = await enableHosting(token, org.slug);
+      setHostingIp(res.ip);
+      setHostingState("provisioning");
+      // Start polling for status
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await getHostingStatus(token, org.slug);
+          if (status.coder_ready) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            setHostingState("ready");
+            onRefresh && onRefresh();
+          }
+        } catch {}
+      }, 10000);
+    } catch (e) {
+      setHostingState("error");
+      setHostingError(e.message);
+    }
+  };
 
   const openTerminal = async () => {
     setTerminalLoading(true);
@@ -420,6 +452,71 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
           </svg>
           {terminalLoading ? "Connecting..." : "Open in Browser"}
         </button>
+      )}
+
+      {/* Enable hosting for non-hosted orgs (admin only) */}
+      {!org.hosting_enabled && isAdmin && !hostingState && (
+        <button
+          onClick={handleEnableHosting}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 8, width: "100%", padding: "10px 16px",
+            background: "none", color: C.gold, border: `1px solid ${C.gold}`,
+            ...font.mono, fontSize: 12, fontWeight: 700,
+            marginBottom: 12, cursor: "pointer",
+            transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+          Enable Hosted Access
+        </button>
+      )}
+
+      {/* Hosting provisioning state */}
+      {hostingState === "enabling" && (
+        <div style={{ padding: "10px 16px", marginBottom: 12, fontSize: 12, color: C.muted, textAlign: "center" }}>
+          Requesting server...
+        </div>
+      )}
+      {hostingState === "provisioning" && (
+        <div style={{
+          padding: "10px 16px", marginBottom: 12, fontSize: 12,
+          border: `1px solid rgba(200,165,90,0.2)`, background: "rgba(200,165,90,0.05)",
+        }}>
+          <div style={{ color: C.gold, fontWeight: 700, marginBottom: 4 }}>Provisioning VPS...</div>
+          <div style={{ color: C.muted }}>
+            Server {hostingIp ? `(${hostingIp}) ` : ""}is starting up. Coder will be ready in 2-5 minutes.
+          </div>
+          <div style={{ color: C.muted, marginTop: 4, fontSize: 11 }}>
+            Checking every 10s...
+          </div>
+        </div>
+      )}
+      {hostingState === "ready" && (
+        <div style={{
+          padding: "10px 16px", marginBottom: 12, fontSize: 12,
+          border: `1px solid rgba(74,170,74,0.3)`, background: "rgba(74,170,74,0.05)", color: "#4a4",
+        }}>
+          Hosting enabled! Refreshing...
+        </div>
+      )}
+      {hostingState === "error" && (
+        <div style={{
+          padding: "10px 16px", marginBottom: 12, fontSize: 12,
+          border: `1px solid rgba(122,15,27,0.3)`, background: "rgba(122,15,27,0.05)", color: C.crimson,
+        }}>
+          Failed: {hostingError || "Unknown error"}
+          <button onClick={() => setHostingState(null)} style={{
+            ...font.mono, background: "transparent", color: C.muted, border: `1px solid ${C.muted}`,
+            padding: "2px 8px", marginLeft: 8, fontSize: 10, cursor: "pointer",
+          }}>Retry</button>
+        </div>
       )}
 
       {/* Health Status */}

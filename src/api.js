@@ -116,6 +116,10 @@ export async function getHostingStatus(token, slug) {
   return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
 }
 
+export async function enableHosting(token, slug) {
+  return request("POST", `/api/hosting/enable/${encodeURIComponent(slug)}`, { token });
+}
+
 // ─── User API Keys ──────────────────────────────────────────────
 
 export async function getUserKeys(token) {
