@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, getTerminalUrl } from "../api";
 import { isAdmin } from "../auth";
 
 const C = {
@@ -138,8 +138,22 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
   }, [orgSlug, githubToken]);
 
-  const handleHostedClick = () => {
-    window.open(hostingInfo.coder_url, "_blank");
+  const [terminalLoading, setTerminalLoading] = useState(false);
+
+  const handleHostedClick = async () => {
+    if (!orgSlug || !githubToken) {
+      window.open(hostingInfo.coder_url, "_blank");
+      return;
+    }
+    setTerminalLoading(true);
+    try {
+      const { url } = await getTerminalUrl(githubToken, orgSlug);
+      window.open(url, "_blank");
+    } catch {
+      window.open(hostingInfo.coder_url, "_blank");
+    } finally {
+      setTerminalLoading(false);
+    }
   };
 
   const handleKeySave = async () => {
@@ -186,7 +200,7 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
         onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
       >
         <BrowserIcon />
-        Open in browser
+        {terminalLoading ? "Connecting..." : "Open in browser"}
       </button>
       <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
         Hosted Egregore — zero install, full terminal in your browser.
@@ -299,11 +313,28 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
   );
 }
 
-function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
+function HostedGetStarted({ coderUrl, orgSlug, githubToken, setupToken }) {
   const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [keyError, setKeyError] = useState(null);
   const [keySaved, setKeySaved] = useState(false);
+  const [terminalLoading, setTerminalLoading] = useState(false);
+
+  const handleOpenWorkspace = async () => {
+    if (!orgSlug || !githubToken) {
+      window.open(coderUrl, "_blank");
+      return;
+    }
+    setTerminalLoading(true);
+    try {
+      const { url } = await getTerminalUrl(githubToken, orgSlug);
+      window.open(url, "_blank");
+    } catch {
+      window.open(coderUrl, "_blank");
+    } finally {
+      setTerminalLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!keyInput.trim()) return;
@@ -323,24 +354,25 @@ function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
       <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
         Step 1 — Open your workspace
       </p>
-      <a
-        href={coderUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handleOpenWorkspace}
+        disabled={terminalLoading}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
-          background: C.ink, color: C.parchment, textDecoration: "none",
-          ...font.mono, fontSize: "0.85rem", cursor: "pointer",
+          background: C.ink, color: C.parchment, border: "none",
+          ...font.mono, fontSize: "0.85rem",
+          cursor: terminalLoading ? "wait" : "pointer",
+          opacity: terminalLoading ? 0.7 : 1,
           marginBottom: "0.75rem",
           transition: "opacity 0.2s",
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+        onMouseEnter={(e) => { if (!terminalLoading) e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
       >
         <BrowserIcon />
-        Open workspace
-      </a>
+        {terminalLoading ? "Connecting..." : "Open workspace"}
+      </button>
       <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
         Your workspace is ready. Egregore auto-starts when you open the terminal.
       </p>
@@ -1100,6 +1132,7 @@ function SetupProgress({ token, user, org, repos = [], joinRepoName, instanceNam
       {hosting && result.hosting_status !== "failed" ? (
         <HostedGetStarted
           coderUrl={result.hosting_coder_url}
+          orgSlug={result.org_slug}
           githubToken={token}
           setupToken={result.setup_token}
         />
