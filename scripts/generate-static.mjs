@@ -154,6 +154,12 @@ function generateRobotsTxt() {
   return [
     "User-agent: *",
     "Allow: /",
+    "Disallow: /setup",
+    "Disallow: /callback",
+    "Disallow: /join",
+    "Disallow: /admin",
+    "Disallow: /dashboard",
+    "Disallow: /settings",
     "",
     `Sitemap: ${SITE}/sitemap.xml`,
     "",

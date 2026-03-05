@@ -93,20 +93,48 @@ function getMeta(request) {
   return null;
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildJsonLd(meta) {
+  if (meta.type === "article") {
+    return JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: meta.title,
+      description: meta.description,
+      image: meta.image,
+      url: meta.url,
+      publisher: { "@type": "Organization", name: SITE_NAME, url: meta.url.split("/research")[0] },
+    });
+  }
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    description: meta.description,
+    url: meta.url,
+  });
+}
+
 function injectOgTags(html, meta) {
+  const jsonLd = buildJsonLd(meta);
   const ogTags = `
+    <link rel="canonical" href="${escapeHtml(meta.url)}" />
     <meta property="og:type" content="${meta.type}" />
     <meta property="og:site_name" content="${SITE_NAME}" />
-    <meta property="og:title" content="${meta.title}" />
-    <meta property="og:description" content="${meta.description}" />
-    <meta property="og:url" content="${meta.url}" />
+    <meta property="og:title" content="${escapeHtml(meta.title)}" />
+    <meta property="og:description" content="${escapeHtml(meta.description)}" />
+    <meta property="og:url" content="${escapeHtml(meta.url)}" />
     <meta property="og:image" content="${meta.image}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${meta.title}" />
-    <meta name="twitter:description" content="${meta.description}" />
-    <meta name="twitter:image" content="${meta.image}" />`;
+    <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
+    <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
+    <meta name="twitter:image" content="${meta.image}" />
+    <script type="application/ld+json">${jsonLd}</script>`;
 
   // Replace existing OG tags and title
   let result = html;
@@ -114,13 +142,13 @@ function injectOgTags(html, meta) {
   // Replace <title>
   result = result.replace(
     /<title>[^<]*<\/title>/,
-    `<title>${meta.title}</title>`
+    `<title>${escapeHtml(meta.title)}</title>`
   );
 
   // Replace <meta name="description">
   result = result.replace(
     /<meta name="description" content="[^"]*" \/>/,
-    `<meta name="description" content="${meta.description}" />`
+    `<meta name="description" content="${escapeHtml(meta.description)}" />`
   );
 
   // Replace existing OG/twitter meta block with new one

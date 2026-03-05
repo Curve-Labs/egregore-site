@@ -10,6 +10,7 @@ import SetupFlow from './components/SetupFlow.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
 import UserDashboard from './UserDashboard.jsx'
 import SettingsPage from './SettingsPage.jsx'
+import { DocumentHead } from './useDocumentHead.js'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -184,6 +185,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <GlobalStyles />
+      <DocumentHead />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/setup" element={<SetupFlow />} />
