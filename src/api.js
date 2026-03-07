@@ -2,7 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f
 const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
 
 const GITHUB_SCOPES = {
-  joiner: "read:user",
+  joiner: "repo,read:org",
   founder: "repo,read:org",
   admin: "repo,read:org",
 };
