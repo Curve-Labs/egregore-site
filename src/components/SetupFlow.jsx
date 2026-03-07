@@ -178,33 +178,11 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     return <InstallCommand setupToken={setupToken} label={label} />;
   }
 
-  // Dual path: hosted + local
+  // Dual path: CLI primary, hosted secondary (disabled for now)
   return (
     <div style={{ marginBottom: "2.5rem" }}>
-      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
-        {label}
-      </p>
-
-      {/* Primary: Hosted Egregore — always enabled, no key gate */}
-      <button
-        onClick={handleHostedClick}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
-          background: C.ink, color: C.parchment, border: "none",
-          ...font.mono, fontSize: "0.85rem", cursor: "pointer",
-          marginBottom: "0.75rem",
-          transition: "opacity 0.2s",
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-      >
-        <BrowserIcon />
-        {terminalLoading ? "Connecting..." : "Open in browser"}
-      </button>
-      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
-        Hosted Egregore — zero install, full terminal in your browser.
-      </p>
+      {/* Primary: CLI install command */}
+      <InstallCommand setupToken={setupToken} label={label} />
 
       {/* Optional: API key (collapsed by default) */}
       <button
@@ -281,34 +259,26 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
         </div>
       )}
 
-      {/* Secondary: Install locally (collapsed by default) */}
-      <button
-        onClick={() => setShowLocal(!showLocal)}
+      {/* Secondary: Open in browser — disabled, coming soon */}
+      <div
         style={{
           display: "flex", alignItems: "center", gap: "0.5rem",
-          background: "none", border: "none", cursor: "pointer",
-          ...font.mono, fontSize: "0.7rem", color: C.muted,
-          padding: 0, marginBottom: showLocal ? "0.75rem" : 0,
+          ...font.mono, fontSize: "0.65rem", color: C.muted,
+          padding: "0.6rem 0",
+          opacity: 0.5,
         }}
       >
-        <TerminalIcon />
-        {showLocal ? "Hide" : "Or install locally"}
-        <svg
-          width="10" height="10" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: showLocal ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {showLocal && (
-        <>
-          <InstallCommand setupToken={setupToken} label="Local Egregore" />
-          <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "0.25rem" }}>
-            Requires terminal, git, and Claude Code. You'll set your API key locally.
-          </p>
-        </>
-      )}
+        <BrowserIcon />
+        <span>Open in browser</span>
+        <span style={{
+          ...font.mono, fontSize: "0.55rem", color: C.muted,
+          border: `1px solid ${C.warmGray}`,
+          padding: "0.15rem 0.4rem",
+          marginLeft: "0.25rem",
+        }}>
+          coming soon
+        </span>
+      </div>
     </div>
   );
 }
