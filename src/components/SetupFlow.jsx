@@ -905,18 +905,16 @@ function DeploymentChoice({ onChoice }) {
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        {/* Hosted */}
-        <button
-          onClick={() => onChoice("hosted")}
-          onMouseEnter={() => setHovered("hosted")}
-          onMouseLeave={() => setHovered(null)}
+        {/* Hosted — coming soon */}
+        <div
           style={{
             display: "flex", alignItems: "flex-start", gap: "1rem",
             padding: "1.25rem 1.5rem", textAlign: "left",
-            background: hovered === "hosted" ? "rgba(26,23,20,0.04)" : "white",
-            border: `1px solid ${hovered === "hosted" ? C.ink : C.warmGray}`,
-            cursor: "pointer",
-            transition: "all 0.15s",
+            background: "rgba(26,23,20,0.02)",
+            border: `1px solid ${C.warmGray}`,
+            opacity: 0.5,
+            cursor: "not-allowed",
+            position: "relative",
           }}
         >
           <BrowserIcon />
@@ -927,11 +925,11 @@ function DeploymentChoice({ onChoice }) {
             <div style={{ ...font.mono, fontSize: "0.68rem", color: C.muted, lineHeight: 1.5 }}>
               We provision a server for your team. Everyone opens a terminal in their browser. Zero install, zero dependencies.
             </div>
-            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginTop: "0.5rem", opacity: 0.7 }}>
-              Takes ~2 minutes to provision
+            <div style={{ ...font.mono, fontSize: "0.6rem", color: C.crimson, marginTop: "0.5rem" }}>
+              Coming soon
             </div>
           </div>
-        </button>
+        </div>
 
         {/* Local */}
         <button
