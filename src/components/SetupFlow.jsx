@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, getTerminalUrl } from "../api";
-import { isAdmin } from "../auth";
+
 
 const C = {
   parchment: "#F4F1EA",
@@ -1684,15 +1684,6 @@ export default function SetupFlow() {
     return (
       <SetupLayout>
         <InviteAccept token={githubToken} user={user} inviteToken={inviteToken} />
-      </SetupLayout>
-    );
-  }
-
-  // Admin gate — only admins can create new instances via /setup
-  if (githubToken && !inviteToken && !isAdmin(user?.login)) {
-    return (
-      <SetupLayout>
-        <AccessRestricted user={user} />
       </SetupLayout>
     );
   }
