@@ -178,11 +178,35 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     return <InstallCommand setupToken={setupToken} label={label} />;
   }
 
-  // Dual path: CLI primary, hosted secondary (disabled for now)
+  // Hosted: "Open workspace" primary, "Or install locally" secondary
   return (
     <div style={{ marginBottom: "2.5rem" }}>
-      {/* Primary: CLI install command */}
-      <InstallCommand setupToken={setupToken} label={label} />
+      {/* Primary: Open workspace */}
+      <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "1rem" }}>
+        {label}
+      </p>
+      <button
+        onClick={handleHostedClick}
+        disabled={terminalLoading}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "0.5rem", width: "100%", padding: "1rem 1.5rem",
+          background: C.ink, color: C.parchment, border: "none",
+          ...font.mono, fontSize: "0.85rem",
+          cursor: terminalLoading ? "wait" : "pointer",
+          opacity: terminalLoading ? 0.7 : 1,
+          marginBottom: "0.75rem",
+          transition: "opacity 0.2s",
+        }}
+        onMouseEnter={(e) => { if (!terminalLoading) e.currentTarget.style.opacity = "0.85"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
+      >
+        <BrowserIcon />
+        {terminalLoading ? "Connecting..." : "Open workspace"}
+      </button>
+      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1.5rem" }}>
+        Your workspace is ready. Egregore auto-starts when you open the terminal.
+      </p>
 
       {/* Optional: API key (collapsed by default) */}
       <button
@@ -206,6 +230,9 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
           </svg>
         )}
       </button>
+      <p style={{ ...font.mono, fontSize: "0.6rem", color: C.muted, marginBottom: showKey ? "0.75rem" : "0.5rem" }}>
+        Using Claude Max? Just open and authenticate when prompted — no key needed.
+      </p>
       {showKey && !keySaved && (
         <div style={{
           border: `1px solid ${C.warmGray}`,
@@ -214,8 +241,7 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
           background: "rgba(26,23,20,0.02)",
         }}>
           <p style={{ ...font.mono, fontSize: "0.62rem", color: C.muted, marginBottom: "0.75rem", lineHeight: 1.5 }}>
-            Using Claude Max? Just open and authenticate when prompted — no key needed.
-            Otherwise, enter your{" "}
+            Enter your{" "}
             <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
               style={{ color: C.crimson, textDecoration: "none" }}>
               Anthropic API key
@@ -259,26 +285,31 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
         </div>
       )}
 
-      {/* Secondary: Open in browser — disabled, coming soon */}
-      <div
+      {/* Secondary: Or install locally */}
+      <button
+        onClick={() => setShowLocal(!showLocal)}
         style={{
           display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "none", border: "none", cursor: "pointer",
           ...font.mono, fontSize: "0.65rem", color: C.muted,
           padding: "0.6rem 0",
-          opacity: 0.5,
         }}
       >
-        <BrowserIcon />
-        <span>Open in browser</span>
-        <span style={{
-          ...font.mono, fontSize: "0.55rem", color: C.muted,
-          border: `1px solid ${C.warmGray}`,
-          padding: "0.15rem 0.4rem",
-          marginLeft: "0.25rem",
-        }}>
-          coming soon
-        </span>
-      </div>
+        <TerminalIcon />
+        <span>Or install locally</span>
+        <svg
+          width="10" height="10" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: showLocal ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {showLocal && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <InstallCommand setupToken={setupToken} />
+        </div>
+      )}
     </div>
   );
 }
