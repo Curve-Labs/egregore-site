@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, ensureWorkspace, enableHosting, getHostingStatus, deleteOrg } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -443,8 +443,22 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
   const [hostingState, setHostingState] = useState(null); // null | "enabling" | "provisioning" | "ready" | "error"
   const [hostingError, setHostingError] = useState(null);
   const [hostingIp, setHostingIp] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKeySaving, setApiKeySaving] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState(null);
+  const [hasApiKey, setHasApiKey] = useState(null); // null = unknown, true/false
   const pollRef = useRef(null);
   const isAdmin = org.role === "admin";
+
+  // Check if user has an API key on mount
+  useEffect(() => {
+    if (org.hosting_enabled && token) {
+      getUserKeys(token).then((keys) => {
+        setHasApiKey(!!(keys?.anthropic_api_key));
+      }).catch(() => setHasApiKey(false));
+    }
+  }, [org.hosting_enabled, token]);
 
   // Clean up polling on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
@@ -474,18 +488,46 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
     }
   };
 
-  const openTerminal = async () => {
+  const launchWorkspace = async () => {
     setTerminalLoading(true);
     try {
-      // Ensure workspace exists (creates user + workspace on demand), then open terminal
       const res = await ensureWorkspace(token, org.slug);
       window.open(res.terminal_url, "_blank");
     } catch (e) {
-      // Fallback to direct URL
       window.open(org.hosting_workspace_url || org.hosting_coder_url, "_blank");
     } finally {
       setTerminalLoading(false);
     }
+  };
+
+  const openTerminal = async () => {
+    // If we know they have a key, go straight to workspace
+    if (hasApiKey) return launchWorkspace();
+    // If unknown or no key, show auth modal
+    setShowAuthModal(true);
+  };
+
+  const handleSaveKeyAndOpen = async () => {
+    if (!apiKeyInput.trim()) return;
+    setApiKeySaving(true);
+    setApiKeyError(null);
+    try {
+      await updateUserKeys(token, { anthropic_api_key: apiKeyInput.trim() });
+      setHasApiKey(true);
+      setShowAuthModal(false);
+      setApiKeyInput("");
+      launchWorkspace();
+    } catch (e) {
+      setApiKeyError(e.message || "Failed to save key");
+    } finally {
+      setApiKeySaving(false);
+    }
+  };
+
+  const handleMaxAuth = () => {
+    // Max users authenticate inside Claude Code — just open the workspace
+    setShowAuthModal(false);
+    launchWorkspace();
   };
 
   return (
@@ -528,6 +570,95 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
           </svg>
           {terminalLoading ? "Connecting..." : "Open in Browser"}
         </button>
+      )}
+
+      {/* Auth modal — shown when user has no API key */}
+      {showAuthModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+        }} onClick={() => setShowAuthModal(false)}>
+          <div style={{
+            background: C.termBg, border: `1px solid rgba(200,165,90,0.3)`,
+            padding: 28, maxWidth: 420, width: "90%",
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ ...font.ibmPlex, fontSize: 14, fontWeight: 700, color: C.parchment, marginBottom: 4 }}>
+              Connect to Anthropic
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>
+              Your workspace needs access to Claude. Choose one:
+            </div>
+
+            {/* Option 1: API Key */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ ...font.mono, fontSize: 11, color: C.gold, marginBottom: 8, fontWeight: 700 }}>
+                API Key
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveKeyAndOpen()}
+                  placeholder="sk-ant-..."
+                  style={{
+                    flex: 1, padding: "8px 10px", background: "rgba(0,0,0,0.3)",
+                    border: `1px solid rgba(200,165,90,0.2)`, color: C.parchment,
+                    ...font.mono, fontSize: 12, boxSizing: "border-box",
+                  }}
+                />
+                <button
+                  onClick={handleSaveKeyAndOpen}
+                  disabled={apiKeySaving || !apiKeyInput.trim()}
+                  style={{
+                    ...font.mono, fontSize: 12, fontWeight: 700, padding: "8px 16px",
+                    background: C.gold, color: C.termBg, border: "none",
+                    cursor: (apiKeySaving || !apiKeyInput.trim()) ? "default" : "pointer",
+                    opacity: (apiKeySaving || !apiKeyInput.trim()) ? 0.4 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {apiKeySaving ? "Saving..." : "Save & Open"}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+                Get one at{" "}
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer"
+                  style={{ color: C.gold, textDecoration: "none" }}>console.anthropic.com</a>
+              </div>
+              {apiKeyError && (
+                <div style={{ fontSize: 11, color: C.crimson, marginTop: 6 }}>{apiKeyError}</div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12, marginBottom: 20,
+            }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(200,165,90,0.15)" }} />
+              <span style={{ ...font.mono, fontSize: 11, color: C.muted }}>or</span>
+              <div style={{ flex: 1, height: 1, background: "rgba(200,165,90,0.15)" }} />
+            </div>
+
+            {/* Option 2: Claude Max */}
+            <button
+              onClick={handleMaxAuth}
+              style={{
+                width: "100%", padding: "10px 16px", background: "none",
+                border: `1px solid rgba(200,165,90,0.3)`, color: C.parchment,
+                ...font.mono, fontSize: 12, cursor: "pointer",
+                transition: "border-color 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.gold; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(200,165,90,0.3)"; }}
+            >
+              I have Claude Max — sign in inside workspace
+            </button>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+              You'll authenticate with Anthropic when the workspace opens.
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Enable hosting for non-hosted orgs (admin only) */}
