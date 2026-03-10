@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, getTerminalUrl } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace } from "../api";
 
 
 const C = {
@@ -147,8 +147,9 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
     setTerminalLoading(true);
     try {
-      const { url } = await getTerminalUrl(githubToken, orgSlug);
-      window.open(url, "_blank");
+      // Ensure workspace exists (creates user + workspace on demand), then open terminal
+      const res = await ensureWorkspace(githubToken, orgSlug);
+      window.open(res.terminal_url, "_blank");
     } catch {
       window.open(hostingInfo.coder_url, "_blank");
     } finally {

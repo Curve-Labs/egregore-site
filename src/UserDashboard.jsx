@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, enableHosting, getHostingStatus, deleteOrg } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, getTerminalUrl, ensureWorkspace, enableHosting, getHostingStatus, deleteOrg } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -477,8 +477,9 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
   const openTerminal = async () => {
     setTerminalLoading(true);
     try {
-      const { url } = await getTerminalUrl(token, org.slug);
-      window.open(url, "_blank");
+      // Ensure workspace exists (creates user + workspace on demand), then open terminal
+      const res = await ensureWorkspace(token, org.slug);
+      window.open(res.terminal_url, "_blank");
     } catch (e) {
       // Fallback to direct URL
       window.open(org.hosting_workspace_url || org.hosting_coder_url, "_blank");

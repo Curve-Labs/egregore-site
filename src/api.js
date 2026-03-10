@@ -116,6 +116,10 @@ export async function getTerminalUrl(token, slug) {
   return request("GET", `/api/hosting/terminal/${encodeURIComponent(slug)}`, { token });
 }
 
+export async function ensureWorkspace(token, slug) {
+  return request("POST", `/api/hosting/workspace/${encodeURIComponent(slug)}`, { token });
+}
+
 export async function getHostingStatus(token, slug) {
   return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
 }
