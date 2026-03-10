@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, getWorkspaceStatus, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
 
 // ─── Shared styles ─────────────────────────────────────────────────
 
@@ -488,15 +488,40 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
     }
   };
 
+  const [provisioningStatus, setProvisioningStatus] = useState(null); // null | "provisioning" | "starting" | "ready" | "error"
+
   const launchWorkspace = async () => {
     setTerminalLoading(true);
+    setProvisioningStatus("provisioning");
     try {
       const res = await ensureWorkspace(token, org.slug);
-      window.open(res.terminal_url, "_blank");
+      const terminalUrl = res.terminal_url;
+
+      // Poll for workspace readiness before opening
+      setProvisioningStatus("starting");
+      const maxAttempts = 30; // ~60 seconds
+      for (let i = 0; i < maxAttempts; i++) {
+        try {
+          const status = await getWorkspaceStatus(token, org.slug);
+          if (status.ready) {
+            setProvisioningStatus("ready");
+            window.open(terminalUrl, "_blank");
+            setTerminalLoading(false);
+            setProvisioningStatus(null);
+            return;
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // Timeout — open anyway, Coder will show its own loading
+      window.open(terminalUrl, "_blank");
     } catch (e) {
+      setProvisioningStatus("error");
       window.open(org.hosting_workspace_url || org.hosting_coder_url, "_blank");
     } finally {
       setTerminalLoading(false);
+      setTimeout(() => setProvisioningStatus(null), 3000);
     }
   };
 
@@ -549,27 +574,49 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
 
       {/* Hosted: Open in browser */}
       {org.hosting_enabled && (
-        <button
-          onClick={openTerminal}
-          disabled={terminalLoading}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 8, width: "100%", padding: "10px 16px",
-            background: C.gold, color: C.termBg, border: "none",
-            ...font.mono, fontSize: 12, fontWeight: 700,
-            marginBottom: 12, cursor: terminalLoading ? "wait" : "pointer",
-            opacity: terminalLoading ? 0.7 : 1,
-            transition: "opacity 0.2s",
-          }}
-          onMouseEnter={(e) => { if (!terminalLoading) e.currentTarget.style.opacity = "0.85"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="4 17 10 11 4 5" />
-            <line x1="12" y1="19" x2="20" y2="19" />
-          </svg>
-          {terminalLoading ? "Connecting..." : "Open in Browser"}
-        </button>
+        <>
+          <button
+            onClick={openTerminal}
+            disabled={terminalLoading}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8, width: "100%", padding: "10px 16px",
+              background: C.gold, color: C.termBg, border: "none",
+              ...font.mono, fontSize: 12, fontWeight: 700,
+              marginBottom: provisioningStatus ? 0 : 12,
+              cursor: terminalLoading ? "wait" : "pointer",
+              opacity: terminalLoading ? 0.7 : 1,
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => { if (!terminalLoading) e.currentTarget.style.opacity = "0.85"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 17 10 11 4 5" />
+              <line x1="12" y1="19" x2="20" y2="19" />
+            </svg>
+            {terminalLoading ? (provisioningStatus === "provisioning" ? "Creating workspace..." : "Starting workspace...") : "Open in Browser"}
+          </button>
+          {provisioningStatus && (
+            <div style={{
+              padding: "8px 12px", marginBottom: 12,
+              background: "rgba(212, 175, 55, 0.1)", border: `1px solid ${C.gold}22`,
+              ...font.mono, fontSize: 11, color: C.gold,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{
+                display: "inline-block", width: 8, height: 8, borderRadius: "50%",
+                background: provisioningStatus === "error" ? "#ff4444" : C.gold,
+                animation: provisioningStatus !== "error" ? "pulse 1.5s infinite" : "none",
+              }} />
+              {provisioningStatus === "provisioning" && "Setting up your workspace..."}
+              {provisioningStatus === "starting" && "Workspace created. Waiting for agent to connect..."}
+              {provisioningStatus === "ready" && "Ready! Opening terminal..."}
+              {provisioningStatus === "error" && "Error provisioning. Opening Coder directly..."}
+              <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+            </div>
+          )}
+        </>
       )}
 
       {/* Auth modal — shown when user has no API key */}

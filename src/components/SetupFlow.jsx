@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace, getWorkspaceStatus } from "../api";
 
 
 const C = {
@@ -147,9 +147,17 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
     setTerminalLoading(true);
     try {
-      // Ensure workspace exists (creates user + workspace on demand), then open terminal
       const res = await ensureWorkspace(githubToken, orgSlug);
-      window.open(res.terminal_url, "_blank");
+      const terminalUrl = res.terminal_url;
+      // Poll for readiness
+      for (let i = 0; i < 30; i++) {
+        try {
+          const status = await getWorkspaceStatus(githubToken, orgSlug);
+          if (status.ready) { window.open(terminalUrl, "_blank"); setTerminalLoading(false); return; }
+        } catch {}
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      window.open(terminalUrl, "_blank");
     } catch {
       window.open(hostingInfo.coder_url, "_blank");
     } finally {

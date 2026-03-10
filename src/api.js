@@ -120,6 +120,10 @@ export async function ensureWorkspace(token, slug) {
   return request("POST", `/api/hosting/workspace/${encodeURIComponent(slug)}`, { token });
 }
 
+export async function getWorkspaceStatus(token, slug) {
+  return request("GET", `/api/hosting/workspace-status/${encodeURIComponent(slug)}`, { token });
+}
+
 export async function getHostingStatus(token, slug) {
   return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
 }
