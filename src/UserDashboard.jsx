@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
-import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, getWorkspaceStatus, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
+import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
 
 /** Write a branded loading page into a blank popup tab */
 function writeLoadingPage(w, message = "Preparing your workspace...") {
@@ -524,51 +524,45 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
     // Open window synchronously in click handler to avoid popup blocker.
     // Any window.open after an await gets blocked by browsers.
     const w = window.open("", "_blank");
-    writeLoadingPage(w, "Connecting to your workspace...");
+    writeLoadingPage(w, "Preparing your workspace...");
     setTerminalLoading(true);
     setProvisioningStatus("provisioning");
     try {
       const res = await ensureWorkspace(token, org.slug);
       const terminalUrl = res.terminal_url;
+      const coderUrl = res.coder_url || org.hosting_coder_url;
 
       if (res.status === "exists") {
-        updateLoadingPage(w, "Workspace ready. Opening terminal...");
+        updateLoadingPage(w, "Workspace ready — sign in with GitHub if prompted.");
         w.location.href = terminalUrl;
         setProvisioningStatus(null);
         setTerminalLoading(false);
         return;
       }
 
-      // New workspace — poll for readiness
-      setProvisioningStatus("starting");
-      updateLoadingPage(w, "Starting workspace... this takes about a minute.");
-      const maxAttempts = 30;
-      for (let i = 0; i < maxAttempts; i++) {
-        try {
-          const status = await getWorkspaceStatus(token, org.slug);
-          if (status.ready) {
-            updateLoadingPage(w, "Workspace ready. Opening terminal...");
-            w.location.href = terminalUrl;
-            setProvisioningStatus(null);
-            setTerminalLoading(false);
-            return;
-          }
-        } catch {}
-        if (i === 5) updateLoadingPage(w, "Building workspace environment...");
-        else if (i === 15) updateLoadingPage(w, "Almost ready...");
-        await new Promise(r => setTimeout(r, 2000));
+      if (res.status === "created") {
+        // New workspace needs ~60s to boot. Redirect to terminal URL —
+        // user authenticates via GitHub OAuth while workspace starts.
+        setProvisioningStatus("starting");
+        updateLoadingPage(w, "Workspace created! Starting up — sign in with GitHub when Coder opens.");
+        await new Promise(r => setTimeout(r, 3000));
+        w.location.href = terminalUrl;
+        setProvisioningStatus(null);
+        setTerminalLoading(false);
+        return;
       }
 
-      // Timeout — open anyway
-      updateLoadingPage(w, "Opening workspace...");
-      w.location.href = terminalUrl;
+      // Error from API
+      setProvisioningStatus("error");
+      updateLoadingPage(w, "Something went wrong. Opening Coder...");
+      w.location.href = coderUrl;
     } catch (e) {
       setProvisioningStatus("error");
-      updateLoadingPage(w, "Redirecting to Coder...");
+      updateLoadingPage(w, "Could not create workspace. Opening Coder...");
       w.location.href = org.hosting_workspace_url || org.hosting_coder_url;
     } finally {
       setTerminalLoading(false);
-      setTimeout(() => setProvisioningStatus(null), 3000);
+      setTimeout(() => setProvisioningStatus(null), 5000);
     }
   };
 
@@ -656,10 +650,10 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
                 background: provisioningStatus === "error" ? "#ff4444" : C.gold,
                 animation: provisioningStatus !== "error" ? "pulse 1.5s infinite" : "none",
               }} />
-              {provisioningStatus === "provisioning" && "Setting up your workspace... a new tab will open when ready."}
-              {provisioningStatus === "starting" && "Workspace created. Starting up — this takes about a minute."}
+              {provisioningStatus === "provisioning" && "Preparing workspace... a new tab will open shortly."}
+              {provisioningStatus === "starting" && "Workspace created. Opening Coder — sign in with GitHub."}
               {provisioningStatus === "ready" && "Ready! Opening terminal..."}
-              {provisioningStatus === "error" && "Error provisioning. Opening Coder directly..."}
+              {provisioningStatus === "error" && "Something went wrong. Check the new tab."}
               <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
             </div>
           )}

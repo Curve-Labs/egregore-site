@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace, getWorkspaceStatus, reportInviteEvent } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace, reportInviteEvent } from "../api";
 
 
 const C = {
@@ -171,6 +171,8 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
   const [terminalLoading, setTerminalLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("");
 
+  const [workspaceError, setWorkspaceError] = useState(null);
+
   const handleHostedClick = async () => {
     if (!orgSlug || !githubToken) {
       window.open(hostingInfo.coder_url, "_blank");
@@ -178,48 +180,37 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
     // Open window synchronously to avoid popup blocker
     const w = window.open("", "_blank");
-    writeLoadingPage(w, "Connecting to your workspace...");
+    writeLoadingPage(w, "Preparing your workspace...");
     setTerminalLoading(true);
-    setLoadingStatus("Connecting to workspace...");
+    setLoadingStatus("Preparing workspace...");
+    setWorkspaceError(null);
     try {
       const res = await ensureWorkspace(githubToken, orgSlug);
       const terminalUrl = res.terminal_url;
+      const coderUrl = res.coder_url || hostingInfo.coder_url;
+
       if (res.status === "exists") {
-        updateLoadingPage(w, "Workspace ready. Opening terminal...");
-        setLoadingStatus("Opening terminal...");
+        updateLoadingPage(w, "Workspace ready — sign in with GitHub if prompted.");
+        setLoadingStatus("Opening workspace...");
         w.location.href = terminalUrl;
-        setTerminalLoading(false);
-        setLoadingStatus("");
-        return;
+      } else if (res.status === "created") {
+        // New workspace needs ~60s to boot. Redirect to Coder — user logs in
+        // via GitHub OAuth while workspace starts. By the time they're in,
+        // the workspace will be ready.
+        updateLoadingPage(w, "Workspace created! Starting up — sign in with GitHub when Coder opens.");
+        setLoadingStatus("Workspace created — opening Coder...");
+        await new Promise(r => setTimeout(r, 3000));
+        w.location.href = terminalUrl;
+      } else {
+        // Error from API
+        updateLoadingPage(w, "Something went wrong. Redirecting to Coder...");
+        setWorkspaceError(res.detail || "Failed to create workspace");
+        w.location.href = coderUrl;
       }
-      // New workspace — poll for readiness
-      updateLoadingPage(w, "Starting workspace... this takes about a minute.");
-      setLoadingStatus("Starting workspace...");
-      for (let i = 0; i < 30; i++) {
-        try {
-          const status = await getWorkspaceStatus(githubToken, orgSlug);
-          if (status.ready) {
-            updateLoadingPage(w, "Workspace ready. Opening terminal...");
-            setLoadingStatus("Opening terminal...");
-            w.location.href = terminalUrl;
-            setTerminalLoading(false);
-            setLoadingStatus("");
-            return;
-          }
-        } catch {}
-        if (i === 5) {
-          updateLoadingPage(w, "Building workspace environment...");
-          setLoadingStatus("Building environment...");
-        } else if (i === 15) {
-          updateLoadingPage(w, "Almost ready...");
-          setLoadingStatus("Almost ready...");
-        }
-        await new Promise(r => setTimeout(r, 2000));
-      }
-      updateLoadingPage(w, "Opening workspace...");
-      w.location.href = terminalUrl;
-    } catch {
-      updateLoadingPage(w, "Redirecting to Coder...");
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || "Could not reach workspace service";
+      setWorkspaceError(detail);
+      updateLoadingPage(w, "Could not create workspace. Opening Coder...");
       w.location.href = hostingInfo.coder_url;
     } finally {
       setTerminalLoading(false);
@@ -283,9 +274,14 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
           </p>
         </div>
       )}
-      {!terminalLoading && (
+      {workspaceError && (
+        <div style={{ padding: "0.5rem 0.75rem", marginBottom: "0.75rem", border: `1px solid ${C.crimson}`, ...font.mono, fontSize: "0.65rem", color: C.crimson }}>
+          {workspaceError}
+        </div>
+      )}
+      {!terminalLoading && !workspaceError && (
         <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1.5rem" }}>
-          Your workspace is ready. Egregore auto-starts when you open the terminal.
+          Opens in a new tab. Sign in with GitHub if prompted.
         </p>
       )}
 
@@ -410,16 +406,16 @@ function HostedGetStarted({ coderUrl, orgSlug, githubToken, setupToken }) {
     }
     // Open window synchronously to avoid popup blocker
     const w = window.open("", "_blank");
-    writeLoadingPage(w, "Connecting to your workspace...");
+    writeLoadingPage(w, "Opening your workspace — sign in with GitHub if prompted.");
     setTerminalLoading(true);
-    setLoadingStatus("Connecting to workspace...");
+    setLoadingStatus("Opening workspace...");
     try {
       const { url } = await getTerminalUrl(githubToken, orgSlug);
-      updateLoadingPage(w, "Workspace ready. Opening terminal...");
+      updateLoadingPage(w, "Workspace ready — sign in with GitHub if prompted.");
       setLoadingStatus("Opening terminal...");
       w.location.href = url;
     } catch {
-      updateLoadingPage(w, "Redirecting to Coder...");
+      updateLoadingPage(w, "Redirecting to Coder — sign in with GitHub.");
       w.location.href = coderUrl;
     } finally {
       setTerminalLoading(false);
@@ -474,7 +470,7 @@ function HostedGetStarted({ coderUrl, orgSlug, githubToken, setupToken }) {
       )}
       {!terminalLoading && (
         <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
-          Your workspace is ready. Egregore auto-starts when you open the terminal.
+          Opens in a new tab. Sign in with GitHub if prompted.
         </p>
       )}
 
