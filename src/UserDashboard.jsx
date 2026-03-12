@@ -2,6 +2,36 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { C, font } from "./tokens";
 import { getGitHubAuthUrl, exchangeCode, getMyEgregores, removeMember, ensureWorkspace, getWorkspaceStatus, enableHosting, getHostingStatus, deleteOrg, getUserKeys, updateUserKeys } from "./api";
 
+/** Write a branded loading page into a blank popup tab */
+function writeLoadingPage(w, message = "Preparing your workspace...") {
+  if (!w || w.closed) return;
+  try {
+    w.document.open();
+    w.document.write(`<!DOCTYPE html><html><head><title>Egregore</title><style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
+      body { margin: 0; background: #F4F1EA; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Space Mono', monospace; color: #1a1714; }
+      .spinner { width: 24px; height: 24px; border: 2px solid #d4cfc5; border-top-color: #7A0F1B; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1.5rem; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .msg { font-size: 0.8rem; color: #8a8578; text-align: center; max-width: 300px; line-height: 1.6; }
+      .brand { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: #d4cfc5; position: fixed; bottom: 2rem; }
+    </style></head><body>
+      <div class="spinner"></div>
+      <div class="msg" id="status">${message}</div>
+      <div class="brand">EGREGORE</div>
+    </body></html>`);
+    w.document.close();
+  } catch { /* cross-origin — tab already navigated, ignore */ }
+}
+
+/** Update the status message in a loading page tab */
+function updateLoadingPage(w, message) {
+  if (!w || w.closed) return;
+  try {
+    const el = w.document.getElementById("status");
+    if (el) el.textContent = message;
+  } catch { /* cross-origin, ignore */ }
+}
+
 // ─── Shared styles ─────────────────────────────────────────────────
 
 const s = {
@@ -494,6 +524,7 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
     // Open window synchronously in click handler to avoid popup blocker.
     // Any window.open after an await gets blocked by browsers.
     const w = window.open("", "_blank");
+    writeLoadingPage(w, "Connecting to your workspace...");
     setTerminalLoading(true);
     setProvisioningStatus("provisioning");
     try {
@@ -501,6 +532,7 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
       const terminalUrl = res.terminal_url;
 
       if (res.status === "exists") {
+        updateLoadingPage(w, "Workspace ready. Opening terminal...");
         w.location.href = terminalUrl;
         setProvisioningStatus(null);
         setTerminalLoading(false);
@@ -509,24 +541,30 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
 
       // New workspace — poll for readiness
       setProvisioningStatus("starting");
+      updateLoadingPage(w, "Starting workspace... this takes about a minute.");
       const maxAttempts = 30;
       for (let i = 0; i < maxAttempts; i++) {
         try {
           const status = await getWorkspaceStatus(token, org.slug);
           if (status.ready) {
+            updateLoadingPage(w, "Workspace ready. Opening terminal...");
             w.location.href = terminalUrl;
             setProvisioningStatus(null);
             setTerminalLoading(false);
             return;
           }
         } catch {}
+        if (i === 5) updateLoadingPage(w, "Building workspace environment...");
+        else if (i === 15) updateLoadingPage(w, "Almost ready...");
         await new Promise(r => setTimeout(r, 2000));
       }
 
       // Timeout — open anyway
+      updateLoadingPage(w, "Opening workspace...");
       w.location.href = terminalUrl;
     } catch (e) {
       setProvisioningStatus("error");
+      updateLoadingPage(w, "Redirecting to Coder...");
       w.location.href = org.hosting_workspace_url || org.hosting_coder_url;
     } finally {
       setTerminalLoading(false);
@@ -618,8 +656,8 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
                 background: provisioningStatus === "error" ? "#ff4444" : C.gold,
                 animation: provisioningStatus !== "error" ? "pulse 1.5s infinite" : "none",
               }} />
-              {provisioningStatus === "provisioning" && "Setting up your workspace..."}
-              {provisioningStatus === "starting" && "Workspace created. Waiting for agent to connect..."}
+              {provisioningStatus === "provisioning" && "Setting up your workspace... a new tab will open when ready."}
+              {provisioningStatus === "starting" && "Workspace created. Starting up — this takes about a minute."}
               {provisioningStatus === "ready" && "Ready! Opening terminal..."}
               {provisioningStatus === "error" && "Error provisioning. Opening Coder directly..."}
               <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>

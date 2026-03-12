@@ -120,6 +120,36 @@ const KeyIcon = () => (
   </svg>
 );
 
+/** Write a branded loading page into a blank popup tab */
+function writeLoadingPage(w, message = "Preparing your workspace...") {
+  if (!w || w.closed) return;
+  try {
+    w.document.open();
+    w.document.write(`<!DOCTYPE html><html><head><title>Egregore</title><style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
+      body { margin: 0; background: #F4F1EA; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Space Mono', monospace; color: #1a1714; }
+      .spinner { width: 24px; height: 24px; border: 2px solid #d4cfc5; border-top-color: #7A0F1B; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1.5rem; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .msg { font-size: 0.8rem; color: #8a8578; text-align: center; max-width: 300px; line-height: 1.6; }
+      .brand { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: #d4cfc5; position: fixed; bottom: 2rem; }
+    </style></head><body>
+      <div class="spinner"></div>
+      <div class="msg" id="status">${message}</div>
+      <div class="brand">EGREGORE</div>
+    </body></html>`);
+    w.document.close();
+  } catch { /* cross-origin — tab already navigated, ignore */ }
+}
+
+/** Update the status message in a loading page tab */
+function updateLoadingPage(w, message) {
+  if (!w || w.closed) return;
+  try {
+    const el = w.document.getElementById("status");
+    if (el) el.textContent = message;
+  } catch { /* cross-origin, ignore */ }
+}
+
 function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get started" }) {
   const [hostingInfo, setHostingInfo] = useState(null);
   const [showLocal, setShowLocal] = useState(false);
@@ -139,6 +169,7 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
   }, [orgSlug, githubToken]);
 
   const [terminalLoading, setTerminalLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("");
 
   const handleHostedClick = async () => {
     if (!orgSlug || !githubToken) {
@@ -147,28 +178,52 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
     // Open window synchronously to avoid popup blocker
     const w = window.open("", "_blank");
+    writeLoadingPage(w, "Connecting to your workspace...");
     setTerminalLoading(true);
+    setLoadingStatus("Connecting to workspace...");
     try {
       const res = await ensureWorkspace(githubToken, orgSlug);
       const terminalUrl = res.terminal_url;
       if (res.status === "exists") {
+        updateLoadingPage(w, "Workspace ready. Opening terminal...");
+        setLoadingStatus("Opening terminal...");
         w.location.href = terminalUrl;
         setTerminalLoading(false);
+        setLoadingStatus("");
         return;
       }
       // New workspace — poll for readiness
+      updateLoadingPage(w, "Starting workspace... this takes about a minute.");
+      setLoadingStatus("Starting workspace...");
       for (let i = 0; i < 30; i++) {
         try {
           const status = await getWorkspaceStatus(githubToken, orgSlug);
-          if (status.ready) { w.location.href = terminalUrl; setTerminalLoading(false); return; }
+          if (status.ready) {
+            updateLoadingPage(w, "Workspace ready. Opening terminal...");
+            setLoadingStatus("Opening terminal...");
+            w.location.href = terminalUrl;
+            setTerminalLoading(false);
+            setLoadingStatus("");
+            return;
+          }
         } catch {}
+        if (i === 5) {
+          updateLoadingPage(w, "Building workspace environment...");
+          setLoadingStatus("Building environment...");
+        } else if (i === 15) {
+          updateLoadingPage(w, "Almost ready...");
+          setLoadingStatus("Almost ready...");
+        }
         await new Promise(r => setTimeout(r, 2000));
       }
+      updateLoadingPage(w, "Opening workspace...");
       w.location.href = terminalUrl;
     } catch {
+      updateLoadingPage(w, "Redirecting to Coder...");
       w.location.href = hostingInfo.coder_url;
     } finally {
       setTerminalLoading(false);
+      setLoadingStatus("");
     }
   };
 
@@ -218,11 +273,21 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
         onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
       >
         <BrowserIcon />
-        {terminalLoading ? "Connecting..." : "Open workspace"}
+        {terminalLoading ? (loadingStatus || "Connecting...") : "Open workspace"}
       </button>
-      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1.5rem" }}>
-        Your workspace is ready. Egregore auto-starts when you open the terminal.
-      </p>
+      {terminalLoading && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+          <SmallSpinner />
+          <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, margin: 0 }}>
+            {loadingStatus || "Connecting..."} A new tab will open when ready.
+          </p>
+        </div>
+      )}
+      {!terminalLoading && (
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1.5rem" }}>
+          Your workspace is ready. Egregore auto-starts when you open the terminal.
+        </p>
+      )}
 
       {/* Optional: API key (collapsed by default) */}
       <button
@@ -336,20 +401,29 @@ function HostedGetStarted({ coderUrl, orgSlug, githubToken, setupToken }) {
   const [keyError, setKeyError] = useState(null);
   const [keySaved, setKeySaved] = useState(false);
   const [terminalLoading, setTerminalLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("");
 
   const handleOpenWorkspace = async () => {
     if (!orgSlug || !githubToken) {
       window.open(coderUrl, "_blank");
       return;
     }
+    // Open window synchronously to avoid popup blocker
+    const w = window.open("", "_blank");
+    writeLoadingPage(w, "Connecting to your workspace...");
     setTerminalLoading(true);
+    setLoadingStatus("Connecting to workspace...");
     try {
       const { url } = await getTerminalUrl(githubToken, orgSlug);
-      window.open(url, "_blank");
+      updateLoadingPage(w, "Workspace ready. Opening terminal...");
+      setLoadingStatus("Opening terminal...");
+      w.location.href = url;
     } catch {
-      window.open(coderUrl, "_blank");
+      updateLoadingPage(w, "Redirecting to Coder...");
+      w.location.href = coderUrl;
     } finally {
       setTerminalLoading(false);
+      setLoadingStatus("");
     }
   };
 
@@ -388,11 +462,21 @@ function HostedGetStarted({ coderUrl, orgSlug, githubToken, setupToken }) {
         onMouseLeave={(e) => { e.currentTarget.style.opacity = terminalLoading ? "0.7" : "1"; }}
       >
         <BrowserIcon />
-        {terminalLoading ? "Connecting..." : "Open workspace"}
+        {terminalLoading ? (loadingStatus || "Connecting...") : "Open workspace"}
       </button>
-      <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
-        Your workspace is ready. Egregore auto-starts when you open the terminal.
-      </p>
+      {terminalLoading && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+          <SmallSpinner />
+          <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, margin: 0 }}>
+            {loadingStatus || "Connecting..."} A new tab will open when ready.
+          </p>
+        </div>
+      )}
+      {!terminalLoading && (
+        <p style={{ ...font.mono, fontSize: "0.65rem", color: C.muted, marginBottom: "1rem" }}>
+          Your workspace is ready. Egregore auto-starts when you open the terminal.
+        </p>
+      )}
 
       {/* Optional: API key (collapsed by default) */}
       <p style={{ ...font.mono, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: C.muted, marginBottom: "0.75rem" }}>
