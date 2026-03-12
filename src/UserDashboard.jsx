@@ -533,7 +533,7 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
       const coderUrl = res.coder_url || org.hosting_coder_url;
 
       if (res.status === "exists") {
-        updateLoadingPage(w, "Workspace ready — sign in with GitHub if prompted.");
+        updateLoadingPage(w, "Workspace ready — opening terminal...");
         w.location.href = terminalUrl;
         setProvisioningStatus(null);
         setTerminalLoading(false);
@@ -542,9 +542,9 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
 
       if (res.status === "created") {
         // New workspace needs ~60s to boot. Redirect to terminal URL —
-        // user authenticates via GitHub OAuth while workspace starts.
+        // auth is handled via session token cookie (no OAuth needed).
         setProvisioningStatus("starting");
-        updateLoadingPage(w, "Workspace created! Starting up — sign in with GitHub when Coder opens.");
+        updateLoadingPage(w, "Workspace created! Starting up...");
         await new Promise(r => setTimeout(r, 3000));
         w.location.href = terminalUrl;
         setProvisioningStatus(null);
