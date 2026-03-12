@@ -491,45 +491,43 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
   const [provisioningStatus, setProvisioningStatus] = useState(null); // null | "provisioning" | "starting" | "ready" | "error"
 
   const launchWorkspace = async () => {
+    // Open window synchronously in click handler to avoid popup blocker.
+    // Any window.open after an await gets blocked by browsers.
+    const w = window.open("", "_blank");
     setTerminalLoading(true);
     setProvisioningStatus("provisioning");
     try {
       const res = await ensureWorkspace(token, org.slug);
       const terminalUrl = res.terminal_url;
 
-      // If workspace already exists, open immediately — don't poll.
-      // Polling delays window.open past the click event context,
-      // causing browsers to block it as a popup.
       if (res.status === "exists") {
-        setProvisioningStatus("ready");
-        window.open(terminalUrl, "_blank");
-        setTerminalLoading(false);
+        w.location.href = terminalUrl;
         setProvisioningStatus(null);
+        setTerminalLoading(false);
         return;
       }
 
       // New workspace — poll for readiness
       setProvisioningStatus("starting");
-      const maxAttempts = 30; // ~60 seconds
+      const maxAttempts = 30;
       for (let i = 0; i < maxAttempts; i++) {
         try {
           const status = await getWorkspaceStatus(token, org.slug);
           if (status.ready) {
-            setProvisioningStatus("ready");
-            window.open(terminalUrl, "_blank");
-            setTerminalLoading(false);
+            w.location.href = terminalUrl;
             setProvisioningStatus(null);
+            setTerminalLoading(false);
             return;
           }
         } catch {}
         await new Promise(r => setTimeout(r, 2000));
       }
 
-      // Timeout — open anyway, Coder will show its own loading
-      window.open(terminalUrl, "_blank");
+      // Timeout — open anyway
+      w.location.href = terminalUrl;
     } catch (e) {
       setProvisioningStatus("error");
-      window.open(org.hosting_workspace_url || org.hosting_coder_url, "_blank");
+      w.location.href = org.hosting_workspace_url || org.hosting_coder_url;
     } finally {
       setTerminalLoading(false);
       setTimeout(() => setProvisioningStatus(null), 3000);

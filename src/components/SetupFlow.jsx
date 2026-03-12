@@ -145,13 +145,14 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
       window.open(hostingInfo.coder_url, "_blank");
       return;
     }
+    // Open window synchronously to avoid popup blocker
+    const w = window.open("", "_blank");
     setTerminalLoading(true);
     try {
       const res = await ensureWorkspace(githubToken, orgSlug);
       const terminalUrl = res.terminal_url;
-      // If workspace already exists, open immediately — avoid popup blocker
       if (res.status === "exists") {
-        window.open(terminalUrl, "_blank");
+        w.location.href = terminalUrl;
         setTerminalLoading(false);
         return;
       }
@@ -159,13 +160,13 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
       for (let i = 0; i < 30; i++) {
         try {
           const status = await getWorkspaceStatus(githubToken, orgSlug);
-          if (status.ready) { window.open(terminalUrl, "_blank"); setTerminalLoading(false); return; }
+          if (status.ready) { w.location.href = terminalUrl; setTerminalLoading(false); return; }
         } catch {}
         await new Promise(r => setTimeout(r, 2000));
       }
-      window.open(terminalUrl, "_blank");
+      w.location.href = terminalUrl;
     } catch {
-      window.open(hostingInfo.coder_url, "_blank");
+      w.location.href = hostingInfo.coder_url;
     } finally {
       setTerminalLoading(false);
     }
