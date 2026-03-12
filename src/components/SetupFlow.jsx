@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace, getWorkspaceStatus } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, ensureWorkspace, getWorkspaceStatus, reportInviteEvent } from "../api";
 
 
 const C = {
@@ -149,7 +149,13 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     try {
       const res = await ensureWorkspace(githubToken, orgSlug);
       const terminalUrl = res.terminal_url;
-      // Poll for readiness
+      // If workspace already exists, open immediately — avoid popup blocker
+      if (res.status === "exists") {
+        window.open(terminalUrl, "_blank");
+        setTerminalLoading(false);
+        return;
+      }
+      // New workspace — poll for readiness
       for (let i = 0; i < 30; i++) {
         try {
           const status = await getWorkspaceStatus(githubToken, orgSlug);
@@ -1518,7 +1524,10 @@ function InviteLanding({ inviteToken, onAuth }) {
   useEffect(() => {
     getInviteInfo(inviteToken)
       .then(setInfo)
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        setError(err.message);
+        reportInviteEvent(inviteToken, "peek_failed", err.message);
+      });
   }, [inviteToken]);
 
   if (error) {
@@ -1593,7 +1602,11 @@ function InviteAccept({ token, user, inviteToken }) {
         setResult(data);
         setStatus("done");
       })
-      .catch((err) => { setError(err.message); setStatus("error"); });
+      .catch((err) => {
+        setError(err.message);
+        setStatus("error");
+        reportInviteEvent(inviteToken, "accept_failed", err.message);
+      });
   };
 
   useEffect(() => { doAccept(); }, []);

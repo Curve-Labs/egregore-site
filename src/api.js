@@ -156,3 +156,24 @@ export async function getAdminTelemetry(token, filters = {}) {
   const qs = params.toString();
   return request("GET", `/api/admin/telemetry${qs ? `?${qs}` : ""}`, { token });
 }
+
+// ─── Invite Observability ────────────────────────────────────────
+
+export function reportInviteEvent(inviteToken, step, errorMessage, metadata = {}) {
+  try {
+    fetch(`${API_URL}/api/invite-events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        invite_token: inviteToken,
+        step,
+        status: "error",
+        source: "website",
+        error_message: errorMessage,
+        metadata: { user_agent: navigator.userAgent, ...metadata },
+      }),
+    }).catch(() => {}); // Fire-and-forget
+  } catch {
+    // Never let reporting break the UI
+  }
+}

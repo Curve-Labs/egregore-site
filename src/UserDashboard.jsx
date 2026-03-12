@@ -497,7 +497,18 @@ function OrgCard({ org, token, currentUser, onRefresh }) {
       const res = await ensureWorkspace(token, org.slug);
       const terminalUrl = res.terminal_url;
 
-      // Poll for workspace readiness before opening
+      // If workspace already exists, open immediately — don't poll.
+      // Polling delays window.open past the click event context,
+      // causing browsers to block it as a popup.
+      if (res.status === "exists") {
+        setProvisioningStatus("ready");
+        window.open(terminalUrl, "_blank");
+        setTerminalLoading(false);
+        setProvisioningStatus(null);
+        return;
+      }
+
+      // New workspace — poll for readiness
       setProvisioningStatus("starting");
       const maxAttempts = 30; // ~60 seconds
       for (let i = 0; i < maxAttempts; i++) {
