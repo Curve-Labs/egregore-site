@@ -8,6 +8,7 @@ import {
   getAdminTelemetry,
   getAdminHealth,
   removeMember,
+  adminDeleteOrg,
 } from "./api";
 
 const ADMIN_USERS = ["oguzhan", "fcdagdelen", "djserveth"];
@@ -449,12 +450,112 @@ function AdminRemoveMemberDialog({ member, slug, token, onClose, onRemoved }) {
   );
 }
 
+// ─── Delete Org Dialog ────────────────────────────────────────────
+
+function AdminDeleteOrgDialog({ slug, token, onClose, onDeleted }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminDeleteOrg(token, slug);
+      setResult(res);
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }} onClick={onClose}>
+      <div style={{
+        background: C.termBg, border: `1px solid ${C.crimson}`, borderRadius: 8,
+        padding: 24, maxWidth: 420, width: "90%", ...font.mono, fontSize: 13,
+      }} onClick={(e) => e.stopPropagation()}>
+        {result ? (
+          <>
+            <div style={{ ...font.ibmPlex, fontSize: 15, fontWeight: 700, color: "#4a4", marginBottom: 16 }}>
+              Deleted
+            </div>
+            <div style={{ color: C.parchment, marginBottom: 12 }}>
+              <strong style={{ color: C.gold }}>{slug}</strong> has been removed.
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
+              {(result.steps || []).map((s, i) => <div key={i}>{s}</div>)}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={onDeleted} style={{
+                ...font.mono, background: "rgba(200,165,90,0.15)", color: C.gold, border: `1px solid ${C.gold}`,
+                padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+              }}>Back to overview</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ ...font.ibmPlex, fontSize: 15, fontWeight: 700, color: C.crimson, marginBottom: 16 }}>
+              Delete Egregore
+            </div>
+            <div style={{ color: C.parchment, marginBottom: 12 }}>
+              This will permanently delete <strong style={{ color: C.gold }}>{slug}</strong> and all associated data:
+            </div>
+            <ul style={{ color: C.muted, fontSize: 12, margin: "0 0 16px 16px", padding: 0 }}>
+              <li>All memberships</li>
+              <li>API keys</li>
+              <li>Telemetry events</li>
+              <li>Neo4j Org node</li>
+            </ul>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>
+                Type <strong style={{ color: C.parchment }}>{slug}</strong> to confirm:
+              </div>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={slug}
+                style={{
+                  width: "100%", background: "rgba(200,165,90,0.05)", border: `1px solid rgba(200,165,90,0.2)`,
+                  color: C.parchment, ...font.mono, fontSize: 13, padding: "6px 10px", boxSizing: "border-box",
+                }}
+              />
+            </div>
+            {error && <div style={{ color: C.crimson, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={onClose} disabled={loading} style={{
+                ...font.mono, background: "transparent", color: C.muted, border: `1px solid ${C.muted}`,
+                padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+              }}>Cancel</button>
+              <button
+                onClick={handleDelete}
+                disabled={loading || confirmText !== slug}
+                style={{
+                  ...font.mono, background: C.crimson, color: "#fff", border: "none",
+                  padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 12,
+                  opacity: (loading || confirmText !== slug) ? 0.4 : 1,
+                }}
+              >{loading ? "Deleting..." : "Delete Egregore"}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Org Detail View ──────────────────────────────────────────────
 
 function OrgDetailView({ token, slug, onBack }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [removingMember, setRemovingMember] = useState(null);
+  const [showDeleteOrg, setShowDeleteOrg] = useState(false);
 
   const fetchData = useCallback(() => {
     if (!slug || !token) return;
@@ -701,6 +802,31 @@ function OrgDetailView({ token, slug, onBack }) {
           </div>
         )}
       </div>
+
+      {/* Delete Egregore */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+        <button
+          onClick={() => setShowDeleteOrg(true)}
+          style={{
+            ...font.mono, background: "transparent", color: C.crimson,
+            border: `1px solid ${C.crimson}`, padding: "6px 16px",
+            borderRadius: 4, cursor: "pointer", fontSize: 11,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(180,40,40,0.15)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+        >
+          Delete Egregore
+        </button>
+      </div>
+
+      {showDeleteOrg && (
+        <AdminDeleteOrgDialog
+          slug={slug}
+          token={token}
+          onClose={() => setShowDeleteOrg(false)}
+          onDeleted={() => { setShowDeleteOrg(false); onBack(); }}
+        />
+      )}
     </div>
   );
 }

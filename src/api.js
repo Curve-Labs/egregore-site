@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
+const API_URL = import.meta.env.VITE_API_URL || (
+  window.location.hostname === "localhost" ? "" : "https://egregore-production-55f2.up.railway.app"
+);
 const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
 
 const GITHUB_SCOPES = {
@@ -104,6 +106,10 @@ export async function removeMember(token, slug, username, mode = "revoke") {
   return request("DELETE", `/api/org/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}?mode=${mode}`, { token });
 }
 
+export async function adminDeleteOrg(token, slug) {
+  return request("DELETE", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
+}
+
 export async function getHostingInfo(token, slug) {
   return request("GET", `/api/hosting/info/${encodeURIComponent(slug)}`, { token });
 }
@@ -129,6 +135,41 @@ export async function updateUserKeys(token, keys) {
 export async function deleteUserKey(token, keyName) {
   return request("DELETE", `/api/user/keys/${encodeURIComponent(keyName)}`, { token });
 }
+
+// ─── Graph Queries ──────────────────────────────────────────────
+
+export async function graphQuery(apiKey, statement, parameters = {}) {
+  const resp = await fetch(`${API_URL}/api/graph/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({ statement, parameters }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data;
+}
+
+export async function graphBatch(apiKey, queries) {
+  const resp = await fetch(`${API_URL}/api/graph/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({ queries }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data;
+}
+
+export async function getActivityDashboard(apiKey, username) {
+  const resp = await fetch(`${API_URL}/api/activity/dashboard?github_username=${encodeURIComponent(username)}`, {
+    headers: { "Authorization": `Bearer ${apiKey}` },
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data;
+}
+
+// ─── Admin ──────────────────────────────────────────────────────
 
 export async function getAdminTelemetry(token, filters = {}) {
   const params = new URLSearchParams();
