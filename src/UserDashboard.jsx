@@ -147,7 +147,7 @@ function useAuth() {
   return { token, user, error, loading, logout };
 }
 
-// ─── Graph data hook ────────────────────────────────────────────
+// ─── Graph data hook (people + knowledge only) ─────────────────
 
 const GRAPH_QUERIES = [
   { // 0: people
@@ -170,50 +170,10 @@ const GRAPH_QUERIES = [
              p.name AS author, q.id AS quest
       ORDER BY a.created DESC LIMIT 30`,
   },
-  { // 2: quests
-    statement: `
-      MATCH (q:Quest)
-      OPTIONAL MATCH (a:Artifact)-[:PART_OF]->(q)
-      OPTIONAL MATCH (s:Session)-[:INVOLVES]->(q)
-      OPTIONAL MATCH (s)-[:STARTED_BY]->(p:Person)
-      WITH q, count(DISTINCT a) AS artifacts, collect(DISTINCT p.name) AS people, max(a.created) AS lastActivity
-      RETURN q.id AS id, q.title AS title, q.status AS status,
-             q.description AS description, artifacts, people, lastActivity
-      ORDER BY CASE q.status WHEN 'active' THEN 0 ELSE 1 END, lastActivity DESC`,
-  },
-  { // 3: todos
-    statement: `
-      MATCH (t:Todo)-[:BY]->(p:Person)
-      OPTIONAL MATCH (t)-[:PART_OF]->(q:Quest)
-      RETURN t.id AS id, t.text AS text, t.status AS status,
-             t.created AS created, t.priority AS priority,
-             p.name AS by, q.id AS quest
-      ORDER BY t.created DESC LIMIT 50`,
-  },
-  { // 4: handoffs
-    statement: `
-      MATCH (s:Session)
-      WHERE s.handoffStatus IS NOT NULL
-      OPTIONAL MATCH (s)-[:STARTED_BY]->(p:Person)
-      OPTIONAL MATCH (s)-[:HANDED_TO]->(t:Person)
-      WITH s, p, collect(DISTINCT t.name) AS handedToList
-      RETURN s.id AS id, s.topic AS topic, s.summary AS summary,
-             s.handoffStatus AS status, s.date AS date,
-             p.name AS author, handedToList
-      ORDER BY s.date DESC LIMIT 30`,
-  },
-  { // 5: sessions
-    statement: `
-      MATCH (s:Session)-[:STARTED_BY]->(p:Person)
-      RETURN s.id AS id, s.topic AS topic, s.status AS status,
-             s.date AS date, s.branch AS branch, s.summary AS summary,
-             p.name AS by
-      ORDER BY s.date DESC LIMIT 50`,
-  },
 ];
 
 function useGraphData(apiKey) {
-  const [data, setData] = useState({ people: [], knowledge: [], quests: [], todos: [], handoffs: [], sessions: [] });
+  const [data, setData] = useState({ people: [], knowledge: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const lastFetchRef = useRef(0);
@@ -233,10 +193,6 @@ function useGraphData(apiKey) {
         setData({
           people: toRecords(results[0]),
           knowledge: toRecords(results[1]),
-          quests: toRecords(results[2]),
-          todos: toRecords(results[3]),
-          handoffs: toRecords(results[4]),
-          sessions: toRecords(results[5]),
         });
         setError(null);
         setLoading(false);
@@ -411,12 +367,12 @@ function HomeView({ orgName, graph, activity, org }) {
       .slice(0, 4)
       .map(h => ({
         title: (h.topic || "untitled").toLowerCase(),
-        meta: `${(h.author || "").toLowerCase()} \u00B7 ${h.status}`,
+        meta: `${(h.author || "").toLowerCase()} · ${h.status}`,
         blocked: false,
       }));
   })();
 
-  const questCount = graph.quests.filter(q => q.status === "active").length;
+  const questCount = activity?.quests?.length || 0;
 
   return (
     <div style={styles.content}>
@@ -425,7 +381,7 @@ function HomeView({ orgName, graph, activity, org }) {
         title="home"
         stats={[
           { value: String(graph.knowledge.length || 0), label: "artifacts" },
-          { value: String(graph.quests.length || 0), label: "quests" },
+          { value: String(questCount), label: "quests" },
           { value: String(questCount), label: "active", color: T.green },
         ]}
       />
@@ -640,7 +596,7 @@ function QuestsView({ orgName, quests }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {quests.map((q, i) => {
             const isActive = q.status === "active";
-            const people = (q.people || []).filter(Boolean).join(" \u00B7 ");
+            const people = (q.people || []).filter(Boolean).join(" · ");
             return (
               <div key={i} style={{ ...styles.questCard, borderLeft: `3px solid ${isActive ? T.green : T.muted}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -657,7 +613,8 @@ function QuestsView({ orgName, quests }) {
                 )}
                 <div style={{ display: "flex", gap: 20 }}>
                   <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{q.artifacts || 0} artifacts</span>
-                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{timeAgo(q.lastActivity)} ago</span>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{q.daysSince != null ? `${q.daysSince}d ago` : timeAgo(q.lastActivity)}</span>
+                  {q.score && <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>score: {Math.round(q.score)}</span>}
                   {people && <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{people}</span>}
                 </div>
               </div>
@@ -671,11 +628,12 @@ function QuestsView({ orgName, quests }) {
 
 // ─── Todos View ─────────────────────────────────────────────────
 
-function TodosView({ orgName, todos }) {
-  const [tab, setTab] = useState("open");
-  const open = todos.filter(t => t.status === "open" || t.status === "blocked" || t.status === "deferred");
-  const done = todos.filter(t => t.status === "done");
-  const filtered = tab === "open" ? open : tab === "done" ? done : todos;
+function TodosView({ orgName, todosMerged, pendingQuestions, checkins }) {
+  const active = todosMerged.activeTodoCount || 0;
+  const blocked = todosMerged.blockedCount || 0;
+  const deferred = todosMerged.deferredCount || 0;
+  const staleBlocked = todosMerged.staleBlockedCount || 0;
+  const lastCheckin = todosMerged.lastCheckinDate;
 
   return (
     <div style={styles.content}>
@@ -683,42 +641,71 @@ function TodosView({ orgName, todos }) {
         orgName={orgName}
         title="todos"
         stats={[
-          { value: String(open.length), label: "open", color: T.green },
-          { value: String(done.length), label: "done" },
+          { value: String(active), label: "active", color: T.green },
+          { value: String(blocked), label: "blocked", color: blocked > 0 ? T.red : undefined },
+          { value: String(deferred), label: "deferred" },
         ]}
       />
-      <TabBar tabs={["open", "done", "all"]} active={tab} onChange={setTab} />
       <div style={styles.divider} />
-      {filtered.length === 0 ? <EmptyState text={`no ${tab} todos`} /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map((todo, i) => {
-            const isDone = todo.status === "done";
-            return (
-              <div key={i} style={{
-                ...styles.todoItem,
-                borderLeft: `3px solid ${isDone ? T.muted : T.green}`,
-                opacity: isDone ? 0.6 : 1,
-              }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <span style={{ fontFamily: mono, fontSize: 16, flexShrink: 0, marginTop: -1, color: isDone ? T.green : T.muted }}>
-                    {isDone ? "\u2611" : "\u2610"}
-                  </span>
-                  <span style={{
-                    fontFamily: mono, fontSize: 13, lineHeight: 1.5,
-                    color: isDone ? T.dim : T.text,
-                    textDecoration: isDone ? "line-through" : "none",
-                  }}>{(todo.text || "").toLowerCase()}</span>
-                </div>
-                <div style={{ display: "flex", gap: 16, paddingLeft: 28 }}>
-                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{todo.by}</span>
-                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(todo.created)}</span>
-                  {todo.quest && <span style={{ fontFamily: mono, fontSize: 11, color: T.green }}>{todo.quest}</span>}
-                </div>
-              </div>
-            );
-          })}
+
+      {/* Summary cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ ...styles.card, borderLeft: `3px solid ${T.green}` }}>
+          <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
+            {active} active todos
+          </span>
+          {blocked > 0 && (
+            <span style={{ fontFamily: mono, fontSize: 12, color: T.red }}>
+              {blocked} blocked{staleBlocked > 0 ? ` (${staleBlocked} stale 3+ days)` : ""}
+            </span>
+          )}
+          {deferred > 0 && (
+            <span style={{ fontFamily: mono, fontSize: 12, color: T.amber }}>
+              {deferred} deferred
+            </span>
+          )}
+          <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
+            // last check-in: {lastCheckin ? formatDate(lastCheckin) : "never"}
+          </span>
+          <span style={{ fontFamily: mono, fontSize: 11, color: T.dim, marginTop: 4 }}>
+            // manage todos via /todo in your terminal
+          </span>
         </div>
-      )}
+
+        {/* Pending questions */}
+        {pendingQuestions.length > 0 && (
+          <>
+            <SectionHeader>// pending questions</SectionHeader>
+            {pendingQuestions.map((q, i) => (
+              <div key={i} style={{ ...styles.card, borderLeft: `3px solid ${T.purple}` }}>
+                <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
+                  {(q.topic || "").toLowerCase()}
+                </span>
+                <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
+                  from {q.from} · {timeAgo(q.created)}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Recent check-ins */}
+        {checkins.length > 0 && (
+          <>
+            <SectionHeader>// recent check-ins</SectionHeader>
+            {checkins.map((c, i) => (
+              <div key={i} style={{ ...styles.card, borderLeft: `3px solid ${T.blue}` }}>
+                <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
+                  {(c.summary || "check-in").toLowerCase()}
+                </span>
+                <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
+                  {c.by} · {formatDate(c.date)} · {c.total || 0} items
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -784,13 +771,17 @@ function HandoffsView({ orgName, handoffs }) {
 
 // ─── Activity View ──────────────────────────────────────────────
 
-function ActivityView({ orgName, sessions }) {
+function ActivityView({ orgName, sessions, trends }) {
   const [tab, setTab] = useState("all");
-  const statusColor = { active: T.green, wrapped: T.blue, handed_off: T.amber };
-  const activeSessions = sessions.filter(s => s.status === "active");
-  const wrapped = sessions.filter(s => s.status === "wrapped");
-  const handedOff = sessions.filter(s => s.status === "handed_off");
-  const filtered = tab === "all" ? sessions : sessions.filter(s => s.status === tab);
+  const mySessions = sessions.filter(s => s.by === s._me);
+  const teamSessions = sessions.filter(s => s.by !== s._me);
+  const filtered = tab === "all" ? sessions : tab === "mine" ? mySessions : teamSessions;
+
+  const cadence = trends?.cadence || [];
+  const thisWeek = cadence.find(c => c.weeksAgo === 0)?.sessions || 0;
+  const lastWeek = cadence.find(c => c.weeksAgo === 1)?.sessions || 0;
+  const resolution = trends?.resolution || {};
+  const throughput = trends?.throughput || {};
 
   return (
     <div style={styles.content}>
@@ -798,43 +789,54 @@ function ActivityView({ orgName, sessions }) {
         orgName={orgName}
         title="activity"
         stats={[
-          { value: String(activeSessions.length), label: "active", color: T.green },
-          { value: String(wrapped.length), label: "wrapped", color: T.blue },
-          { value: String(handedOff.length), label: "handed off", color: T.amber },
+          { value: String(sessions.length), label: "sessions" },
+          { value: String(thisWeek), label: "this week", color: T.green },
+          { value: String(lastWeek), label: "last week" },
         ]}
       />
-      <TabBar tabs={["all", "active", "wrapped", "handed_off"]} active={tab} onChange={setTab} />
+
+      {/* Trends bar */}
+      {(cadence.length > 0 || resolution.resolved) && (
+        <div style={{ display: "flex", gap: 24, padding: "12px 0", borderBottom: `1px solid ${T.border}`, marginBottom: 12 }}>
+          {cadence.length > 0 && (
+            <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
+              // cadence: {cadence.map(c => c.sessions).join(" → ")} (w0→w{cadence.length - 1})
+            </span>
+          )}
+          {resolution.resolved > 0 && (
+            <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
+              // resolution: {resolution.avgDays?.toFixed(1)}d avg ({resolution.resolved} resolved)
+            </span>
+          )}
+          {throughput.created > 0 && (
+            <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
+              // todos: {throughput.created} created, {throughput.completed} done (28d)
+            </span>
+          )}
+        </div>
+      )}
+
+      <TabBar tabs={["all", "mine", "team"]} active={tab} onChange={setTab} />
       <div style={styles.divider} />
       {filtered.length === 0 ? <EmptyState text={`no ${tab} sessions`} /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map((sess, i) => (
             <div key={i} style={{
               ...styles.sessionCard,
-              borderLeft: `3px solid ${statusColor[sess.status] || T.muted}`,
+              borderLeft: `3px solid ${isRecent(sess.date) ? T.green : T.muted}`,
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Dot color={statusColor[sess.status] || T.muted} />
+                  <Dot color={isRecent(sess.date) ? T.green : T.muted} />
                   <span style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.text }}>{sess.by}</span>
                 </div>
-                <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 500, color: statusColor[sess.status] || T.dim }}>
-                  {(sess.status || "").replace("_", " ")}
+                <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
+                  {formatDate(sess.date)}
                 </span>
               </div>
               <span style={{ fontFamily: mono, fontSize: 13, color: T.sub }}>
-                {(sess.topic || "untitled session").toLowerCase()}
+                {(sess.topic || "session").toLowerCase()}
               </span>
-              {sess.summary && (
-                <span style={{ fontFamily: mono, fontSize: 12, color: T.dim, lineHeight: 1.5 }}>
-                  {sess.summary.toLowerCase()}
-                </span>
-              )}
-              <div style={{ display: "flex", gap: 16 }}>
-                <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(sess.date)}</span>
-                {sess.branch && sess.branch !== "develop" && (
-                  <span style={{ fontFamily: mono, fontSize: 11, color: T.green }}>{sess.branch}</span>
-                )}
-              </div>
             </div>
           ))}
         </div>
@@ -1218,7 +1220,7 @@ export default function UserDashboard() {
       .catch(() => {});
   }, [apiKey, user?.login]);
 
-  // Transform graph data for views
+  // Transform data for views — activity is primary source, graph for people+knowledge
   const knowledgeItems = graph.knowledge.map(a => ({
     type: a.type || "finding",
     created: a.created,
@@ -1229,35 +1231,47 @@ export default function UserDashboard() {
     quest: a.quest || "",
   }));
 
-  const handoffs = (() => {
-    const seen = new Map();
-    for (const h of graph.handoffs) {
-      if (seen.has(h.id)) {
-        const existing = seen.get(h.id);
-        const newNames = (h.handedToList || []).filter(Boolean);
-        const oldNames = existing.handedTo ? existing.handedTo.split(", ").filter(Boolean) : [];
-        existing.handedTo = [...new Set([...oldNames, ...newNames])].join(", ");
-      } else {
-        seen.set(h.id, {
-          id: h.id || "", topic: h.topic || "untitled",
-          summary: h.summary || "", status: h.status || "pending",
-          date: h.date, author: h.author || "",
-          handedTo: (h.handedToList || []).filter(Boolean).join(", "),
-        });
-      }
-    }
-    return [...seen.values()];
-  })();
-
-  const sessions = graph.sessions.map(s => ({
-    id: s.id || "", topic: s.topic || "", status: s.status || "active",
-    date: s.date, branch: s.branch || "", summary: s.summary || "", by: s.by || "",
+  // Handoffs from activity endpoint (already has status, author, handedTo)
+  const handoffs = (activity?.handoffs_to_me || []).concat(
+    (activity?.all_handoffs || []).filter(h =>
+      !(activity?.handoffs_to_me || []).some(m => m.topic === h.topic && m.date === h.date)
+    ).map(h => ({
+      topic: h.topic, date: h.date, author: h.from,
+      status: "info", handedTo: h.to,
+    }))
+  ).map(h => ({
+    id: h.sessionId || "", topic: h.topic || "untitled",
+    summary: "", status: h.status || "pending",
+    date: h.date, author: h.author || h.from || "",
+    handedTo: h.handedTo || "",
   }));
 
-  const todos = graph.todos.map(t => ({
-    id: t.id || "", text: t.text || "", status: t.status || "open",
-    created: t.created, by: t.by || "", quest: t.quest || "", priority: t.priority || 0,
+  // Sessions from activity endpoint (my + team merged)
+  const sessions = [
+    ...(activity?.my_sessions || []).map(s => ({
+      id: s.id || "", topic: s.topic || "", status: "active",
+      date: s.date, branch: "", summary: "", by: activity?.me || "",
+    })),
+    ...(activity?.team_sessions || []).map(s => ({
+      id: "", topic: s.topic || "", status: "active",
+      date: s.date, branch: "", summary: "", by: s.by || "",
+    })),
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Quests from activity endpoint
+  const activityQuests = (activity?.quests || []).map(q => ({
+    id: q.quest || "", title: q.title || "", description: "",
+    status: "active", artifacts: q.artifacts || 0,
+    lastActivity: null, people: [], daysSince: q.daysSince, score: q.score,
   }));
+
+  // Todos from activity endpoint (summary counts — full list not available)
+  const todosMerged = activity?.todos_merged || { activeTodoCount: 0, blockedCount: 0, deferredCount: 0 };
+
+  // Trends + extras
+  const trends = activity?.trends || {};
+  const pendingQuestions = activity?.pending_questions || [];
+  const checkins = activity?.checkins || [];
 
   // ── Login screen ──
   if (!token && !authLoading) {
@@ -1343,20 +1357,16 @@ export default function UserDashboard() {
         {/* Update indicator */}
         {lastUpdated && (
           <div style={styles.updateIndicator}>
-            // updated {timeAgo(lastUpdated.toISOString())} ago \u00B7 auto-refreshes every 60s
+            // updated {timeAgo(lastUpdated.toISOString())} ago · auto-refreshes every 60s
           </div>
         )}
         {view === "home" && <HomeView orgName={orgName} graph={graph} activity={activity} org={selectedOrg} />}
         {view === "people" && <PeopleView orgName={orgName} graph={graph} orgMembers={selectedOrg?.members || []} />}
         {view === "knowledge" && <KnowledgeView orgName={orgName} items={knowledgeItems} />}
-        {view === "quests" && <QuestsView orgName={orgName} quests={graph.quests.map(q => ({
-          id: q.id || "", title: q.title || "", description: q.description || "",
-          status: q.status || "active", artifacts: q.artifacts || 0,
-          lastActivity: q.lastActivity, people: q.people || [],
-        }))} />}
-        {view === "todos" && <TodosView orgName={orgName} todos={todos} />}
+        {view === "quests" && <QuestsView orgName={orgName} quests={activityQuests} />}
+        {view === "todos" && <TodosView orgName={orgName} todosMerged={todosMerged} pendingQuestions={pendingQuestions} checkins={checkins} />}
         {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} />}
-        {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} />}
+        {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} trends={trends} />}
         {view === "manage" && selectedOrg && (
           <ManageView
             orgName={orgName}
