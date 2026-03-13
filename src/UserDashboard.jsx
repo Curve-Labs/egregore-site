@@ -170,10 +170,19 @@ const GRAPH_QUERIES = [
              p.name AS author, q.id AS quest
       ORDER BY a.created DESC LIMIT 30`,
   },
+  { // 2: todos (full list for todos tab)
+    statement: `
+      MATCH (t:Todo)-[:BY]->(p:Person)
+      OPTIONAL MATCH (t)-[:PART_OF]->(q:Quest)
+      RETURN t.id AS id, t.text AS text, t.status AS status,
+             t.created AS created, t.priority AS priority,
+             p.name AS by, q.id AS quest
+      ORDER BY t.priority DESC, t.created DESC LIMIT 50`,
+  },
 ];
 
 function useGraphData(apiKey) {
-  const [data, setData] = useState({ people: [], knowledge: [] });
+  const [data, setData] = useState({ people: [], knowledge: [], todos: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const lastFetchRef = useRef(0);
@@ -193,6 +202,7 @@ function useGraphData(apiKey) {
         setData({
           people: toRecords(results[0]),
           knowledge: toRecords(results[1]),
+          todos: toRecords(results[2]),
         });
         setError(null);
         setLoading(false);
@@ -455,7 +465,7 @@ function PeopleView({ orgName, graph, orgMembers }) {
       artifacts: p.artifacts || 0,
       status: orgMember?.status || "active",
     };
-  });
+  }).filter(m => m.status !== "removed");
   const onlineCount = members.filter(m => m.online).length;
 
   return (
@@ -628,12 +638,13 @@ function QuestsView({ orgName, quests }) {
 
 // ─── Todos View ─────────────────────────────────────────────────
 
-function TodosView({ orgName, todosMerged, pendingQuestions, checkins }) {
-  const active = todosMerged.activeTodoCount || 0;
-  const blocked = todosMerged.blockedCount || 0;
-  const deferred = todosMerged.deferredCount || 0;
-  const staleBlocked = todosMerged.staleBlockedCount || 0;
-  const lastCheckin = todosMerged.lastCheckinDate;
+function TodosView({ orgName, todos, todosMerged, pendingQuestions }) {
+  const [tab, setTab] = useState("open");
+  const open = todos.filter(t => t.status === "open" || t.status === "blocked" || t.status === "deferred");
+  const done = todos.filter(t => t.status === "done");
+  const filtered = tab === "open" ? open : tab === "done" ? done : todos;
+  const blocked = todosMerged?.blockedCount || 0;
+  const staleBlocked = todosMerged?.staleBlockedCount || 0;
 
   return (
     <div style={styles.content}>
@@ -641,41 +652,56 @@ function TodosView({ orgName, todosMerged, pendingQuestions, checkins }) {
         orgName={orgName}
         title="todos"
         stats={[
-          { value: String(active), label: "active", color: T.green },
+          { value: String(open.length), label: "active", color: T.green },
           { value: String(blocked), label: "blocked", color: blocked > 0 ? T.red : undefined },
-          { value: String(deferred), label: "deferred" },
+          { value: String(done.length), label: "done" },
         ]}
       />
-      <div style={styles.divider} />
-
-      {/* Summary cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ ...styles.card, borderLeft: `3px solid ${T.green}` }}>
-          <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
-            {active} active todos
-          </span>
-          {blocked > 0 && (
-            <span style={{ fontFamily: mono, fontSize: 12, color: T.red }}>
-              {blocked} blocked{staleBlocked > 0 ? ` (${staleBlocked} stale 3+ days)` : ""}
-            </span>
-          )}
-          {deferred > 0 && (
-            <span style={{ fontFamily: mono, fontSize: 12, color: T.amber }}>
-              {deferred} deferred
-            </span>
-          )}
-          <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
-            // last check-in: {lastCheckin ? formatDate(lastCheckin) : "never"}
-          </span>
-          <span style={{ fontFamily: mono, fontSize: 11, color: T.dim, marginTop: 4 }}>
-            // manage todos via /todo in your terminal
-          </span>
+      {staleBlocked > 0 && (
+        <div style={{ fontFamily: mono, fontSize: 11, color: T.red, padding: "4px 0 8px" }}>
+          // {staleBlocked} blocked 3+ days
         </div>
-
-        {/* Pending questions */}
-        {pendingQuestions.length > 0 && (
-          <>
-            <SectionHeader>// pending questions</SectionHeader>
+      )}
+      <TabBar tabs={["open", "done", "all"]} active={tab} onChange={setTab} />
+      <div style={styles.divider} />
+      {filtered.length === 0 ? <EmptyState text={`no ${tab} todos`} /> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtered.map((todo, i) => {
+            const isDone = todo.status === "done";
+            const isBlocked = todo.status === "blocked";
+            const borderColor = isBlocked ? T.red : isDone ? T.muted : T.green;
+            return (
+              <div key={i} style={{
+                ...styles.todoItem,
+                borderLeft: `3px solid ${borderColor}`,
+                opacity: isDone ? 0.6 : 1,
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <span style={{ fontFamily: mono, fontSize: 16, flexShrink: 0, marginTop: -1, color: isDone ? T.green : isBlocked ? T.red : T.muted }}>
+                    {isDone ? "\u2611" : isBlocked ? "\u2612" : "\u2610"}
+                  </span>
+                  <span style={{
+                    fontFamily: mono, fontSize: 13, lineHeight: 1.5,
+                    color: isDone ? T.dim : T.text,
+                    textDecoration: isDone ? "line-through" : "none",
+                  }}>{(todo.text || "").toLowerCase()}</span>
+                </div>
+                <div style={{ display: "flex", gap: 16, paddingLeft: 28 }}>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{todo.by}</span>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(todo.created)}</span>
+                  {todo.quest && <span style={{ fontFamily: mono, fontSize: 11, color: T.green }}>{todo.quest}</span>}
+                  {todo.priority >= 2 && <span style={{ fontFamily: mono, fontSize: 11, color: T.amber }}>★</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Pending questions */}
+      {pendingQuestions.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <SectionHeader>// pending questions</SectionHeader>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {pendingQuestions.map((q, i) => (
               <div key={i} style={{ ...styles.card, borderLeft: `3px solid ${T.purple}` }}>
                 <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
@@ -686,26 +712,9 @@ function TodosView({ orgName, todosMerged, pendingQuestions, checkins }) {
                 </span>
               </div>
             ))}
-          </>
-        )}
-
-        {/* Recent check-ins */}
-        {checkins.length > 0 && (
-          <>
-            <SectionHeader>// recent check-ins</SectionHeader>
-            {checkins.map((c, i) => (
-              <div key={i} style={{ ...styles.card, borderLeft: `3px solid ${T.blue}` }}>
-                <span style={{ fontFamily: mono, fontSize: 13, color: T.text }}>
-                  {(c.summary || "check-in").toLowerCase()}
-                </span>
-                <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
-                  {c.by} · {formatDate(c.date)} · {c.total || 0} items
-                </span>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -714,11 +723,14 @@ function TodosView({ orgName, todosMerged, pendingQuestions, checkins }) {
 
 function HandoffsView({ orgName, handoffs }) {
   const [tab, setTab] = useState("all");
+  const [expanded, setExpanded] = useState({});
   const statusColor = { pending: T.amber, read: T.blue, done: T.green };
   const pending = handoffs.filter(h => h.status === "pending");
   const read = handoffs.filter(h => h.status === "read");
   const done = handoffs.filter(h => h.status === "done");
   const filtered = tab === "all" ? handoffs : handoffs.filter(h => h.status === tab);
+
+  const toggle = (i) => setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
 
   return (
     <div style={styles.content}>
@@ -735,34 +747,68 @@ function HandoffsView({ orgName, handoffs }) {
       <div style={styles.divider} />
       {filtered.length === 0 ? <EmptyState text={`no ${tab} handoffs`} /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map((h, i) => (
-            <div key={i} style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: mono, fontSize: 14, fontWeight: 500, color: T.text }}>
-                  {(h.topic || "untitled").toLowerCase()}
-                </span>
-                <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 500, color: statusColor[h.status] || T.dim }}>
-                  {h.status}
-                </span>
-              </div>
-              {h.summary && (
-                <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
-                  {h.summary.toLowerCase()}
-                </span>
-              )}
-              <div style={{ display: "flex", gap: 20 }}>
-                <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
-                  <span style={{ color: T.dim }}>from</span> {h.author}
-                </span>
-                {h.handedTo && (
-                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
-                    <span style={{ color: T.dim }}>to</span> {h.handedTo}
+          {filtered.map((h, i) => {
+            const isOpen = !!expanded[i];
+            const hasContent = h.filePath || h.response || h.summary;
+            return (
+              <div key={i} style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasContent ? "pointer" : "default" }}
+                  onClick={() => hasContent && toggle(i)}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {hasContent && (
+                      <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, transition: "transform 0.15s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
+                        ▶
+                      </span>
+                    )}
+                    <span style={{ fontFamily: mono, fontSize: 14, fontWeight: 500, color: T.text }}>
+                      {(h.topic || "untitled").toLowerCase()}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 500, color: statusColor[h.status] || T.dim }}>
+                    {h.status}
                   </span>
+                </div>
+                <div style={{ display: "flex", gap: 20 }}>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
+                    <span style={{ color: T.dim }}>from</span> {h.author}
+                  </span>
+                  {h.handedTo && (
+                    <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
+                      <span style={{ color: T.dim }}>to</span> {h.handedTo}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(h.date)}</span>
+                </div>
+                {isOpen && (
+                  <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, marginTop: 4, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {h.response && (
+                      <div>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// response</span>
+                        <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.response}</span>
+                      </div>
+                    )}
+                    {h.summary && (
+                      <div>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// summary</span>
+                        <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.summary.toLowerCase()}</span>
+                      </div>
+                    )}
+                    {h.filePath && (
+                      <div>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// source</span>
+                        <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{h.filePath}</span>
+                      </div>
+                    )}
+                    {!h.response && !h.summary && h.filePath && (
+                      <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// content available in memory repo</span>
+                    )}
+                  </div>
                 )}
-                <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(h.date)}</span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -771,17 +817,79 @@ function HandoffsView({ orgName, handoffs }) {
 
 // ─── Activity View ──────────────────────────────────────────────
 
-function ActivityView({ orgName, sessions, trends }) {
-  const [tab, setTab] = useState("all");
-  const mySessions = sessions.filter(s => s.by === s._me);
-  const teamSessions = sessions.filter(s => s.by !== s._me);
-  const filtered = tab === "all" ? sessions : tab === "mine" ? mySessions : teamSessions;
-
+function ActivityView({ orgName, sessions, trends, activity }) {
   const cadence = trends?.cadence || [];
   const thisWeek = cadence.find(c => c.weeksAgo === 0)?.sessions || 0;
   const lastWeek = cadence.find(c => c.weeksAgo === 1)?.sessions || 0;
   const resolution = trends?.resolution || {};
   const throughput = trends?.throughput || {};
+  const checkins = activity?.checkins || [];
+
+  const me = activity?.me || "";
+  const mySessions = (activity?.my_sessions || []).map(s => ({ ...s, who: me, isMine: true }));
+  const teamSessions = (activity?.team_sessions || []).map(s => ({ ...s, who: s.by, isMine: false }));
+
+  // Group sessions by date
+  const groupByDate = (items) => {
+    const groups = {};
+    items.forEach(s => {
+      const d = s.date ? new Date(s.date) : null;
+      const key = d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "unknown";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return Object.entries(groups);
+  };
+
+  // Interleave checkins into my sessions
+  const myCheckins = checkins.filter(c => c.by === me).map(c => ({ ...c, _type: "checkin" }));
+  const myItems = [...mySessions.map(s => ({ ...s, _type: "session" })), ...myCheckins]
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const teamCheckins = checkins.filter(c => c.by !== me).map(c => ({ ...c, _type: "checkin" }));
+  const teamItems = [...teamSessions.map(s => ({ ...s, _type: "session" })), ...teamCheckins]
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const renderItem = (item, i) => {
+    if (item._type === "checkin") {
+      return (
+        <div key={`ci-${i}`} style={{
+          ...styles.sessionCard,
+          borderLeft: `3px solid ${T.purple}`,
+          background: "#1A1525",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontFamily: mono, fontSize: 11, color: T.purple, fontWeight: 500 }}>check-in</span>
+              <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: T.text }}>{item.by}</span>
+            </div>
+            <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(item.date)}</span>
+          </div>
+          <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+            {(item.summary || "").toLowerCase()}
+          </span>
+        </div>
+      );
+    }
+    const recent = isRecent(item.date);
+    return (
+      <div key={`s-${i}`} style={{
+        ...styles.sessionCard,
+        borderLeft: `3px solid ${recent ? T.green : T.muted}`,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Dot color={recent ? T.green : T.muted} />
+            <span style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.text }}>{item.who || item.by}</span>
+          </div>
+          <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(item.date)}</span>
+        </div>
+        <span style={{ fontFamily: mono, fontSize: 13, color: T.sub }}>
+          {(item.topic || "session").toLowerCase()}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div style={styles.content}>
@@ -789,15 +897,18 @@ function ActivityView({ orgName, sessions, trends }) {
         orgName={orgName}
         title="activity"
         stats={[
-          { value: String(sessions.length), label: "sessions" },
+          { value: String(mySessions.length + teamSessions.length), label: "sessions" },
           { value: String(thisWeek), label: "this week", color: T.green },
           { value: String(lastWeek), label: "last week" },
         ]}
       />
 
       {/* Trends bar */}
-      {(cadence.length > 0 || resolution.resolved) && (
-        <div style={{ display: "flex", gap: 24, padding: "12px 0", borderBottom: `1px solid ${T.border}`, marginBottom: 12 }}>
+      {(cadence.length > 0 || resolution.resolved || throughput.created) && (
+        <div style={{
+          display: "flex", gap: 24, padding: "14px 18px",
+          background: T.card, borderRadius: 4, border: `1px solid ${T.border}`,
+        }}>
           {cadence.length > 0 && (
             <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
               // cadence: {cadence.map(c => c.sessions).join(" → ")} (w0→w{cadence.length - 1})
@@ -810,37 +921,47 @@ function ActivityView({ orgName, sessions, trends }) {
           )}
           {throughput.created > 0 && (
             <span style={{ fontFamily: mono, fontSize: 11, color: T.dim }}>
-              // todos: {throughput.created} created, {throughput.completed} done (28d)
+              // throughput: {throughput.created} created, {throughput.completed} done (28d)
             </span>
           )}
         </div>
       )}
 
-      <TabBar tabs={["all", "mine", "team"]} active={tab} onChange={setTab} />
-      <div style={styles.divider} />
-      {filtered.length === 0 ? <EmptyState text={`no ${tab} sessions`} /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map((sess, i) => (
-            <div key={i} style={{
-              ...styles.sessionCard,
-              borderLeft: `3px solid ${isRecent(sess.date) ? T.green : T.muted}`,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Dot color={isRecent(sess.date) ? T.green : T.muted} />
-                  <span style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.text }}>{sess.by}</span>
+      <div style={styles.columns}>
+        {/* Your sessions */}
+        <div style={styles.mainCol}>
+          <SectionHeader>// your sessions ({myItems.length})</SectionHeader>
+          {myItems.length === 0 ? <EmptyState text="no sessions yet" /> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {groupByDate(myItems).map(([date, items]) => (
+                <div key={date}>
+                  <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, display: "block", marginBottom: 6, marginTop: 8 }}>{date}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {items.map((item, i) => renderItem(item, `my-${date}-${i}`))}
+                  </div>
                 </div>
-                <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
-                  {formatDate(sess.date)}
-                </span>
-              </div>
-              <span style={{ fontFamily: mono, fontSize: 13, color: T.sub }}>
-                {(sess.topic || "session").toLowerCase()}
-              </span>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      )}
+
+        {/* Team sessions */}
+        <div style={styles.mainCol}>
+          <SectionHeader>// team ({teamItems.length})</SectionHeader>
+          {teamItems.length === 0 ? <EmptyState text="no team sessions" /> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {groupByDate(teamItems).map(([date, items]) => (
+                <div key={date}>
+                  <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, display: "block", marginBottom: 6, marginTop: 8 }}>{date}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {items.map((item, i) => renderItem(item, `tm-${date}-${i}`))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1244,6 +1365,8 @@ export default function UserDashboard() {
     summary: "", status: h.status || "pending",
     date: h.date, author: h.author || h.from || "",
     handedTo: h.handedTo || "",
+    filePath: h.filePath || "",
+    response: h.response || "",
   }));
 
   // Sessions from activity endpoint (my + team merged)
@@ -1364,9 +1487,9 @@ export default function UserDashboard() {
         {view === "people" && <PeopleView orgName={orgName} graph={graph} orgMembers={selectedOrg?.members || []} />}
         {view === "knowledge" && <KnowledgeView orgName={orgName} items={knowledgeItems} />}
         {view === "quests" && <QuestsView orgName={orgName} quests={activityQuests} />}
-        {view === "todos" && <TodosView orgName={orgName} todosMerged={todosMerged} pendingQuestions={pendingQuestions} checkins={checkins} />}
+        {view === "todos" && <TodosView orgName={orgName} todos={graph.todos} todosMerged={todosMerged} pendingQuestions={pendingQuestions} />}
         {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} />}
-        {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} trends={trends} />}
+        {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} trends={trends} activity={activity} />}
         {view === "manage" && selectedOrg && (
           <ManageView
             orgName={orgName}
