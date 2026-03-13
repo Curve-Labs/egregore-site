@@ -1,160 +1,165 @@
-const API_URL = import.meta.env.VITE_API_URL || "https://egregore-production-55f2.up.railway.app";
-const GITHUB_CLIENT_ID = "Ov23lizB4nYEeIRsHTdb";
+/**
+ * Egregore API client for the dashboard.
+ */
 
-const GITHUB_SCOPES = {
-  joiner: "repo,read:org",
-  founder: "repo,read:org",
-  admin: "repo,read:org",
-};
+const API_URL = import.meta.env.VITE_API_URL || ''
 
-export function getGitHubAuthUrl(role = "founder") {
-  const scope = GITHUB_SCOPES[role] || GITHUB_SCOPES.founder;
-  const redirectUri = `${window.location.origin}/callback`;
-  return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${scope}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+async function request(path, options = {}) {
+  const url = `${API_URL}${path}`
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const resp = await fetch(url, { ...options, headers })
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}))
+    throw new Error(body.detail || `Request failed: ${resp.status}`)
+  }
+  return resp.json()
 }
 
-async function request(method, path, { body, token } = {}) {
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
-  const resp = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
-  return data;
+function authHeaders(token) {
+  return { Authorization: `Bearer ${token}` }
 }
 
-export async function exchangeCode(code) {
-  return request("POST", "/api/auth/github/callback", { body: { code } });
+// --- Auth ---
+
+export async function getGitHubClientId() {
+  return request('/api/auth/github/client-id')
 }
 
-export async function getOrgs(token) {
-  return request("GET", "/api/org/setup/orgs", { token });
+export async function exchangeGitHubCode(code) {
+  return request('/api/auth/github/callback', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
 }
 
-export async function getOrgRepos(token, org) {
-  return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
+// --- User ---
+
+export async function getUserProfile(githubToken) {
+  return request('/api/user/profile', {
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function setupOrg(token, { github_org, org_name, is_personal, repos = [], instance_name, transcript_sharing = false, hosting = false }) {
-  const body = { github_org, org_name, is_personal, repos, transcript_sharing, hosting };
-  if (instance_name) body.instance_name = instance_name;
-  return request("POST", "/api/org/setup", { token, body });
+export async function getUserOrgs(githubToken) {
+  return request('/api/user/orgs', {
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function joinOrg(token, { github_org, repo_name = "egregore-core" }) {
-  return request("POST", "/api/org/join", {
-    token,
-    body: { github_org, repo_name },
-  });
+export async function updateUserProfile(githubToken, telegramUsername) {
+  return request('/api/user/profile', {
+    method: 'POST',
+    headers: authHeaders(githubToken),
+    body: JSON.stringify({ telegram_username: telegramUsername }),
+  })
+}
+
+// --- Org ---
+
+export async function getOrgMembers(apiKey, slug) {
+  return request(`/api/org/${slug}/members`, {
+    headers: authHeaders(apiKey),
+  })
+}
+
+export async function getOrgStatus(apiKey) {
+  return request('/api/org/status', {
+    headers: authHeaders(apiKey),
+  })
 }
 
 export async function getTelegramStatus(slug) {
-  return request("GET", `/api/org/telegram/status/${slug}`);
+  return request(`/api/org/telegram/status/${slug}`)
 }
 
-export async function checkTelegramMembership(slug, githubToken) {
-  return request("GET", `/api/org/${slug}/telegram/membership`, { token: githubToken });
+// --- Setup ---
+
+export async function getSetupOrgs(githubToken) {
+  return request('/api/org/setup/orgs', {
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function getInviteInfo(inviteToken) {
-  return request("GET", `/api/org/invite/${inviteToken}`);
+export async function setupOrg(githubToken, data) {
+  return request('/api/org/setup', {
+    method: 'POST',
+    headers: authHeaders(githubToken),
+    body: JSON.stringify(data),
+  })
 }
 
-export async function acceptInvite(token, inviteToken) {
-  return request("POST", `/api/org/invite/${inviteToken}/accept`, { token });
+export async function joinOrg(githubToken, data) {
+  return request('/api/org/join', {
+    method: 'POST',
+    headers: authHeaders(githubToken),
+    body: JSON.stringify(data),
+  })
 }
 
-export async function getUserProfile(token) {
-  return request("GET", "/api/user/profile", { token });
+// --- Invite ---
+
+export async function getInviteInfo(token) {
+  return request(`/api/org/invite/${token}`)
 }
 
-export async function updateUserProfile(token, { telegram_username }) {
-  return request("POST", "/api/user/profile", { token, body: { telegram_username } });
+export async function acceptInvite(githubToken, inviteToken) {
+  return request(`/api/org/invite/${inviteToken}/accept`, {
+    method: 'POST',
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function joinWaitlist(name, email) {
-  return request("POST", "/api/admin/waitlist", { body: { name, email, source: "website" } });
+export async function sendInvite(apiKey, data) {
+  return request('/api/org/invite', {
+    method: 'POST',
+    headers: authHeaders(apiKey),
+    body: JSON.stringify(data),
+  })
 }
 
-export async function getMyEgregores(token) {
-  return request("GET", "/api/me/egregores", { token });
+// --- Dashboard v2 ---
+
+export async function getOrgApiKey(githubToken, slug) {
+  return request(`/api/org/${slug}/key`, {
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function getAdminHealth(token, filters = {}) {
-  const params = new URLSearchParams();
-  if (filters.org_slug) params.set("org_slug", filters.org_slug);
-  const qs = params.toString();
-  return request("GET", `/api/admin/health${qs ? `?${qs}` : ""}`, { token });
+export async function getActivityDashboard(apiKey, githubUsername) {
+  return request(`/api/activity/dashboard?github_username=${encodeURIComponent(githubUsername)}`, {
+    headers: authHeaders(apiKey),
+  })
 }
 
-export async function getAdminDashboard(token) {
-  return request("GET", "/api/admin/dashboard", { token });
+export async function graphQuery(apiKey, statement, parameters = {}) {
+  return request('/api/graph/query', {
+    method: 'POST',
+    headers: authHeaders(apiKey),
+    body: JSON.stringify({ statement, parameters }),
+  })
 }
 
-export async function getAdminOrgDetail(token, slug) {
-  return request("GET", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
+// --- Waitlist ---
+
+export async function addToWaitlist(data) {
+  return request('/api/admin/waitlist', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 }
 
-export async function removeMember(token, slug, username, mode = "revoke") {
-  return request("DELETE", `/api/org/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}?mode=${mode}`, { token });
+export async function getWaitlist(githubToken, status = 'pending') {
+  return request(`/api/admin/waitlist?status=${status}`, {
+    headers: authHeaders(githubToken),
+  })
 }
 
-export async function deleteOrg(token, slug) {
-  return request("DELETE", `/api/admin/org/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function getHostingInfo(token, slug) {
-  return request("GET", `/api/hosting/info/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function getTerminalUrl(token, slug) {
-  return request("GET", `/api/hosting/terminal/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function ensureWorkspace(token, slug) {
-  return request("POST", `/api/hosting/workspace/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function getWorkspaceStatus(token, slug) {
-  return request("GET", `/api/hosting/workspace-status/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function getHostingStatus(token, slug) {
-  return request("GET", `/api/hosting/status/${encodeURIComponent(slug)}`, { token });
-}
-
-export async function enableHosting(token, slug) {
-  return request("POST", `/api/hosting/enable/${encodeURIComponent(slug)}`, { token });
-}
-
-// ─── User API Keys ──────────────────────────────────────────────
-
-export async function getUserKeys(token) {
-  return request("GET", "/api/user/keys", { token });
-}
-
-export async function updateUserKeys(token, keys) {
-  return request("PUT", "/api/user/keys", { token, body: keys });
-}
-
-export async function deleteUserKey(token, keyName) {
-  return request("DELETE", `/api/user/keys/${encodeURIComponent(keyName)}`, { token });
-}
-
-export async function getAdminTelemetry(token, filters = {}) {
-  const params = new URLSearchParams();
-  if (filters.org_slug) params.set("org_slug", filters.org_slug);
-  if (filters.event_type) params.set("event_type", filters.event_type);
-  if (filters.user_handle) params.set("user_handle", filters.user_handle);
-  if (filters.since) params.set("since", filters.since);
-  if (filters.limit) params.set("limit", String(filters.limit));
-  const qs = params.toString();
-  return request("GET", `/api/admin/telemetry${qs ? `?${qs}` : ""}`, { token });
+export async function approveWaitlist(githubToken, waitlistId) {
+  return request('/api/admin/waitlist/approve', {
+    method: 'POST',
+    headers: authHeaders(githubToken),
+    body: JSON.stringify({ waitlist_id: waitlistId }),
+  })
 }
 
 // ─── Invite Observability ────────────────────────────────────────
