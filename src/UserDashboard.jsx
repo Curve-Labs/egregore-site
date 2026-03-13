@@ -1180,6 +1180,10 @@ export default function UserDashboard() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [activity, setActivity] = useState(null);
   const intervalRef = useRef(null);
+  const selectedOrgRef = useRef(null);
+
+  // Keep ref in sync so fetchOrgs never goes stale on org change
+  useEffect(() => { selectedOrgRef.current = selectedOrg; }, [selectedOrg]);
 
   const apiKey = selectedOrg?.api_key || null;
   const graph = useGraphData(apiKey);
@@ -1189,17 +1193,18 @@ export default function UserDashboard() {
     getMyEgregores(token)
       .then(d => {
         setOrgs(d.egregores || []);
-        if (!selectedOrg && d.egregores?.length > 0) {
+        const current = selectedOrgRef.current;
+        if (!current && d.egregores?.length > 0) {
           setSelectedOrg(d.egregores[0]);
-        } else if (selectedOrg) {
-          const updated = d.egregores.find(o => o.slug === selectedOrg.slug);
+        } else if (current) {
+          const updated = d.egregores.find(o => o.slug === current.slug);
           if (updated) setSelectedOrg(updated);
         }
         setLastUpdated(new Date());
         setDashError(null);
       })
       .catch(e => { setDashError(e.message); setOrgs(prev => prev || []); });
-  }, [token, selectedOrg]);
+  }, [token]);
 
   useEffect(() => {
     fetchOrgs();
