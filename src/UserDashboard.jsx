@@ -1178,15 +1178,15 @@ export default function UserDashboard() {
   const { token, user, error: authError, loading: authLoading, logout } = useAuth();
   const [view, setView] = useState("home");
   const [orgs, setOrgs] = useState(null);
-  const [selectedOrg, setSelectedOrg] = useState(null);
+  const [selectedSlug, setSelectedSlug] = useState(null);
   const [dashError, setDashError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [activity, setActivity] = useState(null);
   const intervalRef = useRef(null);
-  const selectedOrgRef = useRef(null);
 
-  // Keep ref in sync so fetchOrgs never goes stale on org change
-  useEffect(() => { selectedOrgRef.current = selectedOrg; }, [selectedOrg]);
+  // Derive selectedOrg from orgs + slug — never store the full object
+  const selectedOrg = orgs?.find(o => o.slug === selectedSlug) || null;
+  const setSelectedOrg = useCallback((org) => setSelectedSlug(org?.slug || null), []);
 
   const apiKey = selectedOrg?.api_key || null;
   const graph = useGraphData(apiKey);
@@ -1196,13 +1196,8 @@ export default function UserDashboard() {
     getMyEgregores(token)
       .then(d => {
         setOrgs(d.egregores || []);
-        const current = selectedOrgRef.current;
-        if (!current && d.egregores?.length > 0) {
-          setSelectedOrg(d.egregores[0]);
-        } else if (current) {
-          const updated = d.egregores.find(o => o.slug === current.slug);
-          if (updated) setSelectedOrg(updated);
-        }
+        // Auto-select first org only if nothing selected yet
+        setSelectedSlug(prev => prev || d.egregores?.[0]?.slug || null);
         setLastUpdated(new Date());
         setDashError(null);
       })
