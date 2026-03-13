@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getGitHubAuthUrl, exchangeCode, getMyEgregores,
   removeMember, getTerminalUrl, graphBatch, getActivityDashboard,
+  readMemoryFile,
 } from "./api";
 
 // ─── Design tokens ──────────────────────────────────────────────
@@ -721,16 +722,48 @@ function TodosView({ orgName, todos, todosMerged, pendingQuestions }) {
 
 // ─── Handoffs View ──────────────────────────────────────────────
 
-function HandoffsView({ orgName, handoffs }) {
+function HandoffsView({ orgName, handoffs, apiKey }) {
   const [tab, setTab] = useState("all");
   const [expanded, setExpanded] = useState({});
+  const [fileContent, setFileContent] = useState({});
+  const [loadingFile, setLoadingFile] = useState({});
   const statusColor = { pending: T.amber, read: T.blue, done: T.green };
   const pending = handoffs.filter(h => h.status === "pending");
   const read = handoffs.filter(h => h.status === "read");
   const done = handoffs.filter(h => h.status === "done");
   const filtered = tab === "all" ? handoffs : handoffs.filter(h => h.status === tab);
 
-  const toggle = (i) => setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
+  const toggle = (i, filePath) => {
+    const wasOpen = !!expanded[i];
+    setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
+    // Fetch file content on first expand
+    if (!wasOpen && filePath && !fileContent[filePath] && !loadingFile[filePath] && apiKey) {
+      setLoadingFile(prev => ({ ...prev, [filePath]: true }));
+      readMemoryFile(apiKey, filePath)
+        .then(data => setFileContent(prev => ({ ...prev, [filePath]: data.content })))
+        .catch(() => setFileContent(prev => ({ ...prev, [filePath]: null })))
+        .finally(() => setLoadingFile(prev => ({ ...prev, [filePath]: false })));
+    }
+  };
+
+  // Simple markdown-to-sections renderer
+  const renderContent = (content) => {
+    if (!content) return null;
+    const lines = content.split("\n");
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {lines.map((line, i) => {
+          if (line.startsWith("# ")) return <span key={i} style={{ fontFamily: mono, fontSize: 14, fontWeight: 600, color: T.text, marginTop: 8 }}>{line.slice(2)}</span>;
+          if (line.startsWith("## ")) return <span key={i} style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.green, marginTop: 12, marginBottom: 2 }}>{line.slice(3).toLowerCase()}</span>;
+          if (line.startsWith("### ")) return <span key={i} style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: T.sub, marginTop: 8 }}>{line.slice(4).toLowerCase()}</span>;
+          if (line.startsWith("- ")) return <span key={i} style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6, paddingLeft: 12 }}>· {line.slice(2)}</span>;
+          if (line.startsWith("---")) return <div key={i} style={{ height: 1, background: T.border, margin: "8px 0" }} />;
+          if (line.trim() === "") return <span key={i} style={{ height: 6 }} />;
+          return <span key={i} style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{line}</span>;
+        })}
+      </div>
+    );
+  };
 
   return (
     <div style={styles.content}>
@@ -749,16 +782,18 @@ function HandoffsView({ orgName, handoffs }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map((h, i) => {
             const isOpen = !!expanded[i];
-            const hasContent = h.filePath || h.response || h.summary;
+            const hasExpandable = h.filePath || h.response || h.summary;
+            const fc = h.filePath ? fileContent[h.filePath] : null;
+            const isLoading = h.filePath ? loadingFile[h.filePath] : false;
             return (
               <div key={i} style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
                 <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasContent ? "pointer" : "default" }}
-                  onClick={() => hasContent && toggle(i)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasExpandable ? "pointer" : "default" }}
+                  onClick={() => hasExpandable && toggle(i, h.filePath)}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {hasContent && (
-                      <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, transition: "transform 0.15s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
+                    {hasExpandable && (
+                      <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, transition: "transform 0.15s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>
                         ▶
                       </span>
                     )}
@@ -770,6 +805,12 @@ function HandoffsView({ orgName, handoffs }) {
                     {h.status}
                   </span>
                 </div>
+                {/* Summary preview (always visible if available) */}
+                {h.summary && !isOpen && (
+                  <span style={{ fontFamily: mono, fontSize: 12, color: T.dim, lineHeight: 1.5 }}>
+                    {h.summary.length > 120 ? h.summary.slice(0, 120).toLowerCase() + "..." : h.summary.toLowerCase()}
+                  </span>
+                )}
                 <div style={{ display: "flex", gap: 20 }}>
                   <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>
                     <span style={{ color: T.dim }}>from</span> {h.author}
@@ -782,27 +823,34 @@ function HandoffsView({ orgName, handoffs }) {
                   <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{formatDate(h.date)}</span>
                 </div>
                 {isOpen && (
-                  <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, marginTop: 4, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, marginTop: 4, display: "flex", flexDirection: "column", gap: 12 }}>
                     {h.response && (
                       <div>
                         <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// response</span>
                         <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.response}</span>
                       </div>
                     )}
-                    {h.summary && (
+                    {/* Full file content */}
+                    {isLoading && (
+                      <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// loading content...</span>
+                    )}
+                    {fc && renderContent(fc)}
+                    {fc === null && !isLoading && h.filePath && (
+                      <div>
+                        {h.summary && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// summary</span>
+                            <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.summary.toLowerCase()}</span>
+                          </div>
+                        )}
+                        <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// {h.filePath}</span>
+                      </div>
+                    )}
+                    {!fc && !isLoading && !h.filePath && h.summary && (
                       <div>
                         <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// summary</span>
                         <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.summary.toLowerCase()}</span>
                       </div>
-                    )}
-                    {h.filePath && (
-                      <div>
-                        <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// source</span>
-                        <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>{h.filePath}</span>
-                      </div>
-                    )}
-                    {!h.response && !h.summary && h.filePath && (
-                      <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// content available in memory repo</span>
                     )}
                   </div>
                 )}
@@ -1362,7 +1410,7 @@ export default function UserDashboard() {
     }))
   ).map(h => ({
     id: h.sessionId || "", topic: h.topic || "untitled",
-    summary: "", status: h.status || "pending",
+    summary: h.summary || "", status: h.status || "pending",
     date: h.date, author: h.author || h.from || "",
     handedTo: h.handedTo || "",
     filePath: h.filePath || "",
@@ -1488,7 +1536,7 @@ export default function UserDashboard() {
         {view === "knowledge" && <KnowledgeView orgName={orgName} items={knowledgeItems} />}
         {view === "quests" && <QuestsView orgName={orgName} quests={activityQuests} />}
         {view === "todos" && <TodosView orgName={orgName} todos={graph.todos} todosMerged={todosMerged} pendingQuestions={pendingQuestions} />}
-        {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} />}
+        {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} apiKey={apiKey} />}
         {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} trends={trends} activity={activity} />}
         {view === "manage" && selectedOrg && (
           <ManageView

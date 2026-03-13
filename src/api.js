@@ -169,6 +169,17 @@ export async function getActivityDashboard(apiKey, username) {
   return data;
 }
 
+// ─── Memory Files ──────────────────────────────────────────────
+
+export async function readMemoryFile(apiKey, path) {
+  const resp = await fetch(`${API_URL}/api/org/memory/read?path=${encodeURIComponent(path)}`, {
+    headers: { "Authorization": `Bearer ${apiKey}` },
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data;
+}
+
 // ─── Admin ──────────────────────────────────────────────────────
 
 export async function getAdminTelemetry(token, filters = {}) {
