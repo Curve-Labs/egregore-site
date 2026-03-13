@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys } from "../api";
+import { exchangeCode, getOrgs, getOrgRepos, setupOrg, joinOrg, getTelegramStatus, getInviteInfo, acceptInvite, getGitHubAuthUrl, checkTelegramMembership, getUserProfile, updateUserProfile, getHostingInfo, getHostingStatus, getUserKeys, updateUserKeys, getMyEgregores } from "../api";
 import { isAdmin } from "../auth";
 
 const C = {
@@ -1631,6 +1631,7 @@ export default function SetupFlow() {
   const [creatingNew, setCreatingNew] = useState(false); // user chose "Create new instance"
   const [instanceName, setInstanceName] = useState(null); // name for new instance (when creatingNew)
   const [hostingChoice, setHostingChoice] = useState(null); // null = not asked, "hosted" | "local"
+  const [hasExistingOrgs, setHasExistingOrgs] = useState(false);
 
   const isCallback = window.location.pathname === "/callback";
   const isJoin = window.location.pathname === "/join";
@@ -1638,6 +1639,16 @@ export default function SetupFlow() {
   // Only load invite token from sessionStorage on /join or /callback (survives OAuth redirect).
   // On /setup, ignore stale tokens so the setup flow isn't hijacked.
   const inviteToken = params.get("invite") || ((isJoin || isCallback) ? sessionStorage.getItem("egregore_invite") : null);
+
+  // Check if user already has active memberships (bypass gate for rejoins)
+  useEffect(() => {
+    if (!githubToken) return;
+    getMyEgregores(githubToken)
+      .then((data) => {
+        if (data?.egregores?.length > 0) setHasExistingOrgs(true);
+      })
+      .catch(() => {}); // silent — gate stays closed on error
+  }, [githubToken]);
 
   // Clear stale invite tokens when explicitly on /setup
   useEffect(() => {
@@ -1686,7 +1697,8 @@ export default function SetupFlow() {
   }
 
   // Admin gate — only admins can create new instances via /setup
-  if (githubToken && !inviteToken && !isAdmin(user?.login)) {
+  // Users with existing memberships can pass through (rejoin from another machine)
+  if (githubToken && !inviteToken && !isAdmin(user?.login) && !hasExistingOrgs) {
     return (
       <SetupLayout>
         <AccessRestricted user={user} />
