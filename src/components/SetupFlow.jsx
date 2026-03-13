@@ -138,8 +138,53 @@ function DualPathInstall({ setupToken, orgSlug, githubToken, label = "Get starte
     }
   }, [orgSlug, githubToken]);
 
-  const handleHostedClick = () => {
-    window.open(hostingInfo.coder_url, "_blank");
+  const [terminalLoading, setTerminalLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("");
+
+  const [workspaceError, setWorkspaceError] = useState(null);
+
+  const handleHostedClick = async () => {
+    if (!orgSlug || !githubToken) {
+      window.open(hostingInfo.coder_url, "_blank");
+      return;
+    }
+    // Open window synchronously to avoid popup blocker
+    const w = window.open("", "_blank");
+    writeLoadingPage(w, "Preparing your workspace...");
+    setTerminalLoading(true);
+    setLoadingStatus("Preparing workspace...");
+    setWorkspaceError(null);
+    try {
+      const res = await ensureWorkspace(githubToken, orgSlug);
+      const terminalUrl = res.terminal_url;
+      const coderUrl = res.coder_url || hostingInfo.coder_url;
+
+      if (res.status === "exists") {
+        updateLoadingPage(w, "Workspace ready — opening terminal...");
+        setLoadingStatus("Opening workspace...");
+        w.location.href = terminalUrl;
+      } else if (res.status === "created") {
+        // New workspace needs ~60s to boot. Auth is handled via session token
+        // cookie — no OAuth needed.
+        updateLoadingPage(w, "Workspace created! Starting up...");
+        setLoadingStatus("Workspace created — starting up...");
+        await new Promise(r => setTimeout(r, 3000));
+        w.location.href = terminalUrl;
+      } else {
+        // Error from API
+        updateLoadingPage(w, "Something went wrong. Redirecting to Coder...");
+        setWorkspaceError(res.detail || "Failed to create workspace");
+        w.location.href = coderUrl;
+      }
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || "Could not reach workspace service";
+      setWorkspaceError(detail);
+      updateLoadingPage(w, "Could not create workspace. Opening Coder...");
+      w.location.href = hostingInfo.coder_url;
+    } finally {
+      setTerminalLoading(false);
+      setLoadingStatus("");
+    }
   };
 
   const handleKeySave = async () => {
@@ -304,6 +349,32 @@ function HostedGetStarted({ coderUrl, githubToken, setupToken }) {
   const [keyInput, setKeyInput] = useState("");
   const [keyError, setKeyError] = useState(null);
   const [keySaved, setKeySaved] = useState(false);
+  const [terminalLoading, setTerminalLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("");
+
+  const handleOpenWorkspace = async () => {
+    if (!orgSlug || !githubToken) {
+      window.open(coderUrl, "_blank");
+      return;
+    }
+    // Open window synchronously to avoid popup blocker
+    const w = window.open("", "_blank");
+    writeLoadingPage(w, "Opening your workspace...");
+    setTerminalLoading(true);
+    setLoadingStatus("Opening workspace...");
+    try {
+      const { url } = await getTerminalUrl(githubToken, orgSlug);
+      updateLoadingPage(w, "Workspace ready — opening terminal...");
+      setLoadingStatus("Opening terminal...");
+      w.location.href = url;
+    } catch {
+      updateLoadingPage(w, "Could not open workspace. Redirecting to Coder...");
+      w.location.href = coderUrl;
+    } finally {
+      setTerminalLoading(false);
+      setLoadingStatus("");
+    }
+  };
 
   const handleSave = async () => {
     if (!keyInput.trim()) return;
