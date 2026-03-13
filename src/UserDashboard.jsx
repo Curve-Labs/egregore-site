@@ -217,12 +217,15 @@ function useGraphData(apiKey) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const lastFetchRef = useRef(0);
+  const lastKeyRef = useRef(null);
 
-  const fetch_ = useCallback(() => {
+  const fetch_ = useCallback((force) => {
     if (!apiKey) return;
     const now = Date.now();
-    if (now - lastFetchRef.current < 30000) return; // debounce 30s
+    const keyChanged = apiKey !== lastKeyRef.current;
+    if (!force && !keyChanged && now - lastFetchRef.current < 30000) return;
     lastFetchRef.current = now;
+    lastKeyRef.current = apiKey;
     setLoading(true);
     graphBatch(apiKey, GRAPH_QUERIES)
       .then(res => {
