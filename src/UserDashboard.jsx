@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getGitHubAuthUrl, exchangeCode, getMyEgregores,
   removeMember, getTerminalUrl, graphBatch, getActivityDashboard,
-  readMemoryFile,
 } from "./api";
 
 // ─── Design tokens ──────────────────────────────────────────────
@@ -722,43 +721,29 @@ function TodosView({ orgName, todos, todosMerged, pendingQuestions }) {
 
 // ─── Handoffs View ──────────────────────────────────────────────
 
-function HandoffsView({ orgName, handoffs, apiKey }) {
+function HandoffsView({ orgName, handoffs }) {
   const [tab, setTab] = useState("all");
   const [expanded, setExpanded] = useState({});
-  const [fileContent, setFileContent] = useState({});
-  const [loadingFile, setLoadingFile] = useState({});
   const statusColor = { pending: T.amber, read: T.blue, done: T.green };
   const pending = handoffs.filter(h => h.status === "pending");
   const read = handoffs.filter(h => h.status === "read");
   const done = handoffs.filter(h => h.status === "done");
   const filtered = tab === "all" ? handoffs : handoffs.filter(h => h.status === tab);
 
-  const toggle = (i, filePath) => {
-    const wasOpen = !!expanded[i];
-    setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
-    // Fetch file content on first expand
-    if (!wasOpen && filePath && !fileContent[filePath] && !loadingFile[filePath] && apiKey) {
-      setLoadingFile(prev => ({ ...prev, [filePath]: true }));
-      readMemoryFile(apiKey, filePath)
-        .then(data => setFileContent(prev => ({ ...prev, [filePath]: data.content })))
-        .catch(() => setFileContent(prev => ({ ...prev, [filePath]: null })))
-        .finally(() => setLoadingFile(prev => ({ ...prev, [filePath]: false })));
-    }
-  };
+  const toggle = (i) => setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
 
-  // Simple markdown-to-sections renderer
-  const renderContent = (content) => {
-    if (!content) return null;
-    const lines = content.split("\n");
+  // Simple markdown renderer for summary content
+  const renderMarkdown = (text) => {
+    if (!text) return null;
+    const lines = text.split("\n");
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {lines.map((line, i) => {
-          if (line.startsWith("# ")) return <span key={i} style={{ fontFamily: mono, fontSize: 14, fontWeight: 600, color: T.text, marginTop: 8 }}>{line.slice(2)}</span>;
-          if (line.startsWith("## ")) return <span key={i} style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.green, marginTop: 12, marginBottom: 2 }}>{line.slice(3).toLowerCase()}</span>;
+          if (line.startsWith("## ")) return <span key={i} style={{ fontFamily: mono, fontSize: 13, fontWeight: 500, color: T.green, marginTop: 10, marginBottom: 2 }}>{line.slice(3).toLowerCase()}</span>;
           if (line.startsWith("### ")) return <span key={i} style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: T.sub, marginTop: 8 }}>{line.slice(4).toLowerCase()}</span>;
           if (line.startsWith("- ")) return <span key={i} style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6, paddingLeft: 12 }}>· {line.slice(2)}</span>;
           if (line.startsWith("---")) return <div key={i} style={{ height: 1, background: T.border, margin: "8px 0" }} />;
-          if (line.trim() === "") return <span key={i} style={{ height: 6 }} />;
+          if (line.trim() === "") return <span key={i} style={{ height: 4 }} />;
           return <span key={i} style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{line}</span>;
         })}
       </div>
@@ -782,17 +767,15 @@ function HandoffsView({ orgName, handoffs, apiKey }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map((h, i) => {
             const isOpen = !!expanded[i];
-            const hasExpandable = h.filePath || h.response || h.summary;
-            const fc = h.filePath ? fileContent[h.filePath] : null;
-            const isLoading = h.filePath ? loadingFile[h.filePath] : false;
+            const hasContent = h.summary || h.response;
             return (
               <div key={i} style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
                 <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasExpandable ? "pointer" : "default" }}
-                  onClick={() => hasExpandable && toggle(i, h.filePath)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasContent ? "pointer" : "default" }}
+                  onClick={() => hasContent && toggle(i)}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {hasExpandable && (
+                    {hasContent && (
                       <span style={{ fontFamily: mono, fontSize: 10, color: T.muted, transition: "transform 0.15s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>
                         ▶
                       </span>
@@ -805,10 +788,10 @@ function HandoffsView({ orgName, handoffs, apiKey }) {
                     {h.status}
                   </span>
                 </div>
-                {/* Summary preview (always visible if available) */}
+                {/* Summary preview when collapsed */}
                 {h.summary && !isOpen && (
                   <span style={{ fontFamily: mono, fontSize: 12, color: T.dim, lineHeight: 1.5 }}>
-                    {h.summary.length > 120 ? h.summary.slice(0, 120).toLowerCase() + "..." : h.summary.toLowerCase()}
+                    {h.summary.length > 140 ? h.summary.slice(0, 140).toLowerCase() + "..." : h.summary.toLowerCase()}
                   </span>
                 )}
                 <div style={{ display: "flex", gap: 20 }}>
@@ -830,28 +813,7 @@ function HandoffsView({ orgName, handoffs, apiKey }) {
                         <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.response}</span>
                       </div>
                     )}
-                    {/* Full file content */}
-                    {isLoading && (
-                      <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// loading content...</span>
-                    )}
-                    {fc && renderContent(fc)}
-                    {fc === null && !isLoading && h.filePath && (
-                      <div>
-                        {h.summary && (
-                          <div style={{ marginBottom: 8 }}>
-                            <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// summary</span>
-                            <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.summary.toLowerCase()}</span>
-                          </div>
-                        )}
-                        <span style={{ fontFamily: mono, fontSize: 11, color: T.muted }}>// {h.filePath}</span>
-                      </div>
-                    )}
-                    {!fc && !isLoading && !h.filePath && h.summary && (
-                      <div>
-                        <span style={{ fontFamily: mono, fontSize: 10, color: T.dim, display: "block", marginBottom: 4 }}>// summary</span>
-                        <span style={{ fontFamily: mono, fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{h.summary.toLowerCase()}</span>
-                      </div>
-                    )}
+                    {h.summary && renderMarkdown(h.summary)}
                   </div>
                 )}
               </div>
@@ -1536,7 +1498,7 @@ export default function UserDashboard() {
         {view === "knowledge" && <KnowledgeView orgName={orgName} items={knowledgeItems} />}
         {view === "quests" && <QuestsView orgName={orgName} quests={activityQuests} />}
         {view === "todos" && <TodosView orgName={orgName} todos={graph.todos} todosMerged={todosMerged} pendingQuestions={pendingQuestions} />}
-        {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} apiKey={apiKey} />}
+        {view === "handoffs" && <HandoffsView orgName={orgName} handoffs={handoffs} />}
         {view === "activity" && <ActivityView orgName={orgName} sessions={sessions} trends={trends} activity={activity} />}
         {view === "manage" && selectedOrg && (
           <ManageView
