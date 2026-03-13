@@ -1,15 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { getActivityDashboard, graphQuery } from '../api'
 
-const VIEWS = ['home', 'people', 'knowledge', 'quests', 'manage']
+const VIEWS = ['home', 'people', 'knowledge', 'quests', 'todos', 'handoffs', 'activity', 'manage']
 
 const NAV_ITEMS = [
-  { key: 'home', icon: '⌂', label: 'HOME' },
-  { key: 'people', icon: '◎', label: 'PEOPLE' },
-  { key: 'knowledge', icon: '◆', label: 'KNOWLEDGE' },
-  { key: 'quests', icon: '⚑', label: 'QUESTS' },
-  { key: 'manage', icon: '⚙', label: 'MANAGE' },
+  { key: 'home', icon: '⌂', label: 'home' },
+  { key: 'people', icon: '◎', label: 'people' },
+  { key: 'knowledge', icon: '◆', label: 'knowledge' },
+  { key: 'quests', icon: '⚑', label: 'quests' },
+  { key: 'todos', icon: '☐', label: 'todos' },
+  { key: 'handoffs', icon: '⇄', label: 'handoffs' },
+  { key: 'activity', icon: '◈', label: 'activity' },
+  { key: 'manage', icon: '⚙', label: 'manage' },
 ]
+
+const LogoIcon = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill={color} xmlns="http://www.w3.org/2000/svg">
+    <rect x="46" y="4" width="8" height="36" rx="4" />
+    <rect x="46" y="60" width="8" height="36" rx="4" />
+    <rect x="4" y="46" width="36" height="8" rx="4" />
+    <rect x="60" y="46" width="36" height="8" rx="4" />
+    <rect x="14.5" y="14.5" width="8" height="30" rx="4" transform="rotate(-45 18.5 29.5)" />
+    <rect x="77.5" y="14.5" width="8" height="30" rx="4" transform="rotate(45 81.5 29.5)" />
+    <rect x="14.5" y="55.5" width="8" height="30" rx="4" transform="rotate(45 18.5 70.5)" />
+    <rect x="77.5" y="55.5" width="8" height="30" rx="4" transform="rotate(-45 81.5 70.5)" />
+  </svg>
+)
 
 // ─── Sidebar ────────────────────────────────────────────────
 
@@ -18,7 +34,7 @@ function Sidebar({ activeView, onNavigate, orgName }) {
     <div style={s.sidebar}>
       <div style={s.sidebarTop}>
         <div style={s.logo}>
-          <span style={s.logoIcon}>&gt;</span>
+          <LogoIcon size={22} color="#22C55E" />
           <span style={s.logoText}>EGREGORE</span>
         </div>
         <nav style={s.nav}>
@@ -34,13 +50,12 @@ function Sidebar({ activeView, onNavigate, orgName }) {
                 }}
               >
                 <span style={{
-                  ...s.navIcon,
-                  color: active ? '#059669' : '#9CA3AF',
-                }}>{item.icon}</span>
+                  ...s.navIndicator,
+                  color: active ? '#22C55E' : '#525252',
+                }}>{active ? '>' : '○'}</span>
                 <span style={{
                   ...s.navLabel,
-                  color: active ? '#1A1A1A' : '#9CA3AF',
-                  fontWeight: active ? 500 : 400,
+                  color: active ? '#E5E5E5' : '#737373',
                 }}>{item.label}</span>
               </button>
             )
@@ -50,9 +65,9 @@ function Sidebar({ activeView, onNavigate, orgName }) {
       <div style={s.workspaceWidget}>
         <div style={s.wsTop}>
           <span style={s.wsIcon}>⊞</span>
-          <span style={s.wsLabel}>WORKSPACES</span>
+          <span style={s.wsLabel}>workspaces</span>
         </div>
-        <span style={s.wsName}>{orgName || 'WORKSPACE'}</span>
+        <span style={s.wsName}>{orgName || 'workspace'}</span>
       </div>
     </div>
   )
@@ -64,15 +79,15 @@ function PageHeader({ orgName, title, stats }) {
   return (
     <div style={s.topBar}>
       <div style={s.titleBlock}>
-        <span style={s.titleOrg}>// {(orgName || '').toUpperCase()}</span>
-        <span style={s.titleText}>{title}</span>
+        <span style={s.titleOrg}>// {(orgName || '').toLowerCase()}</span>
+        <span style={s.titleText}>{title.toLowerCase()}</span>
       </div>
       {stats && (
         <div style={s.statsRow}>
           {stats.map((st, i) => (
             <div key={i} style={s.stat}>
-              <span style={{ ...s.statVal, color: st.color || '#1A1A1A' }}>{st.value}</span>
-              <span style={s.statLabel}>{st.label}</span>
+              <span style={{ ...s.statVal, color: st.color || '#E5E5E5' }}>{st.value}</span>
+              <span style={s.statLabel}>{st.label.toLowerCase()}</span>
             </div>
           ))}
         </div>
@@ -84,7 +99,7 @@ function PageHeader({ orgName, title, stats }) {
 // ─── Section Header ─────────────────────────────────────────
 
 function SectionHeader({ children }) {
-  return <div style={s.sectionHeader}>{children}</div>
+  return <div style={s.sectionHeader}>{typeof children === 'string' ? children.toLowerCase() : children}</div>
 }
 
 // ─── Home View ──────────────────────────────────────────────
@@ -94,67 +109,67 @@ function HomeView({ orgName, feedItems, people, threads, stats }) {
     <div style={s.content}>
       <PageHeader
         orgName={orgName}
-        title="HOME"
+        title="home"
         stats={stats}
       />
       <div style={s.columns}>
         <div style={s.mainCol}>
-          <SectionHeader>PULSE</SectionHeader>
+          <SectionHeader>pulse</SectionHeader>
           <div style={s.feed}>
             {feedItems.map((item, i) => (
               <div key={i} style={s.feedItem}>
                 <span style={s.feedTime}>{item.time}</span>
                 <span style={{
                   ...s.feedDot,
-                  background: item.recent ? '#10B981' : '#E5E7EB',
+                  background: item.recent ? '#22C55E' : '#525252',
                   width: item.recent ? 8 : 6,
                   height: item.recent ? 8 : 6,
                 }} />
                 <span style={{
                   ...s.feedWho,
-                  color: item.recent ? '#059669' : '#9CA3AF',
-                }}>{item.who}</span>
+                  color: item.recent ? '#22C55E' : '#737373',
+                }}>{item.who.toLowerCase()}</span>
                 <span style={{
                   ...s.feedText,
-                  color: item.recent ? '#2D2D2D' : '#6B7280',
-                }}>{item.text}</span>
+                  color: item.recent ? '#E5E5E5' : '#737373',
+                }}>{item.text.toLowerCase()}</span>
               </div>
             ))}
           </div>
         </div>
         <div style={s.rightPanel}>
-          <SectionHeader>PEOPLE</SectionHeader>
+          <SectionHeader>people</SectionHeader>
           <div style={s.peopleList}>
             {people.map((p, i) => (
               <div key={i} style={s.personRow}>
                 <span style={{
                   ...s.feedDot,
-                  background: p.online ? '#10B981' : '#D1D5DB',
+                  background: p.online ? '#22C55E' : '#525252',
                   width: 8, height: 8,
                 }} />
                 <span style={{
                   ...s.personName,
-                  color: p.online ? '#1A1A1A' : '#9CA3AF',
-                }}>{p.name}</span>
+                  color: p.online ? '#E5E5E5' : '#737373',
+                }}>{p.name.toLowerCase()}</span>
                 <span style={{
                   ...s.personStatus,
-                  color: p.online ? '#B0B5BD' : '#C0C5CD',
-                }}>{p.status}</span>
+                  color: p.online ? '#A3A3A3' : '#525252',
+                }}>{p.status.toLowerCase()}</span>
               </div>
             ))}
           </div>
           <button style={s.openWorkspace}>
-            &gt;_ OPEN WORKSPACE
+            &gt;_ open workspace
           </button>
-          <SectionHeader>OPEN THREADS</SectionHeader>
+          <SectionHeader>open threads</SectionHeader>
           <div style={s.threadsList}>
             {threads.map((t, i) => (
               <div key={i} style={s.threadItem}>
-                <span style={s.threadTitle}>{t.title}</span>
+                <span style={s.threadTitle}>{t.title.toLowerCase()}</span>
                 <span style={{
                   ...s.threadMeta,
-                  color: t.blocked ? '#DC2626' : '#B0B5BD',
-                }}>{t.meta}</span>
+                  color: t.blocked ? '#EF4444' : '#525252',
+                }}>{t.meta.toLowerCase()}</span>
               </div>
             ))}
           </div>
@@ -171,10 +186,10 @@ function PeopleView({ orgName, members }) {
     <div style={s.content}>
       <PageHeader
         orgName={orgName}
-        title="PEOPLE"
+        title="people"
         stats={[
-          { value: String(members.length), label: 'MEMBERS' },
-          { value: String(members.filter(m => m.online).length), label: 'ONLINE', color: '#059669' },
+          { value: String(members.length), label: 'members' },
+          { value: String(members.filter(m => m.online).length), label: 'online', color: '#22C55E' },
         ]}
       />
       <div style={s.peopleGrid}>
@@ -183,7 +198,7 @@ function PeopleView({ orgName, members }) {
             <div style={s.personCardTop}>
               <span style={{
                 ...s.feedDot,
-                background: m.online ? '#10B981' : '#D1D5DB',
+                background: m.online ? '#22C55E' : '#525252',
                 width: 10, height: 10,
               }} />
               <span style={s.personCardName}>{m.name}</span>
@@ -197,13 +212,13 @@ function PeopleView({ orgName, members }) {
             </div>
             <span style={{
               ...s.personCardFocus,
-              color: m.online ? '#059669' : '#B0B5BD',
-            }}>{m.online ? `NOW: ${m.focus}` : `LAST: ${m.lastSeen}`}</span>
+              color: m.online ? '#22C55E' : '#525252',
+            }}>{m.online ? `now: ${(m.focus || '').toLowerCase()}` : `last: ${(m.lastSeen || '').toLowerCase()}`}</span>
           </div>
         ))}
         <button style={s.inviteCard}>
           <span style={s.inviteIcon}>+</span>
-          <span style={s.inviteText}>INVITE MEMBER</span>
+          <span style={s.inviteText}>invite member</span>
         </button>
       </div>
     </div>
@@ -219,17 +234,17 @@ function KnowledgeView({ orgName, items }) {
   const filtered = tab === 'all' ? items : items.filter(it => it.type === tab)
   const active = filtered[selected] || filtered[0]
 
-  const typeColor = { decision: '#059669', finding: '#F59E0B', pattern: '#8B5CF6' }
+  const typeColor = { decision: '#22C55E', finding: '#F59E0B', pattern: '#8B5CF6' }
 
   return (
     <div style={s.content}>
       <PageHeader
         orgName={orgName}
-        title="KNOWLEDGE"
+        title="knowledge"
         stats={[
-          { value: String(items.filter(i => i.type === 'decision').length), label: 'DECISIONS', color: '#059669' },
-          { value: String(items.filter(i => i.type === 'finding').length), label: 'FINDINGS', color: '#F59E0B' },
-          { value: String(items.filter(i => i.type === 'pattern').length), label: 'PATTERNS', color: '#8B5CF6' },
+          { value: String(items.filter(i => i.type === 'decision').length), label: 'decisions', color: '#22C55E' },
+          { value: String(items.filter(i => i.type === 'finding').length), label: 'findings', color: '#F59E0B' },
+          { value: String(items.filter(i => i.type === 'pattern').length), label: 'patterns', color: '#8B5CF6' },
         ]}
       />
       <div style={s.columns}>
@@ -241,11 +256,11 @@ function KnowledgeView({ orgName, items }) {
                 onClick={() => { setTab(t); setSelected(0) }}
                 style={{
                   ...s.tab,
-                  color: tab === t ? '#1A1A1A' : '#9CA3AF',
+                  color: tab === t ? '#E5E5E5' : '#737373',
                   fontWeight: tab === t ? 500 : 400,
                 }}
               >
-                {t === 'all' ? 'ALL' : t.toUpperCase() + 'S'}
+                {t === 'all' ? 'all' : t + 's'}
               </button>
             ))}
           </div>
@@ -257,18 +272,17 @@ function KnowledgeView({ orgName, items }) {
                 onClick={() => setSelected(i)}
                 style={{
                   ...s.knowledgeItem,
-                  background: selected === i ? '#FFFFFF' : '#F5F5F0',
-                  boxShadow: selected === i ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                  background: selected === i ? '#1F1F1F' : 'transparent',
                 }}
               >
                 <div style={s.knowledgeBadge}>
                   <span style={{ ...s.knowledgeType, color: typeColor[item.type] }}>
-                    {item.type.toUpperCase()}
+                    {item.type}
                   </span>
                   <span style={s.knowledgeDate}>{item.date}</span>
                 </div>
-                <span style={s.knowledgeTitle}>{item.title}</span>
-                <span style={s.knowledgeDesc}>{item.description}</span>
+                <span style={s.knowledgeTitle}>{item.title.toLowerCase()}</span>
+                <span style={s.knowledgeDesc}>{item.description.toLowerCase()}</span>
                 <div style={s.knowledgeMeta}>
                   <span style={s.knowledgeAuthor}>{item.author}</span>
                   <span style={s.knowledgeQuest}>{item.quest}</span>
@@ -279,24 +293,24 @@ function KnowledgeView({ orgName, items }) {
         </div>
         {active && (
           <div style={s.threadPanel}>
-            <span style={s.threadPanelHeader}>THREAD</span>
+            <span style={s.threadPanelHeader}>thread</span>
             <div style={s.divider} />
-            <span style={s.threadPanelTitle}>{active.title}</span>
-            <span style={s.threadPanelBody}>{active.fullText || active.description}</span>
+            <span style={s.threadPanelTitle}>{active.title.toLowerCase()}</span>
+            <span style={s.threadPanelBody}>{(active.fullText || active.description).toLowerCase()}</span>
             {active.related && active.related.length > 0 && (
               <>
-                <span style={s.threadPanelLabel}>RELATED</span>
+                <span style={s.threadPanelLabel}>related</span>
                 {active.related.map((r, i) => (
                   <div key={i} style={s.relatedItem}>
-                    <span style={{ color: typeColor[r.type] || '#059669' }}>◉</span>
-                    <span style={s.relatedText}>{r.title}</span>
+                    <span style={{ color: typeColor[r.type] || '#22C55E' }}>◉</span>
+                    <span style={s.relatedText}>{r.title.toLowerCase()}</span>
                   </div>
                 ))}
               </>
             )}
             {active.source && (
               <>
-                <span style={s.threadPanelLabel}>SOURCE</span>
+                <span style={s.threadPanelLabel}>source</span>
                 <span style={s.threadPanelSource}>{active.source}</span>
               </>
             )}
@@ -317,38 +331,40 @@ function QuestsView({ orgName, quests }) {
     <div style={s.content}>
       <PageHeader
         orgName={orgName}
-        title="QUESTS"
+        title="quests"
         stats={[
-          { value: String(active.length), label: 'ACTIVE', color: '#059669' },
-          { value: String(completed.length), label: 'COMPLETED' },
+          { value: String(active.length), label: 'active', color: '#22C55E' },
+          { value: String(completed.length), label: 'completed' },
         ]}
       />
       <div style={s.questList}>
         {quests.map((q, i) => {
           const isActive = q.status === 'active'
           return (
-            <div key={i} style={s.questCard}>
+            <div key={i} style={{
+              ...s.questCard,
+              borderLeft: `3px solid ${isActive ? '#22C55E' : '#525252'}`,
+            }}>
               <div style={s.questHeader}>
                 <div style={s.questLeft}>
-                  <span style={{ color: isActive ? '#059669' : '#9CA3AF' }}>⚑</span>
                   <span style={{
                     ...s.questId,
-                    color: isActive ? '#059669' : '#9CA3AF',
+                    color: isActive ? '#22C55E' : '#737373',
                   }}>{q.id}</span>
                 </div>
                 <span style={{
                   ...s.questStatus,
-                  color: isActive ? '#059669' : '#9CA3AF',
-                }}>{q.status.toUpperCase()}</span>
+                  color: isActive ? '#22C55E' : '#737373',
+                }}>{q.status}</span>
               </div>
               <span style={{
                 ...s.questTitle,
-                color: isActive ? '#1A1A1A' : '#9CA3AF',
-              }}>{q.title}</span>
+                color: isActive ? '#E5E5E5' : '#737373',
+              }}>{q.title.toLowerCase()}</span>
               <span style={{
                 ...s.questDesc,
-                color: isActive ? '#6B7280' : '#B0B5BD',
-              }}>{q.description}</span>
+                color: isActive ? '#A3A3A3' : '#525252',
+              }}>{q.description.toLowerCase()}</span>
               <div style={s.questMeta}>
                 <span style={s.questMetaItem}>{q.artifacts} artifacts</span>
                 <span style={s.questMetaItem}>{q.age}</span>
@@ -362,81 +378,349 @@ function QuestsView({ orgName, quests }) {
   )
 }
 
+// ─── Todos View ─────────────────────────────────────────────
+
+function TodosView({ orgName, todos }) {
+  const [tab, setTab] = useState('open')
+
+  const open = todos.filter(t => t.status === 'open')
+  const done = todos.filter(t => t.status === 'done')
+  const filtered = tab === 'open' ? open : tab === 'done' ? done : todos
+
+  return (
+    <div style={s.content}>
+      <PageHeader
+        orgName={orgName}
+        title="todos"
+        stats={[
+          { value: String(open.length), label: 'open', color: '#22C55E' },
+          { value: String(done.length), label: 'done' },
+        ]}
+      />
+      <div style={s.tabs}>
+        {['open', 'done', 'all'].map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              ...s.tab,
+              color: tab === t ? '#E5E5E5' : '#737373',
+              fontWeight: tab === t ? 500 : 400,
+            }}
+          >{t}</button>
+        ))}
+      </div>
+      <div style={s.divider} />
+      <div style={s.todoList}>
+        {filtered.length === 0 && (
+          <div style={s.emptyState}>// no {tab} todos</div>
+        )}
+        {filtered.map((todo, i) => {
+          const isDone = todo.status === 'done'
+          return (
+            <div key={i} style={{
+              ...s.todoItem,
+              borderLeft: `3px solid ${isDone ? '#525252' : '#22C55E'}`,
+              opacity: isDone ? 0.6 : 1,
+            }}>
+              <div style={s.todoHeader}>
+                <span style={{
+                  ...s.todoCheckbox,
+                  color: isDone ? '#22C55E' : '#525252',
+                }}>{isDone ? '☑' : '☐'}</span>
+                <span style={{
+                  ...s.todoText,
+                  color: isDone ? '#737373' : '#E5E5E5',
+                  textDecoration: isDone ? 'line-through' : 'none',
+                }}>{todo.text.toLowerCase()}</span>
+              </div>
+              <div style={s.todoMeta}>
+                <span style={s.todoMetaItem}>{todo.by}</span>
+                <span style={s.todoMetaItem}>{todo.date}</span>
+                {todo.quest && <span style={{ ...s.todoMetaItem, color: '#22C55E' }}>{todo.quest}</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Handoffs View ──────────────────────────────────────────
+
+function HandoffsView({ orgName, handoffs }) {
+  const [tab, setTab] = useState('all')
+
+  const pending = handoffs.filter(h => h.status === 'pending')
+  const read = handoffs.filter(h => h.status === 'read')
+  const done = handoffs.filter(h => h.status === 'done')
+  const filtered = tab === 'all' ? handoffs : handoffs.filter(h => h.status === tab)
+
+  const statusColor = { pending: '#F59E0B', read: '#3B82F6', done: '#22C55E' }
+
+  return (
+    <div style={s.content}>
+      <PageHeader
+        orgName={orgName}
+        title="handoffs"
+        stats={[
+          { value: String(pending.length), label: 'pending', color: '#F59E0B' },
+          { value: String(read.length), label: 'read', color: '#3B82F6' },
+          { value: String(done.length), label: 'done', color: '#22C55E' },
+        ]}
+      />
+      <div style={s.tabs}>
+        {['all', 'pending', 'read', 'done'].map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              ...s.tab,
+              color: tab === t ? '#E5E5E5' : '#737373',
+              fontWeight: tab === t ? 500 : 400,
+            }}
+          >{t}</button>
+        ))}
+      </div>
+      <div style={s.divider} />
+      <div style={s.handoffList}>
+        {filtered.length === 0 && (
+          <div style={s.emptyState}>// no {tab} handoffs</div>
+        )}
+        {filtered.map((h, i) => (
+          <div key={i} style={{
+            ...s.handoffCard,
+            borderLeft: `3px solid ${statusColor[h.status] || '#525252'}`,
+          }}>
+            <div style={s.handoffHeader}>
+              <span style={s.handoffTopic}>{(h.topic || 'untitled').toLowerCase()}</span>
+              <span style={{
+                ...s.handoffStatus,
+                color: statusColor[h.status] || '#737373',
+              }}>{h.status}</span>
+            </div>
+            {h.summary && (
+              <span style={s.handoffSummary}>{h.summary.toLowerCase()}</span>
+            )}
+            <div style={s.handoffMeta}>
+              <span style={s.handoffMetaItem}>
+                <span style={{ color: '#737373' }}>from</span> {h.author}
+              </span>
+              {h.handedTo && (
+                <span style={s.handoffMetaItem}>
+                  <span style={{ color: '#737373' }}>to</span> {h.handedTo}
+                </span>
+              )}
+              <span style={s.handoffMetaItem}>{h.date}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Activity View ──────────────────────────────────────────
+
+function ActivityView({ orgName, sessions }) {
+  const [tab, setTab] = useState('all')
+
+  const activeSessions = sessions.filter(s => s.status === 'active')
+  const wrapped = sessions.filter(s => s.status === 'wrapped')
+  const handedOff = sessions.filter(s => s.status === 'handed_off')
+  const filtered = tab === 'all' ? sessions : sessions.filter(s => s.status === tab)
+
+  const statusColor = {
+    active: '#22C55E',
+    wrapped: '#3B82F6',
+    handed_off: '#F59E0B',
+  }
+
+  return (
+    <div style={s.content}>
+      <PageHeader
+        orgName={orgName}
+        title="activity"
+        stats={[
+          { value: String(activeSessions.length), label: 'active', color: '#22C55E' },
+          { value: String(wrapped.length), label: 'wrapped', color: '#3B82F6' },
+          { value: String(handedOff.length), label: 'handed_off', color: '#F59E0B' },
+        ]}
+      />
+      <div style={s.tabs}>
+        {['all', 'active', 'wrapped', 'handed_off'].map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              ...s.tab,
+              color: tab === t ? '#E5E5E5' : '#737373',
+              fontWeight: tab === t ? 500 : 400,
+            }}
+          >{t}</button>
+        ))}
+      </div>
+      <div style={s.divider} />
+      <div style={s.activityList}>
+        {filtered.length === 0 && (
+          <div style={s.emptyState}>// no {tab} sessions</div>
+        )}
+        {filtered.map((sess, i) => (
+          <div key={i} style={{
+            ...s.sessionCard,
+            borderLeft: `3px solid ${statusColor[sess.status] || '#525252'}`,
+          }}>
+            <div style={s.sessionHeader}>
+              <div style={s.sessionLeft}>
+                <span style={{
+                  ...s.feedDot,
+                  background: statusColor[sess.status] || '#525252',
+                  width: 8, height: 8,
+                }} />
+                <span style={s.sessionBy}>{sess.by}</span>
+              </div>
+              <span style={{
+                ...s.sessionStatus,
+                color: statusColor[sess.status] || '#737373',
+              }}>{sess.status}</span>
+            </div>
+            <span style={s.sessionTopic}>
+              {(sess.topic || 'untitled session').toLowerCase()}
+            </span>
+            {sess.summary && (
+              <span style={s.sessionSummary}>{sess.summary.toLowerCase()}</span>
+            )}
+            <div style={s.sessionMeta}>
+              <span style={s.sessionMetaItem}>{sess.date}</span>
+              {sess.branch && sess.branch !== 'develop' && (
+                <span style={{ ...s.sessionMetaItem, color: '#22C55E' }}>{sess.branch}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Manage View ────────────────────────────────────────────
+
+const INTEGRATIONS = [
+  { name: 'github', status: 'connected', icon: '⬡' },
+  { name: 'neo4j', status: 'connected', icon: '◉' },
+  { name: 'telegram', status: 'not connected', icon: '▷' },
+  { name: 'google_workspace', status: 'not connected', icon: '◧' },
+]
 
 function ManageView({ orgName, org, members }) {
   return (
     <div style={s.content}>
       <PageHeader
         orgName={orgName}
-        title="MANAGE"
+        title="manage"
         stats={[]}
       />
       <div style={{ ...s.topBar, justifyContent: 'flex-end', marginTop: -16 }}>
-        <span style={s.adminBadge}>ADMIN</span>
+        <span style={s.adminBadge}>admin</span>
       </div>
-      <div style={s.columns}>
-        <div style={s.mainCol}>
+      <div style={s.manageGrid}>
+        <div style={s.manageLeftCol}>
           <div style={s.manageCard}>
-            <span style={s.manageCardHeader}>WORKSPACE</span>
+            <span style={s.manageCardHeader}>workspace</span>
             <div style={s.divider} />
             {[
-              ['Organization', org.name || orgName],
-              ['GitHub Org', org.github_org || '—'],
-              ['Memory Repo', org.memory_repo || '—'],
-              ['Status', null],
+              ['organization', org.name || orgName],
+              ['github_org', org.github_org || '—'],
+              ['memory_repo', org.memory_repo || '—'],
+              ['status', null],
             ].map(([label, value], i) => (
               <div key={i} style={s.manageRow}>
                 <span style={s.manageLabel}>{label}</span>
                 {value !== null ? (
                   <span style={s.manageValue}>{value}</span>
                 ) : (
-                  <span style={{ ...s.manageValue, color: '#059669' }}>● Connected</span>
+                  <span style={{ ...s.manageValue, color: '#22C55E' }}>● connected</span>
                 )}
               </div>
             ))}
           </div>
           <div style={s.manageCard}>
-            <span style={s.manageCardHeader}>API KEY</span>
+            <span style={s.manageCardHeader}>api_key</span>
             <div style={s.divider} />
             <div style={s.manageRow}>
-              <span style={{ ...s.manageLabel, fontFamily: "'IBM Plex Mono', monospace" }}>
+              <span style={{ ...s.manageLabel, fontFamily: mono }}>
                 egr_sk_••••••••••••••••
               </span>
-              <button style={s.copyBtn}>COPY</button>
+              <button style={s.copyBtn}>copy</button>
             </div>
-            <span style={s.manageNote}>Used for graph queries and notifications. Store in .env</span>
+            <span style={s.manageNote}>// used for graph queries and notifications. store in .env</span>
           </div>
-        </div>
-        <div style={s.membersPanel}>
-          <span style={s.manageCardHeader}>MEMBERS</span>
-          <div style={s.divider} />
-          <div style={s.membersTable}>
-            <div style={s.membersHeaderRow}>
-              <span style={{ ...s.membersHeaderCell, width: 120 }}>Name</span>
-              <span style={{ ...s.membersHeaderCell, width: 100 }}>Role</span>
-              <span style={{ ...s.membersHeaderCell, width: 100 }}>Status</span>
-              <span style={{ ...s.membersHeaderCell, width: 80 }}>Access</span>
-            </div>
-            {members.map((m, i) => (
-              <div key={i} style={s.memberRow}>
-                <span style={{ ...s.memberCell, width: 120, fontWeight: 500, color: '#1A1A1A' }}>{m.name}</span>
-                <span style={{ ...s.memberCell, width: 100 }}>{m.role}</span>
-                <span style={{ ...s.memberCell, width: 100, color: m.online ? '#059669' : '#9CA3AF' }}>
-                  {m.online ? '● online' : '○ offline'}
-                </span>
-                <span style={{ ...s.memberCell, width: 80 }}>{m.access || 'member'}</span>
+          <div style={s.manageCard}>
+            <span style={s.manageCardHeader}>integrations</span>
+            <div style={s.divider} />
+            {INTEGRATIONS.map((intg, i) => (
+              <div key={i} style={s.manageRow}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ color: intg.status === 'connected' ? '#22C55E' : '#525252', fontSize: 14 }}>{intg.icon}</span>
+                  <span style={s.manageLabel}>{intg.name}</span>
+                </div>
+                <span style={{
+                  ...s.manageValue,
+                  color: intg.status === 'connected' ? '#22C55E' : '#525252',
+                  fontSize: 11,
+                }}>{intg.status}</span>
               </div>
             ))}
           </div>
-          <button style={s.inviteMemberBtn}>+ INVITE MEMBER</button>
+          <div style={{ ...s.manageCard, borderColor: '#7F1D1D' }}>
+            <span style={{ ...s.manageCardHeader, color: '#EF4444' }}>danger_zone</span>
+            <div style={{ ...s.divider, background: '#7F1D1D' }} />
+            <div style={s.manageRow}>
+              <div>
+                <span style={s.manageLabel}>reset_graph</span>
+                <span style={{ ...s.manageNote, display: 'block', marginTop: 4 }}>// clears all nodes and relationships</span>
+              </div>
+              <button style={s.dangerBtn}>reset</button>
+            </div>
+            <div style={s.manageRow}>
+              <div>
+                <span style={s.manageLabel}>delete_egregore</span>
+                <span style={{ ...s.manageNote, display: 'block', marginTop: 4 }}>// permanently removes this workspace</span>
+              </div>
+              <button style={s.dangerBtn}>delete</button>
+            </div>
+          </div>
+        </div>
+        <div style={s.membersPanel}>
+          <span style={s.manageCardHeader}>members</span>
+          <div style={s.divider} />
+          <div style={s.membersTable}>
+            <div style={s.membersHeaderRow}>
+              <span style={{ ...s.membersHeaderCell, flex: 2 }}>name</span>
+              <span style={{ ...s.membersHeaderCell, flex: 1.5 }}>role</span>
+              <span style={{ ...s.membersHeaderCell, flex: 1.5 }}>status</span>
+              <span style={{ ...s.membersHeaderCell, flex: 1 }}>sessions</span>
+              <span style={{ ...s.membersHeaderCell, flex: 1 }}>access</span>
+            </div>
+            {members.map((m, i) => (
+              <div key={i} style={s.memberRow}>
+                <span style={{ ...s.memberCell, flex: 2, color: '#E5E5E5' }}>{m.name}</span>
+                <span style={{ ...s.memberCell, flex: 1.5 }}>{m.role}</span>
+                <span style={{ ...s.memberCell, flex: 1.5, color: m.online ? '#22C55E' : '#737373' }}>
+                  {m.online ? '● online' : '○ offline'}
+                </span>
+                <span style={{ ...s.memberCell, flex: 1 }}>{m.sessions || 0}</span>
+                <span style={{ ...s.memberCell, flex: 1 }}>{m.access || 'member'}</span>
+              </div>
+            ))}
+          </div>
+          <button style={s.inviteMemberBtn}>+ invite member</button>
         </div>
       </div>
     </div>
   )
 }
-
-// ─── Main Component ─────────────────────────────────────────
 
 // ─── Data helpers ───────────────────────────────────────────
 
@@ -445,11 +729,11 @@ function timeAgo(dateStr) {
   const d = new Date(dateStr)
   const now = new Date()
   const mins = Math.floor((now - d) / 60000)
-  if (mins < 60) return `${mins}M`
+  if (mins < 60) return `${mins}m`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}H`
+  if (hrs < 24) return `${hrs}h`
   const days = Math.floor(hrs / 24)
-  return `${days}D`
+  return `${days}d`
 }
 
 function formatDate(dateStr) {
@@ -480,19 +764,19 @@ export default function ExperimentDash() {
   const [graphPeople, setGraphPeople] = useState([])
   const [graphKnowledge, setGraphKnowledge] = useState([])
   const [graphQuests, setGraphQuests] = useState([])
+  const [graphTodos, setGraphTodos] = useState([])
+  const [graphHandoffs, setGraphHandoffs] = useState([])
+  const [graphSessions, setGraphSessions] = useState([])
 
-  // Direct API key auth — no GitHub OAuth needed for the experiment dashboard.
-  // In production, this would come from the login flow.
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('egregore_api_key') || '')
   const [username, setUsername] = useState(() => localStorage.getItem('egregore_username') || '')
   const orgName = 'Curve Labs'
 
-  // If no key stored, show a simple key entry
   if (!apiKey) {
     return (
       <div style={{ ...s.loadingScreen, flexDirection: 'column', gap: 16 }}>
         <div style={s.logo}>
-          <span style={s.logoIcon}>&gt;</span>
+          <LogoIcon size={22} color="#22C55E" />
           <span style={s.logoText}>EGREGORE</span>
         </div>
         <form onSubmit={e => {
@@ -507,29 +791,27 @@ export default function ExperimentDash() {
             setUsername(user)
           }
         }} style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 320 }}>
-          <input name="user" placeholder="GitHub username" defaultValue=""
-            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, padding: '10px 14px', background: '#EAEAE5', border: 'none', borderRadius: 8, color: '#1A1A1A' }} />
-          <input name="key" placeholder="API key (ek_...)" defaultValue=""
-            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, padding: '10px 14px', background: '#EAEAE5', border: 'none', borderRadius: 8, color: '#1A1A1A' }} />
+          <input name="user" placeholder="github username" defaultValue=""
+            style={{ fontFamily: mono, fontSize: 13, padding: '10px 14px', background: '#1A1A1A', border: '1px solid #1F1F1F', borderRadius: 8, color: '#E5E5E5' }} />
+          <input name="key" placeholder="api key (ek_...)" defaultValue=""
+            style={{ fontFamily: mono, fontSize: 13, padding: '10px 14px', background: '#1A1A1A', border: '1px solid #1F1F1F', borderRadius: 8, color: '#E5E5E5' }} />
           <button type="submit"
-            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 600, padding: '12px 14px', background: '#059669', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-            CONNECT
+            style={{ fontFamily: mono, fontSize: 13, fontWeight: 600, padding: '12px 14px', background: '#22C55E', color: '#0C0C0C', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            connect
           </button>
         </form>
       </div>
     )
   }
 
-  // Fetch all dashboard data
   useEffect(() => {
     if (!apiKey || !username) return
 
-    // Activity dashboard (sessions, handoffs, quests summary, etc.)
     getActivityDashboard(apiKey, username)
       .then(data => { setActivity(data); setLoading(false) })
       .catch(err => { console.warn('Activity fetch failed:', err.message); setLoading(false) })
 
-    // People with stats
+    // People
     graphQuery(apiKey, `
       MATCH (p:Person)
       OPTIONAL MATCH (s:Session)-[:BY]->(p)
@@ -541,7 +823,7 @@ export default function ExperimentDash() {
       ORDER BY sessions DESC
     `).then(r => setGraphPeople(toRecords(r))).catch(() => {})
 
-    // Knowledge artifacts (decisions, findings, patterns)
+    // Knowledge
     graphQuery(apiKey, `
       MATCH (a:Artifact)
       WHERE a.type IN ['decision', 'finding', 'pattern']
@@ -564,6 +846,39 @@ export default function ExperimentDash() {
              q.description AS description, artifacts, people, lastActivity
       ORDER BY q.status ASC, lastActivity DESC
     `).then(r => setGraphQuests(toRecords(r))).catch(() => {})
+
+    // Todos
+    graphQuery(apiKey, `
+      MATCH (t:Todo)-[:BY]->(p:Person)
+      OPTIONAL MATCH (t)-[:INVOLVES]->(q:Quest)
+      RETURN t.id AS id, t.text AS text, t.status AS status,
+             t.created AS created, t.completed AS completed,
+             p.name AS by, q.title AS quest
+      ORDER BY t.created DESC LIMIT 50
+    `).then(r => setGraphTodos(toRecords(r))).catch(() => {})
+
+    // Handoffs
+    graphQuery(apiKey, `
+      MATCH (s:Session)
+      WHERE s.handoffStatus IS NOT NULL
+      OPTIONAL MATCH (s)-[:BY]->(p:Person)
+      OPTIONAL MATCH (s)-[:HANDED_TO]->(t:Person)
+      WITH s, p, collect(DISTINCT t.name) AS handedToList
+      RETURN s.id AS id, s.topic AS topic, s.summary AS summary,
+             s.handoffStatus AS status, s.date AS date,
+             p.name AS author, handedToList
+      ORDER BY s.date DESC LIMIT 30
+    `).then(r => setGraphHandoffs(toRecords(r))).catch(() => {})
+
+    // Sessions (activity)
+    graphQuery(apiKey, `
+      MATCH (s:Session)-[:BY]->(p:Person)
+      RETURN s.id AS id, s.topic AS topic, s.status AS status,
+             s.date AS date, s.branch AS branch, s.summary AS summary,
+             p.name AS by
+      ORDER BY s.date DESC LIMIT 50
+    `).then(r => setGraphSessions(toRecords(r))).catch(() => {})
+
   }, [apiKey, username])
 
   // ─── Transform graph data into view props ────────────────
@@ -574,7 +889,6 @@ export default function ExperimentDash() {
     return hrs < 4
   }
 
-  // Pulse feed from activity sessions
   const feedItems = (() => {
     if (!activity) return MOCK.feedItems
     const mySessions = (activity.my_sessions || []).slice(0, 3)
@@ -587,26 +901,24 @@ export default function ExperimentDash() {
       .slice(0, 8)
     return all.map(s => ({
       time: timeAgo(s.date),
-      who: (s.who || '').toUpperCase(),
-      text: (s.topic || 'session').toUpperCase(),
+      who: (s.who || '').toLowerCase(),
+      text: (s.topic || 'session').toLowerCase(),
       recent: isRecentSession(s.date),
     }))
   })()
 
-  // People from graph
   const people = (() => {
     if (graphPeople.length === 0) return MOCK.people
     return graphPeople.map(p => {
       const isOnline = p.lastSession && isRecentSession(p.lastSession)
       return {
-        name: (p.name || '').toUpperCase(),
-        status: isOnline ? (p.name || '').toUpperCase() : timeAgo(p.lastSession) + ' AGO',
+        name: (p.name || ''),
+        status: isOnline ? (p.name || '') : timeAgo(p.lastSession) + ' ago',
         online: isOnline,
       }
     })
   })()
 
-  // Open threads from handoffs
   const threads = (() => {
     if (!activity) return MOCK.threads
     const pending = (activity.handoffs_to_me || [])
@@ -614,13 +926,12 @@ export default function ExperimentDash() {
       .slice(0, 4)
     if (pending.length === 0) return MOCK.threads
     return pending.map(h => ({
-      title: (h.topic || 'untitled').toUpperCase(),
-      meta: `${(h.author || '').toUpperCase()} · ${h.status === 'pending' ? 'PENDING' : 'OPEN'}`,
+      title: (h.topic || 'untitled').toLowerCase(),
+      meta: `${(h.author || '').toLowerCase()} · ${h.status === 'pending' ? 'pending' : 'open'}`,
       blocked: false,
     }))
   })()
 
-  // Members for people view
   const members = (() => {
     if (graphPeople.length === 0) return MOCK.members
     return graphPeople.map(p => {
@@ -630,8 +941,8 @@ export default function ExperimentDash() {
         github: p.github || p.name || '',
         role: p.role || 'member',
         online: isOnline,
-        focus: (p.name || '').toUpperCase(),
-        lastSeen: timeAgo(p.lastSession) + ' AGO',
+        focus: (p.name || ''),
+        lastSeen: timeAgo(p.lastSession) + ' ago',
         sessions: p.sessions || 0,
         artifacts: p.artifacts || 0,
         commits: 0,
@@ -640,7 +951,6 @@ export default function ExperimentDash() {
     })
   })()
 
-  // Knowledge items
   const knowledgeItems = (() => {
     if (graphKnowledge.length === 0) return MOCK.knowledgeItems
     return graphKnowledge.map(a => ({
@@ -656,7 +966,6 @@ export default function ExperimentDash() {
     }))
   })()
 
-  // Quests
   const quests = (() => {
     if (graphQuests.length === 0) return MOCK.quests
     return graphQuests.map(q => ({
@@ -670,25 +979,79 @@ export default function ExperimentDash() {
     }))
   })()
 
-  // Stats from activity
+  const todos = (() => {
+    if (graphTodos.length === 0) return MOCK.todos
+    return graphTodos.map(t => ({
+      id: t.id || '',
+      text: t.text || '',
+      status: t.status || 'open',
+      date: formatDate(t.created),
+      by: t.by || '',
+      quest: t.quest || '',
+    }))
+  })()
+
+  const handoffs = (() => {
+    if (graphHandoffs.length === 0) return MOCK.handoffs
+    // Deduplicate by id (same handoff can have multiple HANDED_TO)
+    const seen = new Map()
+    for (const h of graphHandoffs) {
+      if (seen.has(h.id)) {
+        const existing = seen.get(h.id)
+        const newNames = (h.handedToList || []).filter(Boolean)
+        existing.handedTo = [...new Set([...existing.handedTo.split(', ').filter(Boolean), ...newNames])].join(', ')
+      } else {
+        seen.set(h.id, {
+          id: h.id || '',
+          topic: h.topic || 'untitled',
+          summary: h.summary || '',
+          status: h.status || 'pending',
+          date: formatDate(h.date),
+          author: h.author || '',
+          handedTo: (h.handedToList || []).filter(Boolean).join(', '),
+        })
+      }
+    }
+    return [...seen.values()]
+  })()
+
+  const sessions = (() => {
+    if (graphSessions.length === 0) return MOCK.sessions
+    return graphSessions.map(s => ({
+      id: s.id || '',
+      topic: s.topic || '',
+      status: s.status || 'active',
+      date: formatDate(s.date),
+      branch: s.branch || '',
+      summary: s.summary || '',
+      by: s.by || '',
+    }))
+  })()
+
   const homeStats = (() => {
     if (!activity) return [
-      { value: '—', label: 'ARTIFACTS' },
-      { value: '—', label: 'DECISIONS' },
-      { value: '—', label: 'ACTIVE NOW', color: '#059669' },
+      { value: '—', label: 'artifacts' },
+      { value: '—', label: 'decisions' },
+      { value: '—', label: 'active now', color: '#22C55E' },
     ]
     const questCount = (activity.quests || []).length
     return [
-      { value: String(graphKnowledge.length || '—'), label: 'ARTIFACTS' },
-      { value: String(graphKnowledge.filter(k => k.type === 'decision').length || '—'), label: 'DECISIONS' },
-      { value: String(questCount), label: 'ACTIVE', color: '#059669' },
+      { value: String(graphKnowledge.length || '—'), label: 'artifacts' },
+      { value: String(graphKnowledge.filter(k => k.type === 'decision').length || '—'), label: 'decisions' },
+      { value: String(questCount), label: 'active', color: '#22C55E' },
     ]
   })()
+
+  const currentOrg = {
+    name: orgName,
+    github_org: 'Curve-Labs',
+    memory_repo: 'Curve-Labs/egregore-memory',
+  }
 
   if (loading) {
     return (
       <div style={s.loadingScreen}>
-        <span style={s.logoIcon}>&gt;</span>
+        <LogoIcon size={22} color="#22C55E" />
         <span style={{ ...s.logoText, marginLeft: 8 }}>EGREGORE</span>
       </div>
     )
@@ -710,6 +1073,15 @@ export default function ExperimentDash() {
         {view === 'quests' && (
           <QuestsView orgName={orgName} quests={quests} />
         )}
+        {view === 'todos' && (
+          <TodosView orgName={orgName} todos={todos} />
+        )}
+        {view === 'handoffs' && (
+          <HandoffsView orgName={orgName} handoffs={handoffs} />
+        )}
+        {view === 'activity' && (
+          <ActivityView orgName={orgName} sessions={sessions} />
+        )}
         {view === 'manage' && (
           <ManageView orgName={orgName} org={currentOrg} members={members} />
         )}
@@ -722,29 +1094,29 @@ export default function ExperimentDash() {
 
 const MOCK = {
   feedItems: [
-    { time: '2M', who: 'KAAN', text: 'STARTED SESSION: UNIFIED CHARACTER ONBOARDING', recent: true },
-    { time: '1H', who: 'OZ', text: 'DEPLOYED HOSTED EGREGORE V2', recent: true },
-    { time: '3H', who: 'CEM', text: 'CAPTURED DECISION: THICK VS THIN CHARACTER', recent: true },
-    { time: '5H', who: 'OZ', text: 'PUSHED: WORKSPACE ENDPOINT + DEPLOY COMMANDS', recent: false },
-    { time: '1D', who: 'RENC', text: 'COMPLETED QUEST: SPIRIT ECOLOGY MAINTENANCE', recent: false },
+    { time: '2m', who: 'kaan', text: 'started session: unified character onboarding', recent: true },
+    { time: '1h', who: 'oz', text: 'deployed hosted egregore v2', recent: true },
+    { time: '3h', who: 'cem', text: 'captured decision: thick vs thin character', recent: true },
+    { time: '5h', who: 'oz', text: 'pushed: workspace endpoint + deploy commands', recent: false },
+    { time: '1d', who: 'renc', text: 'completed quest: spirit ecology maintenance', recent: false },
   ],
   people: [
-    { name: 'KAAN', status: 'CHARACTER ONBOARDING', online: true },
-    { name: 'OZ', status: 'INFRA DEPLOY', online: true },
-    { name: 'CEM', status: '3H AGO', online: false },
-    { name: 'RENC', status: '1D AGO', online: false },
+    { name: 'kaan', status: 'character onboarding', online: true },
+    { name: 'oz', status: 'infra deploy', online: true },
+    { name: 'cem', status: '3h ago', online: false },
+    { name: 'renc', status: '1d ago', online: false },
   ],
   threads: [
-    { title: 'THICK VS THIN CHARACTER', meta: 'CEM · WAITING ON EXTERNAL TESTING', blocked: false },
-    { title: 'OAUTH URL COPY BROKEN ON MAC', meta: 'OZ · BLOCKED', blocked: true },
-    { title: 'ONBOARDING FOR EXISTING USERS', meta: 'OZ · NEEDS DESIGN', blocked: false },
+    { title: 'thick vs thin character', meta: 'cem · waiting on external testing', blocked: false },
+    { title: 'oauth url copy broken on mac', meta: 'oz · blocked', blocked: true },
+    { title: 'onboarding for existing users', meta: 'oz · needs design', blocked: false },
   ],
   members: [
-    { name: 'cem', github: 'fcdagdelen', role: 'founder', online: true, focus: 'CHARACTER VOICE', sessions: 24, artifacts: 18, commits: 45, access: 'admin' },
-    { name: 'oz', github: 'ozthegreat', role: 'engineering', online: true, focus: 'INFRA DEPLOY', sessions: 31, artifacts: 12, commits: 98, access: 'admin' },
-    { name: 'kaan', github: 'keryilmaz', role: 'engineering', online: true, focus: 'UNIFIED CHARACTER ONBOARDING', sessions: 15, artifacts: 8, commits: 30, access: 'admin' },
-    { name: 'renc', github: 'renc', role: 'design', online: false, lastSeen: '1D AGO', sessions: 8, artifacts: 5, commits: 12, access: 'member' },
-    { name: 'pali', github: 'pali', role: 'operations', online: false, lastSeen: '2D AGO', sessions: 6, artifacts: 3, commits: 4, access: 'member' },
+    { name: 'cem', github: 'fcdagdelen', role: 'founder', online: true, focus: 'character voice', sessions: 24, artifacts: 18, commits: 45, access: 'admin' },
+    { name: 'oz', github: 'ozthegreat', role: 'engineering', online: true, focus: 'infra deploy', sessions: 31, artifacts: 12, commits: 98, access: 'admin' },
+    { name: 'kaan', github: 'keryilmaz', role: 'engineering', online: true, focus: 'unified character onboarding', sessions: 15, artifacts: 8, commits: 30, access: 'admin' },
+    { name: 'renc', github: 'renc', role: 'design', online: false, lastSeen: '1d ago', sessions: 8, artifacts: 5, commits: 12, access: 'member' },
+    { name: 'pali', github: 'pali', role: 'operations', online: false, lastSeen: '2d ago', sessions: 6, artifacts: 3, commits: 4, access: 'member' },
   ],
   knowledgeItems: [
     { type: 'decision', date: 'Mar 10', title: 'Org-level GitHub token for git clone', description: 'External auth requires user to authenticate through Coder first — impossible for new users.', author: 'oz', quest: 'hosted-egregore', related: [], source: '' },
@@ -758,21 +1130,39 @@ const MOCK = {
     { id: 'Q-003', title: 'Spirit ecology — autonomous graph maintenance', description: 'Spirits that autonomously maintain the knowledge graph.', status: 'active', artifacts: 3, age: '1d ago', people: 'cem · oz' },
     { id: 'Q-001', title: 'Open-source release plan — first draft', description: 'Defined egregore-core public repo strategy and sync workflow.', status: 'completed', artifacts: 2, age: '5d ago', people: 'oz · cem' },
   ],
+  todos: [
+    { id: 't-001', text: 'Research secrets/password manager for Claude Code workflows', status: 'open', date: 'Mar 12', by: 'oz', quest: '' },
+    { id: 't-002', text: 'Feasibility analysis: Egregore as Claude Code plugin', status: 'open', date: 'Mar 12', by: 'oz', quest: '' },
+    { id: 't-003', text: 'Per-org GitHub OAuth app for Coder', status: 'open', date: 'Mar 12', by: 'oz', quest: 'hosted-egregore' },
+    { id: 't-004', text: 'Build auto-complete hook — detect when session work resolves open todos', status: 'open', date: 'Mar 12', by: 'oz', quest: '' },
+    { id: 't-005', text: 'Review tech tree document from meeting', status: 'open', date: 'Mar 12', by: 'oz', quest: '' },
+    { id: 't-006', text: 'Ship onboarding v7 character voice', status: 'done', date: 'Mar 11', by: 'kaan', quest: 'character-voice' },
+  ],
+  handoffs: [
+    { id: 'h-001', topic: 'CORK Launch Plan — Meeting Analysis', summary: 'Analyzed the CORK launch plan from the team meeting. Key decisions around timeline and resource allocation.', status: 'read', date: 'Mar 12', author: 'cem', handedTo: 'oz, renc, kaan' },
+    { id: 'h-002', topic: 'Character v5 — test the new version', summary: 'Character v5 is ready for testing. New voice gradient from poetic to practical.', status: 'done', date: 'Mar 11', author: 'kaan', handedTo: 'cem, renc' },
+    { id: 'h-003', topic: 'Hosted workspace deploy flow', summary: 'VPS provisioning pipeline is working. Need OAuth app per org next.', status: 'pending', date: 'Mar 10', author: 'oz', handedTo: 'kaan' },
+  ],
+  sessions: [
+    { id: 's-001', topic: 'experiment dashboard dark theme', status: 'active', date: 'Mar 13', branch: 'dev/kaan/experiment-dashboard', summary: '', by: 'kaan' },
+    { id: 's-002', topic: 'hosted egregore credentials endpoint', status: 'active', date: 'Mar 13', branch: 'dev/oz/credentials', summary: '', by: 'oz' },
+    { id: 's-003', topic: 'CORK launch plan analysis', status: 'wrapped', date: 'Mar 12', branch: 'dev/cem/cork-launch-plan-analysis', summary: 'Analyzed meeting transcript and extracted key decisions.', by: 'cem' },
+    { id: 's-004', topic: 'character v5 test new version', status: 'handed_off', date: 'Mar 11', branch: 'dev/kaan/character-v5-test', summary: 'Tested new character voice. Ready for review.', by: 'kaan' },
+    { id: 's-005', topic: 'spirit ecology maintenance', status: 'wrapped', date: 'Mar 10', branch: 'dev/renc/spirit-ecology', summary: 'Completed spirit ecology maintenance quest.', by: 'renc' },
+  ],
 }
 
 // ─── Styles ─────────────────────────────────────────────────
 
-const font = "'IBM Plex Sans', system-ui, -apple-system, sans-serif"
-const mono = "'IBM Plex Mono', 'SF Mono', monospace"
+const mono = "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace"
 
 const s = {
-  // Shell
   shell: {
     display: 'flex',
     height: '100vh',
-    background: '#F5F5F0',
-    fontFamily: font,
-    color: '#1A1A1A',
+    background: '#0C0C0C',
+    fontFamily: mono,
+    color: '#E5E5E5',
     overflow: 'hidden',
   },
   loadingScreen: {
@@ -780,13 +1170,12 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
-    background: '#F5F5F0',
-    fontFamily: font,
+    background: '#0C0C0C',
+    fontFamily: mono,
   },
   main: {
     flex: 1,
     overflow: 'auto',
-    borderRadius: 8,
   },
 
   // Sidebar
@@ -798,7 +1187,7 @@ const s = {
     padding: '32px 20px',
     gap: 32,
     flexShrink: 0,
-    borderRadius: 8,
+    borderRight: '1px solid #1F1F1F',
   },
   sidebarTop: {
     display: 'flex',
@@ -810,17 +1199,12 @@ const s = {
     alignItems: 'center',
     gap: 8,
   },
-  logoIcon: {
-    fontFamily: mono,
-    fontSize: 20,
-    fontWeight: 700,
-    color: '#059669',
-  },
   logoText: {
     fontFamily: mono,
     fontSize: 18,
-    fontWeight: 500,
-    color: '#1A1A1A',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    color: '#E5E5E5',
   },
   nav: {
     display: 'flex',
@@ -834,32 +1218,36 @@ const s = {
     padding: '10px 14px',
     background: 'none',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 4,
     cursor: 'pointer',
     width: '100%',
     textAlign: 'left',
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
     transition: 'background 0.1s',
   },
   navItemActive: {
-    background: '#FFFFFF',
+    background: '#171717',
   },
-  navIcon: {
+  navIndicator: {
     fontFamily: mono,
     fontSize: 14,
+    fontWeight: 700,
+    width: 16,
+    textAlign: 'center',
   },
   navLabel: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
   },
   workspaceWidget: {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-    background: '#EAEAE5',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
     padding: '10px 14px',
+    border: '1px solid #1F1F1F',
   },
   wsTop: {
     display: 'flex',
@@ -869,18 +1257,18 @@ const s = {
   wsIcon: {
     fontFamily: mono,
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#525252',
   },
   wsLabel: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#525252',
   },
   wsName: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
     fontWeight: 600,
-    color: '#059669',
+    color: '#22C55E',
   },
 
   // Content
@@ -905,14 +1293,14 @@ const s = {
   titleOrg: {
     fontFamily: mono,
     fontSize: 12,
-    fontWeight: 500,
-    color: '#B0B5BD',
+    fontWeight: 400,
+    color: '#525252',
   },
   titleText: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 28,
     fontWeight: 500,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   statsRow: {
     display: 'flex',
@@ -928,24 +1316,22 @@ const s = {
   statVal: {
     fontFamily: mono,
     fontSize: 20,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   statLabel: {
     fontFamily: mono,
     fontSize: 10,
     fontWeight: 500,
-    color: '#B0B5BD',
+    color: '#525252',
   },
 
-  // Section header
   sectionHeader: {
     fontFamily: mono,
     fontSize: 12,
     fontWeight: 500,
-    color: '#9CA3AF',
+    color: '#737373',
   },
 
-  // Columns
   columns: {
     display: 'flex',
     gap: 32,
@@ -978,14 +1364,15 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     gap: 14,
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
     padding: '14px 18px',
+    border: '1px solid #1F1F1F',
   },
   feedTime: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#B0B5BD',
+    color: '#525252',
     minWidth: 24,
   },
   feedDot: {
@@ -1000,7 +1387,7 @@ const s = {
     flexShrink: 0,
   },
   feedText: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 12,
   },
 
@@ -1014,9 +1401,10 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
     padding: '12px 16px',
+    border: '1px solid #1F1F1F',
   },
   personName: {
     fontFamily: mono,
@@ -1029,24 +1417,22 @@ const s = {
     marginLeft: 'auto',
   },
 
-  // Open workspace button
   openWorkspace: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#10B981',
-    borderRadius: 8,
+    background: '#22C55E',
+    borderRadius: 4,
     padding: '14px 20px',
     border: 'none',
     cursor: 'pointer',
     fontFamily: mono,
     fontSize: 12,
     fontWeight: 600,
-    color: '#000000',
+    color: '#0C0C0C',
     width: '100%',
   },
 
-  // Threads
   threadsList: {
     display: 'flex',
     flexDirection: 'column',
@@ -1056,14 +1442,15 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
     padding: '12px 16px',
+    border: '1px solid #1F1F1F',
   },
   threadTitle: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#2D2D2D',
+    color: '#E5E5E5',
   },
   threadMeta: {
     fontFamily: mono,
@@ -1080,9 +1467,10 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
     padding: 24,
+    border: '1px solid #1F1F1F',
   },
   personCardTop: {
     display: 'flex',
@@ -1090,21 +1478,20 @@ const s = {
     gap: 12,
   },
   personCardName: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 16,
     fontWeight: 500,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   personCardGithub: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#B0B5BD',
+    color: '#525252',
   },
   personCardRole: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 12,
-    color: '#1d3c71',
-    textTransform: 'uppercase',
+    color: '#22C55E',
   },
   personCardStats: {
     display: 'flex',
@@ -1113,7 +1500,7 @@ const s = {
   personCardStat: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#737373',
   },
   personCardFocus: {
     fontFamily: mono,
@@ -1126,8 +1513,8 @@ const s = {
     justifyContent: 'center',
     gap: 8,
     background: 'none',
-    border: '2px dashed #D1D5DB',
-    borderRadius: 8,
+    border: '1px dashed #525252',
+    borderRadius: 4,
     padding: 24,
     cursor: 'pointer',
     minHeight: 180,
@@ -1135,12 +1522,12 @@ const s = {
   inviteIcon: {
     fontFamily: mono,
     fontSize: 24,
-    color: '#059669',
+    color: '#22C55E',
   },
   inviteText: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#059669',
+    color: '#22C55E',
     fontWeight: 500,
   },
 
@@ -1159,7 +1546,7 @@ const s = {
   },
   divider: {
     height: 1,
-    background: '#E5E7EB',
+    background: '#1F1F1F',
     width: '100%',
   },
   knowledgeList: {
@@ -1172,12 +1559,12 @@ const s = {
     flexDirection: 'column',
     gap: 8,
     padding: '16px 18px',
-    borderRadius: 8,
-    border: 'none',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
     cursor: 'pointer',
     textAlign: 'left',
     width: '100%',
-    fontFamily: font,
+    fontFamily: mono,
     transition: 'background 0.1s',
   },
   knowledgeBadge: {
@@ -1193,18 +1580,18 @@ const s = {
   knowledgeDate: {
     fontFamily: mono,
     fontSize: 10,
-    color: '#B0B5BD',
+    color: '#525252',
   },
   knowledgeTitle: {
     fontFamily: mono,
     fontSize: 14,
     fontWeight: 500,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   knowledgeDesc: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#6B7280',
+    color: '#737373',
     lineHeight: 1.5,
   },
   knowledgeMeta: {
@@ -1214,12 +1601,12 @@ const s = {
   knowledgeAuthor: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#737373',
   },
   knowledgeQuest: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#B0B5BD',
+    color: '#525252',
   },
 
   // Thread panel
@@ -1229,8 +1616,9 @@ const s = {
     flexDirection: 'column',
     gap: 16,
     padding: '20px 22px',
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
     flexShrink: 0,
     overflow: 'auto',
   },
@@ -1238,46 +1626,46 @@ const s = {
     fontFamily: mono,
     fontSize: 11,
     fontWeight: 500,
-    color: '#9CA3AF',
+    color: '#737373',
   },
   threadPanelTitle: {
     fontFamily: mono,
     fontSize: 14,
     fontWeight: 500,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   threadPanelBody: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#6B7280',
+    color: '#A3A3A3',
     lineHeight: 1.6,
   },
   threadPanelLabel: {
     fontFamily: mono,
     fontSize: 10,
     fontWeight: 500,
-    color: '#9CA3AF',
+    color: '#737373',
     marginTop: 8,
   },
   threadPanelSource: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#B0B5BD',
+    color: '#525252',
   },
   relatedItem: {
     display: 'flex',
     gap: 8,
     alignItems: 'center',
     padding: '10px 12px',
-    background: '#F5F5F0',
-    borderRadius: 8,
+    background: '#1A1A1A',
+    borderRadius: 4,
     fontFamily: mono,
     fontSize: 10,
   },
   relatedText: {
     fontFamily: mono,
     fontSize: 12,
-    color: '#6B7280',
+    color: '#A3A3A3',
   },
 
   // Quests
@@ -1291,8 +1679,9 @@ const s = {
     flexDirection: 'column',
     gap: 12,
     padding: '20px 22px',
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
   },
   questHeader: {
     display: 'flex',
@@ -1317,7 +1706,7 @@ const s = {
     fontWeight: 500,
   },
   questTitle: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 15,
     fontWeight: 500,
   },
@@ -1333,7 +1722,162 @@ const s = {
   questMetaItem: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#525252',
+  },
+
+  // Todos
+  todoList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  todoItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    padding: '16px 20px',
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
+  },
+  todoHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  todoCheckbox: {
+    fontFamily: mono,
+    fontSize: 16,
+    flexShrink: 0,
+    marginTop: -1,
+  },
+  todoText: {
+    fontFamily: mono,
+    fontSize: 13,
+    lineHeight: 1.5,
+  },
+  todoMeta: {
+    display: 'flex',
+    gap: 16,
+    paddingLeft: 28,
+  },
+  todoMetaItem: {
+    fontFamily: mono,
+    fontSize: 11,
+    color: '#525252',
+  },
+
+  // Handoffs
+  handoffList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  handoffCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+    padding: '20px 22px',
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
+  },
+  handoffHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  handoffTopic: {
+    fontFamily: mono,
+    fontSize: 14,
+    fontWeight: 500,
+    color: '#E5E5E5',
+  },
+  handoffStatus: {
+    fontFamily: mono,
+    fontSize: 10,
+    fontWeight: 500,
+  },
+  handoffSummary: {
+    fontFamily: mono,
+    fontSize: 12,
+    color: '#A3A3A3',
+    lineHeight: 1.5,
+  },
+  handoffMeta: {
+    display: 'flex',
+    gap: 20,
+  },
+  handoffMetaItem: {
+    fontFamily: mono,
+    fontSize: 11,
+    color: '#525252',
+  },
+
+  // Activity / Sessions
+  activityList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  sessionCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    padding: '18px 22px',
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
+  },
+  sessionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sessionLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sessionBy: {
+    fontFamily: mono,
+    fontSize: 13,
+    fontWeight: 500,
+    color: '#E5E5E5',
+  },
+  sessionStatus: {
+    fontFamily: mono,
+    fontSize: 10,
+    fontWeight: 500,
+  },
+  sessionTopic: {
+    fontFamily: mono,
+    fontSize: 13,
+    color: '#A3A3A3',
+  },
+  sessionSummary: {
+    fontFamily: mono,
+    fontSize: 12,
+    color: '#737373',
+    lineHeight: 1.5,
+  },
+  sessionMeta: {
+    display: 'flex',
+    gap: 16,
+  },
+  sessionMetaItem: {
+    fontFamily: mono,
+    fontSize: 11,
+    color: '#525252',
+  },
+
+  // Empty state
+  emptyState: {
+    fontFamily: mono,
+    fontSize: 13,
+    color: '#525252',
+    padding: '40px 0',
+    textAlign: 'center',
   },
 
   // Manage
@@ -1341,24 +1885,38 @@ const s = {
     fontFamily: mono,
     fontSize: 10,
     fontWeight: 500,
-    color: '#059669',
-    background: '#ECFDF5',
+    color: '#22C55E',
+    background: '#0C2A15',
     padding: '6px 12px',
-    borderRadius: 8,
+    borderRadius: 4,
+    border: '1px solid #14532D',
+  },
+  manageGrid: {
+    display: 'flex',
+    gap: 32,
+    flex: 1,
+    minHeight: 0,
+  },
+  manageLeftCol: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
   },
   manageCard: {
     display: 'flex',
     flexDirection: 'column',
     gap: 14,
     padding: '20px 22px',
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
   },
   manageCardHeader: {
     fontFamily: mono,
     fontSize: 11,
     fontWeight: 500,
-    color: '#9CA3AF',
+    color: '#737373',
   },
   manageRow: {
     display: 'flex',
@@ -1366,40 +1924,52 @@ const s = {
     alignItems: 'center',
   },
   manageLabel: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
-    color: '#6B7280',
+    color: '#A3A3A3',
   },
   manageValue: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
     fontWeight: 500,
-    color: '#1A1A1A',
+    color: '#E5E5E5',
   },
   manageNote: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#B0B5BD',
+    color: '#525252',
   },
   copyBtn: {
     fontFamily: mono,
     fontSize: 10,
     fontWeight: 500,
-    color: '#1A1A1A',
-    background: '#F5F5F0',
-    border: 'none',
-    borderRadius: 8,
+    color: '#E5E5E5',
+    background: '#252525',
+    border: '1px solid #1F1F1F',
+    borderRadius: 4,
+    padding: '6px 14px',
+    cursor: 'pointer',
+  },
+  dangerBtn: {
+    fontFamily: mono,
+    fontSize: 10,
+    fontWeight: 500,
+    color: '#EF4444',
+    background: 'transparent',
+    border: '1px solid #7F1D1D',
+    borderRadius: 4,
     padding: '6px 14px',
     cursor: 'pointer',
   },
   membersPanel: {
-    width: 420,
+    width: 480,
     display: 'flex',
     flexDirection: 'column',
     gap: 14,
     padding: '20px 22px',
-    background: '#FFFFFF',
-    borderRadius: 8,
+    background: '#171717',
+    borderRadius: 4,
+    border: '1px solid #1F1F1F',
     flexShrink: 0,
   },
   membersTable: {
@@ -1409,29 +1979,31 @@ const s = {
   membersHeaderRow: {
     display: 'flex',
     padding: '4px 0',
+    borderBottom: '1px solid #1F1F1F',
   },
   membersHeaderCell: {
     fontFamily: mono,
     fontSize: 11,
-    color: '#B0B5BD',
+    color: '#525252',
   },
   memberRow: {
     display: 'flex',
-    padding: '8px 0',
+    padding: '10px 0',
+    borderBottom: '1px solid #1F1F1F',
   },
   memberCell: {
-    fontFamily: font,
+    fontFamily: mono,
     fontSize: 13,
-    color: '#6B7280',
+    color: '#A3A3A3',
   },
   inviteMemberBtn: {
     fontFamily: mono,
     fontSize: 12,
     fontWeight: 500,
-    color: '#059669',
-    background: '#F5F5F0',
-    border: 'none',
-    borderRadius: 8,
+    color: '#22C55E',
+    background: '#0C2A15',
+    border: '1px solid #14532D',
+    borderRadius: 4,
     padding: '10px 0',
     cursor: 'pointer',
     width: '100%',
