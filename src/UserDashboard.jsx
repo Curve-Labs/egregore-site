@@ -4,6 +4,42 @@ import {
   removeMember, getTerminalUrl, graphBatch, getActivityDashboard,
 } from "./api";
 
+// ─── Global styles (injected once) ──────────────────────────────
+
+const GLOBAL_STYLES_ID = "egregore-dash-globals";
+function injectGlobalStyles() {
+  if (document.getElementById(GLOBAL_STYLES_ID)) return;
+  const style = document.createElement("style");
+  style.id = GLOBAL_STYLES_ID;
+  style.textContent = `
+    body {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      -webkit-text-size-adjust: 100%;
+    }
+    ::selection {
+      background: #22C55E;
+      color: #0C0C0C;
+    }
+    @media (hover: hover) {
+      .eg-nav-item:hover { background: #171717 !important; }
+      .eg-tab:hover { color: #E5E5E5 !important; }
+      .eg-card:hover { border-color: #525252 !important; }
+      .eg-btn:hover { opacity: 0.85; }
+    }
+    .eg-btn { transition: transform 120ms ease-out; }
+    .eg-btn:active { transform: scale(0.96); }
+    .eg-card { transition: border-color 150ms ease-out; }
+    .eg-nav-item { transition: background 150ms ease-out !important; }
+    .eg-btn:focus-visible, .eg-tab:focus-visible, .eg-nav-item:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px #0C0C0C, 0 0 0 4px #22C55E;
+    }
+    .eg-tab:focus-visible { border-radius: 4px; }
+  `;
+  document.head.appendChild(style);
+}
+
 // ─── Design tokens ──────────────────────────────────────────────
 
 const mono = "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace";
@@ -29,7 +65,7 @@ const T = {
 
 function LogoIcon({ size = 20, color = "currentColor" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill={color} xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 100 100" fill={color} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <rect x="46" y="4" width="8" height="36" rx="4" />
       <rect x="46" y="60" width="8" height="36" rx="4" />
       <rect x="4" y="46" width="36" height="8" rx="4" />
@@ -100,9 +136,10 @@ function CopyButton({ text, label = "copy" }) {
 
 function Dot({ color, size = 8 }) {
   return (
-    <span style={{
+    <span aria-hidden="true" style={{
       display: "inline-block", width: size, height: size,
       borderRadius: "50%", background: color, flexShrink: 0,
+      pointerEvents: "none",
     }} />
   );
 }
@@ -244,6 +281,7 @@ function Sidebar({ view, onNavigate, orgs, selectedOrg, onSelectOrg, user, onLog
             return (
               <button
                 key={item.key}
+                className="eg-nav-item"
                 onClick={() => onNavigate(item.key)}
                 style={{ ...styles.navItem, ...(active ? styles.navItemActive : {}) }}
               >
@@ -331,6 +369,7 @@ function TabBar({ tabs, active, onChange }) {
       {tabs.map(t => (
         <button
           key={t}
+          className="eg-tab"
           onClick={() => onChange(t)}
           style={{
             ...styles.tab,
@@ -401,7 +440,7 @@ function HomeView({ orgName, graph, activity, org }) {
           {feedItems.length === 0 ? <EmptyState text="no recent activity" /> : (
             <div style={styles.feed}>
               {feedItems.map((item, i) => (
-                <div key={i} style={styles.feedItem}>
+                <div key={i} className="eg-card" style={styles.feedItem}>
                   <span style={styles.feedTime}>{item.time}</span>
                   <Dot color={item.recent ? T.green : T.muted} size={item.recent ? 8 : 6} />
                   <span style={{ ...styles.feedWho, color: item.recent ? T.green : T.dim }}>{item.who}</span>
@@ -481,7 +520,7 @@ function PeopleView({ orgName, graph, orgMembers }) {
       {members.length === 0 ? <EmptyState text="no members found" /> : (
         <div style={styles.peopleGrid}>
           {members.map((m, i) => (
-            <div key={i} style={styles.personCard}>
+            <div key={i} className="eg-card" style={styles.personCard}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Dot color={m.online ? T.green : T.muted} size={10} />
                 <span style={{ fontFamily: mono, fontSize: 16, fontWeight: 500, color: T.text }}>{m.name}</span>
@@ -497,8 +536,8 @@ function PeopleView({ orgName, graph, orgMembers }) {
               </span>
             </div>
           ))}
-          <button style={styles.inviteCard}>
-            <span style={{ fontFamily: mono, fontSize: 24, color: T.green }}>+</span>
+          <button className="eg-btn" style={styles.inviteCard} aria-label="Invite a new member">
+            <span aria-hidden="true" style={{ fontFamily: mono, fontSize: 24, color: T.green }}>+</span>
             <span style={{ fontFamily: mono, fontSize: 12, color: T.green, fontWeight: 500 }}>invite member</span>
           </button>
         </div>
@@ -536,6 +575,7 @@ function KnowledgeView({ orgName, items }) {
               {filtered.map((item, i) => (
                 <button
                   key={i}
+                  className="eg-card"
                   onClick={() => setSelected(i)}
                   style={{
                     ...styles.knowledgeItem,
@@ -608,7 +648,7 @@ function QuestsView({ orgName, quests }) {
             const isActive = q.status === "active";
             const people = (q.people || []).filter(Boolean).join(" · ");
             return (
-              <div key={i} style={{ ...styles.questCard, borderLeft: `3px solid ${isActive ? T.green : T.muted}` }}>
+              <div key={i} className="eg-card" style={{ ...styles.questCard, borderLeft: `3px solid ${isActive ? T.green : T.muted}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: isActive ? T.green : T.dim }}>{q.id}</span>
                   <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 500, color: isActive ? T.green : T.dim }}>{q.status}</span>
@@ -671,7 +711,7 @@ function TodosView({ orgName, todos, todosMerged, pendingQuestions }) {
             const isBlocked = todo.status === "blocked";
             const borderColor = isBlocked ? T.red : isDone ? T.muted : T.green;
             return (
-              <div key={i} style={{
+              <div key={i} className="eg-card" style={{
                 ...styles.todoItem,
                 borderLeft: `3px solid ${borderColor}`,
                 opacity: isDone ? 0.6 : 1,
@@ -769,10 +809,14 @@ function HandoffsView({ orgName, handoffs }) {
             const isOpen = !!expanded[i];
             const hasContent = h.summary || h.response;
             return (
-              <div key={i} style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
+              <div key={i} className="eg-card" style={{ ...styles.handoffCard, borderLeft: `3px solid ${statusColor[h.status] || T.muted}` }}>
                 <div
+                  role={hasContent ? "button" : undefined}
+                  aria-expanded={hasContent ? isOpen : undefined}
+                  tabIndex={hasContent ? 0 : undefined}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: hasContent ? "pointer" : "default" }}
                   onClick={() => hasContent && toggle(i)}
+                  onKeyDown={(e) => { if (hasContent && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(i); } }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {hasContent && (
@@ -863,7 +907,7 @@ function ActivityView({ orgName, sessions, trends, activity }) {
   const renderItem = (item, i) => {
     if (item._type === "checkin") {
       return (
-        <div key={`ci-${i}`} style={{
+        <div key={`ci-${i}`} className="eg-card" style={{
           ...styles.sessionCard,
           borderLeft: `3px solid ${T.purple}`,
           background: "#1A1525",
@@ -883,7 +927,7 @@ function ActivityView({ orgName, sessions, trends, activity }) {
     }
     const recent = isRecent(item.date);
     return (
-      <div key={`s-${i}`} style={{
+      <div key={`s-${i}`} className="eg-card" style={{
         ...styles.sessionCard,
         borderLeft: `3px solid ${recent ? T.green : T.muted}`,
       }}>
@@ -994,7 +1038,7 @@ function WorkspaceButton({ org, token }) {
   };
 
   return (
-    <button onClick={open} disabled={loading} style={styles.openWorkspace}>
+    <button className="eg-btn" onClick={open} disabled={loading} style={styles.openWorkspace}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
       </svg>
@@ -1009,6 +1053,12 @@ function RemoveMemberDialog({ member, slug, token, onClose, onRemoved }) {
   const [mode, setMode] = useState("revoke");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -1308,6 +1358,7 @@ function ManageView({ orgName, org, token, currentUser, onRefresh }) {
 // ─── Main Component ─────────────────────────────────────────────
 
 export default function UserDashboard() {
+  useEffect(() => { injectGlobalStyles(); }, []);
   const { token, user, error: authError, loading: authLoading, logout } = useAuth();
   const [view, setView] = useState("home");
   const [orgs, setOrgs] = useState(null);
@@ -1420,6 +1471,7 @@ export default function UserDashboard() {
           </span>
           {authError && <span style={{ fontFamily: mono, fontSize: 12, color: T.red }}>{authError}</span>}
           <button
+            className="eg-btn"
             style={styles.loginBtn}
             onClick={() => {
               sessionStorage.setItem("dash_auth_pending", "1");
@@ -1578,13 +1630,13 @@ const styles = {
     padding: "10px 14px",
     background: "none",
     border: "none",
-    borderRadius: 4,
+    borderRadius: 6,
     cursor: "pointer",
     width: "100%",
     textAlign: "left",
     fontFamily: mono,
     fontSize: 13,
-    transition: "background 0.1s",
+    userSelect: "none",
   },
   navItemActive: {
     background: T.card,
@@ -1635,13 +1687,14 @@ const styles = {
   },
   logoutBtn: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     color: T.muted,
     background: "none",
     border: `1px solid ${T.border}`,
     borderRadius: 4,
-    padding: "4px 10px",
+    padding: "6px 12px",
     cursor: "pointer",
+    userSelect: "none",
   },
   loginBtn: {
     fontFamily: mono,
@@ -1651,9 +1704,10 @@ const styles = {
     background: T.green,
     color: T.bg,
     border: "none",
-    borderRadius: 4,
+    borderRadius: 6,
     cursor: "pointer",
     letterSpacing: "0.02em",
+    userSelect: "none",
   },
 
   // Content
@@ -1662,8 +1716,7 @@ const styles = {
     flexDirection: "column",
     gap: 28,
     padding: "40px 48px",
-    height: "100%",
-    overflow: "auto",
+    minHeight: "100%",
   },
   topBar: {
     display: "flex",
@@ -1696,6 +1749,7 @@ const styles = {
   statVal: {
     fontFamily: mono,
     fontSize: 20,
+    fontVariantNumeric: "tabular-nums",
   },
   statLabel: {
     fontFamily: mono,
@@ -1728,12 +1782,15 @@ const styles = {
     fontFamily: mono,
     fontSize: 12,
     cursor: "pointer",
-    padding: 0,
+    padding: "8px 4px",
+    borderRadius: 4,
+    userSelect: "none",
   },
   divider: {
     height: 1,
     background: T.border,
     width: "100%",
+    pointerEvents: "none",
   },
 
   // Layout
@@ -1770,7 +1827,7 @@ const styles = {
     alignItems: "center",
     gap: 14,
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "14px 18px",
     border: `1px solid ${T.border}`,
   },
@@ -1779,6 +1836,7 @@ const styles = {
     fontSize: 11,
     color: T.muted,
     minWidth: 24,
+    fontVariantNumeric: "tabular-nums",
   },
   feedWho: {
     fontFamily: mono,
@@ -1795,7 +1853,7 @@ const styles = {
     alignItems: "center",
     gap: 12,
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "12px 16px",
     border: `1px solid ${T.border}`,
   },
@@ -1804,7 +1862,7 @@ const styles = {
     flexDirection: "column",
     gap: 6,
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "12px 16px",
     border: `1px solid ${T.border}`,
   },
@@ -1820,7 +1878,7 @@ const styles = {
     flexDirection: "column",
     gap: 12,
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: 24,
     border: `1px solid ${T.border}`,
   },
@@ -1832,7 +1890,7 @@ const styles = {
     gap: 8,
     background: "none",
     border: `1px dashed ${T.muted}`,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: 24,
     cursor: "pointer",
     minHeight: 180,
@@ -1844,7 +1902,7 @@ const styles = {
     flexDirection: "column",
     gap: 8,
     padding: "16px 18px",
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
     cursor: "pointer",
     textAlign: "left",
@@ -1859,7 +1917,7 @@ const styles = {
     gap: 16,
     padding: "20px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
     flexShrink: 0,
     overflow: "auto",
@@ -1872,7 +1930,7 @@ const styles = {
     gap: 12,
     padding: "20px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
   },
 
@@ -1883,7 +1941,7 @@ const styles = {
     gap: 10,
     padding: "16px 20px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
   },
 
@@ -1894,7 +1952,7 @@ const styles = {
     gap: 12,
     padding: "20px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
   },
 
@@ -1905,7 +1963,7 @@ const styles = {
     gap: 10,
     padding: "18px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
   },
 
@@ -1916,7 +1974,7 @@ const styles = {
     justifyContent: "center",
     gap: 8,
     background: T.green,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "14px 20px",
     border: "none",
     cursor: "pointer",
@@ -1925,6 +1983,7 @@ const styles = {
     fontWeight: 600,
     color: T.bg,
     width: "100%",
+    userSelect: "none",
   },
 
   // Manage
@@ -1956,7 +2015,7 @@ const styles = {
     gap: 14,
     padding: "20px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
   },
   manageCardHeader: {
@@ -1996,26 +2055,28 @@ const styles = {
   },
   copyBtn: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 500,
     color: T.text,
     background: "#252525",
     border: `1px solid ${T.border}`,
     borderRadius: 4,
-    padding: "4px 10px",
+    padding: "6px 12px",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    userSelect: "none",
   },
   dangerBtn: {
     fontFamily: mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 500,
     color: T.red,
     background: "transparent",
     border: `1px solid ${T.redDark}`,
     borderRadius: 4,
-    padding: "4px 10px",
+    padding: "6px 12px",
     cursor: "pointer",
+    userSelect: "none",
   },
   membersPanel: {
     width: 480,
@@ -2024,7 +2085,7 @@ const styles = {
     gap: 14,
     padding: "20px 22px",
     background: T.card,
-    borderRadius: 4,
+    borderRadius: 6,
     border: `1px solid ${T.border}`,
     flexShrink: 0,
   },
