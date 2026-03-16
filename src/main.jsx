@@ -8,6 +8,7 @@ import ArticlePage from './ArticlePage.jsx'
 import DocsPage from './DocsPage.jsx'
 import SetupFlow from './components/SetupFlow.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
+import ExperimentDash from './components/ExperimentDash.jsx'
 import UserDashboard from './UserDashboard.jsx'
 import SettingsPage from './SettingsPage.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
@@ -195,6 +196,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/experimentdash" element={<ExperimentDash />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

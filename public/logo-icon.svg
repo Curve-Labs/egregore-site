@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+  <!-- 8-ray starburst with rounded ends -->
+  <!-- Vertical top -->
+  <rect x="46" y="4" width="8" height="36" rx="4" />
+  <!-- Vertical bottom -->
+  <rect x="46" y="60" width="8" height="36" rx="4" />
+  <!-- Horizontal left -->
+  <rect x="4" y="46" width="36" height="8" rx="4" />
+  <!-- Horizontal right -->
+  <rect x="60" y="46" width="36" height="8" rx="4" />
+  <!-- Diagonal top-left -->
+  <rect x="14.5" y="14.5" width="8" height="30" rx="4" transform="rotate(-45 18.5 29.5)" />
+  <!-- Diagonal top-right -->
+  <rect x="77.5" y="14.5" width="8" height="30" rx="4" transform="rotate(45 81.5 29.5)" />
+  <!-- Diagonal bottom-left -->
+  <rect x="14.5" y="55.5" width="8" height="30" rx="4" transform="rotate(45 18.5 70.5)" />
+  <!-- Diagonal bottom-right -->
+  <rect x="77.5" y="55.5" width="8" height="30" rx="4" transform="rotate(-45 81.5 70.5)" />
+</svg>

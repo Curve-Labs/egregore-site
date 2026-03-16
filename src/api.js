@@ -161,3 +161,31 @@ export async function approveWaitlist(githubToken, waitlistId) {
     body: JSON.stringify({ waitlist_id: waitlistId }),
   })
 }
+
+export function getHostingInfo() { return Promise.resolve({}) }
+
+
+// Stubs for missing exports
+export function checkTelegramMembership() { return Promise.resolve({}) }
+export function ensureWorkspace() { return Promise.resolve({}) }
+export function exchangeCode(...args) { return exchangeGitHubCode(...args) }
+export function getGitHubAuthUrl(scope) { return `https://github.com/login/oauth/authorize?scope=${scope || 'repo'}` }
+export function getHostingStatus() { return Promise.resolve({}) }
+export function getOrgRepos() { return Promise.resolve([]) }
+export function getOrgs() { return getUserOrgs() }
+export function getUserKeys() { return Promise.resolve({}) }
+export function getWorkspaceStatus() { return Promise.resolve({}) }
+export function updateUserKeys() { return Promise.resolve({}) }
+
+// Admin dashboard stubs
+export function getAdminDashboard() { return Promise.resolve({ orgs: [], total_orgs: 0, total_users: 0, alerts: [] }) }
+export function getAdminOrgDetail() { return Promise.resolve({}) }
+export function getAdminTelemetry() { return Promise.resolve({ events: [], aggregates: {} }) }
+export function getAdminHealth() { return Promise.resolve({ alerts: [], checkins: [], versions: {}, org_info: {} }) }
+export function removeMember() { return Promise.resolve({}) }
+
+// More stubs
+export function getMyEgregores() { return Promise.resolve([]) }
+export function enableHosting() { return Promise.resolve({}) }
+export function deleteOrg() { return Promise.resolve({}) }
+export function deleteUserKey() { return Promise.resolve({}) }
