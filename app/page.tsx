@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -105,95 +105,6 @@ function SectionDivider({ style }: { style?: React.CSSProperties }) {
     </div>
   );
 }
-
-const TestimonialCarousel = memo(function TestimonialCarousel() {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideKey, setSlideKey] = useState(0);
-  const slideCount = 3;
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-    setSlideKey((k) => k + 1);
-    const track = trackRef.current;
-    if (track) {
-      track.style.transform = `translateX(-${index * (100 / slideCount)}%)`;
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      goToSlide((currentSlide + 1) % slideCount);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [currentSlide, goToSlide]);
-
-  return (
-    <section className="testimonials">
-      <div className="testimonial-viewport">
-        <div className="testimonial-track" ref={trackRef}>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;It&rsquo;s like having a Claude that already sat in on
-              every standup. Everyone&rsquo;s context is just there.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Alex M." />
-              </div>
-              <div>
-                <div className="testimonial-name">Alex M.</div>
-                <div className="testimonial-role">eng lead, 4-person startup</div>
-              </div>
-            </div>
-          </div>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;Three of us work across timezones. Egregore turned Claude
-              from &lsquo;my&rsquo; assistant into the team&rsquo;s shared
-              brain.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Sam K." />
-              </div>
-              <div>
-                <div className="testimonial-name">Sam K.</div>
-                <div className="testimonial-role">distributed team</div>
-              </div>
-            </div>
-          </div>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;The unlock isn&rsquo;t any single feature — it&rsquo;s
-              that Claude finally has institutional memory. It compounds.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Jordan R." />
-              </div>
-              <div>
-                <div className="testimonial-name">Jordan R.</div>
-                <div className="testimonial-role">technical co-founder</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="testimonial-bars">
-        {Array.from({ length: slideCount }).map((_, i) => (
-          <div
-            key={i}
-            className={`bar ${i === currentSlide ? "active" : i < currentSlide ? "past" : ""}`}
-            onClick={() => goToSlide(i)}
-          >
-            <div className="bar-fill" key={i === currentSlide ? `fill-${slideKey}` : `static-${i}`} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-});
 
 export default function HomePage() {
   const heroBgRef = useRef<HTMLDivElement>(null);
@@ -739,8 +650,6 @@ export default function HomePage() {
         style={{ maxWidth: 752, margin: "60px auto", padding: "0 28px" }}
       />
 
-      {/* ── Testimonials ── */}
-      <TestimonialCarousel />
 
       {/* ── Footer CTA ── */}
       <section className="footer-cta">
