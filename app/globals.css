@@ -585,115 +585,6 @@ body {
   mix-blend-mode: multiply;
 }
 
-/* ── Testimonials ── */
-.testimonials {
-  max-width: 752px;
-  margin: 0 auto;
-  padding: 0 28px;
-  position: relative;
-}
-
-.testimonial-viewport {
-  overflow: hidden;
-  width: 100%;
-}
-
-.testimonial-track {
-  display: flex;
-  transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-  width: 300%;
-}
-
-.testimonial-slide {
-  width: calc(100% / 3);
-  flex-shrink: 0;
-}
-
-.testimonial-slide blockquote {
-  font-family: var(--font-serif);
-  font-size: 32px;
-  font-weight: 400;
-  line-height: 1.25;
-  letter-spacing: -0.03em;
-  color: #16100B;
-  margin-bottom: 32px;
-  max-width: 570px;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.testimonial-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #D4C8BC;
-  overflow: hidden;
-}
-
-.testimonial-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.testimonial-name {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 500;
-  color: #16100B;
-}
-
-.testimonial-role {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: #16100B;
-  opacity: 0.5;
-}
-
-.testimonial-bars {
-  display: flex;
-  gap: 6px;
-  margin-top: 32px;
-}
-
-.testimonial-bars .bar {
-  flex: 1;
-  height: 2px;
-  background: rgba(59, 45, 33, 0.08);
-  border-radius: 2px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.testimonial-bars .bar .bar-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: rgba(59, 45, 33, 0.35);
-  border-radius: 2px;
-}
-
-.testimonial-bars .bar.past .bar-fill {
-  width: 100%;
-}
-
-.testimonial-bars .bar.active .bar-fill {
-  width: 100%;
-  animation: barProgress 4s linear forwards;
-}
-
-@keyframes barProgress {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-
 /* ── Blog ── */
 .blog {
   padding: 100px 24px;
@@ -986,14 +877,6 @@ body {
   .egregoric-img video { width: 100%; height: auto; }
   .egregoric-label { margin-bottom: 8px; }
 
-  .testimonials { padding: 0 20px; }
-  .testimonial-slide blockquote {
-    font-size: 24px;
-    line-height: 1.3;
-    max-width: 100%;
-  }
-  .testimonial-bars { margin-top: 24px; }
-
   .footer-cta { padding: 60px 20px 40px; }
   .footer-cta h2 { font-size: 40px; line-height: 38px; }
   .footer-cta .footer-sub { font-size: 13px; max-width: 100%; }
@@ -1008,7 +891,6 @@ body {
   .hero h1 { font-size: 44px; line-height: 42px; }
   .cta-pill { font-size: 12px; height: 48px; width: auto; }
   .terminal-body { font-size: 11px; }
-  .testimonial-slide blockquote { font-size: 20px; }
   .footer-cta h2 { font-size: 32px; line-height: 30px; }
   .egregoric-text h2 { font-size: 24px; line-height: 26px; }
 }
