@@ -10,6 +10,7 @@ import SetupFlow from './components/SetupFlow.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
 import UserDashboard from './UserDashboard.jsx'
 import SettingsPage from './SettingsPage.jsx'
+import ArtifactsPage from './ArtifactsPage.jsx'
 import slovicDemoHistoric from './fonts/Slovic_Demo-Historic.otf'
 
 function GlobalStyles() {
@@ -174,6 +175,15 @@ function CallbackRouter() {
         return;
       }
     }
+    if (sessionStorage.getItem("artifacts_auth_pending")) {
+      const returnPath = sessionStorage.getItem("artifacts_return_path") || "/view";
+      sessionStorage.removeItem("artifacts_auth_pending");
+      sessionStorage.removeItem("artifacts_return_path");
+      if (code) {
+        window.location.replace(`${returnPath}?code=${encodeURIComponent(code)}`);
+        return;
+      }
+    }
     setReady(true);
   }, []);
   if (!ready) return null;
@@ -195,6 +205,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/view/:org" element={<ArtifactsPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
