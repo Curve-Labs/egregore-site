@@ -19,6 +19,19 @@
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
 
+# Artifact serving — proxy to API (must be before catch-all)
+[[redirects]]
+  from = "/view/:org/:id"
+  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/:org/:id"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/view/:id"
+  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/:id"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
