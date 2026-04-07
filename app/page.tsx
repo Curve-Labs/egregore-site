@@ -317,13 +317,14 @@ export default function HomePage() {
         <div className="hero-container">
           <div className="hero-content">
             <h1>
-              <AnimatedLine text="Claude code" startIndex={0} />
+              <AnimatedLine text="The missing layer" startIndex={0} />
               <br />
-              <AnimatedLine text="now multiplayer" startIndex={11} />
+              <AnimatedLine text="between AI and your org" startIndex={17} />
             </h1>
             <p className="hero-sub">
-              You open a terminal. You talk to Claude. But this Claude connects
-              the dots. It knows what your teammates did yesterday.
+              Claude Code is powerful alone. Egregore makes it organizational
+              — shared memory, automatic handoffs, and a knowledge graph
+              that compounds over time.
             </p>
           </div>
 
@@ -340,29 +341,30 @@ export default function HomePage() {
       <div className="features-wrapper">
         <nav className="features-nav">
           <div className="features-nav-label">Features</div>
-          <span className="active" data-section="todo">
-            /todo
+          <span className="active" data-section="activity">
+            /activity
           </span>
           <span data-section="handoff">/handoff</span>
           <span data-section="save">/save</span>
-          <span data-section="activity">/activity</span>
+          <span data-section="deep-reflect">/deep-reflect</span>
         </nav>
 
         <div className="features-content">
-          {/* /todo */}
+          {/* /activity */}
           <section
             className="action-section"
-            id="todo"
+            id="activity"
             style={{ paddingTop: 0 }}
           >
             <div className="action-text">
-              <img src="/icon-todo.svg" alt="" className="action-icon" />
+              <img src="/icon-activity.svg" alt="" className="action-icon" />
               <h2>
-                Track your work <span className="cmd-label">/todo</span>
+                See the whole board{" "}
+                <span className="cmd-label">/activity</span>
               </h2>
               <p>
-                Tell Claude what you&apos;re working on. It creates todos, checks
-                progress, and never loses context between sessions.
+                What happened today. Who worked on what. Open threads, recent
+                handoffs, the full picture — without a standup.
               </p>
             </div>
             <TerminalBlock>
@@ -370,43 +372,55 @@ export default function HomePage() {
                 <span className="prompt">$ </span>
                 <span className="type-line">
                   <span className="cmd">
-                    <span className="highlight">/todo</span> fix the auth
-                    redirect bug
+                    <span className="highlight">/activity</span>
                   </span>
                 </span>
               </div>
               <br />
               <span className="fade-line">
-                <span className="success">&#10003;</span>{" "}
-                <span className="output">Todo: fix the auth redirect bug</span>
-                <br />
                 <span className="dim">
-                  &nbsp;&nbsp;3 open todos &middot; /todo to see all
+                  &nbsp;&nbsp;Today &middot; 3 sessions
                 </span>
               </span>
               <br />
               <br />
-              <div className="cmd-line fade-line">
-                <span className="prompt">$ </span>
-                <span className="type-line-2">
-                  <span className="cmd">
-                    <span className="highlight">/todo</span>
-                  </span>
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">Kaan</span> &middot;
+                  2h ago
                 </span>
-              </div>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;fixed auth redirect, refactored tokens
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
+                  for Sam: expired sessions edge case
+                </span>
+              </span>
               <br />
-              <span className="fade-line-2">
+              <br />
+              <span className="fade-line">
                 <span className="output">
-                  [1] <span className="highlight">&#9733;</span> fix the auth
-                  redirect bug
+                  &nbsp;&nbsp;<span className="highlight">Sam</span> &middot; 5h
+                  ago
                 </span>
                 <br />
+                <span className="dim">
+                  &nbsp;&nbsp;shipped onboarding v2, updated docs
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
                 <span className="output">
-                  [2] &nbsp; update onboarding flow
+                  &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
+                  8h ago
                 </span>
                 <br />
-                <span className="output">
-                  [3] &nbsp; review Sam&apos;s PR
+                <span className="dim">
+                  &nbsp;&nbsp;set up CI pipeline, added lint checks
                 </span>
               </span>
               <br />
@@ -543,17 +557,18 @@ export default function HomePage() {
 
           <SectionDivider />
 
-          {/* /activity */}
-          <section className="action-section" id="activity">
+          {/* /deep-reflect */}
+          <section className="action-section" id="deep-reflect">
             <div className="action-text">
               <img src="/icon-activity.svg" alt="" className="action-icon" />
               <h2>
-                See the whole board{" "}
-                <span className="cmd-label">/activity</span>
+                Connect the dots{" "}
+                <span className="cmd-label">/deep-reflect</span>
               </h2>
               <p>
-                What happened today. Who worked on what. Open threads, recent
-                handoffs, the full picture — without a standup.
+                Cross-reference an insight against everything your team knows.
+                It reads your knowledge base, finds tensions, gaps, and
+                patterns you missed.
               </p>
             </div>
             <TerminalBlock>
@@ -561,58 +576,67 @@ export default function HomePage() {
                 <span className="prompt">$ </span>
                 <span className="type-line">
                   <span className="cmd">
-                    <span className="highlight">/activity</span>
+                    <span className="highlight">/deep-reflect</span> on our
+                    pricing strategy
                   </span>
                 </span>
               </div>
               <br />
               <span className="fade-line">
                 <span className="dim">
-                  &nbsp;&nbsp;Today &middot; 3 sessions
+                  &nbsp;&nbsp;Analyzing against 42 artifacts...
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Kaan</span> &middot;
-                  2h ago
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">tension</span> with
+                  defensibility-architecture
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;fixed auth redirect, refactored tokens
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
-                  for Sam: expired sessions edge case
+                  &nbsp;&nbsp;&nbsp;&nbsp;Free tier grows graph forever but
+                  server costs scale linearly
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Sam</span> &middot; 5h
-                  ago
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">gap</span> in knowledge base
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;shipped onboarding v2, updated docs
+                  &nbsp;&nbsp;&nbsp;&nbsp;No artifact defines what
+                  &quot;agent memory&quot; means as a product surface
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
-                  8h ago
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">convergence</span> with
+                  harvest-flywheel
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;set up CI pipeline, added lint checks
+                  &nbsp;&nbsp;&nbsp;&nbsp;Three separate sessions arrived at
+                  &quot;compounding data&quot; independently
                 </span>
               </span>
               <br />
+              <br />
+              <span className="fade-line">
+                <span className="success">&#10003;</span>{" "}
+                <span className="dim">
+                  Saved &middot; 3 signals indexed &middot; linked to
+                  egregore-launch
+                </span>
+              </span>
             </TerminalBlock>
           </section>
         </div>
@@ -673,13 +697,6 @@ export default function HomePage() {
             rel="noopener noreferrer"
           >
             GitHub
-          </a>
-          <a
-            href="https://curvelabs.eu"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Curve Labs
           </a>
           <a
             href="https://egregore.xyz"
