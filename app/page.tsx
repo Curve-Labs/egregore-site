@@ -317,9 +317,9 @@ export default function HomePage() {
         <div className="hero-container">
           <div className="hero-content">
             <h1>
-              <AnimatedLine text="The missing layer" startIndex={0} />
+              <AnimatedLine text="Towards" startIndex={0} />
               <br />
-              <AnimatedLine text="between AI and your org" startIndex={17} />
+              <AnimatedLine text="shared minds" startIndex={7} />
             </h1>
             <p className="hero-sub">
               Claude Code is powerful alone. Egregore makes it organizational
@@ -341,30 +341,31 @@ export default function HomePage() {
       <div className="features-wrapper">
         <nav className="features-nav">
           <div className="features-nav-label">Features</div>
-          <span className="active" data-section="activity">
-            /activity
+          <span className="active" data-section="invite">
+            /invite
           </span>
           <span data-section="handoff">/handoff</span>
           <span data-section="save">/save</span>
+          <span data-section="activity">/activity</span>
           <span data-section="deep-reflect">/deep-reflect</span>
         </nav>
 
         <div className="features-content">
-          {/* /activity */}
+          {/* /invite */}
           <section
             className="action-section"
-            id="activity"
+            id="invite"
             style={{ paddingTop: 0 }}
           >
             <div className="action-text">
-              <img src="/icon-activity.svg" alt="" className="action-icon" />
+              <img src="/icon-invite.svg" alt="" className="action-icon" />
               <h2>
-                See the whole board{" "}
-                <span className="cmd-label">/activity</span>
+                Bring your team in{" "}
+                <span className="cmd-label">/invite</span>
               </h2>
               <p>
-                What happened today. Who worked on what. Open threads, recent
-                handoffs, the full picture — without a standup.
+                One command adds a teammate. They get access, onboarding,
+                and the full context of what&apos;s already happened — instantly.
               </p>
             </div>
             <TerminalBlock>
@@ -372,58 +373,39 @@ export default function HomePage() {
                 <span className="prompt">$ </span>
                 <span className="type-line">
                   <span className="cmd">
-                    <span className="highlight">/activity</span>
+                    <span className="highlight">/invite</span> sam@company.com
                   </span>
                 </span>
               </div>
               <br />
               <span className="fade-line">
                 <span className="dim">
-                  &nbsp;&nbsp;Today &middot; 3 sessions
+                  &nbsp;&nbsp;Sending invite...
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Kaan</span> &middot;
-                  2h ago
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> GitHub org invite sent
                 </span>
                 <br />
-                <span className="dim">
-                  &nbsp;&nbsp;fixed auth redirect, refactored tokens
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> Workspace provisioned
                 </span>
                 <br />
-                <span className="dim">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
-                  for Sam: expired sessions edge case
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> Memory access granted
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Sam</span> &middot; 5h
-                  ago
-                </span>
-                <br />
+                <span className="success">&#10003;</span>{" "}
                 <span className="dim">
-                  &nbsp;&nbsp;shipped onboarding v2, updated docs
+                  Sam will land in onboarding on first session
                 </span>
               </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
-                  8h ago
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;set up CI pipeline, added lint checks
-                </span>
-              </span>
-              <br />
             </TerminalBlock>
           </section>
 
@@ -557,6 +539,81 @@ export default function HomePage() {
 
           <SectionDivider />
 
+          {/* /activity */}
+          <section className="action-section" id="activity">
+            <div className="action-text">
+              <img src="/icon-todo.svg" alt="" className="action-icon" />
+              <h2>
+                See the whole board{" "}
+                <span className="cmd-label">/activity</span>
+              </h2>
+              <p>
+                What happened today. Who worked on what. Open threads, recent
+                handoffs, the full picture — without a standup.
+              </p>
+            </div>
+            <TerminalBlock>
+              <div className="cmd-line">
+                <span className="prompt">$ </span>
+                <span className="type-line">
+                  <span className="cmd">
+                    <span className="highlight">/activity</span>
+                  </span>
+                </span>
+              </div>
+              <br />
+              <span className="fade-line">
+                <span className="dim">
+                  &nbsp;&nbsp;Today &middot; 3 sessions
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">Kaan</span> &middot;
+                  2h ago
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;fixed auth redirect, refactored tokens
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
+                  for Sam: expired sessions edge case
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">Sam</span> &middot; 5h
+                  ago
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;shipped onboarding v2, updated docs
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
+                  8h ago
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;set up CI pipeline, added lint checks
+                </span>
+              </span>
+              <br />
+            </TerminalBlock>
+          </section>
+
+          <SectionDivider />
+
           {/* /deep-reflect */}
           <section className="action-section" id="deep-reflect">
             <div className="action-text">
@@ -666,14 +723,13 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="egregoric-img">
-          <video src="/wizard-video.mp4" autoPlay loop muted playsInline />
+          <img src="/wizard-static.png" alt="" />
         </div>
       </section>
 
       <SectionDivider
         style={{ maxWidth: 752, margin: "60px auto", padding: "0 28px" }}
       />
-
 
       {/* ── Footer CTA ── */}
       <section className="footer-cta">
