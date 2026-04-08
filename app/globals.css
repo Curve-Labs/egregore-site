@@ -240,11 +240,41 @@ body {
 
 .hero-doc-link a:hover { opacity: 0.8; }
 
+/* ── Value Propositions ── */
+.value-props {
+  max-width: 752px;
+  margin: -120px auto 0;
+  padding: 0 28px 80px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.value-prop h3 {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 400;
+  color: #16100B;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.value-prop p {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 19px;
+  color: #16100B;
+  opacity: 0.6;
+  max-width: 520px;
+}
+
 /* ── Features Section ── */
 .features-wrapper {
   position: relative;
   max-width: 752px;
-  margin: -40px auto 0;
+  margin: 40px auto 0;
   padding: 0 28px;
 }
 
@@ -336,7 +366,7 @@ body {
 
 .action-text h2 {
   font-family: var(--font-serif);
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 400;
   line-height: 1.2;
   margin-bottom: 16px;
@@ -959,6 +989,7 @@ body {
 
   .hero-container { padding: 32px 0; }
 
+  .value-props { padding: 48px 20px; gap: 28px; }
   .features-wrapper { padding: 0 20px; margin-top: 0; }
   .features-nav { display: none; }
   .features-content { padding: 0; }

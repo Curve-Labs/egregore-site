@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -105,95 +105,6 @@ function SectionDivider({ style }: { style?: React.CSSProperties }) {
     </div>
   );
 }
-
-const TestimonialCarousel = memo(function TestimonialCarousel() {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideKey, setSlideKey] = useState(0);
-  const slideCount = 3;
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-    setSlideKey((k) => k + 1);
-    const track = trackRef.current;
-    if (track) {
-      track.style.transform = `translateX(-${index * (100 / slideCount)}%)`;
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      goToSlide((currentSlide + 1) % slideCount);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [currentSlide, goToSlide]);
-
-  return (
-    <section className="testimonials">
-      <div className="testimonial-viewport">
-        <div className="testimonial-track" ref={trackRef}>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;It&rsquo;s like having a Claude that already sat in on
-              every standup. Everyone&rsquo;s context is just there.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Alex M." />
-              </div>
-              <div>
-                <div className="testimonial-name">Alex M.</div>
-                <div className="testimonial-role">eng lead, 4-person startup</div>
-              </div>
-            </div>
-          </div>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;Three of us work across timezones. Egregore turned Claude
-              from &lsquo;my&rsquo; assistant into the team&rsquo;s shared
-              brain.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Sam K." />
-              </div>
-              <div>
-                <div className="testimonial-name">Sam K.</div>
-                <div className="testimonial-role">distributed team</div>
-              </div>
-            </div>
-          </div>
-          <div className="testimonial-slide">
-            <blockquote>
-              &ldquo;The unlock isn&rsquo;t any single feature — it&rsquo;s
-              that Claude finally has institutional memory. It compounds.&rdquo;
-            </blockquote>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">
-                <img src="/avatar.png" alt="Jordan R." />
-              </div>
-              <div>
-                <div className="testimonial-name">Jordan R.</div>
-                <div className="testimonial-role">technical co-founder</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="testimonial-bars">
-        {Array.from({ length: slideCount }).map((_, i) => (
-          <div
-            key={i}
-            className={`bar ${i === currentSlide ? "active" : i < currentSlide ? "past" : ""}`}
-            onClick={() => goToSlide(i)}
-          >
-            <div className="bar-fill" key={i === currentSlide ? `fill-${slideKey}` : `static-${i}`} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-});
 
 export default function HomePage() {
   const heroBgRef = useRef<HTMLDivElement>(null);
@@ -406,13 +317,13 @@ export default function HomePage() {
         <div className="hero-container">
           <div className="hero-content">
             <h1>
-              <AnimatedLine text="Claude code" startIndex={0} />
+              <AnimatedLine text="Towards" startIndex={0} />
               <br />
-              <AnimatedLine text="now multiplayer" startIndex={11} />
+              <AnimatedLine text="shared minds" startIndex={7} />
             </h1>
             <p className="hero-sub">
-              You open a terminal. You talk to Claude. But this Claude connects
-              the dots. It knows what your teammates did yesterday.
+              AI-native collaboration is here. Turn the traces of your
+              team&apos;s work into persistent collective cognition.
             </p>
           </div>
 
@@ -425,33 +336,72 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Value Propositions ── */}
+      <section className="value-props">
+        <div className="value-prop">
+          <h3>Organizational cognition</h3>
+          <p>
+            Every session leaves a trace. Decisions, patterns, handoffs —
+            structured and ready to build on. Persistent context beyond
+            individual sessions, compounding into institutional knowledge
+            that any member — human or AI — can work with.
+          </p>
+        </div>
+        <div className="value-prop">
+          <h3>Multi-agent continuity</h3>
+          <p>
+            Human-AI pairs communicating with each other across a rich,
+            shared context space. Handoffs carry not just state, but the
+            reasoning that produced it — enabling speed and situational
+            awareness for people, and depth for AI agents picking up the
+            thread.
+          </p>
+        </div>
+        <div className="value-prop">
+          <h3>Deep pattern recognition</h3>
+          <p>
+            Your organization generates more signal than anyone can track.
+            Deep pattern recognition makes the invisible visible — revealing
+            how your team actually operates, where it&apos;s converging, and
+            where the coordination infrastructure itself can evolve.
+          </p>
+        </div>
+      </section>
+
+      <SectionDivider
+        style={{ maxWidth: 752, margin: "0 auto", padding: "0 28px" }}
+      />
+
       {/* ── Features ── */}
       <div className="features-wrapper">
         <nav className="features-nav">
           <div className="features-nav-label">Features</div>
-          <span className="active" data-section="todo">
-            /todo
+          <span className="active" data-section="invite">
+            /invite
           </span>
           <span data-section="handoff">/handoff</span>
           <span data-section="save">/save</span>
           <span data-section="activity">/activity</span>
+          <span data-section="deep-reflect">/deep-reflect</span>
         </nav>
 
         <div className="features-content">
-          {/* /todo */}
+          {/* /invite */}
           <section
             className="action-section"
-            id="todo"
+            id="invite"
             style={{ paddingTop: 0 }}
           >
             <div className="action-text">
-              <img src="/icon-todo.svg" alt="" className="action-icon" />
+              <img src="/icon-invite.svg" alt="" className="action-icon" />
               <h2>
-                Track your work <span className="cmd-label">/todo</span>
+                Make it multiplayer{" "}
+                <span className="cmd-label">/invite</span>
               </h2>
               <p>
-                Tell Claude what you&apos;re working on. It creates todos, checks
-                progress, and never loses context between sessions.
+                One command brings a teammate into your egregore. They get
+                access to shared memory and coordination workflows from
+                their first session.
               </p>
             </div>
             <TerminalBlock>
@@ -459,46 +409,46 @@ export default function HomePage() {
                 <span className="prompt">$ </span>
                 <span className="type-line">
                   <span className="cmd">
-                    <span className="highlight">/todo</span> fix the auth
-                    redirect bug
+                    <span className="highlight">/invite</span> mia@studio.dev
                   </span>
                 </span>
               </div>
               <br />
               <span className="fade-line">
-                <span className="success">&#10003;</span>{" "}
-                <span className="output">Todo: fix the auth redirect bug</span>
+                <span className="dim">
+                  &nbsp;&nbsp;Inviting mia@studio.dev...
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> GitHub org invitation sent
+                </span>
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> Memory access granted
+                </span>
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#10003;</span> Knowledge graph linked
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="dim">
+                  &nbsp;&nbsp;Mia gets access to the organization&apos;s accumulated
+                </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;3 open todos &middot; /todo to see all
-                </span>
-              </span>
-              <br />
-              <br />
-              <div className="cmd-line fade-line">
-                <span className="prompt">$ </span>
-                <span className="type-line-2">
-                  <span className="cmd">
-                    <span className="highlight">/todo</span>
-                  </span>
-                </span>
-              </div>
-              <br />
-              <span className="fade-line-2">
-                <span className="output">
-                  [1] <span className="highlight">&#9733;</span> fix the auth
-                  redirect bug
+                  &nbsp;&nbsp;context from her first session.
                 </span>
                 <br />
-                <span className="output">
-                  [2] &nbsp; update onboarding flow
-                </span>
-                <br />
-                <span className="output">
-                  [3] &nbsp; review Sam&apos;s PR
+                <span className="dim">
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff something to get her started
                 </span>
               </span>
-              <br />
             </TerminalBlock>
           </section>
 
@@ -509,11 +459,13 @@ export default function HomePage() {
             <div className="action-text">
               <img src="/icon-handoff.svg" alt="" className="action-icon" />
               <h2>
-                Pass the baton <span className="cmd-label">/handoff</span>
+                The atomic unit of AI-native coordination{" "}
+                <span className="cmd-label">/handoff</span>
               </h2>
               <p>
-                End your session with notes for the next person. They pick up
-                exactly where you left off — no Slack catch-up, no stale docs.
+                A handoff doesn&apos;t just communicate the state of the work —
+                it carries the context graph that generated it. Decisions,
+                trade-offs, open threads, and the reasoning behind them.
               </p>
             </div>
             <TerminalBlock>
@@ -535,11 +487,11 @@ export default function HomePage() {
                 <span className="dim">&nbsp;&nbsp;What I did:</span>
                 <br />
                 <span className="output">
-                  &nbsp;&nbsp;Fixed auth redirect, added tests
+                  &nbsp;&nbsp;Redesigned the dashboard layout, rewired data layer
                 </span>
                 <br />
                 <span className="output">
-                  &nbsp;&nbsp;Refactored token refresh logic
+                  &nbsp;&nbsp;Added responsive breakpoints for mobile
                 </span>
               </span>
               <br />
@@ -548,13 +500,13 @@ export default function HomePage() {
                 <span className="dim">&nbsp;&nbsp;Still open:</span>
                 <br />
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> edge
-                  case with expired sessions
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> loading
+                  state flickers on slow connections
                 </span>
                 <br />
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> needs QA
-                  on mobile Safari
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> accessibility
+                  audit on new color tokens
                 </span>
               </span>
               <br />
@@ -562,7 +514,7 @@ export default function HomePage() {
               <span className="fade-line">
                 <span className="success">&#10003;</span>{" "}
                 <span className="dim">
-                  pushed to memory &middot; Sam will see this
+                  pushed to memory &middot; Alex&apos;s Claude will have this context
                 </span>
               </span>
             </TerminalBlock>
@@ -575,14 +527,16 @@ export default function HomePage() {
             <div className="action-text">
               <img src="/icon-save.svg" alt="" className="action-icon" />
               <h2>
-                Ship your work <span className="cmd-label">/save</span>
+                Automate the git workflow{" "}
+                <span className="cmd-label">/save</span>
               </h2>
               <p>
-                One command creates a PR with everything you did. Teammates
-                review it, or markdown changes merge automatically.
+                Stage, commit, push, open a PR — one command. Automatic
+                enforcement of versioning best practices so that collaborative
+                AI-driven development stays streamlined.
               </p>
             </div>
-            <TerminalBlock branch="dev/kaan/auth-fix">
+            <TerminalBlock branch="dev/alex/dashboard-redesign">
               <div className="cmd-line">
                 <span className="prompt">$ </span>
                 <span className="type-line">
@@ -595,17 +549,17 @@ export default function HomePage() {
               <span className="fade-line">
                 <span className="output">
                   Saving to{" "}
-                  <span className="highlight">dev/kaan/auth-fix</span>
+                  <span className="highlight">dev/alex/dashboard-redesign</span>
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
-                <span className="dim">&nbsp;&nbsp;&#10003; 3 files staged</span>
+                <span className="dim">&nbsp;&nbsp;&#10003; 4 files staged</span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&#10003; committed: &quot;fix auth redirect on token
-                  expiry&quot;
+                  &nbsp;&nbsp;&#10003; committed: &quot;redesign dashboard layout +
+                  mobile breakpoints&quot;
                 </span>
                 <br />
                 <span className="dim">
@@ -616,14 +570,14 @@ export default function HomePage() {
               <br />
               <span className="fade-line">
                 <span className="success">&#10003;</span>{" "}
-                <span className="output">PR #42 created</span>
+                <span className="output">PR #87 created</span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;github.com/team/app/pull/42
+                  &nbsp;&nbsp;github.com/studio/app/pull/87
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> Sam
+                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> Mia
                   added as reviewer
                 </span>
               </span>
@@ -635,14 +589,15 @@ export default function HomePage() {
           {/* /activity */}
           <section className="action-section" id="activity">
             <div className="action-text">
-              <img src="/icon-activity.svg" alt="" className="action-icon" />
+              <img src="/icon-todo.svg" alt="" className="action-icon" />
               <h2>
                 See the whole board{" "}
                 <span className="cmd-label">/activity</span>
               </h2>
               <p>
-                What happened today. Who worked on what. Open threads, recent
-                handoffs, the full picture — without a standup.
+                What happened today. Who worked on what. Open threads,
+                pending handoffs, quest momentum — the full picture of your
+                organization&apos;s work. A /activity is worth a thousand standups.
               </p>
             </div>
             <TerminalBlock>
@@ -657,36 +612,36 @@ export default function HomePage() {
               <br />
               <span className="fade-line">
                 <span className="dim">
-                  &nbsp;&nbsp;Today &middot; 3 sessions
+                  &nbsp;&nbsp;Today &middot; 4 sessions
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Kaan</span> &middot;
-                  2h ago
+                  &nbsp;&nbsp;<span className="highlight">Alex</span> &middot;
+                  1h ago
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;fixed auth redirect, refactored tokens
+                  &nbsp;&nbsp;dashboard redesign, rewired data layer
                 </span>
                 <br />
                 <span className="dim">
                   &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
-                  for Sam: expired sessions edge case
+                  for Mia: loading state on slow connections
                 </span>
               </span>
               <br />
               <br />
               <span className="fade-line">
                 <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Sam</span> &middot; 5h
+                  &nbsp;&nbsp;<span className="highlight">Mia</span> &middot; 3h
                   ago
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;shipped onboarding v2, updated docs
+                  &nbsp;&nbsp;shipped new color system, updated design tokens
                 </span>
               </span>
               <br />
@@ -694,14 +649,126 @@ export default function HomePage() {
               <span className="fade-line">
                 <span className="output">
                   &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
+                  6h ago
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;migration script for v2 schema, added rollback
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">Priya</span> &middot;
                   8h ago
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;set up CI pipeline, added lint checks
+                  &nbsp;&nbsp;user interview synthesis, 3 patterns extracted
                 </span>
               </span>
               <br />
+            </TerminalBlock>
+          </section>
+
+          <SectionDivider />
+
+          {/* /deep-reflect */}
+          <section className="action-section" id="deep-reflect">
+            <div className="action-text">
+              <img src="/icon-activity.svg" alt="" className="action-icon" />
+              <h2>
+                Surface what&apos;s beneath{" "}
+                <span className="cmd-label">/deep-reflect</span>
+              </h2>
+              <p>
+                Your team&apos;s knowledge base holds more than anyone has read
+                end to end. Deep-reflect traverses it — across decisions,
+                handoffs, quests, and the patterns forming between them.
+              </p>
+            </div>
+            <TerminalBlock>
+              <div className="cmd-line">
+                <span className="prompt">$ </span>
+                <span className="type-line">
+                  <span className="cmd">
+                    <span className="highlight">/deep-reflect</span> on why
+                    users drop off after day 3
+                  </span>
+                </span>
+              </div>
+              <br />
+              <span className="fade-line">
+                <span className="dim">
+                  &nbsp;&nbsp;Reading 67 artifacts across 4 quests...
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">pattern</span> &middot; recurring
+                  across 3 teams
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;Onboarding sessions focus on features,
+                  not workflows — users who discover /activity retain 3x
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">tension</span> &middot;
+                  growth-strategy ↔ product-roadmap
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;Marketing promises &quot;instant
+                  setup&quot; but time-to-value is 12 minutes
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">convergence</span> &middot;
+                  design-research + support-tickets
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&quot;Aha moment&quot; is seeing a
+                  teammate&apos;s handoff, not completing setup
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
+                  <span className="highlight">gap</span> &middot; no artifact
+                  covers re-engagement
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;Three quests reference retention but
+                  none define the recovery path
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="success">&#10003;</span>{" "}
+                <span className="dim">
+                  Saved &middot; 4 signals indexed &middot; linked to
+                  user-retention
+                </span>
+              </span>
             </TerminalBlock>
           </section>
         </div>
@@ -731,16 +798,13 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="egregoric-img">
-          <video src="/wizard-video.mp4" autoPlay loop muted playsInline />
+          <img src="/wizard-static.png" alt="" />
         </div>
       </section>
 
       <SectionDivider
         style={{ maxWidth: 752, margin: "60px auto", padding: "0 28px" }}
       />
-
-      {/* ── Testimonials ── */}
-      <TestimonialCarousel />
 
       {/* ── Footer CTA ── */}
       <section className="footer-cta">
@@ -766,13 +830,6 @@ export default function HomePage() {
             GitHub
           </a>
           <a
-            href="https://curvelabs.eu"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Curve Labs
-          </a>
-          <a
             href="https://egregore.xyz"
             target="_blank"
             rel="noopener noreferrer"
@@ -781,6 +838,11 @@ export default function HomePage() {
           </a>
         </div>
       </section>
+
+      {/* ── Footer ── */}
+      <footer className="site-footer">
+        <a href="mailto:hello@egregore.xyz">Get in touch for enterprise version</a>
+      </footer>
     </>
   );
 }
