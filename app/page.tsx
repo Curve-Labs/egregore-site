@@ -763,6 +763,11 @@ export default function HomePage() {
           </a>
         </div>
       </section>
+
+      {/* ── Footer ── */}
+      <footer className="site-footer">
+        <a href="mailto:hello@egregore.xyz">Get in touch for enterprise version</a>
+      </footer>
     </>
   );
 }

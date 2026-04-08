@@ -895,6 +895,26 @@ body {
   .egregoric-text h2 { font-size: 24px; line-height: 26px; }
 }
 
+/* ── Site Footer ── */
+.site-footer {
+  height: 80px;
+  background: #16100B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-footer a {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: #ECE9DA;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
 /* ══════════════════════════════════════════
    Blog Article Page
    ══════════════════════════════════════════ */
