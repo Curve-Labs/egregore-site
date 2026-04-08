@@ -1,0 +1,37 @@
+---
+title: Shared Memory
+description: How Egregore persists knowledge across sessions and people
+---
+
+Egregore's memory is a Git repository shared by the entire team. It stores decisions, patterns, handoffs, and knowledge — all versioned, all searchable, all persistent.
+
+## How It Works
+
+When you start a session, Egregore syncs the memory repo automatically. The `memory/` directory in your project is a symlink to this shared repo.
+
+```
+memory/
+├── people/          # Team directory
+├── handoffs/        # Session handoffs + index.md
+├── knowledge/
+│   ├── decisions/   # Org decisions
+│   └── patterns/    # Emergent patterns
+└── infrastructure/  # Service registry
+```
+
+## Writing to Memory
+
+You don't manage memory files directly. Slash commands handle it:
+
+- `/reflect` — Captures a decision or insight to `knowledge/`
+- `/handoff` — Writes session notes to `handoffs/`
+- `/note` — Saves a personal, half-baked thought
+- `/add` — Adds a document or artifact
+
+## Reading from Memory
+
+Egregore reads memory automatically to inform its responses. When you ask about past decisions or context, it checks `knowledge/` first. Commands like `/activity` and `/dashboard` aggregate from memory.
+
+## Git-Based
+
+Memory is just a Git repo. You can browse it, search it, or read it outside Egregore. No proprietary format, no lock-in.

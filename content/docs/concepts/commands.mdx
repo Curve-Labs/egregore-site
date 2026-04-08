@@ -1,0 +1,116 @@
+---
+title: Slash Commands
+description: The command system that drives Egregore workflows
+---
+
+Egregore extends Claude Code with slash commands — typed workflows that encode team practices. No git knowledge needed, no manual file management.
+
+## How Commands Work
+
+Commands are `.md` files in `.claude/commands/`. When you type `/reflect`, Claude loads the command spec and executes the workflow it defines. Commands can read and write files, run shell scripts, ask you questions interactively, and chain into other commands.
+
+You can also invoke commands by intent — say "I want to hand off my work" and Egregore will invoke `/handoff` automatically.
+
+## Command Categories
+
+### Core Loop
+
+The commands you'll use every session:
+
+| Command | What it does |
+|---------|-------------|
+| `/dashboard` | Your personal status — recent sessions, open handoffs, current tasks |
+| `/activity` | Org-wide view — what's happening across the team |
+| `/save` | Commit, push, and create a PR to develop — across all repos with changes |
+| `/handoff` | Leave structured notes for others (auto-saves when done) |
+| `/wrap` | Close your session with a personal summary |
+| `/todo` | Manage personal tasks |
+
+### Knowledge
+
+Capture and retrieve organizational knowledge:
+
+| Command | Purpose |
+|---------|---------|
+| `/reflect` | Capture a share-ready decision, pattern, or insight |
+| `/note` | Save a half-baked thought — personal, never shared |
+| `/deep-reflect` | Cross-reference an insight against the knowledge base |
+| `/archive` | Store effective prompt patterns as reusable knowledge |
+| `/add` | Add a document, link, or artifact to shared memory |
+| `/meeting` | Analyze meetings from Granola |
+| `/ingest` | Unified content ingestion — dispatches to type-specific pipelines |
+
+### Coordination
+
+Work together asynchronously:
+
+| Command | Purpose |
+|---------|---------|
+| `/ask` | Route a question to a person, the team, or think out loud |
+| `/quest` | Start or contribute to a shared exploration |
+| `/issue` | Report something broken |
+| `/invite` | Add someone to your Egregore (GitHub invitation + setup link) |
+| `/delete-user` | Remove a member from the Egregore |
+| `/announce` | Draft and send a message to the Telegram group |
+
+### Git Workflow
+
+Egregore handles git for you (see [Git Workflow](/docs/concepts/git-workflow)), but you can use these directly:
+
+| Command | Purpose |
+|---------|---------|
+| `/save` | The main one — handles commit, push, PR across all repos |
+| `/branch` | Create a working branch (usually automatic) |
+| `/pr` | Create a pull request |
+| `/review-pr` | Review a PR with deep scrutiny |
+| `/contribute` | Contribute an improvement back to the upstream Egregore framework |
+
+### Identity
+
+| Command | Purpose |
+|---------|---------|
+| `/me` | View or set your display name |
+
+### Infrastructure
+
+| Command | Purpose |
+|---------|---------|
+| `/setup` | First-time Egregore setup |
+| `/env` | Configure environment variables |
+| `/checkup` | Run diagnostics on your environment |
+| `/update` | Sync framework from upstream and pull repos |
+| `/pull` | Pull latest for current repo and shared memory |
+| `/sync-repos` | Fetch all managed repos |
+| `/telemetry` | View or change telemetry settings |
+| `/telegram-connect` | Set up Telegram group for notifications |
+
+### Ingestion
+
+| Command | Purpose |
+|---------|---------|
+| `/ingest` | Unified content ingestion router |
+| `/ingest-user-interview` | Analyze user interview transcripts |
+| `/harvest` | Directed elicitation — extract and synthesize insights from people |
+
+### Hosted (requires managed hosting)
+
+These commands require the [knowledge graph](/docs/guides/hosting):
+
+| Command | Purpose |
+|---------|---------|
+| `/graph-diagnostic` | Full graph schema and data quality audit |
+| `/graph-maintain` | Graph maintenance cycle |
+| `/project` | Show project status — linked quests, recent artifacts |
+| `/hosting` | Manage hosted workspaces |
+| `/infra` | View or register infrastructure services |
+| `/connect` | Manage external service connectors |
+
+### Advanced
+
+| Command | Purpose |
+|---------|---------|
+| `/summon` | Design and launch a persistent agent process |
+| `/tutorial` | Interactive walkthrough of Egregore's core loop |
+| `/eval` | Evaluate and compare pipeline outputs |
+| `/eval-multiagent` | Run multi-agent pipeline evaluations |
+| `/quest-suggest` | Analyze quest drift and suggest restructuring |

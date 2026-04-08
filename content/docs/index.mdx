@@ -1,0 +1,48 @@
+---
+title: Egregore
+description: A shared intelligence layer for teams using Claude Code
+---
+
+Egregore gives your team a shared brain that persists across Claude Code sessions. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.
+
+Everything runs locally. No servers, no accounts, no API keys required.
+
+## Quick Start
+
+### Prerequisites
+
+- [git](https://git-scm.com)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — `npm install -g @anthropic-ai/claude-code`
+
+### Install
+
+```bash
+npx create-egregore@latest --open
+```
+
+This walks you through:
+
+1. **Sign in with GitHub** — OAuth device flow, no tokens to copy
+2. **Pick your account** — Personal or organization
+3. **Name your project** — Creates an Egregore instance and shared memory repo
+4. **Optionally create a project repo** — For your actual code
+5. **Done** — Everything cloned and linked locally
+
+### Start
+
+Setup adds a shell command to your profile. Open a new terminal and type:
+
+```bash
+egregore
+```
+
+This opens Claude Code in your Egregore directory, syncs memory, and picks up where you left off.
+
+## Next Steps
+
+<Cards>
+  <Card title="Core Concepts" href="/docs/concepts/memory" />
+  <Card title="Commands Reference" href="/docs/commands" />
+  <Card title="Telegram Setup" href="/docs/guides/telegram" />
+  <Card title="Managed Hosting" href="/docs/guides/hosting" />
+</Cards>

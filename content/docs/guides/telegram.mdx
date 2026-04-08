@@ -1,0 +1,58 @@
+---
+title: Telegram Setup
+description: Connect Telegram for team notifications
+---
+
+Egregore can send notifications to a Telegram group — handoff alerts, announcements, and status updates.
+
+## Setup
+
+Run the setup command inside your Egregore:
+
+```
+/telegram-connect
+```
+
+It walks you through three steps:
+
+### 1. Create a Telegram Group
+
+Create a group for your team in the Telegram app. This is where Egregore will post notifications.
+
+### 2. Add the Bot
+
+Click this link to add the Egregore bot to your group:
+
+```
+https://t.me/Egregore_clbot?startgroup=true
+```
+
+### 3. Paste the Invite Link
+
+Copy your group's invite link and paste it when prompted. Egregore stores it in `egregore.json` so new members can find the group.
+
+## What Gets Sent
+
+- **Handoff notifications** — When someone creates a handoff addressed to you or the team
+- **Announcements** — Messages sent via `/announce`
+- **Direct messages** — When someone uses `/ask` to route a question to you
+
+## Modes
+
+### Local Mode
+
+In local mode, the Telegram group link is stored so joiners can see it, but live notifications require connected mode.
+
+### Connected Mode
+
+Full notification support. Messages are routed through the Egregore API to the Telegram bot, which posts to your group.
+
+## Sending Messages
+
+To send a direct message to someone:
+
+```bash
+bin/notify.sh send <person> "your message"
+```
+
+To broadcast to the group, use `/announce`.

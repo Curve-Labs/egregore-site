@@ -1,0 +1,64 @@
+---
+title: Installation
+description: Set up Egregore from scratch
+---
+
+## Prerequisites
+
+You need two things installed:
+
+- **git** — [git-scm.com](https://git-scm.com)
+- **Claude Code** — `npm install -g @anthropic-ai/claude-code`
+
+## Create Your Egregore
+
+```bash
+npx create-egregore@latest --open
+```
+
+The installer walks you through:
+
+1. **Sign in with GitHub** — OAuth device flow. Opens your browser, no tokens to copy.
+2. **Pick your account** — Personal GitHub account or organization.
+3. **Name your project** — Creates an Egregore instance and shared memory repo on GitHub.
+4. **Create a project repo** (optional) — For your actual code. You can add repos later.
+5. **Done** — Everything cloned and linked locally.
+
+## Start Working
+
+Setup adds an `egregore` shell command to your profile. Open a new terminal:
+
+```bash
+egregore
+```
+
+This opens Claude Code in your Egregore directory, syncs memory, and shows your status.
+
+## First-Time Setup
+
+On first launch, Egregore runs `/setup` automatically:
+
+1. Clones the shared memory repo as a sibling directory
+2. Creates the `memory/` symlink
+3. Registers your person node in the knowledge graph (if connected)
+4. Clones any managed repos from `egregore.json`
+
+## Join an Existing Egregore
+
+If someone invited you:
+
+```bash
+npx create-egregore@latest join <github-org>/<repo-name>
+```
+
+This clones the instance, sets up memory, and runs onboarding.
+
+## Invite Others
+
+From inside your Egregore:
+
+```
+/invite <github-username>
+```
+
+This adds them as a collaborator on GitHub. They join with the command above.

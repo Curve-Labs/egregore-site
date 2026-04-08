@@ -1,3 +1,7 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
 @font-face {
   font-family: 'LT Superior Serif';
   src: url('/fonts/LTSuperiorSerif-Regular.otf') format('opentype');
@@ -1219,4 +1223,52 @@ body {
     flex-direction: column;
     gap: 24px;
   }
+}
+
+/* ── Fumadocs Theme Overrides ── */
+:root {
+  --fd-background: var(--cream);
+  --fd-foreground: var(--black);
+  --fd-muted: #EDE9E3;
+  --fd-muted-foreground: #6B5E52;
+  --fd-card: #FAF8F5;
+  --fd-card-foreground: var(--black);
+  --fd-border: var(--border);
+  --fd-primary: var(--terracotta);
+  --fd-primary-foreground: var(--cream);
+  --fd-accent: #EDE9E3;
+  --fd-accent-foreground: var(--black);
+  --fd-ring: var(--terracotta);
+}
+
+.dark {
+  --fd-background: #1D1611;
+  --fd-foreground: #F1EFE2;
+  --fd-muted: #2A2118;
+  --fd-muted-foreground: #A89888;
+  --fd-card: #241D16;
+  --fd-card-foreground: #F1EFE2;
+  --fd-border: #3A3028;
+  --fd-primary: var(--terracotta);
+  --fd-primary-foreground: #1D1611;
+  --fd-accent: #2A2118;
+  --fd-accent-foreground: #F1EFE2;
+  --fd-ring: var(--terracotta);
+}
+
+/* Docs headings use serif font */
+[data-docs] h1, [data-docs] h2, [data-docs] h3, [data-docs] h4,
+.fd-page h1, .fd-page h2, .fd-page h3, .fd-page h4 {
+  font-family: var(--font-serif) !important;
+  letter-spacing: -0.02em;
+}
+
+/* Code blocks use the same mono as the site */
+[data-docs] code, [data-docs] pre, [data-docs] kbd {
+  font-family: var(--font-mono) !important;
+}
+
+/* Sidebar active item uses terracotta */
+[data-active="true"] {
+  color: var(--terracotta) !important;
 }
