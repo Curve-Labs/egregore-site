@@ -49,7 +49,7 @@
   --max-width: 1200px;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; background: #1D1611; }
 
 body {
   background: var(--cream);
@@ -74,7 +74,7 @@ body {
   position: absolute;
   top: 300px;
   left: 0;
-  right: 0;
+  right: 40px;
   pointer-events: none;
   mix-blend-mode: multiply;
   -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 90%);
@@ -373,8 +373,8 @@ body {
 }
 
 .action-text h2 .cmd-label {
-  color: #16100B;
-  opacity: 0.3;
+  color: #E8772E;
+  opacity: 1;
   font-weight: 400;
 }
 
@@ -602,15 +602,15 @@ body {
 
 .egregoric-img {
   position: absolute;
-  right: 0;
-  top: -50px;
+  right: 40px;
+  top: 20px;
   pointer-events: none;
 }
 
 .egregoric-img img,
 .egregoric-img video {
-  width: 394px;
-  height: 389px;
+  width: 260px;
+  height: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
 }
@@ -1250,4 +1250,18 @@ body {
     flex-direction: column;
     gap: 24px;
   }
+}
+
+/* Footer */
+.site-footer {
+  height: 80px;
+  background: #1D1611;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.site-footer a {
+  color: #F5F0EB;
+  text-decoration: none;
+  font-size: 14px;
 }

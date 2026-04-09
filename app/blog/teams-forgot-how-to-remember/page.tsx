@@ -3,9 +3,9 @@ import Link from "next/link";
 import CopyButton from "./CopyButton";
 
 export const metadata: Metadata = {
-  title: "Teams forgot how to remember — Egregore",
+  title: "Context Gardening — Egregore",
   description:
-    "Every organization runs on context. AI made the problem worse. We built Egregore to fix it.",
+    "You don't manufacture context, you cultivate the conditions for it to grow.",
 };
 
 function Divider() {
@@ -40,199 +40,123 @@ export default function BlogPost() {
 
       <article className="article">
         <header className="article-header">
-          <div className="article-meta">From the lab &middot; Mar 2026</div>
-          <h1>Teams forgot how to remember.</h1>
+          <div className="article-meta">From the lab &middot; Feb 2026</div>
+          <h1>Context Gardening</h1>
           <p className="lede">
-            Every organization runs on context. AI made the problem worse, not
-            better. We built Egregore to fix it.
+            What liberates us is the knowledge of who we were, what we became,
+            where we were, whereinto we have been thrown, whereto we speed, where
+            from we are redeemed, what birth is and what rebirth.
+            <br />
+            <em>&mdash; Theodotus</em>
           </p>
         </header>
 
         <p>
-          Every organization runs on context. Who decided what. Why it was
-          decided. What was tried before. What someone learned last Thursday that
-          would save someone else three hours on Monday.
+          The prevailing term in AI tooling right now is &ldquo;context
+          engineering&rdquo; &mdash; the idea that if you&apos;re methodical
+          enough, you can assemble the optimal set of information for a model to
+          work with. Curate the right documents, structure the right prompts,
+          retrieve the right chunks. Engineering implies a known target state:
+          you design, you build, you ship.
         </p>
 
         <p>
-          That context lives in Slack threads nobody will search. In meeting
-          recordings nobody will watch. In someone&apos;s head — until they leave.
+          But this framing carries a quiet assumption that doesn&apos;t survive
+          contact with real organizations. It assumes one person &mdash; or one
+          system &mdash; can know in advance what the relevant context is. That
+          relevance is a property of documents rather than a property of
+          situations. That the right information can be selected before the
+          moment it&apos;s needed.
         </p>
 
-        <p>
-          AI made this worse, not better. Coding agents are powerful. But
-          they&apos;re amnesiac. Every session starts from zero. The developer
-          remembers. The agent doesn&apos;t. Close the tab, context gone.
-        </p>
-
-        <p>We built Egregore to fix this.</p>
+        <p>In practice, context doesn&apos;t work like that. Context emerges.</p>
 
         <ArticleSectionDivider />
 
-        <h2>A shared brain for teams using Claude Code.</h2>
+        <h2>What Emergence Knows</h2>
 
         <p>
-          Egregore sits inside Claude Code — the terminal you already use. No new
-          app. No new tab. No dashboard to check.
+          Context gardening starts from a different premise: you don&apos;t
+          manufacture context, you cultivate the conditions for it to grow. You
+          set the soil &mdash; the environment, the capture methodologies, the
+          tooling &mdash; and then you let the organic practice of teams working
+          together produce the context that matters.
         </p>
 
         <p>
-          You open Claude Code. Egregore is already there. It knows what your
-          teammates did yesterday. It knows what decisions were made last month.
-          It knows which questions are still open and how they connect to each
-          other.
+          The difference is not cosmetic. Engineering is top-down: someone
+          decides what&apos;s relevant, builds a pipeline to surface it, and
+          hopes the selection holds. Gardening is bottom-up: priorities emerge
+          from interactions, from the actual texture of work, from what teams
+          repeatedly reach for and what they let fall away. No one has to
+          synthetically tell the model what matters. The model discovers what
+          matters by being embedded in a space where real work is happening.
         </p>
 
         <p>
-          Normal Claude Code: one person, one session, gone when you close the
-          terminal.
-        </p>
-
-        <p>
-          Egregore: every session feeds shared memory. Every person&apos;s work
-          connects. Nothing gets lost.
-        </p>
-
-        <ArticleSectionDivider />
-
-        <h2>The core loop is three moves.</h2>
-
-        <p>
-          Declare what you&apos;re working on. Do the work. Capture what you
-          learned.
-        </p>
-
-        <p>That&apos;s it. Everything else builds on this.</p>
-
-        <p>
-          When you finish a session, you <code>/handoff</code>. Your context —
-          decisions, blockers, open threads — flows into shared memory. The next
-          person who opens Claude Code sees it. Full context. No meeting required.
-        </p>
-
-        <p>
-          Over days and weeks, this compounds. The team&apos;s memory grows
-          denser, more connected, more useful. Not because anyone is maintaining
-          documentation. Because the work itself produces knowledge as a
-          byproduct.
+          This is closer to how institutional knowledge actually forms. Nobody
+          writes the definitive document on &ldquo;how we make decisions
+          here.&rdquo; Instead, patterns accumulate. Certain references become
+          load-bearing. Informal agreements harden into defaults. The
+          organization develops a sense &mdash; distributed across people,
+          artifacts, and habits &mdash; of what its context actually is.
         </p>
 
         <ArticleSectionDivider />
 
-        <h2 id="graph">Context becomes structure.</h2>
-
-        <p>Most tools store information. Egregore connects it.</p>
+        <h2>Egregore as a Context Garden</h2>
 
         <p>
-          A knowledge graph maps people to sessions to artifacts to quests. Not as
-          a visualization feature — as infrastructure. When you ask &quot;what do
-          we know about auth?&quot; the answer draws from every session, every
-          decision, every handoff that touched it. Across people. Across weeks.
+          When teams work inside an Egregore environment, every session
+          contributes to a growing substrate of organizational intelligence. The
+          knowledge graph doesn&apos;t start from a schema designed by an
+          administrator &mdash; it grows from the actual patterns of
+          collaboration. What teams discuss, what they reference, what they build
+          on, what they contradict &mdash; all of this feeds the soil.
         </p>
 
         <p>
-          This changes what an AI agent can do. Instead of answering from a single
-          conversation, Claude answers from the organization&apos;s entire history
-          of thinking about a problem.
+          The result is that AI systems plugged into an Egregore workspace
+          don&apos;t operate on a static retrieval set. They operate on living
+          context &mdash; context that reflects real priorities, real tensions,
+          real momentum. The difference shows up immediately in output quality.
+          Materials produced within this environment are not generically
+          competent. They are tailor-made, because the context they draw from was
+          tailor-grown by the people who will use them.
         </p>
 
         <p>
-          The graph isn&apos;t something you interact with. It&apos;s something
-          that makes everything else smarter.
-        </p>
-
-        <ArticleSectionDivider />
-
-        <h2 id="commands">Commands, not features.</h2>
-
-        <p>Egregore doesn&apos;t have a UI. It has slash commands.</p>
-
-        <ul className="command-list">
-          <li>
-            <code>/activity</code> — see what&apos;s happening across the team.
-          </li>
-          <li>
-            <code>/handoff</code> — leave context for the next person.
-          </li>
-          <li>
-            <code>/reflect</code> — capture a decision, finding, or pattern.
-          </li>
-          <li>
-            <code>/quest</code> — start an open-ended exploration the team can
-            contribute to.
-          </li>
-          <li>
-            <code>/ask</code> — pose a question to a teammate, asynchronously.
-          </li>
-        </ul>
-
-        <p>
-          Each command reads from and writes to the shared brain. Each one makes
-          the next session smarter than the last.
-        </p>
-
-        <p>
-          There&apos;s no app to learn. If you can type a slash, you can use
-          Egregore.
+          This is where the gardening metaphor earns its weight. A garden
+          doesn&apos;t produce the same thing every season. It responds to what
+          you plant, how you tend it, what the conditions are. An Egregore
+          environment does the same &mdash; it becomes more aware, more attuned,
+          more useful as the team&apos;s work deepens.
         </p>
 
         <ArticleSectionDivider />
 
-        <h2>The problem with tools is the tool.</h2>
+        <h2>What This Means in Practice</h2>
 
         <p>
-          Notion, Confluence, Linear, Jira — they all assume the same thing:
-          humans will maintain the knowledge base. Write the docs. Update the
-          status. Tag the ticket.
+          Context gardening shifts the burden of AI effectiveness away from
+          prompt engineering and retrieval optimization and toward something more
+          fundamental: the quality of the collaborative environment itself.
         </p>
 
         <p>
-          They won&apos;t. They never have. The gap between what a team knows and
-          what a team has written down is enormous. And it grows every week.
+          If your team works in fragmented tools with no shared substrate, there
+          is no garden &mdash; only scattered seeds. If your team works inside a
+          persistent, accumulative environment, context grows whether or not
+          anyone is explicitly tending it. The capture happens at the level of
+          practice, not process.
         </p>
 
         <p>
-          Egregore takes the opposite approach. Knowledge capture happens inside
-          the work, not after it. You don&apos;t document a decision — you make a
-          decision, and <code>/reflect</code> extracts it. You don&apos;t write a
-          status update — you <code>/handoff</code>, and your teammates see
-          exactly where things stand.
+          The most powerful context for AI is the one that no single person
+          designed &mdash; the kind that can only emerge from the collective
+          intelligence of the people who produced it. Egregore is the environment
+          where that emergence happens.
         </p>
-
-        <p>
-          The system gets smarter because people are working. Not because they
-          stopped working to update a tool.
-        </p>
-
-        <ArticleSectionDivider />
-
-        <h2>What we&apos;re building toward.</h2>
-
-        <p>
-          Today, Egregore runs inside a single team&apos;s Claude Code
-          environment. Memory is a git repo. The graph indexes it. Commands make
-          it usable.
-        </p>
-
-        <p>
-          Soon: anyone can create an egregore with a single command. Deploy it for
-          your team, your open-source project, your research group. Five minutes
-          from zero to shared intelligence.
-        </p>
-
-        <p>
-          After that: egregores that learn from each other. Patterns discovered in
-          one organization surface as possibilities in another. Not by sharing
-          private data — by sharing structure. The shape of good decisions. The
-          rhythm of productive collaboration. The patterns that make teams work.
-        </p>
-
-        <p>
-          An organization should be able to think across sessions, across people,
-          across time.
-        </p>
-
-        <p>That&apos;s what Egregore does.</p>
       </article>
 
       <Divider />

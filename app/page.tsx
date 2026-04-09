@@ -341,10 +341,10 @@ export default function HomePage() {
         <div className="value-prop">
           <h3>Organizational cognition</h3>
           <p>
-            Every session leaves a trace. Decisions, patterns, handoffs —
+            Every session leaves a trace. Decisions, patterns, handoffs
             structured and ready to build on. Persistent context beyond
             individual sessions, compounding into institutional knowledge
-            that any member — human or AI — can work with.
+            that any member human or AI can work with.
           </p>
         </div>
         <div className="value-prop">
@@ -352,7 +352,7 @@ export default function HomePage() {
           <p>
             Human-AI pairs communicating with each other across a rich,
             shared context space. Handoffs carry not just state, but the
-            reasoning that produced it — enabling speed and situational
+            reasoning that produced it enabling speed and situational
             awareness for people, and depth for AI agents picking up the
             thread.
           </p>
@@ -361,7 +361,7 @@ export default function HomePage() {
           <h3>Deep pattern recognition</h3>
           <p>
             Your organization generates more signal than anyone can track.
-            Deep pattern recognition makes the invisible visible — revealing
+            Deep pattern recognition makes the invisible visible revealing
             how your team actually operates, where it&apos;s converging, and
             where the coordination infrastructure itself can evolve.
           </p>
@@ -459,11 +459,11 @@ export default function HomePage() {
             <div className="action-text">
               <img src="/icon-handoff.svg" alt="" className="action-icon" />
               <h2>
-                The atomic unit of AI-native coordination{" "}
+                Atomic unit of AI-native coordination{" "}
                 <span className="cmd-label">/handoff</span>
               </h2>
               <p>
-                A handoff doesn&apos;t just communicate the state of the work —
+                A handoff doesn&apos;t just communicate the state of the work
                 it carries the context graph that generated it. Decisions,
                 trade-offs, open threads, and the reasoning behind them.
               </p>
@@ -531,7 +531,7 @@ export default function HomePage() {
                 <span className="cmd-label">/save</span>
               </h2>
               <p>
-                Stage, commit, push, open a PR — one command. Automatic
+                Stage, commit, push, open a PR one command. Automatic
                 enforcement of versioning best practices so that collaborative
                 AI-driven development stays streamlined.
               </p>
@@ -596,7 +596,7 @@ export default function HomePage() {
               </h2>
               <p>
                 What happened today. Who worked on what. Open threads,
-                pending handoffs, quest momentum — the full picture of your
+                pending handoffs, quest momentum the full picture of your
                 organization&apos;s work. A /activity is worth a thousand standups.
               </p>
             </div>
@@ -684,7 +684,7 @@ export default function HomePage() {
               </h2>
               <p>
                 Your team&apos;s knowledge base holds more than anyone has read
-                end to end. Deep-reflect traverses it — across decisions,
+                end to end. Deep-reflect traverses it across decisions,
                 handoffs, quests, and the patterns forming between them.
               </p>
             </div>
@@ -715,7 +715,7 @@ export default function HomePage() {
                 <br />
                 <span className="dim">
                   &nbsp;&nbsp;&nbsp;&nbsp;Onboarding sessions focus on features,
-                  not workflows — users who discover /activity retain 3x
+                  not workflows users who discover /activity retain 3x
                 </span>
               </span>
               <br />
@@ -783,22 +783,22 @@ export default function HomePage() {
         <div className="egregoric-text">
           <p className="egregoric-label">From the lab</p>
           <h2>
-            Teams forgot how<br />
-            to remember
+            Context gardening
           </h2>
         </div>
         <div className="egregoric-text" style={{ maxWidth: "55%" }}>
           <p>
-            Every organization runs on context. Who decided what. Why it was
-            decided. What was tried before. AI made this worse, not better —
-            coding agents are powerful but amnesiac.
+            Most teams treat knowledge like a warehouse. Store it, label it,
+            forget where you put it. Context gardening is different: it treats
+            organizational knowledge as something alive that grows, connects,
+            and compounds when you tend to it.
           </p>
           <Link href="/blog/teams-forgot-how-to-remember" className="btn-history">
-            Read full history
+            Read the full article
           </Link>
         </div>
         <div className="egregoric-img">
-          <img src="/wizard-static.png" alt="" />
+          <img src="/context-gardening.png" alt="" />
         </div>
       </section>
 
