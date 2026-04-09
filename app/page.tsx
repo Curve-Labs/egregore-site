@@ -725,15 +725,78 @@ export default function HomePage() {
                 <span className="prompt">$ </span>
                 <span className="type-line">
                   <span className="cmd">
-                    <span className="highlight">/deep-reflect</span> on why
-                    users drop off after day 3
+                    <span className="highlight">/deep-reflect</span> on the
+                    architecture disagreement
                   </span>
                 </span>
               </div>
               <br />
               <span className="fade-line">
                 <span className="dim">
-                  &nbsp;&nbsp;Reading 67 artifacts across 4 quests...
+                  &nbsp;&nbsp;Reading 43 artifacts across 3 quests...
+                </span>
+                <br />
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;&#9899;&#65039; Spawning CandidateSelection agent...
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;9 artifacts selected &middot; 5 weeks &middot; 27 graph edges
+                </span>
+                <br />
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;&#9899;&#65039; Spawning 3 DeepAnalysis agents in parallel...
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&#9500;&#9472; analysis-1 &middot; 9 tool uses &middot; 22.4k tokens &nbsp;<span className="success">Done</span>
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&#9500;&#9472; analysis-2 &middot; 7 tool uses &middot; 18.1k tokens &nbsp;<span className="success">Done</span>
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; analysis-3 &middot; 5 tool uses &middot; 20.6k tokens &nbsp;<span className="success">Done</span>
+                </span>
+                <br />
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;&#9899;&#65039; 3/3 consensus on core finding.
+                </span>
+              </span>
+              <br />
+              <br />
+              <span className="fade-line">
+                <span className="output">
+                  &nbsp;&nbsp;You&apos;re not having a technical disagreement.
+                </span>
+                <br />
+                <span className="output">
+                  &nbsp;&nbsp;You&apos;re having a disagreement about <span className="highlight">time</span>.
+                </span>
+                <br />
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;Both sides cite the same handoff &mdash; the bitter lesson,
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&quot;general methods that leverage computation win in the
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;long run&quot; &mdash; as justification for opposite architectures.
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;They agree on the principle. They disagree on when
+                </span>
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&quot;the long run&quot; starts.
                 </span>
               </span>
               <br />
@@ -741,64 +804,43 @@ export default function HomePage() {
               <span className="fade-line">
                 <span className="output">
                   &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
-                  <span className="highlight">pattern</span> &middot; recurring
-                  across 3 teams
+                  <span className="highlight">tension</span> &middot; architecture &#8596;&#65039; architecture
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&nbsp;&nbsp;Onboarding sessions focus on features,
-                  not workflows users who discover /activity retain 3x
+                  &nbsp;&nbsp;&nbsp;&nbsp;Same source cited for opposite conclusions.
                 </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;The hidden variable is time horizon, not method.
+                </span>
+                <br />
+                <br />
                 <span className="output">
                   &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
-                  <span className="highlight">tension</span> &middot;
-                  growth-strategy ↔ product-roadmap
+                  <span className="highlight">pattern</span> &middot; 4 &quot;alignment&quot; sessions
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&nbsp;&nbsp;Marketing promises &quot;instant
-                  setup&quot; but time-to-value is 12 minutes
+                  &nbsp;&nbsp;&nbsp;&nbsp;Apparent convergence that isn&apos;t &mdash; handoffs
                 </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
+                <br />
+                <span className="dim">
+                  &nbsp;&nbsp;&nbsp;&nbsp;diverge after every recorded agreement.
+                </span>
+                <br />
+                <br />
                 <span className="output">
                   &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
-                  <span className="highlight">convergence</span> &middot;
-                  design-research + support-tickets
+                  <span className="highlight">gap</span> &middot; unnamed variable
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&nbsp;&nbsp;&quot;Aha moment&quot; is seeing a
-                  teammate&apos;s handoff, not completing setup
-                </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">&#9670;</span>{" "}
-                  <span className="highlight">gap</span> &middot; no artifact
-                  covers re-engagement
+                  &nbsp;&nbsp;&nbsp;&nbsp;No artifact marks when &quot;the long run&quot;
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&nbsp;&nbsp;Three quests reference retention but
-                  none define the recovery path
-                </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="success">&#10003;</span>{" "}
-                <span className="dim">
-                  Saved &middot; 4 signals indexed &middot; linked to
-                  user-retention
+                  &nbsp;&nbsp;&nbsp;&nbsp;transitions to &quot;now.&quot;
                 </span>
               </span>
             </TerminalBlock>
