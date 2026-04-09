@@ -252,6 +252,26 @@ body {
   gap: 36px;
 }
 
+.value-prop {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.value-prop-icon {
+  width: 90px;
+  min-width: 90px;
+  height: 90px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  background: #F5F0EB;
+  border-radius: 50%;
+}
+
+.value-prop-text {
+  flex: 1;
+}
+
 .value-prop h3 {
   font-family: var(--font-serif);
   font-size: 32px;
@@ -432,6 +452,12 @@ body {
   color: rgba(255,255,255,0.85);
   overflow-x: auto;
   flex: 1;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.terminal-body::-webkit-scrollbar {
+  display: none;
 }
 
 .terminal-body .prompt {
@@ -621,6 +647,7 @@ body {
 /* ── Lab Carousel Dots ── */
 .lab-carousel-dots {
   display: flex;
+  justify-content: center;
   gap: 8px;
   margin-top: 24px;
 }

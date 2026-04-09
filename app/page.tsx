@@ -393,32 +393,41 @@ export default function HomePage() {
       {/* ── Value Propositions ── */}
       <section className="value-props">
         <div className="value-prop">
-          <h3>Organizational cognition</h3>
-          <p>
-            Every session leaves a trace. Decisions, patterns, handoffs
-            structured and ready to build on. Persistent context beyond
-            individual sessions, compounding into institutional knowledge
-            that any member human or AI can work with.
-          </p>
+          <img src="/icon-organize.png" alt="" className="value-prop-icon" />
+          <div className="value-prop-text">
+            <h3>Organizational cognition</h3>
+            <p>
+              Every session leaves a trace. Decisions, patterns, handoffs
+              structured and ready to build on. Persistent context beyond
+              individual sessions, compounding into institutional knowledge
+              that any member human or AI can work with.
+            </p>
+          </div>
         </div>
         <div className="value-prop">
-          <h3>Multi-agent continuity</h3>
-          <p>
-            Human-AI pairs communicating with each other across a rich,
-            shared context space. Handoffs carry not just state, but the
-            reasoning that produced it enabling speed and situational
-            awareness for people, and depth for AI agents picking up the
-            thread.
-          </p>
+          <img src="/icon-multi.png" alt="" className="value-prop-icon" />
+          <div className="value-prop-text">
+            <h3>Multi-agent continuity</h3>
+            <p>
+              Human-AI pairs communicating with each other across a rich,
+              shared context space. Handoffs carry not just state, but the
+              reasoning that produced it enabling speed and situational
+              awareness for people, and depth for AI agents picking up the
+              thread.
+            </p>
+          </div>
         </div>
         <div className="value-prop">
-          <h3>Deep pattern recognition</h3>
-          <p>
-            Your organization generates more signal than anyone can track.
-            Deep pattern recognition makes the invisible visible revealing
-            how your team actually operates, where it&apos;s converging, and
-            where the coordination infrastructure itself can evolve.
-          </p>
+          <img src="/icon-deep.png" alt="" className="value-prop-icon" />
+          <div className="value-prop-text">
+            <h3>Deep pattern recognition</h3>
+            <p>
+              Your organization generates more signal than anyone can track.
+              Deep pattern recognition makes the invisible visible revealing
+              how your team actually operates, where it&apos;s converging, and
+              where the coordination infrastructure itself can evolve.
+            </p>
+          </div>
         </div>
       </section>
 
