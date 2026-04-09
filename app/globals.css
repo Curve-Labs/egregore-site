@@ -603,7 +603,10 @@ body {
 .egregoric-img {
   position: absolute;
   right: 40px;
-  top: 20px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
   pointer-events: none;
 }
 
@@ -613,6 +616,32 @@ body {
   height: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
+}
+
+/* ── Lab Carousel Dots ── */
+.lab-carousel-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.lab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid #3B2D21;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lab-dot.active {
+  background: #3B2D21;
+}
+
+.lab-dot:hover {
+  background: rgba(59, 45, 33, 0.4);
 }
 
 /* ── Testimonials ── */

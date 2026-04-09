@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -103,6 +103,60 @@ function SectionDivider({ style }: { style?: React.CSSProperties }) {
     <div className="section-divider" style={style}>
       <div className="diamond" />
     </div>
+  );
+}
+
+const labPosts = [
+  {
+    label: "From the lab",
+    title: "Context gardening",
+    body: "Most teams treat knowledge like a warehouse. Store it, label it, forget where you put it. Context gardening is different: it treats organizational knowledge as something alive that grows, connects, and compounds when you tend to it.",
+    href: "/blog/teams-forgot-how-to-remember",
+    img: "/context-gardening.png",
+    imgWidth: 260,
+  },
+  {
+    label: "From the lab",
+    title: "Towards shared minds",
+    body: "What happens when a team's AI doesn't just assist individuals, but develops a shared understanding across everyone? Towards shared minds explores the architecture of collective cognition — and why it changes how organizations think.",
+    href: "/research/towards-shared-minds",
+    img: "/shared-minds.png",
+    imgWidth: 260,
+  },
+];
+
+function LabCarousel() {
+  const [idx, setIdx] = useState(0);
+  const post = labPosts[idx];
+
+  return (
+    <section className="egregoric">
+      <div className="egregoric-text">
+        <p className="egregoric-label">{post.label}</p>
+        <h2>{post.title}</h2>
+      </div>
+      <div className="egregoric-text" style={{ maxWidth: "55%" }}>
+        <p>{post.body}</p>
+        <Link href={post.href} className="btn-history">
+          Read the full article
+        </Link>
+      </div>
+      <div className="egregoric-img">
+        <img src={post.img} alt="" style={post.imgWidth ? { width: post.imgWidth } : undefined} />
+      </div>
+      {labPosts.length > 1 && (
+        <div className="lab-carousel-dots">
+          {labPosts.map((_, i) => (
+            <button
+              key={i}
+              className={`lab-dot${i === idx ? " active" : ""}`}
+              onClick={() => setIdx(i)}
+              aria-label={`Show article ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -748,28 +802,7 @@ export default function HomePage() {
         style={{ maxWidth: 752, margin: "60px auto", padding: "0 28px" }}
       />
 
-      <section className="egregoric">
-        <div className="egregoric-text">
-          <p className="egregoric-label">From the lab</p>
-          <h2>
-            Context gardening
-          </h2>
-        </div>
-        <div className="egregoric-text" style={{ maxWidth: "55%" }}>
-          <p>
-            Most teams treat knowledge like a warehouse. Store it, label it,
-            forget where you put it. Context gardening is different: it treats
-            organizational knowledge as something alive that grows, connects,
-            and compounds when you tend to it.
-          </p>
-          <Link href="/blog/teams-forgot-how-to-remember" className="btn-history">
-            Read the full article
-          </Link>
-        </div>
-        <div className="egregoric-img">
-          <img src="/context-gardening.png" alt="" />
-        </div>
-      </section>
+      <LabCarousel />
 
       <SectionDivider
         style={{ maxWidth: 752, margin: "60px auto", padding: "0 28px" }}
