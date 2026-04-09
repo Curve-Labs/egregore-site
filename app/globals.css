@@ -1265,3 +1265,15 @@ body {
   text-decoration: none;
   font-size: 14px;
 }
+
+/* Activity TUI Box */
+.activity-box {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.55);
+}

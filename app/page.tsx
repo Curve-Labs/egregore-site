@@ -611,64 +611,33 @@ export default function HomePage() {
               </div>
               <br />
               <span className="fade-line">
-                <span className="dim">
-                  &nbsp;&nbsp;Today &middot; 4 sessions
-                </span>
+                <pre className="activity-box">{`+--------------------------------------------------------+
+|  STUDIO EGREGORE * ACTIVITY        alex . Apr 09       |
++--------------------------------------------------------+
+|                                                        |
+|  3 sessions today. Mia shipped the new color           |
+|  system. Jordan's migration is ready for review.       |
++--------------------------------------------------------+
+|  HANDOFFS                                              |
+|                                                        |
+|  [1] * Mia -> you: color token review (2h ago)         |
+|                                                        |
++--------------------------------------------------------+
+|  . SESSIONS                                            |
+|                                                        |
+|  Today     Alex: dashboard redesign                    |
+|  Today     Mia: color system + design tokens           |
+|  Today     Jordan: v2 schema migration                 |
+|                                                        |
+|  # QUESTS (2 active)                                   |
+|                                                        |
+|  onboarding-flow    12 artifacts . 3d ago              |
+|  perf-audit          4 artifacts . 1d ago              |
+|                                                        |
++--------------------------------------------------------+
+|  What's your focus?                                    |
++--------------------------------------------------------+`}</pre>
               </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Alex</span> &middot;
-                  1h ago
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;dashboard redesign, rewired data layer
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;<span className="highlight">&#8594;</span> handoff
-                  for Mia: loading state on slow connections
-                </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Mia</span> &middot; 3h
-                  ago
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;shipped new color system, updated design tokens
-                </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Jordan</span> &middot;
-                  6h ago
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;migration script for v2 schema, added rollback
-                </span>
-              </span>
-              <br />
-              <br />
-              <span className="fade-line">
-                <span className="output">
-                  &nbsp;&nbsp;<span className="highlight">Priya</span> &middot;
-                  8h ago
-                </span>
-                <br />
-                <span className="dim">
-                  &nbsp;&nbsp;user interview synthesis, 3 patterns extracted
-                </span>
-              </span>
-              <br />
             </TerminalBlock>
           </section>
 
