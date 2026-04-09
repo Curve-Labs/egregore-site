@@ -894,7 +894,7 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer className="site-footer">
-        <a href="mailto:hello@egregore.xyz">Get in touch for enterprise version</a>
+        <a href="mailto:info@egregore.xyz">For early enterprise inquiries get in touch with us</a>
       </footer>
     </>
   );
