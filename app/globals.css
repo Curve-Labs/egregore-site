@@ -1367,49 +1367,96 @@ body {
   --fd-ring: #D4875A;
 }
 
-/* Force full opacity on everything inside docs —
-   the landing page uses opacity for animations
-   and it bleeds into Fumadocs elements */
+/* ── Docs isolation ──
+   Fumadocs + Tailwind v4 apply colors with alpha channels
+   (oklch with /0.x). Must override with solid colors on
+   every element. opacity:1 alone doesn't help. */
+
 .egregore-docs,
 .egregore-docs * {
   opacity: 1 !important;
 }
 
 .egregore-docs {
+  --text-color: #16100B;
+  --heading-color: #16100B;
+  --muted-color: #6B5E52;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-  font-size: 16px !important;
-  line-height: 1.6 !important;
-  color: #16100B !important;
 }
 
 .dark .egregore-docs {
-  color: #F1EFE2 !important;
+  --text-color: #F1EFE2;
+  --heading-color: #F1EFE2;
+  --muted-color: #A89888;
 }
 
-.egregore-docs h1,
-.egregore-docs h2,
-.egregore-docs h3,
-.egregore-docs h4 {
-  font-family: 'LT Superior Serif', Georgia, serif !important;
-  letter-spacing: -0.02em !important;
-  color: inherit !important;
-}
-
+/* Main content text — force solid color */
 .egregore-docs p,
 .egregore-docs li,
 .egregore-docs td,
 .egregore-docs th,
-.egregore-docs span,
-.egregore-docs a {
-  color: inherit !important;
+.egregore-docs dd,
+.egregore-docs dt,
+.egregore-docs label,
+.egregore-docs figcaption {
+  color: var(--text-color) !important;
+  -webkit-text-fill-color: var(--text-color) !important;
 }
 
+/* Headings — serif, solid dark */
+.egregore-docs h1,
+.egregore-docs h2,
+.egregore-docs h3,
+.egregore-docs h4,
+.egregore-docs h5,
+.egregore-docs h6 {
+  font-family: 'LT Superior Serif', Georgia, serif !important;
+  letter-spacing: -0.02em !important;
+  color: var(--heading-color) !important;
+  -webkit-text-fill-color: var(--heading-color) !important;
+}
+
+/* Links */
+.egregore-docs a {
+  color: var(--text-color) !important;
+  -webkit-text-fill-color: var(--text-color) !important;
+}
+
+/* Inline spans and descriptions */
+.egregore-docs span {
+  color: var(--text-color) !important;
+  -webkit-text-fill-color: var(--text-color) !important;
+}
+
+/* Muted text (descriptions, captions) */
+.egregore-docs .text-fd-muted-foreground,
+.egregore-docs [class*="muted"] {
+  color: var(--muted-color) !important;
+  -webkit-text-fill-color: var(--muted-color) !important;
+}
+
+/* Code */
 .egregore-docs code,
 .egregore-docs pre,
 .egregore-docs kbd {
   font-family: 'IBM Plex Mono', monospace !important;
 }
 
+/* Don't override colors inside code blocks — they have syntax highlighting */
+.egregore-docs pre *,
+.egregore-docs pre code {
+  color: unset !important;
+  -webkit-text-fill-color: unset !important;
+}
+
+/* Sidebar active item */
 .egregore-docs [data-active="true"] {
   color: #D4875A !important;
+  -webkit-text-fill-color: #D4875A !important;
+}
+
+/* TOC sidebar links — muted */
+.egregore-docs nav[aria-label] a {
+  color: var(--muted-color) !important;
+  -webkit-text-fill-color: var(--muted-color) !important;
 }
