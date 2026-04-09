@@ -118,7 +118,7 @@ const labPosts = [
   {
     label: "From the lab",
     title: "Towards shared minds",
-    body: "What happens when a team's AI doesn't just assist individuals, but develops a shared understanding across everyone? Towards shared minds explores the architecture of collective cognition — and why it changes how organizations think.",
+    body: "What happens when a team's AI doesn't just assist individuals, but develops a shared understanding across everyone? Towards shared minds explores the architecture of collective cognition and why it changes how organizations think.",
     href: "/research/towards-shared-minds",
     img: "/shared-minds.png",
     imgWidth: 260,
@@ -780,7 +780,7 @@ export default function HomePage() {
                 <br />
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;Both sides cite the same handoff &mdash; the bitter lesson,
+                  &nbsp;&nbsp;Both sides cite the same handoff, the bitter lesson,
                 </span>
                 <br />
                 <span className="dim">
@@ -788,7 +788,7 @@ export default function HomePage() {
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;long run&quot; &mdash; as justification for opposite architectures.
+                  &nbsp;&nbsp;long run&quot;, as justification for opposite architectures.
                 </span>
                 <br />
                 <span className="dim">
@@ -822,7 +822,7 @@ export default function HomePage() {
                 </span>
                 <br />
                 <span className="dim">
-                  &nbsp;&nbsp;&nbsp;&nbsp;Apparent convergence that isn&apos;t &mdash; handoffs
+                  &nbsp;&nbsp;&nbsp;&nbsp;Apparent convergence that isn&apos;t. Handoffs
                 </span>
                 <br />
                 <span className="dim">
