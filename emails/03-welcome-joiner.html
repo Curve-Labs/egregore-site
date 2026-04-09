@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Egregore</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; background-color: #F5F0EB; }
+    .wrapper { width: 100%; background-color: #F5F0EB; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header-image img { width: 100%; height: auto; display: block; }
+    .content { padding: 40px 36px; background-color: #F5F0EB; }
+    .logo { margin-bottom: 32px; }
+    .logo img { height: 28px; }
+    h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #16100B; line-height: 1.3; margin: 0 0 24px; }
+    h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 400; color: #16100B; line-height: 1.3; margin: 24px 0 12px; }
+    p { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.7; color: #3B2D21; margin: 0 0 16px; }
+    .greeting { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.7; color: #3B2D21; margin: 0 0 24px; }
+    .editable { background-color: rgba(231, 121, 75, 0.08); border-left: 2px solid #E7794B; padding: 2px 8px; display: inline; }
+    .divider { border: none; border-top: 1px solid #D4C9BC; margin: 32px 0; }
+    .command-row { display: flex; margin-bottom: 12px; }
+    .command-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; }
+    .command-table td { padding: 10px 0; vertical-align: top; border-bottom: 1px solid rgba(212, 201, 188, 0.5); }
+    .command-name { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 14px; color: #E7794B; width: 120px; }
+    .command-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #7A6B5D; }
+    .context-card { background-color: rgba(59, 45, 33, 0.04); border-radius: 12px; padding: 20px 24px; margin: 24px 0; }
+    .context-card p { font-size: 14px; margin: 0 0 8px; }
+    .context-card p:last-child { margin: 0; }
+    .context-label { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 11px; color: #A89A8C; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 8px; }
+    .cta-wrapper { text-align: left; margin: 32px 0; }
+    .cta { display: inline-block; font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 14px; color: #F5F0EB; background-color: #1D1611; padding: 14px 28px; border-radius: 999px; text-decoration: none; }
+    .signature { margin-top: 32px; }
+    .signature p { margin: 0; font-size: 14px; color: #7A6B5D; }
+    .footer { padding: 24px 36px; text-align: left; }
+    .footer p { font-size: 12px; color: #A89A8C; margin: 0 0 4px; }
+    .footer a { color: #7A6B5D; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="left">
+          <div class="container">
+
+            <!-- HEADER IMAGE — replace src with your header -->
+            <div class="header-image">
+              <img src="header-welcome.png" alt="Egregore" width="600" />
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+              <div class="logo">
+                <img src="logo.svg" alt="egregore" height="28" />
+              </div>
+
+              <h1>Welcome to <span class="editable">{{EGREGORE_NAME}}</span>.</h1>
+
+              <p class="greeting">
+                <span class="editable">{{FIRST_NAME}}</span>,
+              </p>
+
+              <p>
+                You've just joined something that gets smarter the more you use it. Not because we engineered a feedback loop — but because that's what happens when a group of people work through a shared substrate. Context accumulates. Patterns surface. The system starts to know things that no single person told it.
+              </p>
+
+              <p>
+                Your egregore already has <span class="editable">{{MEMBER_COUNT}}</span> members, <span class="editable">{{ACTIVE_QUESTS}}</span> active quests, and a growing body of shared context. You're not starting from zero — you're joining a living system.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;"><tr><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td><td width="6%" align="center" style="font-size: 0; line-height: 0; padding: 0 12px;"><div style="width: 6px; height: 6px; background: rgba(59,45,33,0.15); transform: rotate(45deg); -webkit-transform: rotate(45deg);"></div></td><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td></tr></table>
+
+              <!-- WHAT'S HAPPENING — personalized context card -->
+              <div class="context-card">
+                <p class="context-label">What's in motion</p>
+                <p style="color: #3B2D21;"><span class="editable">{{CURRENT_CONTEXT}}</span></p>
+                <p style="color: #7A6B5D; font-size: 13px;">Run <code style="font-family: 'SF Mono', Menlo, monospace; color: #E7794B;">/activity</code> in your first session to see the full picture.</p>
+              </div>
+
+              <h2>The commands that matter most</h2>
+
+              <p>
+                Egregore works through slash commands in your terminal. You don't need to learn them all — these four are the core loop:
+              </p>
+
+              <table class="command-table" role="presentation">
+                <tr>
+                  <td class="command-name">/activity</td>
+                  <td class="command-desc">See what happened today. Who worked on what. Open threads and handoffs waiting for you.</td>
+                </tr>
+                <tr>
+                  <td class="command-name">/handoff</td>
+                  <td class="command-desc">End a session with a summary for the next person. This is how context flows between people.</td>
+                </tr>
+                <tr>
+                  <td class="command-name">/reflect</td>
+                  <td class="command-desc">Capture an insight worth keeping. Decisions, patterns, things you noticed.</td>
+                </tr>
+                <tr>
+                  <td class="command-name">/ask</td>
+                  <td class="command-desc">Ask a teammate something — async. They'll see it on their next session.</td>
+                </tr>
+              </table>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;"><tr><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td><td width="6%" align="center" style="font-size: 0; line-height: 0; padding: 0 12px;"><div style="width: 6px; height: 6px; background: rgba(59,45,33,0.15); transform: rotate(45deg); -webkit-transform: rotate(45deg);"></div></td><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td></tr></table>
+
+              <h2>What to do in your first session</h2>
+
+              <p>
+                Open your terminal, navigate to the egregore directory, and run <code style="font-family: 'SF Mono', Menlo, monospace; color: #E7794B;">claude</code>. The system will orient you — show you what's happening, who's working on what, and where you might plug in. Don't overthink it. Just start working on whatever matters to you. The context generation happens automatically.
+              </p>
+
+              <p>
+                The magic of Egregore is that you don't need to do anything special to contribute to the shared intelligence. You just work. The substrate captures the rest.
+              </p>
+
+              <div class="cta-wrapper">
+                <a href="https://egregore.xyz/docs" class="cta">Read the docs</a>
+              </div>
+
+              <div class="signature">
+                <p>— <span class="editable">{{SENDER_NAME}}</span></p>
+                <p>Curve Labs</p>
+              </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="footer">
+              <p><a href="https://egregore.xyz">egregore.xyz</a></p>
+              <p>You joined <span class="editable">{{EGREGORE_NAME}}</span>. <a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></p>
+            </div>
+
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
