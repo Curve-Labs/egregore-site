@@ -1,0 +1,131 @@
+---
+title: Git Workflow
+description: How Egregore abstracts git for easier collaboration
+---
+
+Egregore abstracts git so you never have to think about branches, commits, or pull requests. You describe your work in natural language — Egregore handles the rest.
+
+## The Branch Model
+
+```
+main ← stable releases (/release)
+  develop ← integration branch (PRs land here)
+    dev/{author}/{topic-slug}     # session work
+    feature/{topic-slug}          # explicit features
+    bugfix/{topic-slug}           # bug fixes
+```
+
+**Nobody pushes directly to `main` or `develop`.** All changes flow through pull requests.
+
+## What Happens When You Start Working
+
+When you describe what you're working on — "fixing the auth flow" or "adding search to the dashboard" — Egregore immediately:
+
+1. **Derives a topic slug** from your description (e.g. `fix-auth-flow`)
+2. **Creates a worktree** — an isolated copy of the repo at `.claude/worktrees/{slug}/`
+3. **Creates a branch** — `dev/{your-name}/{slug}` based on `origin/develop`
+4. **Sets up symlinks** — so memory, `.env`, state files, and config are shared with the main repo
+
+You're now working in an isolated environment. Your changes won't interfere with anyone else, and their changes won't interfere with yours.
+
+### Why Worktrees?
+
+Git worktrees let you have multiple branches checked out simultaneously. This means:
+
+- You can start a new task without stashing or committing in-progress work
+- Multiple Claude Code sessions can work on different branches in parallel
+- The main repo stays clean on `develop`
+
+The `worktree-create.sh` hook handles all of this — fetching `origin/develop`, creating the branch, creating the worktree directory, and symlinking shared files (memory, `.env`, `.egregore-state.json`, session ID).
+
+## Saving Your Work
+
+When you say "save this" or "push my work", Egregore runs `/save`:
+
+1. **Checks branch health** — if you're accidentally on `develop`, it creates a working branch first
+2. **Syncs to the knowledge graph** — scans for new handoffs, artifacts, decisions, and creates graph nodes
+3. **Commits and pushes memory** — the memory repo pushes directly to main (markdown-only, always safe)
+4. **Commits and pushes code** — your working branch is pushed and a PR is created targeting `develop`
+5. **Scans all managed repos** — if you made changes in other repos, those get committed and pushed too
+
+You never run `git add`, `git commit`, `git push`, or `gh pr create`. One command handles everything across all repos.
+
+## Managed Repos
+
+Repos listed in `egregore.json` → `repos[]` are cloned as siblings and managed together:
+
+```
+parent/
+├── my-egregore/           # Your Egregore instance
+├── egregore-memory/       # Shared memory (auto-linked)
+├── my-project/            # Managed repo
+└── my-api/                # Managed repo
+```
+
+Each managed repo follows the same branching model. When Egregore creates a branch for your work, it applies across all repos where you make changes. `/save` scans every managed repo for uncommitted work.
+
+At session start, managed repos are fetched in the background so you always have the latest code.
+
+## Session Start
+
+When you launch Egregore (`egregore` in your terminal), `session-start.sh` runs before your first message. Here's what it does:
+
+### 1. Identity Resolution
+Reads your GitHub username and display name from `.egregore-state.json`. This determines your author slug for branch names.
+
+### 2. Develop Branch
+Ensures `develop` exists locally. If not, creates it from `origin/develop` or pushes a new one.
+
+### 3. Managed Repo Sync
+Fetches all managed repos in the background so they're up-to-date without blocking your session.
+
+### 4. Onboarding Check
+If this is a first-time user (`.egregore-state.json` says `onboarding_complete: false`), routes to `/onboarding` instead of the normal greeting.
+
+### 5. API Key Provisioning
+In connected mode, validates the API key matches the current org slug. If mismatched or missing, fetches the correct key from the API.
+
+### 6. Environment Isolation
+Computes session boundaries — which directories this session can access. Other Egregore instances on the same machine are denied access. Generates dynamic deny rules in `.claude/settings.local.json`.
+
+### 7. Git Sync
+Syncs `develop` and memory from `origin` — pull-rebase to stay current.
+
+### 8. Graph Bootstrap
+In connected mode, ensures the Org, Person, and Session nodes exist in Neo4j. Creates a new Session node with `status: 'active'`.
+
+### 9. WAL Drain
+Drains any queued graph operations from the write-ahead log (handles offline-to-online transitions).
+
+### 10. Context Gathering
+Reads recent handoffs, open quests, and team activity to populate the session greeting.
+
+## Key Scripts
+
+Egregore's git automation is powered by shell scripts in `bin/`:
+
+| Script | Purpose |
+|--------|---------|
+| `session-start.sh` | Orchestrates everything that happens before your first message |
+| `worktree-create.sh` | Hook that creates isolated worktrees with proper symlinks |
+| `worktree-remove.sh` | Cleans up worktrees when a session ends |
+| `boundary.sh` | Computes and enforces environment isolation boundaries |
+| `github-auth.sh` | Sets up HTTPS credential storage for private repos |
+| `graph.sh` | All Neo4j queries route through this script |
+| `graph-wal.sh` | Write-ahead log for graph operations (offline resilience) |
+| `graph-op.sh` | High-level graph operations (set-topic, claim-handoff, etc.) |
+| `notify.sh` | Telegram notifications |
+| `telemetry.sh` | Privacy-respecting telemetry emission |
+| `sync-graph.sh` | Syncs local state to the knowledge graph |
+| `index-handoff.sh` | Indexes handoff files into the graph |
+| `transcript-archive.sh` | Archives session transcripts |
+| `pre-compact.sh` | Runs before context compaction to preserve state |
+
+## Handoff → Branch Continuity
+
+When you pick up a handoff from someone else, Egregore:
+
+1. Creates your working branch
+2. Reads the handoff's `repoState` — which branches were active in which repos
+3. Checks out those branches in the managed repos so you start exactly where they left off
+4. Links the sessions in the knowledge graph (`IMPLEMENTS` relationship)

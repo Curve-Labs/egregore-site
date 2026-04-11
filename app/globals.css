@@ -1,3 +1,7 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
 @font-face {
   font-family: 'LT Superior Serif';
   src: url('/fonts/LTSuperiorSerif-Regular.otf') format('opentype');
@@ -1327,4 +1331,85 @@ body {
   padding: 0;
   background: none;
   color: rgba(255, 255, 255, 0.55);
+}
+
+/* ══════════════════════════════════════════
+   Fumadocs — /docs pages
+   ══════════════════════════════════════════ */
+
+:root {
+  --fd-background: #F5F2ED;
+  --fd-foreground: #16100B;
+  --fd-muted: #EDE9E3;
+  --fd-muted-foreground: #6B5E52;
+  --fd-card: #FAF8F5;
+  --fd-card-foreground: #16100B;
+  --fd-border: #E0D8CC;
+  --fd-primary: #D4875A;
+  --fd-primary-foreground: #F5F2ED;
+  --fd-accent: #EDE9E3;
+  --fd-accent-foreground: #16100B;
+  --fd-ring: #D4875A;
+}
+
+.dark {
+  --fd-background: #1D1611;
+  --fd-foreground: #F1EFE2;
+  --fd-muted: #2A2118;
+  --fd-muted-foreground: #A89888;
+  --fd-card: #241D16;
+  --fd-card-foreground: #F1EFE2;
+  --fd-border: #3A3028;
+  --fd-primary: #D4875A;
+  --fd-primary-foreground: #1D1611;
+  --fd-accent: #2A2118;
+  --fd-accent-foreground: #F1EFE2;
+  --fd-ring: #D4875A;
+}
+
+/* Force full opacity on everything inside docs —
+   the landing page uses opacity for animations
+   and it bleeds into Fumadocs elements */
+.egregore-docs,
+.egregore-docs * {
+  opacity: 1 !important;
+}
+
+.egregore-docs {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  color: #16100B !important;
+}
+
+.dark .egregore-docs {
+  color: #F1EFE2 !important;
+}
+
+.egregore-docs h1,
+.egregore-docs h2,
+.egregore-docs h3,
+.egregore-docs h4 {
+  font-family: 'LT Superior Serif', Georgia, serif !important;
+  letter-spacing: -0.02em !important;
+  color: inherit !important;
+}
+
+.egregore-docs p,
+.egregore-docs li,
+.egregore-docs td,
+.egregore-docs th,
+.egregore-docs span,
+.egregore-docs a {
+  color: inherit !important;
+}
+
+.egregore-docs code,
+.egregore-docs pre,
+.egregore-docs kbd {
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+.egregore-docs [data-active="true"] {
+  color: #D4875A !important;
 }

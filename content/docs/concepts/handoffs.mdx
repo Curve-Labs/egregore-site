@@ -1,0 +1,36 @@
+---
+title: Handoffs
+description: Async collaboration through structured session summaries
+---
+
+Handoffs are the primary way knowledge flows between people (and between sessions). When you finish a piece of work, a handoff captures what you did, what's left, and who should pick it up.
+
+## Creating a Handoff
+
+```
+/handoff
+```
+
+Egregore asks you what happened, generates a structured summary, and saves it to `memory/handoffs/`. It includes:
+
+- **What was done** — Summary of the session's work
+- **What's left** — Open items and next steps
+- **Addressed to** — Who should pick this up (optional)
+- **Branch state** — Which branches are active in which repos
+
+## Picking Up a Handoff
+
+When you start a session and there are handoffs addressed to you, Egregore shows them. Say "I'll pick up that handoff" and it:
+
+1. Creates a working branch
+2. Checks out the branches from the handoff's repo state
+3. Links the sessions in the knowledge graph
+
+## Wrapping Up
+
+Two ways to end a session:
+
+- `/handoff` — Notes for others. Structured, addressed, includes repo state.
+- `/wrap` — Personal closure. Saves a summary for yourself.
+
+Both record what happened. The difference is audience: `/handoff` is for the team, `/wrap` is for you.

@@ -1,0 +1,76 @@
+---
+title: Configuration
+description: Configure your Egregore instance
+---
+
+## egregore.json
+
+The main configuration file. Committed to the repo, shared by the team.
+
+```json
+{
+  "org_name": "My Team",
+  "github_org": "my-github-org",
+  "memory_repo": "egregore-memory.git",
+  "mode": "local",
+  "repos": [
+    "my-project",
+    {
+      "name": "my-api",
+      "description": "Backend API service"
+    }
+  ]
+}
+```
+
+### Fields
+
+| Field | Description |
+|-------|-------------|
+| `org_name` | Display name for your organization |
+| `github_org` | GitHub organization or username |
+| `memory_repo` | Name of the shared memory repository |
+| `mode` | `"local"` or `"connected"` |
+| `repos` | Managed repositories cloned as siblings |
+| `telegram_group_link` | Telegram group invite link (set by `/telegram-connect`) |
+
+## .env
+
+Personal secrets. Gitignored — never committed.
+
+```bash
+GITHUB_TOKEN=ghp_...           # Auto-created during onboarding
+EGREGORE_API_KEY=ek_...        # For connected mode only
+EGREGORE_NO_TELEMETRY=1        # Optional: opt out of telemetry
+```
+
+Use `/env` to manage these values.
+
+## Managed Repos
+
+Repos listed in `egregore.json` → `repos[]` are cloned as siblings:
+
+```
+parent/
+├── my-egregore/         # Your Egregore instance
+├── egregore-memory/     # Shared memory (auto-linked)
+├── my-project/          # Managed repo
+└── my-api/              # Managed repo
+```
+
+Each entry can be a string (just the name) or an object with `name` and `description`. The description helps Egregore match user intent to the right repo.
+
+## Telemetry
+
+Egregore includes privacy-respecting, opt-out telemetry. What's collected:
+
+- Command names and timestamps
+- Session durations
+- Error codes
+
+What's **never** collected: file contents, code, environment variable values, conversation content.
+
+Opt out with any of:
+- `/telemetry off`
+- `EGREGORE_NO_TELEMETRY=1` in `.env`
+- `DO_NOT_TRACK=1` environment variable

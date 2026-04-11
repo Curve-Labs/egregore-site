@@ -1,0 +1,55 @@
+---
+title: Managed Hosting
+description: Hosted workspaces with knowledge graph, dashboard, and notifications
+---
+
+Egregore works fully local — but if you want the knowledge graph, real-time dashboard, and Telegram notifications, managed hosting adds these on top.
+
+## What You Get
+
+- **Knowledge Graph** — Neo4j-backed graph of people, sessions, artifacts, and their relationships
+- **Dashboard** — Real-time web dashboard showing team activity
+- **Notifications** — Telegram bot integration for handoff alerts and announcements
+- **Hosted Workspaces** — Cloud development environments with Claude Code pre-installed
+
+## Getting Started
+
+Visit [egregore.xyz](https://egregore.xyz) to set up managed hosting.
+
+## Local vs Connected
+
+| Feature | Local | Connected |
+|---------|-------|-----------|
+| Shared memory | ✓ | ✓ |
+| Slash commands | ✓ | ✓ |
+| Handoffs | ✓ | ✓ |
+| Knowledge graph | — | ✓ |
+| Web dashboard | — | ✓ |
+| Telegram notifications | — | ✓ |
+| Hosted workspaces | — | ✓ |
+
+## Configuration
+
+Your mode is set in `egregore.json`:
+
+```json
+{
+  "mode": "local"
+}
+```
+
+Or for connected mode:
+
+```json
+{
+  "mode": "connected"
+}
+```
+
+Connected mode requires an API key in `.env`:
+
+```
+EGREGORE_API_KEY=your-key-here
+```
+
+Use `/env` to configure this.
