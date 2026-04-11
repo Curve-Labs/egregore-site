@@ -876,7 +876,7 @@ export default function HomePage() {
 
         <div className="footer-links">
           <a
-            href="https://github.com/Curve-Labs/egregore"
+            href="https://github.com/egregore-labs/egregore"
             target="_blank"
             rel="noopener noreferrer"
           >
