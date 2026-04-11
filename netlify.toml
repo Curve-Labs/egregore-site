@@ -18,7 +18,6 @@
   for = "/llms-full.txt"
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
-<<<<<<< HEAD
 
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
@@ -41,5 +40,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-=======
->>>>>>> f632656 (feat: add /docs with Fumadocs (static export))
