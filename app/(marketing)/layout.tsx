@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { RootProvider } from "fumadocs-ui/provider/next";
-import "./globals.css";
+import Script from "next/script";
+import "../globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://egregore.xyz"),
@@ -40,13 +40,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -60,7 +60,12 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <RootProvider>{children}</RootProvider>
+        {children}
+        <Script src="https://scripts.simpleanalyticscdn.com/latest.js" strategy="afterInteractive" />
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerPolicy="no-referrer-when-downgrade" />
+        </noscript>
       </body>
     </html>
   );
