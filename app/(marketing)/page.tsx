@@ -419,7 +419,7 @@ export default function HomePage() {
           <div className="hero-cta-area">
             <BlurredCta />
             <p className="hero-doc-link">
-              Or read the <a href="/docs">documentation</a>
+              See <a href="/docs">documentation</a>
             </p>
           </div>
         </div>
@@ -898,8 +898,8 @@ export default function HomePage() {
       <section className="footer-cta">
         <h2>Try it now</h2>
         <p className="footer-sub">
-          You open a terminal. You talk to Claude. But this Claude connects the
-          dots. It knows what your teammates did yesterday.
+          Draw the magic circle.<br />
+          One command. Egregore becomes your team&apos;s shared brain.
         </p>
 
         <div className="footer-visual">
