@@ -596,7 +596,7 @@ body {
   font-weight: 400;
   line-height: 34px;
   letter-spacing: -0.03em;
-  margin-bottom: 80px;
+  margin-bottom: 16px;
 }
 
 .egregoric-text p {
@@ -605,7 +605,7 @@ body {
   line-height: 24px;
   letter-spacing: -0.09px;
   color: #16100B;
-  margin-bottom: 12px;
+  margin-bottom: 40px;
 }
 
 .egregoric-text .btn-history {
@@ -645,31 +645,20 @@ body {
 }
 
 /* ── Lab Carousel Dots ── */
-.lab-carousel-dots {
+.lab-carousel-actions {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 24px;
 }
 
-.lab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 0;
+.egregoric-text .btn-next-post {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 24px;
+  letter-spacing: -0.09px;
   border: none;
-  background: rgba(59, 45, 33, 0.2);
-  padding: 0;
   cursor: pointer;
-  transition: background 0.2s;
-  transform: rotate(45deg);
-}
-
-.lab-dot.active {
-  background: #3B2D21;
-}
-
-.lab-dot:hover {
-  background: rgba(59, 45, 33, 0.4);
 }
 
 /* ── Testimonials ── */
@@ -1046,8 +1035,8 @@ body {
 
   .hero-container { padding: 32px 0; }
 
-  .value-props { padding: 48px 20px; gap: 28px; }
-  .features-wrapper { padding: 0 20px; margin-top: 0; }
+  .value-props { padding: 48px 32px; gap: 28px; margin-top: 0; }
+  .features-wrapper { padding-inline: 32px; }
   .features-nav { display: none; }
   .features-content { padding: 0; }
   .action-section { padding: 0; }
@@ -1069,9 +1058,9 @@ body {
   .egregoric { padding: 0 20px; }
   .egregoric-text { max-width: 100% !important; width: 100%; }
   .egregoric-text h2 { font-size: 28px; line-height: 30px; margin-bottom: 12px; }
-  .egregoric-img { position: relative; right: auto; top: auto; margin-top: 20px; }
+  .egregoric-img { position: relative; right: auto; top: auto; margin-top: 0; margin-bottom: 20px; order: -1; min-height: 280px; justify-content: center; }
   .egregoric-img img,
-  .egregoric-img video { width: 100%; height: auto; }
+  .egregoric-img video { height: auto; }
   .egregoric-label { margin-bottom: 8px; }
 
   .testimonials { padding: 0 20px; }
@@ -1099,6 +1088,8 @@ body {
   .testimonial-slide blockquote { font-size: 20px; }
   .footer-cta h2 { font-size: 32px; line-height: 30px; }
   .egregoric-text h2 { font-size: 24px; line-height: 26px; }
+  .value-props { padding: 48px 24px; }
+  .features-wrapper { padding-inline: 24px; }
 }
 
 /* ══════════════════════════════════════════
@@ -1318,9 +1309,12 @@ body {
   justify-content: center;
 }
 .site-footer a {
-  color: #F5F0EB;
+  color: #E7794B;
   text-decoration: none;
   font-size: 14px;
+}
+.site-footer a:hover {
+  text-decoration: underline;
 }
 
 /* Activity TUI Box */

@@ -113,7 +113,7 @@ const labPosts = [
     body: "Most teams treat knowledge like a warehouse. Store it, label it, forget where you put it. Context gardening is different: it treats organizational knowledge as something alive that grows, connects, and compounds when you tend to it.",
     href: "/blog/teams-forgot-how-to-remember",
     img: "/context-gardening.png",
-    imgWidth: 260,
+    imgWidth: 234,
   },
   {
     label: "From the lab",
@@ -137,25 +137,25 @@ function LabCarousel() {
       </div>
       <div className="egregoric-text" style={{ maxWidth: "55%" }}>
         <p>{post.body}</p>
-        <Link href={post.href} className="btn-history">
-          Read the full article
-        </Link>
+        <div className="lab-carousel-actions">
+          <Link href={post.href} className="btn-history">
+            Read the full article
+          </Link>
+          {labPosts.length > 1 && (
+            <button
+              type="button"
+              className="btn-history btn-next-post"
+              onClick={() => setIdx((idx + 1) % labPosts.length)}
+              aria-label="Show next article"
+            >
+              Next post →
+            </button>
+          )}
+        </div>
       </div>
       <div className="egregoric-img">
         <img src={post.img} alt="" style={post.imgWidth ? { width: post.imgWidth } : undefined} />
       </div>
-      {labPosts.length > 1 && (
-        <div className="lab-carousel-dots">
-          {labPosts.map((_, i) => (
-            <button
-              key={i}
-              className={`lab-dot${i === idx ? " active" : ""}`}
-              onClick={() => setIdx(i)}
-              aria-label={`Show article ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }
@@ -881,13 +881,6 @@ export default function HomePage() {
             rel="noopener noreferrer"
           >
             GitHub
-          </a>
-          <a
-            href="https://egregore.xyz"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            egregore.xyz
           </a>
         </div>
       </section>
