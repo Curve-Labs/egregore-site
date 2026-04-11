@@ -58,26 +58,53 @@ function BlurredCta() {
     }
   }, []);
 
+  if (revealed) {
+    return (
+      <motion.div
+        initial={{ filter: "blur(8px)", opacity: 0.6 }}
+        animate={{ filter: "blur(0px)", opacity: 1 }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }
+        }
+      >
+        <CtaPill />
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.div
-      initial={{ filter: "blur(8px)", opacity: 0.6 }}
-      animate={
-        revealed
-          ? { filter: "blur(0px)", opacity: 1 }
-          : { filter: "blur(8px)", opacity: 0.6 }
-      }
-      transition={
-        prefersReducedMotion
-          ? { duration: 0 }
-          : { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }
-      }
-      style={{
-        pointerEvents: revealed ? "auto" : "none",
-        userSelect: revealed ? "auto" : "none",
-      }}
-    >
-      <CtaPill />
-    </motion.div>
+    <div className="blurred-cta-wrapper">
+      <motion.div
+        className="blurred-cta-content"
+        animate={{
+          filter: [
+            "blur(8px)",
+            "blur(4px)",
+            "blur(8px)",
+          ],
+          opacity: [0.5, 0.7, 0.5],
+        }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : {
+                duration: 4,
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "loop" as const,
+              }
+        }
+        style={{
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        <CtaPill />
+      </motion.div>
+      <div className="blurred-cta-shimmer" />
+    </div>
   );
 }
 
