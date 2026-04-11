@@ -384,7 +384,7 @@ export default function HomePage() {
           <div className="hero-cta-area">
             <CtaPill />
             <p className="hero-doc-link">
-              Or read the <a href="https://egregore.xyz/docs">documentation</a>
+              Or read the <a href="/docs">documentation</a>
             </p>
           </div>
         </div>
