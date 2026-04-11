@@ -1308,12 +1308,20 @@ body {
   align-items: center;
   justify-content: center;
 }
-.site-footer a {
-  color: #E7794B;
-  text-decoration: none;
-  font-size: 14px;
+.footer-inquiries {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.02em;
 }
-.site-footer a:hover {
+
+.footer-inquiries a {
+  color: #D4875A;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.footer-inquiries a:hover {
   text-decoration: underline;
 }
 

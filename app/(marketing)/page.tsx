@@ -896,7 +896,7 @@ export default function HomePage() {
 
       {/* ── Footer CTA ── */}
       <section className="footer-cta">
-        <h2>Try it <s>now</s> <span className="soon">soon</span></h2>
+        <h2>Coming soon</h2>
         <p className="footer-sub">
           <strong>Draw the magic circle</strong><br />
           One command. Egregore becomes your team&apos;s shared brain.
@@ -938,7 +938,7 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer className="site-footer">
-<a href="mailto:info@egregore.xyz">info@egregore.xyz</a>
+        <span className="footer-inquiries">For enterprise inquiries — <a href="mailto:info@egregore.xyz">info@egregore.xyz</a></span>
       </footer>
     </>
   );
