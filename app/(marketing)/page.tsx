@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -43,6 +44,40 @@ function CtaPill() {
       <span className="copied-text">Copied!</span>
       <CopyIcon />
     </button>
+  );
+}
+
+function BlurredCta() {
+  const [revealed, setRevealed] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("key")) {
+      setRevealed(true);
+    }
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ filter: "blur(8px)", opacity: 0.6 }}
+      animate={
+        revealed
+          ? { filter: "blur(0px)", opacity: 1 }
+          : { filter: "blur(8px)", opacity: 0.6 }
+      }
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }
+      }
+      style={{
+        pointerEvents: revealed ? "auto" : "none",
+        userSelect: revealed ? "auto" : "none",
+      }}
+    >
+      <CtaPill />
+    </motion.div>
   );
 }
 
@@ -382,7 +417,7 @@ export default function HomePage() {
           </div>
 
           <div className="hero-cta-area">
-            <CtaPill />
+            <BlurredCta />
             <p className="hero-doc-link">
               Or read the <a href="/docs">documentation</a>
             </p>
@@ -871,7 +906,7 @@ export default function HomePage() {
           <div className="footer-img">
             <video src="/footer-video.mp4" autoPlay loop muted playsInline />
           </div>
-          <CtaPill />
+          <BlurredCta />
         </div>
 
         <div className="footer-links">
