@@ -1338,3 +1338,34 @@ body {
   margin-top: 12px;
   text-align: center;
 }
+
+/* "Try it now soon" heading */
+.footer-cta h2 s {
+  text-decoration: line-through;
+  text-decoration-color: rgba(22, 16, 11, 0.4);
+  opacity: 0.4;
+}
+
+.footer-cta h2 .soon {
+  color: #D4875A;
+  font-style: italic;
+}
+
+/* Footer icon links */
+.footer-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(22, 16, 11, 0.06);
+  color: #16100B;
+  opacity: 0.5;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.footer-icon-link:hover {
+  opacity: 1;
+  background: rgba(22, 16, 11, 0.12);
+}
