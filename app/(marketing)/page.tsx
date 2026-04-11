@@ -419,7 +419,7 @@ export default function HomePage() {
           <div className="hero-cta-area">
             <BlurredCta />
             <p className="hero-doc-link">
-              See <a href="/docs">documentation</a>
+              Coming soon &middot; See <a href="/docs">documentation</a>
             </p>
           </div>
         </div>
@@ -907,6 +907,7 @@ export default function HomePage() {
             <video src="/footer-video.mp4" autoPlay loop muted playsInline />
           </div>
           <BlurredCta />
+          <p className="coming-soon-label">Coming soon</p>
         </div>
 
         <div className="footer-links">
@@ -922,7 +923,7 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer className="site-footer">
-        <a href="mailto:info@egregore.xyz">For early enterprise inquiries get in touch with us</a>
+<a href="mailto:info@egregore.xyz">info@egregore.xyz</a>
       </footer>
     </>
   );
