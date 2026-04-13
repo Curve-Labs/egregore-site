@@ -1,0 +1,97 @@
+---
+title: Common Practices
+description: How teams get the most out of Egregore — the few things only you can decide
+---
+
+You don't run Egregore — you talk to it, and it does the rest. Branches, commits, file paths, handoff drafts, knowledge graph links: all handled for you. These practices are about the few things only you can decide: what a session is about, when it's done, and who needs to see the result.
+
+## Session Hygiene
+
+Egregore handles the mechanics — branches, worktrees, commits. What it can't do for you is decide where one piece of work ends and another begins. That's the part you own.
+
+### Be specific in your first message
+
+When Egregore asks "what are you working on?", the answer becomes the session's identity. It sets the branch name, the slug in `/activity`, and the frame the agent uses for everything that follows.
+
+- **Good:** *"I'm fixing the auth token refresh bug."*
+- **Bad:** *"let's look at some stuff."*
+
+There is no separate "name your topic" step. The first thing you say *is* the name. Specific first messages produce sessions your team can find tomorrow; vague ones produce sessions no one ever revisits.
+
+### One topic per session
+
+A session that mixes two unrelated topics produces a handoff that is coherent for neither. When you switch to something new, say so out loud — Egregore will spin up a fresh branch and worktree for the new topic. Don't quietly drift from "fixing auth" into "redesigning onboarding" in the same session.
+
+### Always close with `/save` and `/handoff`
+
+These are not automatic, and they are not the same thing:
+
+| Command | What it does | What happens if you skip it |
+|---------|--------------|------------------------------|
+| `/save` | Pushes your branch and opens a PR to develop, across every repo with changes. **It does not auto-merge.** Code changes wait for human review. | The work doesn't ship. |
+| `/handoff` | Writes a structured session summary into shared memory so the next person — or future you — can pick it up. | The work shipped, but no one knows why. |
+
+Do both. They take seconds, and they are the difference between "I worked on this" and "the team can build on this."
+
+### If you're stuck, `/ask`
+
+Async organizations die from unspoken blockers. A question in the open is cheaper than a day of guessing — and the answer becomes part of the team's shared memory once it lands.
+
+## Writing for the Next Reader
+
+Egregore writes the artifacts. You don't compose handoffs or reflections by hand — the agent drafts them from the session's context. But the agent can only write what you've given it. The quality of the next reader's experience is set by the quality of the conversation that produced the artifact.
+
+### Say the *why* out loud
+
+The agent can see *what* changed. It can't see what you almost did and ruled out, what made the decision feel hard, or what constraint made one option obvious. If the reasoning matters, say it in the session — even one sentence (*"we picked this over X because Y"*) — and it'll land in the handoff. If you don't say it, no one ever will. The diff is permanent; the *why* lives only in what you wrote down.
+
+### Tell Egregore who the handoff is for
+
+A handoff with no recipient gets read by no one. When you `/handoff`, name the person — or say *"for whoever picks up the auth work next."* Egregore will route it; it can't guess.
+
+### Skim what Egregore wrote before you walk away
+
+The agent drafts the handoff from session context. Most of the time it's right. When it's not, correcting it takes ten seconds — and saves the next reader from acting on a wrong summary. Don't merge a handoff you haven't read.
+
+### Pick the right container — just say which one
+
+You don't need to remember the command. You just need to know the difference:
+
+| If you want to... | Say... |
+|--------------------|--------|
+| Keep a decision or insight worth sharing | `/reflect` |
+| Hand work off to someone else | `/handoff` |
+| Save a half-baked thought, just for you | `/note` |
+| Get an answer from a teammate | `/ask` |
+
+Egregore will route it. Collapsing these into "I'll write it somewhere" is how the knowledge base rots.
+
+## Make Work Visible with `/view`
+
+`/view` turns any Egregore artifact — a handoff, a quest, an activity feed — into a branded, shareable HTML page. Most teams underuse it. It's the bridge between *we did the work* and *the work is legible to anyone who needs to see it.*
+
+### Share a handoff externally
+
+When a handoff matters to someone outside your Egregore — a stakeholder, an investor, a contributor without an account — `/view` it and send the link. The context travels; the repo stays private.
+
+### Generate a week-in-review
+
+Pipe `/activity` through `/view` to produce a snapshot of what the team shipped this week. Dramatically cheaper than writing a status update by hand, and grounded in real data instead of memory.
+
+### Make a quest legible
+
+Quests accumulate threads over time. `/view` flattens them into a single readable artifact you can hand to someone deciding whether to join in.
+
+### Rule of thumb
+
+If you're about to copy-paste from Egregore into Notion or Slack, `/view` it instead. The artifact is canonical, branded, and links back to the source.
+
+## The Short Version
+
+If you remember nothing else:
+
+1. **First message sets the session.** Be specific.
+2. **One topic per session.** Switch topics → new session.
+3. **`/save` and `/handoff` before you walk away.** Both, every time.
+4. **Say the *why* out loud.** The agent can't infer it from the diff.
+5. **`/view` anything you'd otherwise paste into Slack.**
