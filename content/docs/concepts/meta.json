@@ -1,4 +1,4 @@
 {
   "title": "Concepts",
-  "pages": ["memory", "commands", "git-workflow", "handoffs"]
+  "pages": ["memory", "commands", "git-workflow", "handoffs", "common-practices"]
 }
