@@ -3,7 +3,7 @@ title: Common Practices
 description: How teams get the most out of Egregore — the few things only you can decide
 ---
 
-You don't run Egregore — you talk to it, and it does the rest. Branches, commits, file paths, handoff drafts, knowledge graph links: all handled for you. These practices are about the few things only you can decide: what a session is about, when it's done, and who needs to see the result.
+Egregore handles most of the mechanics for you — branches, commits, file paths, handoff drafts, knowledge graph links. These practices cover the few things only you can decide: what a session is about, when it's done, and who needs to see the result.
 
 ## Session Hygiene
 
@@ -37,6 +37,8 @@ Do both. They take seconds, and they are the difference between "I worked on thi
 
 Async organizations die from unspoken blockers. A question in the open is cheaper than a day of guessing — and the answer becomes part of the team's shared memory once it lands.
 
+If your team has Telegram connected, `/ask` also reaches people where they already are: on open-source Egregore, the question posts to the group; on hosted Egregore, the person you addressed gets a direct message.
+
 ## Writing for the Next Reader
 
 Egregore writes the artifacts. You don't compose handoffs or reflections by hand — the agent drafts them from the session's context. But the agent can only write what you've given it. The quality of the next reader's experience is set by the quality of the conversation that produced the artifact.
@@ -48,6 +50,8 @@ The agent can see *what* changed. It can't see what you almost did and ruled out
 ### Tell Egregore who the handoff is for
 
 A handoff with no recipient gets read by no one. When you `/handoff`, name the person — or say *"for whoever picks up the auth work next."* Egregore will route it; it can't guess.
+
+Addressing also drives notifications. If your team has Telegram connected, an addressed handoff sends a notification to the group on open-source Egregore, and a direct message to the recipient on hosted Egregore. An unaddressed handoff is silent — it lands in memory but nobody is told it exists.
 
 ### Skim what Egregore wrote before you walk away
 
@@ -66,25 +70,34 @@ You don't need to remember the command. You just need to know the difference:
 
 Egregore will route it. Collapsing these into "I'll write it somewhere" is how the knowledge base rots.
 
-## Make Work Visible with `/view`
+## Make Work Readable with `/view`
 
-`/view` turns any Egregore artifact — a handoff, a quest, an activity feed — into a branded, shareable HTML page. Most teams underuse it. It's the bridge between *we did the work* and *the work is legible to anyone who needs to see it.*
+`/view` renders any Egregore artifact — a handoff, a quest, an activity feed — into a designed, branded HTML page. It's mostly a *reading* tool: instead of squinting at markdown in the terminal, you open the same content in your browser, properly typeset and easy to scan. Most teams underuse it.
+
+### Local by default, hosted on demand
+
+By default `/view` generates the artifact locally and opens it in your browser — no upload, nothing leaves your machine. When you want to share, `/view` can also publish to **egregore.xyz**, returning a link you can send to anyone.
+
+Hosted artifacts have different retention depending on your plan:
+
+- **Open-source Egregore:** hosted artifacts are kept for **one week**, then expire.
+- **Hosted Egregore:** artifacts are kept **forever**, and your team can browse the full archive of everything anyone has ever published.
+
+### Read a handoff or quest in comfort
+
+Long handoffs and quests are hard to read in a terminal pane. `/view` it and read it in your browser — the same content, but actually pleasant to consume. This is the most common use.
 
 ### Share a handoff externally
 
-When a handoff matters to someone outside your Egregore — a stakeholder, an investor, a contributor without an account — `/view` it and send the link. The context travels; the repo stays private.
+When a handoff matters to someone outside your Egregore — a stakeholder, an investor, a contributor without an account — publish it with `/view` and send the link. The context travels; the repo stays private.
 
 ### Generate a week-in-review
 
 Pipe `/activity` through `/view` to produce a snapshot of what the team shipped this week. Dramatically cheaper than writing a status update by hand, and grounded in real data instead of memory.
 
-### Make a quest legible
-
-Quests accumulate threads over time. `/view` flattens them into a single readable artifact you can hand to someone deciding whether to join in.
-
 ### Rule of thumb
 
-If you're about to copy-paste from Egregore into Notion or Slack, `/view` it instead. The artifact is canonical, branded, and links back to the source.
+If you're about to copy-paste from Egregore into Notion or Slack, `/view` it instead. The artifact is canonical, branded, and (if hosted) links back to a permanent URL.
 
 ## The Short Version
 
@@ -94,4 +107,4 @@ If you remember nothing else:
 2. **One topic per session.** Switch topics → new session.
 3. **`/save` and `/handoff` before you walk away.** Both, every time.
 4. **Say the *why* out loud.** The agent can't infer it from the diff.
-5. **`/view` anything you'd otherwise paste into Slack.**
+5. **`/view` anything you want to read in comfort or share outside the terminal.**
