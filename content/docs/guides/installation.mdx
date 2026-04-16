@@ -12,6 +12,10 @@ You need two things installed:
 
 ## Create Your Egregore
 
+Two install paths. Both produce the same local workspace — only the credential source differs. Pick based on your organization's policy.
+
+### Option 1 — `npx` (simplest)
+
 ```bash
 npx create-egregore@latest --open
 ```
@@ -24,7 +28,49 @@ The installer walks you through:
 4. **Create a project repo** (optional) — For your actual code. You can add repos later.
 5. **Done** — Everything cloned and linked locally.
 
-> **No third-party App allowed by your org?** There's an alternative install path that uses the GitHub CLI instead of the Egregore App — first-party auth, no third party on your account. See the [gh CLI install path](https://github.com/egregore-labs/egregore/blob/main/INSTALL-GH.md) for the step-by-step.
+**What the Egregore GitHub App does.** The installer asks you to install the Egregore App on the account or organization you choose. The App requests per-repo access to only the repositories you select — your Egregore instance, its memory repo, and any managed project repos. It uses standard GitHub APIs for repo creation, clone, push, and collaborator invites; it does not read code content. You can revoke it anytime at *GitHub Settings → Applications*. The App exists so you get clean per-repo scoping without handing over a broad personal access token.
+
+### Option 2 — `gh` CLI (for orgs that block third-party Apps)
+
+Some organizations — especially regulated ones — block third-party GitHub Apps by policy. For that case, use the `gh` CLI path. `gh` is GitHub's own first-party CLI; its token is minted by GitHub for you, with no third party involved.
+
+**Step 1 — Install the GitHub CLI and authenticate:**
+
+```bash
+brew install gh          # macOS — or see https://cli.github.com for other OSes
+gh auth login            # first-party device flow in your browser
+```
+
+**Step 2 — Download the installer, inspect it, then run:**
+
+```bash
+curl -sLO https://raw.githubusercontent.com/egregore-labs/egregore/main/bin/init-gh.sh
+less init-gh.sh          # optional — read what it will do before running
+bash init-gh.sh
+```
+
+**Step 3 — Answer the installer's prompts.** The flow mirrors Option 1:
+- If you run it from inside an existing git repo, it offers to install in the parent directory and auto-adopt that repo as managed.
+- Pick the owner (personal account or an organization you're a member of).
+- Name your Egregore.
+- Multi-select any existing repos you want managed.
+- Optionally create a new project repo.
+- Set your display name. Optionally invite a teammate.
+
+**What the installer does locally:** creates your Egregore repo (from the public template), creates a memory repo, clones both + any managed repos as siblings, symlinks `memory/`, writes `.env` (mode 0600) using your `gh` token, installs a shell alias, and registers the instance. Every step is visible in the script you downloaded.
+
+The source is [bin/init-gh.sh on GitHub](https://github.com/egregore-labs/egregore/blob/main/bin/init-gh.sh). For the full walkthrough with every prompt explained, see [INSTALL-GH.md](https://github.com/egregore-labs/egregore/blob/main/INSTALL-GH.md).
+
+### Both paths at a glance
+
+| | Option 1 (`npx`) | Option 2 (`gh`) |
+|---|---|---|
+| Credential source | Egregore GitHub App | `gh auth login` (first-party) |
+| Works on orgs that block third-party Apps | Usually no | Usually yes |
+| Result on your machine | Identical | Identical |
+| Teammate invitation flow | Same | Same |
+
+Everything is MIT-licensed and source-available. Every install script is in [`bin/`](https://github.com/egregore-labs/egregore/tree/main/bin) and every hook in [`.claude/hooks/`](https://github.com/egregore-labs/egregore/tree/main/.claude/hooks) — read them before you run them.
 
 ## Start Working
 
@@ -47,15 +93,36 @@ On first launch, Egregore runs `/setup` automatically:
 
 ## Join an Existing Egregore
 
-If someone invited you:
+If someone invited you, you have the same two options as for a fresh install. Pick whichever your org allows.
+
+### Option 1 — `npx` (simplest)
 
 ```bash
 npx create-egregore@latest join <github-org>/<repo-name>
 ```
 
-This clones the instance, sets up memory, and runs onboarding.
+This accepts pending invitations, clones the instance + memory + managed repos, and runs onboarding.
 
-> **No third-party App path:** `join-gh.sh` is the gh-CLI equivalent — same result, no Egregore App. Details in [INSTALL-GH.md](https://github.com/egregore-labs/egregore/blob/main/INSTALL-GH.md).
+### Option 2 — `gh` CLI (no third-party App)
+
+**Step 1 — one-time `gh` setup** (skip if you already authenticated):
+
+```bash
+brew install gh
+gh auth login
+```
+
+**Step 2 — download the joiner, inspect it, then run:**
+
+```bash
+curl -sLO https://raw.githubusercontent.com/egregore-labs/egregore/main/bin/join-gh.sh
+less join-gh.sh          # optional — read it first
+bash join-gh.sh <github-org>/<repo-name>
+```
+
+The joiner auto-accepts pending GitHub invitations from that owner, clones core + memory + every managed repo you have access to as siblings, writes `.env` with your own `gh` token, and installs a shell alias. On first session, Claude Code runs `/onboarding` with the context the inviter set up.
+
+Source: [bin/join-gh.sh](https://github.com/egregore-labs/egregore/blob/main/bin/join-gh.sh).
 
 ## Invite Others
 
