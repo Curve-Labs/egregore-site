@@ -3,6 +3,8 @@ title: Installation
 description: Set up Egregore from scratch
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+
 ## Prerequisites
 
 You need two things installed:
@@ -12,7 +14,7 @@ You need two things installed:
 
 ## Create Your Egregore
 
-Two install paths. Both produce the same local workspace — only the credential source differs. Pick based on your organization's policy.
+Two install paths, same result on your machine. Option 1 is the fastest; Option 2 uses only first-party GitHub tooling. Pick whichever fits you better.
 
 ### Option 1 — `npx` (simplest)
 
@@ -28,11 +30,23 @@ The installer walks you through:
 4. **Create a project repo** (optional) — For your actual code. You can add repos later.
 5. **Done** — Everything cloned and linked locally.
 
-**What the Egregore GitHub App does.** The installer asks you to install the Egregore App on the account or organization you choose. The App requests per-repo access to only the repositories you select — your Egregore instance, its memory repo, and any managed project repos. It uses standard GitHub APIs for repo creation, clone, push, and collaborator invites; it does not read code content. You can revoke it anytime at *GitHub Settings → Applications*. The App exists so you get clean per-repo scoping without handing over a broad personal access token.
+<Callout type="info" title="What the Egregore GitHub App does">
 
-### Option 2 — `gh` CLI (for orgs that block third-party Apps)
+The installer asks you to install the Egregore App on the account or organization you choose. It's intentionally narrow:
 
-Some organizations — especially regulated ones — block third-party GitHub Apps by policy. For that case, use the `gh` CLI path. `gh` is GitHub's own first-party CLI; its token is minted by GitHub for you, with no third party involved.
+- **Per-repo access only** — the App sees only the repos you select: your Egregore instance, its memory repo, and any managed project repos you pick.
+- **No code content is read** — it uses standard GitHub APIs for repo creation, clone, push, and collaborator invites. Nothing more.
+- **You own the scoping** — you decide which repos it can touch; you can change that any time from GitHub.
+- **Revoke any time** — *GitHub Settings → Applications → Egregore*. Removing it doesn't affect your repos.
+- **Why an App** — clean per-repo scoping without handing out a broad personal access token.
+
+If you'd rather not use a GitHub App — for personal preference or because your organization prefers first-party tools — [Option 2](#option-2--gh-cli-no-github-app) below is the same flow using the GitHub CLI.
+
+</Callout>
+
+### Option 2 — `gh` CLI (no GitHub App)
+
+Uses the GitHub CLI — GitHub's own first-party tool — instead of the Egregore App. The token is minted by GitHub for you, with no third party in the loop. The end state on your machine is identical to Option 1.
 
 **Step 1 — Install the GitHub CLI and authenticate:**
 
@@ -66,7 +80,8 @@ The source is [bin/init-gh.sh on GitHub](https://github.com/egregore-labs/egrego
 | | Option 1 (`npx`) | Option 2 (`gh`) |
 |---|---|---|
 | Credential source | Egregore GitHub App | `gh auth login` (first-party) |
-| Works on orgs that block third-party Apps | Usually no | Usually yes |
+| Requires Node.js | Yes (`npx`) | No |
+| Installs a GitHub App | Yes (scoped, revocable) | No |
 | Result on your machine | Identical | Identical |
 | Teammate invitation flow | Same | Same |
 
@@ -93,7 +108,7 @@ On first launch, Egregore runs `/setup` automatically:
 
 ## Join an Existing Egregore
 
-If someone invited you, you have the same two options as for a fresh install. Pick whichever your org allows.
+If someone invited you, you have the same two options as for a fresh install. Pick whichever fits you better.
 
 ### Option 1 — `npx` (simplest)
 
