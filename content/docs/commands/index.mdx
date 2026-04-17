@@ -8,11 +8,9 @@ import { Callout } from 'fumadocs-ui/components/callout';
 The complete list of slash commands, grouped by purpose. For a conceptual overview, see [Slash Commands](/docs/concepts/commands).
 
 <Callout title="Reading this page">
-Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
+Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) *(coming soon)* — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
 
 Commands in the **Hosted** section only function with managed hosting.
-
-Type them — getting them into your muscle memory is part of adopting Egregore. Describing intent ("I want to hand off my work") also invokes them, but learning the set is the faster path.
 </Callout>
 
 ## Core Loop
@@ -61,6 +59,7 @@ Async work needs routing. These commands turn one-off messages into durable sign
 | Command | What it's for |
 |---------|---------------|
 | `/me` | Tell Egregore what to call you. Your name shows up everywhere your work does. |
+| `/onboarding` | Welcome a new user — verify access, orient them, invite a teammate, produce a first handoff. |
 
 ## Git
 
@@ -69,8 +68,11 @@ Git is handled for you, but you can always drive it yourself. `/save` covers the
 | Command | What it's for |
 |---------|---------------|
 | `/save` `*` | Commit, push, PR across every repo with changes. The command you'll reach for most. |
+| `/commit` | Stage and commit changes in the current repo without pushing. |
+| `/push` | Push the current branch to remote. |
 | `/branch` | Create a working branch. Usually automatic on your first work-related message. |
 | `/pr` | Open a pull request for the current branch. |
+| `/test` | Validate changes before `/save` — the pre-flight check. |
 | `/review-pr` | CTO-grade review of a PR. Use this on vibe-coded changes before merging. |
 | `/contribute` | Send an improvement back to the upstream Egregore framework. Local patches don't survive `/update`. |
 
@@ -80,11 +82,12 @@ Git is handled for you, but you can always drive it yourself. `/save` covers the
 |---------|---------------|
 | `/ingest` `*` | Unified router for turning outside content into structured memory. |
 | `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
+| `/ingest-google` `*` | Promote personal Google Workspace content (Drive, Docs, Sheets, Gmail) into shared memory. |
 | `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. |
 
 ## Infrastructure
 
-Boring but necessary. Set up once, forget.
+Set up once, then the rest of the system leans on this layer. Reach for these when something in the environment feels off, or when you're bringing a new service online.
 
 | Command | What it's for |
 |---------|---------------|
@@ -94,21 +97,19 @@ Boring but necessary. Set up once, forget.
 | `/pull` | Fetch latest for the current repo and shared memory. |
 | `/sync-repos` | Smart refresh across every managed repo. |
 | `/env` | Configure environment variables. |
+| `/infra` | View or register infrastructure services in the shared registry. |
 | `/telemetry` | View or change what Egregore reports back. |
 | `/telegram-connect` `*` | Wire up Telegram as your notification center. |
 
-## Hosted
+## Hosted *(coming soon)*
 
-These commands depend on the [knowledge graph](/docs/guides/hosting) and only function under managed hosting.
+Additional commands ship with [managed hosting](/docs/guides/hosting) *(coming soon)* — they depend on the knowledge graph and hosted services.
 
 | Command | What it's for |
 |---------|---------------|
-| `/graph-diagnostic` | Full audit of graph schema and data quality. |
-| `/graph-maintain` | Scheduled maintenance cycle for the graph. |
-| `/project` | A project's live state: linked quests, recent artifacts, entry points. |
-| `/hosting` | Manage hosted workspaces — enable, status, create. |
-| `/infra` | View or register infrastructure services. |
-| `/connect` | Manage external connectors (Google, and more as they land). |
+| `/project` `*` | A project's live state: linked quests, recent artifacts, entry points. |
+
+More graph and hosting commands land as managed rolls out.
 
 ## Advanced
 
@@ -116,5 +117,9 @@ These commands depend on the [knowledge graph](/docs/guides/hosting) and only fu
 |---------|---------------|
 | `/summon` | Design and launch a persistent agent that runs on its own schedule. |
 | `/tutorial` | Interactive walkthrough of the core loop. |
-| `/eval` | Score and compare pipeline outputs. |
-| `/eval-multiagent` | Pipeline evaluation across multiple agents. |
+
+## Build your own
+
+Egregore is a template. Every command here is a `.md` file in `.claude/skills/` — read them, fork them, write new ones. Custom commands and integrations that encode your team's practice are the whole point.
+
+If you build something generally useful, `/contribute` opens a PR against the upstream framework so every Egregore inherits it.
