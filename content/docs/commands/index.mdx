@@ -9,8 +9,6 @@ The complete catalog of Egregore slash commands, grouped by the layer they act o
 
 <Callout title="Reading this page">
 Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) *(coming soon)* — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
-
-Commands in the **Hosted** section only function with managed hosting.
 </Callout>
 
 ## Core Loop
@@ -20,12 +18,23 @@ Every Egregore session runs on this loop: orient, work, capture, close. These ar
 | Command | What it's for |
 |---------|---------------|
 | `/activity` `*` | The team's situational awareness in one screen — what shipped, what's open, who's asking what. The antidote to standups. |
-| `/dashboard` `*` | Your orientation when you return — what you were last on, what's waiting, where to start. |
 | `/handoff` `*` | Make a session portable. The atomic unit of collaboration: here's what I did, here's what's next, pick it up. |
 | `/view` `*` | Render any memory artifact — quest, handoff, meeting, decision — as an HTML page you can share via URL. |
+| `/quest` `*` | Start an exploration others can contribute to over weeks. Larger than a task, smaller than a project. |
+| `/invite` `*` | Bring someone in — GitHub invite, Egregore setup link, and graph onboarding in one step. |
 | `/wrap` | A personal closing ritual. Turns a drifting session into a captured one. |
 | `/save` `*` | The one button for "I'm done for now." Commit, push, PR across every repo with changes — the git tax, paid automatically. |
 | `/todo` `*` | Personal tasks that outlive the session. Hosted: visible to teammates as signal. |
+| `/dashboard` `*` | Your orientation when you return — what you were last on, what's waiting, where to start. |
+
+## Reflection
+
+Reflection agents reason *with* the accumulated context — surfacing what's already known, what's missing, and what's worth promoting into shared memory. This is where Egregore earns its name.
+
+| Command | What it's for |
+|---------|---------------|
+| `/reflect` `*` | Capture something share-ready — a decision, a pattern, a realization worth keeping. Goes into team memory. |
+| `/deep-reflect` `*` | A deep-research agent that reasons reflectively across the knowledge base. Multi-sample reasoning over real artifacts — surfaces convergence, tension, gaps, and emergence you'd miss reading one file at a time. |
 
 ## Ingestion
 
@@ -33,35 +42,22 @@ Agents that turn outside context — conversations, meetings, documents — into
 
 | Command | What it's for |
 |---------|---------------|
-| `/ingest` `*` | Unified router for turning outside content into structured memory. |
-| `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
+| `/ingest` `*` | Unified router for turning outside content into structured memory. Dispatches to the right pipeline based on what you feed it (user interview, transcript, article, dataset). |
 | `/meeting` `*` | Turn a Granola recording into structured memory — decisions extracted, actions linked to the right people. |
 | `/add` `*` | Bring an external document, link, or artifact into shared memory. |
 | `/archive` | Preserve a prompt pattern that worked. Future sessions inherit your craft. |
 | `/note` | A half-baked thought, private by default. Stays yours unless you promote it. |
 
-## Reflection
-
-Reflection agents reason *with* the accumulated context — surfacing what's already known, what's missing, and what's worth promoting into shared memory.
-
-| Command | What it's for |
-|---------|---------------|
-| `/reflect` `*` | Capture something share-ready — a decision, a pattern, a realization worth keeping. Goes into team memory. |
-| `/deep-reflect` `*` | A deep-research agent that reasons reflectively across the knowledge base. Multi-sample reasoning over real artifacts — surfaces convergence, tension, gaps, and emergence you'd miss reading one file at a time. |
-
 ## Coordination
 
-Multiplayer AI use opens possibilities beyond solo use. These commands capture those coordination workflows as first-class primitives — asking, inviting, broadcasting, running long-lived explorations.
+Multiplayer AI use opens possibilities beyond solo use. These commands handle the communication layer — asking, elicitation, broadcast, and the occasional cleanup.
 
 | Command | What it's for |
 |---------|---------------|
 | `/ask` `*` | Send a question to a person, the team, or yourself-later. Routed through Telegram in hosted mode. |
 | `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. The long-form counterpart to `/ask`. |
 | `/announce` `*` | Broadcast to the whole group — deliberate, previewed, not impulsive. |
-| `/quest` `*` | Start an exploration others can contribute to over weeks. Larger than a task, smaller than a project. |
-| `/quest-suggest` `*` | Analyze quest drift and propose restructuring when threads tangle. |
 | `/issue` | Report something broken. Routes to the right tracker. |
-| `/invite` `*` | Bring someone in — GitHub invite, Egregore setup link, and graph onboarding in one step. |
 | `/delete-user` `*` | Remove a member cleanly across access, memberships, and graph. |
 
 ## Identity
@@ -92,6 +88,7 @@ Configure and maintain your Egregore environment.
 | Command | What it's for |
 |---------|---------------|
 | `/setup` | First-time Egregore setup. |
+| `/tutorial` | Interactive walkthrough of the core loop. |
 | `/checkup` | Diagnose a broken environment. |
 | `/update` | Sync framework from upstream. Run this when something feels stale. |
 | `/pull` | Fetch latest for the current repo and shared memory. |
@@ -99,23 +96,6 @@ Configure and maintain your Egregore environment.
 | `/env` | Configure environment variables. |
 | `/telemetry` | View or change what Egregore reports back. |
 | `/telegram-connect` `*` | Wire up Telegram as your notification center. |
-
-## Hosted *(coming soon)*
-
-Additional commands ship with [managed hosting](/docs/guides/hosting) *(coming soon)* — they depend on the knowledge graph and hosted services.
-
-| Command | What it's for |
-|---------|---------------|
-| `/project` `*` | A project's live state: linked quests, recent artifacts, entry points. |
-
-More graph and hosting commands land as managed rolls out.
-
-## Advanced
-
-| Command | What it's for |
-|---------|---------------|
-| `/summon` | Design and launch a persistent agent that runs on its own schedule. |
-| `/tutorial` | Interactive walkthrough of the core loop. |
 
 ## Build your own
 
