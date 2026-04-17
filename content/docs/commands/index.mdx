@@ -5,7 +5,7 @@ description: Every slash command available in Egregore
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-The complete list of slash commands, grouped by purpose. For a conceptual overview, see [Slash Commands](/docs/concepts/commands).
+Egregore is built to turn accumulated context into cohesive, actionable surfaces. To achieve that, we ship ingestion and reflection agents embedded in specialized slash commands. This page is the complete catalog — for a conceptual overview, see [Slash Commands](/docs/concepts/commands).
 
 <Callout title="Reading this page">
 Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) *(coming soon)* — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
@@ -27,26 +27,36 @@ The commands that structure every session. If you learn only these, you have Egr
 | `/save` `*` | The one button for "I'm done for now." Commit, push, PR across every repo with changes — the git tax, paid automatically. |
 | `/todo` `*` | Personal tasks that outlive the session. Hosted: visible to teammates as signal. |
 
-## Knowledge
+## Ingestion
 
-Egregore's bet is that organizations compound intelligence only when knowledge *accumulates*. These commands distinguish finished thoughts from half-formed ones, and keep both addressable.
+Ingestion agents bring context into Egregore — conversations, meetings, documents, fragments of thinking — and turn them into structured memory the rest of the system can reason over.
+
+| Command | What it's for |
+|---------|---------------|
+| `/ingest` `*` | Unified router for turning outside content into structured memory. |
+| `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
+| `/meeting` `*` | Turn a Granola recording into structured memory — decisions extracted, actions linked to the right people. |
+| `/add` `*` | Bring an external document, link, or artifact into shared memory. |
+| `/archive` | Preserve a prompt pattern that worked. Future sessions inherit your craft. |
+| `/note` | A half-baked thought, private by default. Stays yours unless you promote it. |
+
+## Reflection
+
+Reflection agents reason *with* the accumulated context — surfacing what's already known, what's missing, and what's worth promoting into shared memory.
 
 | Command | What it's for |
 |---------|---------------|
 | `/reflect` `*` | Capture something share-ready — a decision, a pattern, a realization worth keeping. Goes into team memory. |
-| `/note` | A half-baked thought, private by default. Stays yours unless you promote it. |
 | `/deep-reflect` `*` | A deep-research agent that reasons reflectively across the knowledge base. Multi-sample reasoning over real artifacts — surfaces convergence, tension, gaps, and emergence you'd miss reading one file at a time. |
-| `/archive` | Preserve a prompt pattern that worked. Future sessions inherit your craft. |
-| `/add` `*` | Bring an external document, link, or artifact into shared memory. |
-| `/meeting` `*` | Turn a Granola recording into structured memory — decisions extracted, actions linked to the right people. |
 
 ## Coordination
 
-Async work needs routing. These commands turn one-off messages into durable signal.
+Multiplayer AI use opens possibilities that solo use never reaches. These commands capture those coordination workflows as first-class primitives — asking, inviting, broadcasting, running long-lived explorations.
 
 | Command | What it's for |
 |---------|---------------|
 | `/ask` `*` | Send a question to a person, the team, or yourself-later. Routed through Telegram in hosted mode. |
+| `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. The long-form counterpart to `/ask`. |
 | `/announce` `*` | Broadcast to the whole group — deliberate, previewed, not impulsive. |
 | `/quest` `*` | Start an exploration others can contribute to over weeks. Larger than a task, smaller than a project. |
 | `/quest-suggest` `*` | Analyze quest drift and propose restructuring when threads tangle. |
@@ -74,14 +84,6 @@ Git is handled for you, but you can always drive it yourself. `/save` covers the
 | `/test` | Validate changes before `/save` — the pre-flight check. |
 | `/review-pr` | CTO-grade review of a PR. Use this on vibe-coded changes before merging. |
 | `/contribute` | Send an improvement back to the upstream Egregore framework. Local patches don't survive `/update`. |
-
-## Ingestion
-
-| Command | What it's for |
-|---------|---------------|
-| `/ingest` `*` | Unified router for turning outside content into structured memory. |
-| `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
-| `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. |
 
 ## Infrastructure
 
