@@ -5,7 +5,7 @@ description: Every slash command available in Egregore
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-Egregore is built to turn accumulated context into cohesive, actionable surfaces. To achieve that, we ship ingestion and reflection agents embedded in specialized slash commands. This page is the complete catalog — for a conceptual overview, see [Slash Commands](/docs/concepts/commands).
+The complete catalog of Egregore slash commands, grouped by the layer they act on: ingestion, reflection, and coordination. For a conceptual overview, see [Slash Commands](/docs/concepts/commands).
 
 <Callout title="Reading this page">
 Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) *(coming soon)* — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
@@ -15,7 +15,7 @@ Commands in the **Hosted** section only function with managed hosting.
 
 ## Core Loop
 
-The commands that structure every session. If you learn only these, you have Egregore.
+Every Egregore session runs on this loop: orient, work, capture, close. These are the commands that drive it — each built to make handoffs, context, and coordination between teammates smooth from the first keystroke.
 
 | Command | What it's for |
 |---------|---------------|
@@ -29,7 +29,7 @@ The commands that structure every session. If you learn only these, you have Egr
 
 ## Ingestion
 
-Ingestion agents bring context into Egregore — conversations, meetings, documents, fragments of thinking — and turn them into structured memory the rest of the system can reason over.
+Agents that turn outside context — conversations, meetings, documents — into structured memory.
 
 | Command | What it's for |
 |---------|---------------|
@@ -51,7 +51,7 @@ Reflection agents reason *with* the accumulated context — surfacing what's alr
 
 ## Coordination
 
-Multiplayer AI use opens possibilities that solo use never reaches. These commands capture those coordination workflows as first-class primitives — asking, inviting, broadcasting, running long-lived explorations.
+Multiplayer AI use opens possibilities beyond solo use. These commands capture those coordination workflows as first-class primitives — asking, inviting, broadcasting, running long-lived explorations.
 
 | Command | What it's for |
 |---------|---------------|
@@ -72,7 +72,7 @@ Multiplayer AI use opens possibilities that solo use never reaches. These comman
 
 ## Git
 
-Git is handled for you, but you can always drive it yourself. `/save` covers the common path; the rest are here when you need finer control.
+Egregore automatically enforces safe, cohesive git workflows with hooks and commands that streamline collaboration. `/save` covers the common path; the rest are here when you need finer control.
 
 | Command | What it's for |
 |---------|---------------|
@@ -87,7 +87,7 @@ Git is handled for you, but you can always drive it yourself. `/save` covers the
 
 ## Infrastructure
 
-Set up once, then the rest of the system leans on this layer. Reach for these when something in the environment feels off, or when you're bringing a new service online.
+Configure and maintain your Egregore environment.
 
 | Command | What it's for |
 |---------|---------------|
@@ -119,6 +119,4 @@ More graph and hosting commands land as managed rolls out.
 
 ## Build your own
 
-Egregore is a seed. It's meant to grow into the organic workflows of the organizations it lives inside, and evolve with them. When you notice a pattern worth keeping — a ritual, a recurring move, a prompt that works — capture it as a skill or slash command.
-
-If you build something generally useful, `/contribute` opens a PR against the upstream framework.
+Egregore is a seed — it grows into the organic workflows of the organizations it lives inside. When you notice a pattern worth keeping, capture it as a skill or slash command. `/contribute` opens a PR against the upstream framework.
