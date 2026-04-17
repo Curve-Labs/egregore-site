@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -48,64 +47,9 @@ function CtaPill() {
 }
 
 function BlurredCta() {
-  const [revealed, setRevealed] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("key")) {
-      setRevealed(true);
-    }
-  }, []);
-
-  if (revealed) {
-    return (
-      <motion.div
-        initial={{ filter: "blur(8px)", opacity: 0.6 }}
-        animate={{ filter: "blur(0px)", opacity: 1 }}
-        transition={
-          prefersReducedMotion
-            ? { duration: 0 }
-            : { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }
-        }
-      >
-        <CtaPill />
-      </motion.div>
-    );
-  }
-
-  return (
-    <div className="blurred-cta-wrapper">
-      <motion.div
-        className="blurred-cta-content"
-        animate={{
-          filter: [
-            "blur(8px)",
-            "blur(4px)",
-            "blur(8px)",
-          ],
-          opacity: [0.5, 0.7, 0.5],
-        }}
-        transition={
-          prefersReducedMotion
-            ? { duration: 0 }
-            : {
-                duration: 4,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "loop" as const,
-              }
-        }
-        style={{
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        <CtaPill />
-      </motion.div>
-      <div className="blurred-cta-shimmer" />
-    </div>
-  );
+  // Unblurred for launch — install is live. The blur + reveal animation
+  // behind this component is preserved in git history if we need it again.
+  return <CtaPill />;
 }
 
 function TerminalBlock({
@@ -446,7 +390,7 @@ export default function HomePage() {
           <div className="hero-cta-area">
             <BlurredCta />
             <p className="hero-doc-link">
-              Coming soon &middot; See <a href="/docs">documentation</a>
+              See <a href="/docs">documentation</a>
             </p>
           </div>
         </div>
@@ -923,7 +867,7 @@ export default function HomePage() {
 
       {/* ── Footer CTA ── */}
       <section className="footer-cta">
-        <h2>Coming soon</h2>
+        <h2>Try it now</h2>
         <p className="footer-sub">
           <strong>Draw the magic circle</strong><br />
           One command. Egregore becomes your team&apos;s shared brain.
@@ -934,7 +878,6 @@ export default function HomePage() {
             <video src="/footer-video.mp4" autoPlay loop muted playsInline />
           </div>
           <BlurredCta />
-          <p className="coming-soon-label">Coming soon</p>
         </div>
 
         <div className="footer-links">
