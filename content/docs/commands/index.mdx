@@ -59,7 +59,6 @@ Async work needs routing. These commands turn one-off messages into durable sign
 | Command | What it's for |
 |---------|---------------|
 | `/me` | Tell Egregore what to call you. Your name shows up everywhere your work does. |
-| `/onboarding` | Welcome a new user — verify access, orient them, invite a teammate, produce a first handoff. |
 
 ## Git
 
@@ -82,7 +81,6 @@ Git is handled for you, but you can always drive it yourself. `/save` covers the
 |---------|---------------|
 | `/ingest` `*` | Unified router for turning outside content into structured memory. |
 | `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
-| `/ingest-google` `*` | Promote personal Google Workspace content (Drive, Docs, Sheets, Gmail) into shared memory. |
 | `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. |
 
 ## Infrastructure
@@ -97,7 +95,6 @@ Set up once, then the rest of the system leans on this layer. Reach for these wh
 | `/pull` | Fetch latest for the current repo and shared memory. |
 | `/sync-repos` | Smart refresh across every managed repo. |
 | `/env` | Configure environment variables. |
-| `/infra` | View or register infrastructure services in the shared registry. |
 | `/telemetry` | View or change what Egregore reports back. |
 | `/telegram-connect` `*` | Wire up Telegram as your notification center. |
 
@@ -120,6 +117,6 @@ More graph and hosting commands land as managed rolls out.
 
 ## Build your own
 
-Egregore is a template. Every command here is a `.md` file in `.claude/skills/` — read them, fork them, write new ones. Custom commands and integrations that encode your team's practice are the whole point.
+Egregore is a seed. It's meant to grow into the organic workflows of the organizations it lives inside, and evolve with them. When you notice a pattern worth keeping — a ritual, a recurring move, a prompt that works — capture it as a skill or slash command.
 
-If you build something generally useful, `/contribute` opens a PR against the upstream framework so every Egregore inherits it.
+If you build something generally useful, `/contribute` opens a PR against the upstream framework.
