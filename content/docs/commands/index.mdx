@@ -3,99 +3,117 @@ title: Full Command List
 description: Every slash command available in Egregore
 ---
 
-This is the complete list of slash commands. For an overview by category, see [Slash Commands](/docs/concepts/commands).
+import { Callout } from 'fumadocs-ui/components/callout';
 
-Commands marked **Hosted** require [managed hosting](/docs/guides/hosting) (knowledge graph).
+The complete list of slash commands, grouped by purpose. For a conceptual overview, see [Slash Commands](/docs/concepts/commands).
 
-## Core
+<Callout title="Reading this page">
+Commands marked **`*`** work in any Egregore, but are significantly enhanced by [managed hosting](/docs/guides/hosting) — team-wide visibility via the knowledge graph, routed notifications, cross-session memory.
 
-| Command | Description |
-|---------|-------------|
-| `/activity` | See what's happening across the team |
-| `/dashboard` | Your personal status and recent work |
-| `/handoff` | Leave structured notes for others (auto-saves) |
-| `/save` | Commit, push, and PR — across all repos with changes |
-| `/todo` | Manage personal tasks |
-| `/wrap` | Close your session with a personal summary |
+Commands in the **Hosted** section only function with managed hosting.
+
+You rarely type these directly. Describing intent is usually enough — "I want to hand off my work" invokes `/handoff`.
+</Callout>
+
+## Core Loop
+
+The commands that structure every session. If you learn only these, you have Egregore.
+
+| Command | What it's for |
+|---------|---------------|
+| `/activity` `*` | The team's situational awareness in one screen — what shipped, what's open, who's asking what. The antidote to standups. |
+| `/dashboard` `*` | Your orientation when you return — what you were last on, what's waiting, where to start. |
+| `/handoff` `*` | Make a session portable. The atomic unit of collaboration: here's what I did, here's what's next, pick it up. |
+| `/wrap` | A personal closing ritual. Turns a drifting session into a captured one. |
+| `/save` `*` | The one button for "I'm done for now." Commit, push, PR across every repo with changes — the git tax, paid automatically. |
+| `/todo` `*` | Personal tasks that outlive the session. Hosted: visible to teammates as signal. |
 
 ## Knowledge
 
-| Command | Description |
-|---------|-------------|
-| `/add` | Add a document, link, or artifact to shared memory |
-| `/archive` | Store effective prompt patterns as reusable knowledge |
-| `/deep-reflect` | Cross-reference an insight against the knowledge base |
-| `/meeting` | Analyze meetings from Granola |
-| `/note` | Save a personal, half-baked thought |
-| `/reflect` | Capture a share-ready decision, pattern, or insight |
+Egregore's bet is that organizations compound intelligence only when knowledge *accumulates*. These commands distinguish finished thoughts from half-formed ones, and keep both addressable.
+
+| Command | What it's for |
+|---------|---------------|
+| `/reflect` `*` | Capture something share-ready — a decision, a pattern, a realization worth keeping. The filtered layer of memory. |
+| `/note` | A half-baked thought, private by default. Pre-filter — never shared unless you promote it. |
+| `/deep-reflect` `*` | A deep-research agent that reasons reflectively across the knowledge base. Multi-sample reasoning over real artifacts — surfaces convergence, tension, gaps, and emergence you'd miss reading one file at a time. |
+| `/archive` | Preserve a prompt pattern that worked. Future sessions inherit your craft. |
+| `/add` `*` | Bring an external document, link, or artifact into shared memory. |
+| `/meeting` `*` | Turn a Granola recording into structured memory — decisions extracted, actions linked to the right people. |
 
 ## Coordination
 
-| Command | Description |
-|---------|-------------|
-| `/announce` | Draft and send a message to the Telegram group |
-| `/ask` | Route a question to self, a person, or the team |
-| `/delete-user` | Remove a member from this Egregore |
-| `/invite` | Add someone (GitHub invitation + setup link) |
-| `/issue` | Report something broken |
-| `/quest` | Start or contribute to an exploration |
-| `/quest-suggest` | Analyze quest drift and suggest restructuring |
+Async work needs routing. These commands turn one-off messages into durable signal.
+
+| Command | What it's for |
+|---------|---------------|
+| `/ask` `*` | Send a question to a person, the team, or yourself-later. Routed through Telegram in hosted mode. |
+| `/announce` `*` | Broadcast to the whole group — deliberate, previewed, not impulsive. |
+| `/quest` `*` | Start an exploration others can contribute to over weeks. Larger than a task, smaller than a project. |
+| `/quest-suggest` `*` | Analyze quest drift and propose restructuring when threads tangle. |
+| `/issue` | Report something broken. Routes to the right tracker. |
+| `/invite` `*` | Bring someone in — GitHub invite, Egregore setup link, and graph onboarding in one step. |
+| `/delete-user` `*` | Remove a member cleanly across access, memberships, and graph. |
 
 ## Identity
 
-| Command | Description |
-|---------|-------------|
-| `/me` | View or set your display name |
+| Command | What it's for |
+|---------|---------------|
+| `/me` | Tell Egregore what to call you. Your name shows up everywhere your work does. |
 
 ## Git
 
-| Command | Description |
-|---------|-------------|
-| `/branch` | Create a working branch from a description |
-| `/save` | All-in-one: commit, push, PR across all repos |
-| `/pr` | Create a pull request for current branch |
-| `/review-pr` | Review a PR with deep scrutiny |
-| `/contribute` | Contribute back to the upstream Egregore framework |
+Egregore treats git as plumbing. You almost never run these directly — `/save` covers 90%.
+
+| Command | What it's for |
+|---------|---------------|
+| `/save` `*` | The one you'll actually use. Commit, push, PR across every repo with changes. |
+| `/branch` | Create a working branch. Usually automatic on your first work-related message. |
+| `/pr` | Open a pull request for the current branch. |
+| `/review-pr` | CTO-grade review of a PR. Use this on vibe-coded changes before merging. |
+| `/contribute` | Send an improvement back to the upstream Egregore framework. Local patches don't survive `/update`. |
 
 ## Ingestion
 
-| Command | Description |
-|---------|-------------|
-| `/ingest` | Unified content ingestion router |
-| `/ingest-user-interview` | Analyze user interview transcripts |
-| `/harvest` | Directed elicitation — extract and synthesize insights |
+| Command | What it's for |
+|---------|---------------|
+| `/ingest` `*` | Unified router for turning outside content into structured memory. |
+| `/ingest-user-interview` `*` | Multi-agent analysis of user interview transcripts. |
+| `/harvest` `*` | Directed elicitation from a person — extract, deepen, synthesize. |
 
 ## Infrastructure
 
-| Command | Description |
-|---------|-------------|
-| `/checkup` | Run diagnostics on your environment |
-| `/env` | Configure environment variables |
-| `/pull` | Pull latest for current repo and shared memory |
-| `/setup` | First-time Egregore setup |
-| `/sync-repos` | Fetch all managed repos |
-| `/telegram-connect` | Set up Telegram group for notifications |
-| `/telemetry` | View or change telemetry settings |
-| `/update` | Sync framework from upstream and pull repos |
+Boring but necessary. Set up once, forget.
+
+| Command | What it's for |
+|---------|---------------|
+| `/setup` | First-time Egregore setup. |
+| `/checkup` | Diagnose a broken environment. |
+| `/update` | Sync framework from upstream. Run this when something feels stale. |
+| `/pull` | Fetch latest for the current repo and shared memory. |
+| `/sync-repos` | Smart refresh across every managed repo. |
+| `/env` | Configure environment variables. |
+| `/telemetry` | View or change what Egregore reports back. |
+| `/telegram-connect` `*` | Wire up Telegram as your notification center. |
 
 ## Hosted
 
-These commands require [managed hosting](/docs/guides/hosting) with the knowledge graph enabled.
+These commands depend on the [knowledge graph](/docs/guides/hosting) and only function under managed hosting.
 
-| Command | Description |
-|---------|-------------|
-| `/graph-diagnostic` | Full graph schema and data quality audit |
-| `/graph-maintain` | Graph maintenance cycle |
-| `/project` | Show project status — linked quests, recent artifacts |
-| `/hosting` | Manage hosted workspaces |
-| `/infra` | View or register infrastructure services |
-| `/connect` | Manage external service connectors |
+| Command | What it's for |
+|---------|---------------|
+| `/graph-diagnostic` | Full audit of graph schema and data quality. |
+| `/graph-maintain` | Scheduled maintenance cycle for the graph. |
+| `/project` | A project's live state: linked quests, recent artifacts, entry points. |
+| `/hosting` | Manage hosted workspaces — enable, status, create. |
+| `/infra` | View or register infrastructure services. |
+| `/connect` | Manage external connectors (Google, and more as they land). |
 
 ## Advanced
 
-| Command | Description |
-|---------|-------------|
-| `/summon` | Design and launch a persistent agent process |
-| `/tutorial` | Interactive walkthrough of Egregore's core loop |
-| `/eval` | Evaluate and compare pipeline outputs |
-| `/eval-multiagent` | Run multi-agent pipeline evaluations |
+| Command | What it's for |
+|---------|---------------|
+| `/summon` | Design and launch a persistent agent that runs on its own schedule. |
+| `/tutorial` | Interactive walkthrough of the core loop. |
+| `/eval` | Score and compare pipeline outputs. |
+| `/eval-multiagent` | Pipeline evaluation across multiple agents. |
