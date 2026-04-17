@@ -39,6 +39,7 @@
   --color-fd-accent: #EDE9E3;
   --color-fd-accent-foreground: #16100B;
   --color-fd-ring: #D4875A;
+  --color-fd-info: #D4875A;
 }
 
 .dark {
@@ -54,6 +55,7 @@
   --color-fd-accent: #2A2118;
   --color-fd-accent-foreground: #F1EFE2;
   --color-fd-ring: #D4875A;
+  --color-fd-info: #D4875A;
 }
 
 html {
