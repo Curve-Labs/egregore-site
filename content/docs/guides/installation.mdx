@@ -32,15 +32,14 @@ The installer walks you through:
 
 <Callout type="info" title="What the Egregore GitHub App does">
 
-The installer asks you to install the Egregore App on the account or organization you choose. It's intentionally narrow:
+The `npx create-egregore` flow:
 
-- **Per-repo access only** — the App sees only the repos you select: your Egregore instance, its memory repo, and any managed project repos you pick.
-- **No code content is read** — it uses standard GitHub APIs for repo creation, clone, push, and collaborator invites. Nothing more.
-- **You own the scoping** — you decide which repos it can touch; you can change that any time from GitHub.
-- **Revoke any time** — *GitHub Settings → Applications → Egregore*. Removing it doesn't affect your repos.
-- **Why an App** — clean per-repo scoping without handing out a broad personal access token.
+1. You install the App → establishes the scope.
+2. The installer runs device-flow OAuth as **your** user — not as the App.
+3. All repo creation, cloning, pushing uses **your** personal GitHub token on **your** machine.
+4. Nothing in Egregore Labs' infrastructure polls or pulls content from those repos.
 
-If you'd rather not use a GitHub App — for personal preference or because your organization prefers first-party tools — [Option 2](#option-2--gh-cli-no-github-app) below is the same flow using the GitHub CLI.
+If you'd rather not install a GitHub App — for personal preference or because your organization prefers first-party tools — [Option 2](#option-2--gh-cli-no-github-app) below is the same flow using the GitHub CLI.
 
 </Callout>
 
