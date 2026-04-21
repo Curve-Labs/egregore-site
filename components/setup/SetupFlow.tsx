@@ -1010,6 +1010,33 @@ type FlowMode = "setup" | "join" | "callback";
 
 type SelectedOrg = OrgInfo & { is_personal: boolean; instances: OrgInstance[] };
 
+// sessionStorage keys — persist OAuth state across /callback → /setup navigation
+// (App Router page transitions remount SetupFlow, losing React state).
+const TOKEN_KEY = "egregore_github_token";
+const USER_KEY = "egregore_github_user";
+
+function readSessionToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function readSessionUser(): GithubUser | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as GithubUser;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionAuth(token: string, user: GithubUser) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 export default function SetupFlow({ mode }: { mode: FlowMode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -1017,6 +1044,17 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
 
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [user, setUser] = useState<GithubUser | null>(null);
+
+  // Hydrate auth from sessionStorage after mount (not during SSR or initial state —
+  // useState initializer can't touch window on the server).
+  useEffect(() => {
+    const token = readSessionToken();
+    const u = readSessionUser();
+    if (token && u) {
+      setGithubToken(token);
+      setUser(u);
+    }
+  }, []);
   const [selectedOrg, setSelectedOrg] = useState<SelectedOrg | null>(null);
   const [selectedRepos, setSelectedRepos] = useState<string[] | null>(null);
   const [transcriptConsent, setTranscriptConsent] = useState<boolean | null>(null);
@@ -1052,6 +1090,7 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
     return (
       <OAuthCallback
         onAuth={(token, u) => {
+          writeSessionAuth(token, u);
           setGithubToken(token);
           setUser(u);
           if (typeof window !== "undefined") {
