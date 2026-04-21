@@ -13,6 +13,7 @@ import {
   acceptInvite,
   getGitHubAuthUrl,
   checkTelegramMembership,
+  checkAppInstallation,
   getUserProfile,
   updateUserProfile,
   type GithubUser,
@@ -24,6 +25,7 @@ import {
   type TelegramMembership,
   type UserProfile,
   type InviteInfo,
+  type AppInstallationStatus,
 } from "./api";
 import { isAdmin } from "./auth";
 import "./setup.css";
@@ -1004,6 +1006,83 @@ function InviteAccept({
   );
 }
 
+function AppInstallPrompt({
+  org,
+  installUrl,
+  onInstalled,
+}: {
+  org: OrgInfo;
+  installUrl: string;
+  onInstalled: () => void;
+}) {
+  const [checking, setChecking] = useState(false);
+
+  // Poll every 3s to detect when install completes in the other tab
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const status = await checkAppInstallation(org.login);
+        if (status.installed) {
+          clearInterval(id);
+          onInstalled();
+        }
+      } catch { /* ignore transient errors */ }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [org.login, onInstalled]);
+
+  const manualCheck = async () => {
+    setChecking(true);
+    try {
+      const status = await checkAppInstallation(org.login);
+      if (status.installed) onInstalled();
+    } catch { /* ignore */ }
+    setChecking(false);
+  };
+
+  const orgName = org.name || org.login;
+  const url = installUrl || "https://github.com/apps/egregore-labs/installations/new";
+
+  return (
+    <div className="setup-stage">
+      <p className="setup-eyebrow">One more step for {orgName}</p>
+      <p className="setup-title">Authorize Egregore on GitHub</p>
+      <p className="setup-sub">
+        Egregore needs permission to create a repo and manage workflows on your behalf. Install the GitHub App on <strong>{orgName}</strong> and we&apos;ll pick up automatically.
+      </p>
+
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="setup-btn setup-btn-primary"
+        style={{ alignSelf: "center" }}
+      >
+        <GitHubIcon /> Install on {orgName}
+      </a>
+
+      <div className="setup-status-waiting" style={{ justifyContent: "center" }}>
+        <SmallSpinner />
+        <span>Waiting for installation…</span>
+      </div>
+
+      <div style={{ textAlign: "center" }}>
+        <button
+          onClick={manualCheck}
+          disabled={checking}
+          className="setup-btn setup-btn-ghost"
+        >
+          {checking ? "Checking…" : "I've installed it — continue"}
+        </button>
+      </div>
+
+      <p className="setup-install-note" style={{ textAlign: "center", marginTop: 0 }}>
+        The install opens in a new tab. When you&apos;re done, this page continues on its own.
+      </p>
+    </div>
+  );
+}
+
 // ── Orchestrator ─────────────────────────────────────────────────
 
 type FlowMode = "setup" | "join" | "callback";
@@ -1061,6 +1140,17 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
   const [joinInstance, setJoinInstance] = useState<OrgInstance | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [instanceName, setInstanceName] = useState<string | null>(null);
+  const [appInstallStatus, setAppInstallStatus] = useState<AppInstallationStatus | null>(null);
+
+  // Check GitHub App installation as soon as an org is selected. If not
+  // installed, the user is prompted to install inline (no docs link).
+  // Fail-open on network errors so setup can proceed.
+  useEffect(() => {
+    if (!selectedOrg || appInstallStatus?.installed) return;
+    checkAppInstallation(selectedOrg.login)
+      .then(setAppInstallStatus)
+      .catch(() => setAppInstallStatus({ installed: true }));
+  }, [selectedOrg, appInstallStatus?.installed]);
 
   const isCallback = mode === "callback" || pathname === "/callback";
   const isJoin = mode === "join" || pathname === "/join";
@@ -1122,6 +1212,29 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
   // Org picker
   if (githubToken && user && !selectedOrg) {
     return <OrgPicker token={githubToken} user={user} onPick={setSelectedOrg} />;
+  }
+
+  // GitHub App install check — gates everything after org is picked. Without
+  // the App installed on the target account, the API can't generate a repo
+  // or enumerate user repos via installation token.
+  if (githubToken && selectedOrg && !appInstallStatus) {
+    return (
+      <div className="setup-stage setup-stage-centered">
+        <Spinner />
+        <p className="setup-sub" style={{ marginTop: 16, marginBottom: 0 }}>
+          Checking access for {selectedOrg.name || selectedOrg.login}…
+        </p>
+      </div>
+    );
+  }
+  if (githubToken && selectedOrg && appInstallStatus && !appInstallStatus.installed) {
+    return (
+      <AppInstallPrompt
+        org={selectedOrg}
+        installUrl={appInstallStatus.install_url || ""}
+        onInstalled={() => setAppInstallStatus({ installed: true })}
+      />
+    );
   }
 
   // Instance picker

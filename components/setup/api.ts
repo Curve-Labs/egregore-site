@@ -128,6 +128,17 @@ export async function getOrgRepos(token: string, org: string): Promise<OrgReposR
   return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
 }
 
+export type AppInstallationStatus = {
+  installed: boolean;
+  installation_id?: number;
+  install_url?: string;
+  reason?: string;
+};
+
+export async function checkAppInstallation(githubOrg: string): Promise<AppInstallationStatus> {
+  return request("GET", `/api/github-app/installation/${encodeURIComponent(githubOrg)}`);
+}
+
 type SetupOrgBody = {
   github_org: string;
   org_name: string;
