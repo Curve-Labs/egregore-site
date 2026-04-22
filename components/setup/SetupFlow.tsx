@@ -360,6 +360,72 @@ function InstanceNamePrompt({ org, onSubmit }: { org: OrgInfo; onSubmit: (name: 
   );
 }
 
+function NameYourEgregore({
+  org,
+  onSubmit,
+}: {
+  org: OrgInfo;
+  onSubmit: (displayName: string, instanceName: string) => void;
+}) {
+  const [displayName, setDisplayName] = useState(org.name || org.login);
+  const [instanceName, setInstanceName] = useState("");
+
+  const instanceSlug = instanceName.trim().toLowerCase().replace(/\s+/g, "-");
+  const repoPreview = instanceSlug ? `egregore-${instanceSlug}` : "egregore";
+  const canContinue = displayName.trim().length > 0;
+
+  const submit = () => {
+    if (!canContinue) return;
+    onSubmit(displayName.trim(), instanceName.trim());
+  };
+
+  return (
+    <div className="setup-stage">
+      <p className="setup-eyebrow">Setting up for {org.name || org.login}</p>
+      <p className="setup-title">Name your Egregore</p>
+      <p className="setup-sub">
+        A display name for your team or group — shown in the UI, greetings, and notifications.
+      </p>
+
+      <div>
+        <p className="setup-eyebrow" style={{ textAlign: "left", marginBottom: 8 }}>Display name</p>
+        <input
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={org.name || org.login}
+          autoFocus
+          className="setup-input"
+          onKeyDown={(e) => { if (e.key === "Enter" && canContinue) submit(); }}
+        />
+      </div>
+
+      <div>
+        <p className="setup-eyebrow" style={{ textAlign: "left", marginBottom: 8 }}>
+          Instance name <span style={{ opacity: 0.5, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
+        </p>
+        <input
+          type="text"
+          value={instanceName}
+          onChange={(e) => setInstanceName(e.target.value)}
+          placeholder="e.g. research, ops, frontend"
+          className="setup-input"
+          onKeyDown={(e) => { if (e.key === "Enter" && canContinue) submit(); }}
+        />
+        <p className="setup-input-hint">
+          Repo will be: <strong>{repoPreview}</strong>. Leave blank for the default first instance.
+        </p>
+      </div>
+
+      <div className="setup-actions-right">
+        <button onClick={submit} disabled={!canContinue} className="setup-btn setup-btn-primary">
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RepoPicker({
   token,
   org,
@@ -1140,6 +1206,7 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
   const [joinInstance, setJoinInstance] = useState<OrgInstance | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [instanceName, setInstanceName] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [appInstallStatus, setAppInstallStatus] = useState<AppInstallationStatus | null>(null);
 
   // Check GitHub App installation as soon as an org is selected. If not
@@ -1260,9 +1327,22 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
     );
   }
 
-  // Instance name prompt
+  // Instance name prompt (adding a Nth instance to an org that already has one)
   if (githubToken && selectedOrg && creatingNew && instanceName === null) {
     return <InstanceNamePrompt org={selectedOrg} onSubmit={setInstanceName} />;
+  }
+
+  // Name your Egregore (first-time setup, before repo picker)
+  if (githubToken && selectedOrg && !selectedOrg.has_egregore && displayName === null) {
+    return (
+      <NameYourEgregore
+        org={selectedOrg}
+        onSubmit={(name, inst) => {
+          setDisplayName(name);
+          if (inst) setInstanceName(inst);
+        }}
+      />
+    );
   }
 
   // Repo picker
@@ -1278,11 +1358,14 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
   // Setup in progress / complete
   if (githubToken && user && selectedOrg) {
     const orgForSetup = creatingNew ? { ...selectedOrg, has_egregore: false } : selectedOrg;
+    // Use the user-entered display name when available (first-time setup),
+    // fall back to the GitHub org's name/login otherwise.
+    const orgWithName = displayName ? { ...orgForSetup, name: displayName } : orgForSetup;
     return (
       <SetupProgress
         token={githubToken}
         user={user}
-        org={orgForSetup}
+        org={orgWithName}
         repos={selectedRepos || []}
         instanceName={instanceName}
         transcriptSharing={transcriptConsent || false}
