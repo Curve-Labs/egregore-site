@@ -25,25 +25,36 @@
 
 set -euo pipefail
 
+# When run via `curl … | bash`, stdin is the curl pipe, not the user's
+# terminal — interactive prompts (input(), prompt_toolkit) hang or crash
+# with "Input is not a terminal". The standard fix in installer scripts
+# (Homebrew, rustup, etc.) is to re-exec with stdin reattached to /dev/tty
+# whenever stdout is a tty but stdin isn't. We never re-exec in fully
+# non-interactive contexts (CI, scripts), so this only kicks in for the
+# curl-bash case a real human is running.
+if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
+  exec </dev/tty
+fi
+
 BOLD='\033[1m'
 CYAN='\033[0;36m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-echo -e "${BOLD}⚕ Egregore${RESET}"
-echo -e "${CYAN}collective cognition that travels${RESET}"
-echo "${DIM}────────────────────────────────────────${RESET}"
+printf '%b\n' "${BOLD}⚕ Egregore${RESET}"
+printf '%b\n' "${CYAN}collective cognition that travels${RESET}"
+printf '%b\n' "${DIM}────────────────────────────────────────${RESET}"
 echo
 
 # ────────── preflight ─────────────────────────────────────────────────
 
 if ! command -v python3 >/dev/null 2>&1; then
-  echo -e "✗ ${BOLD}Python 3${RESET} is required. Install it first and try again." >&2
+  printf '%b\n' "✗ ${BOLD}Python 3${RESET} is required. Install it first and try again." >&2
   exit 1
 fi
 
 if ! command -v git >/dev/null 2>&1; then
-  echo -e "✗ ${BOLD}git${RESET} is required. Install it first and try again." >&2
+  printf '%b\n' "✗ ${BOLD}git${RESET} is required. Install it first and try again." >&2
   exit 1
 fi
 
@@ -70,30 +81,30 @@ _clone_egregore() {
 }
 
 if [ ! -d "$EGREGORE_HOME/.git" ]; then
-  echo -e "  Downloading Egregore codebase..."
+  printf '%b\n' "  Downloading Egregore codebase..."
   if ! _clone_egregore; then
     echo
-    echo -e "✗ ${BOLD}Couldn't clone $EGREGORE_REPO${RESET} — likely a private-repo auth issue." >&2
+    printf '%b\n' "✗ ${BOLD}Couldn't clone $EGREGORE_REPO${RESET} — likely a private-repo auth issue." >&2
     echo >&2
-    echo -e "Easiest fix:" >&2
-    echo -e "  ${CYAN}gh auth login${RESET}" >&2
-    echo -e "  ${CYAN}gh repo clone $EGREGORE_REPO $EGREGORE_HOME${RESET}" >&2
-    echo -e "  ${CYAN}bash $EGREGORE_HOME/scripts/install.sh${RESET}" >&2
+    printf '%b\n' "Easiest fix:" >&2
+    printf '%b\n' "  ${CYAN}gh auth login${RESET}" >&2
+    printf '%b\n' "  ${CYAN}gh repo clone $EGREGORE_REPO $EGREGORE_HOME${RESET}" >&2
+    printf '%b\n' "  ${CYAN}bash $EGREGORE_HOME/scripts/install.sh${RESET}" >&2
     echo >&2
-    echo -e "Alternatives: a fine-grained read-only PAT in your git credentials," >&2
-    echo -e "or an SSH key registered with your GitHub account." >&2
+    printf '%b\n' "Alternatives: a fine-grained read-only PAT in your git credentials," >&2
+    printf '%b\n' "or an SSH key registered with your GitHub account." >&2
     exit 1
   fi
-  echo -e "${CYAN}✓ Codebase ready.${RESET}"
+  printf '%b\n' "${CYAN}✓ Codebase ready.${RESET}"
 else
-  echo -e "${CYAN}✓ Codebase already present.${RESET}"
+  printf '%b\n' "${CYAN}✓ Codebase already present.${RESET}"
 fi
 
 cd "$EGREGORE_HOME"
 
 # ────────── prepare installer deps ────────────────────────────────────
 
-echo -e "  Preparing installer tools..."
+printf '%b\n' "  Preparing installer tools..."
 
 # Find a package manager (uv if installed, else pip)
 PKGMGR=""
@@ -119,14 +130,14 @@ fi
 
 # Verify prompt_toolkit is importable
 if ! python3 -c "import prompt_toolkit" 2>/dev/null; then
-  echo -e "  ${DIM}Falling back to console-only installer (TUI deps unavailable)...${RESET}"
+  printf '%b\n' "  ${DIM}Falling back to console-only installer (TUI deps unavailable)...${RESET}"
   # Run console-mode with args
   python3 src/egregore/installer/tui.py --mode console "$@"
   exit $?
 fi
 
 echo
-echo -e "${CYAN}Launching Egregore installer...${RESET}"
+printf '%b\n' "${CYAN}Launching Egregore installer...${RESET}"
 echo
 
 # ────────── launch the TUI ────────────────────────────────────────────
