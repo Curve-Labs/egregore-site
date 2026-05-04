@@ -19,6 +19,26 @@
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
 
+# Egregore installer — served as text so curl | bash works.
+[[headers]]
+  for = "/install.sh"
+  [headers.values]
+    Content-Type = "text/x-shellscript; charset=utf-8"
+
+[[headers]]
+  for = "/install"
+  [headers.values]
+    Content-Type = "text/x-shellscript; charset=utf-8"
+
+# /install (no extension) rewrites to /install.sh — both URLs serve the
+# same content; the no-extension form is what we tell users to curl.
+# Must come before the SPA catch-all.
+[[redirects]]
+  from = "/install"
+  to = "/install.sh"
+  status = 200
+  force = true
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
