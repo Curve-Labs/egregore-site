@@ -25,9 +25,9 @@
 
 # The install runs non-interactively. No /dev/tty trickery, no
 # prompt_toolkit dialogs in this script. After framework install
-# completes, we print a clear "now run `egregore wizard`" hint and exit.
-# The wizard handles all interactive choices (create / join / accept)
-# from a fresh terminal where prompt_toolkit works correctly.
+# completes, we either auto-accept a passed-in invite bundle (when
+# the user ran `curl … | bash -s EG1.<bundle>`), or print a "next:
+# run `egregore wizard`" hint and exit.
 #
 # Earlier attempts threaded /dev/tty through `exec </dev/tty` and a
 # tempfile re-exec to keep the wizard inline with curl|bash; both
@@ -39,6 +39,19 @@
 # then `brew bundle`").
 
 set -euo pipefail
+
+# Capture an optional invite bundle from the first positional arg or
+# from the EGREGORE_INVITE env var. Both forms work:
+#
+#   curl -fsSL https://egregore.xyz/install | bash -s EG1.<bundle>
+#   EGREGORE_INVITE='EG1.<bundle>' curl -fsSL …/install | bash
+#
+# When set, after the framework install we auto-run `egregore accept
+# <bundle>` so the joiner's flow is one command end-to-end.
+EGREGORE_INVITE="${1:-${EGREGORE_INVITE:-}}"
+if [ "${1:-}" = "$EGREGORE_INVITE" ] && [ -n "${1:-}" ]; then
+  shift  # so the rest of the script's "$@" doesn't include the bundle
+fi
 
 BOLD='\033[1m'
 CYAN='\033[0;36m'
@@ -157,3 +170,22 @@ echo
 # overrode it.)
 
 python3 src/egregore/installer/tui.py --mode console --repo "$EGREGORE_HOME" "$@"
+
+# ────────── if an invite bundle was passed, auto-accept it ────────────
+# This makes the curl-bash-with-bundle flow a true one-command join:
+# the framework is installed and the substrate is bound, all in one.
+if [ -n "$EGREGORE_INVITE" ]; then
+  echo
+  printf '%b\n' "${CYAN}Accepting your invitation…${RESET}"
+  echo
+  if [ -x "$HOME/.local/bin/egregore" ]; then
+    exec "$HOME/.local/bin/egregore" accept "$EGREGORE_INVITE"
+  elif [ -x "$EGREGORE_HOME/.venv/bin/egregore" ]; then
+    exec "$EGREGORE_HOME/.venv/bin/egregore" accept "$EGREGORE_INVITE"
+  else
+    printf '%b\n' "  ${BOLD}Couldn't find the egregore binary on PATH.${RESET}" >&2
+    printf '%b\n' "  Install reported success but egregore isn't reachable yet." >&2
+    printf '%b\n' "  Open a fresh shell and run: ${CYAN}egregore accept $EGREGORE_INVITE${RESET}" >&2
+    exit 1
+  fi
+fi
