@@ -101,15 +101,17 @@ if [ ! -d "$EGREGORE_HOME/.git" ]; then
   printf '%b\n' "  Downloading Egregore codebase..."
   if ! _clone_egregore; then
     echo
-    printf '%b\n' "✗ ${BOLD}Couldn't clone $EGREGORE_REPO${RESET} — likely a private-repo auth issue." >&2
+    printf '%b\n' "✗ ${BOLD}Couldn't clone $EGREGORE_REPO${RESET}" >&2
     echo >&2
-    printf '%b\n' "Easiest fix:" >&2
-    printf '%b\n' "  ${CYAN}gh auth login${RESET}" >&2
-    printf '%b\n' "  ${CYAN}gh repo clone $EGREGORE_REPO $EGREGORE_HOME${RESET}" >&2
-    printf '%b\n' "  ${CYAN}bash $EGREGORE_HOME/scripts/install.sh${RESET}" >&2
+    printf '%b\n' "Most common causes:" >&2
+    printf '%b\n' "  1. The person who invited you didn't add you as a collaborator on" >&2
+    printf '%b\n' "     ${CYAN}$EGREGORE_REPO${RESET} yet. Ask them to do that on GitHub." >&2
+    printf '%b\n' "  2. Your local git isn't authenticated. Easiest fix:" >&2
+    printf '%b\n' "       ${CYAN}gh auth login${RESET}" >&2
+    printf '%b\n' "     Then re-run the same command." >&2
     echo >&2
-    printf '%b\n' "Alternatives: a fine-grained read-only PAT in your git credentials," >&2
-    printf '%b\n' "or an SSH key registered with your GitHub account." >&2
+    printf '%b\n' "If both are sorted: a fine-grained read-only PAT in your git" >&2
+    printf '%b\n' "credentials, or an SSH key registered with GitHub, also works." >&2
     exit 1
   fi
   printf '%b\n' "${CYAN}✓ Codebase ready.${RESET}"
