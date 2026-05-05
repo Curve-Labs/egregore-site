@@ -23,18 +23,33 @@
 #                   (deployed at egregore.xyz/install)
 # Keep them in sync until we add a GitHub Action.
 
-set -euo pipefail
-
-# When run via `curl … | bash`, stdin is the curl pipe, not the user's
-# terminal — interactive prompts (input(), prompt_toolkit) hang or crash
-# with "Input is not a terminal". The standard fix in installer scripts
-# (Homebrew, rustup, etc.) is to re-exec with stdin reattached to /dev/tty
-# whenever stdout is a tty but stdin isn't. We never re-exec in fully
-# non-interactive contexts (CI, scripts), so this only kicks in for the
-# curl-bash case a real human is running.
-if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
-  exec </dev/tty
+# When run as `curl … | bash`, bash is reading the SCRIPT from stdin (the
+# curl pipe). Naively doing `exec </dev/tty` would swap stdin to the
+# terminal — but then bash would try to read the REST OF THE SCRIPT from
+# the terminal, hanging forever waiting for the user to type it.
+#
+# The correct pattern (used by Homebrew, rustup, et al.): save the rest
+# of stdin to a tempfile, then re-exec bash on that file with /dev/tty
+# as stdin. The tempfile is the "rest of the script" — the lines bash
+# hasn't executed yet — so the post-bootstrap install runs from a file
+# while interactive prompts read from the user's terminal.
+#
+# We sentinel via EGREGORE_INSTALL_REEXEC so the re-exec'd shell
+# doesn't recurse. set -euo pipefail is applied AFTER this bootstrap
+# block so it's active in both the original and the re-exec'd pass.
+if [ "${EGREGORE_INSTALL_REEXEC:-0}" != "1" ] \
+   && [ ! -t 0 ] \
+   && [ -t 1 ] \
+   && [ -r /dev/tty ]; then
+  _eg_tmp="$(mktemp -t egregore-install.XXXXXX)"
+  trap 'rm -f "$_eg_tmp"' EXIT
+  # cat reads what's left of stdin (the rest of the script bash hasn't
+  # consumed yet). It returns when the curl pipe closes.
+  cat > "$_eg_tmp"
+  EGREGORE_INSTALL_REEXEC=1 exec bash "$_eg_tmp" "$@" </dev/tty
 fi
+
+set -euo pipefail
 
 BOLD='\033[1m'
 CYAN='\033[0;36m'
