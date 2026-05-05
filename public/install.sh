@@ -101,7 +101,14 @@ if [ ! -d "$EGREGORE_HOME/.git" ]; then
   fi
   printf '%b\n' "${CYAN}✓ Codebase ready.${RESET}"
 else
-  printf '%b\n' "${CYAN}✓ Codebase already present.${RESET}"
+  # Pull on re-run so the user gets the latest. Best-effort — a network
+  # blip or a dirty working tree shouldn't fail the install.
+  printf '%b\n' "  Updating Egregore codebase..."
+  if git -C "$EGREGORE_HOME" pull --quiet --rebase --autostash 2>/dev/null; then
+    printf '%b\n' "${CYAN}✓ Codebase up to date.${RESET}"
+  else
+    printf '%b\n' "${CYAN}✓ Codebase present (couldn't pull — using local).${RESET}"
+  fi
 fi
 
 cd "$EGREGORE_HOME"
