@@ -23,31 +23,20 @@
 #                   (deployed at egregore.xyz/install)
 # Keep them in sync until we add a GitHub Action.
 
-# When run as `curl … | bash`, bash is reading the SCRIPT from stdin (the
-# curl pipe). Naively doing `exec </dev/tty` would swap stdin to the
-# terminal — but then bash would try to read the REST OF THE SCRIPT from
-# the terminal, hanging forever waiting for the user to type it.
+# The install runs non-interactively. No /dev/tty trickery, no
+# prompt_toolkit dialogs in this script. After framework install
+# completes, we print a clear "now run `egregore wizard`" hint and exit.
+# The wizard handles all interactive choices (create / join / accept)
+# from a fresh terminal where prompt_toolkit works correctly.
 #
-# The correct pattern (used by Homebrew, rustup, et al.): save the rest
-# of stdin to a tempfile, then re-exec bash on that file with /dev/tty
-# as stdin. The tempfile is the "rest of the script" — the lines bash
-# hasn't executed yet — so the post-bootstrap install runs from a file
-# while interactive prompts read from the user's terminal.
-#
-# We sentinel via EGREGORE_INSTALL_REEXEC so the re-exec'd shell
-# doesn't recurse. set -euo pipefail is applied AFTER this bootstrap
-# block so it's active in both the original and the re-exec'd pass.
-if [ "${EGREGORE_INSTALL_REEXEC:-0}" != "1" ] \
-   && [ ! -t 0 ] \
-   && [ -t 1 ] \
-   && [ -r /dev/tty ]; then
-  _eg_tmp="$(mktemp -t egregore-install.XXXXXX)"
-  trap 'rm -f "$_eg_tmp"' EXIT
-  # cat reads what's left of stdin (the rest of the script bash hasn't
-  # consumed yet). It returns when the curl pipe closes.
-  cat > "$_eg_tmp"
-  EGREGORE_INSTALL_REEXEC=1 exec bash "$_eg_tmp" "$@" </dev/tty
-fi
+# Earlier attempts threaded /dev/tty through `exec </dev/tty` and a
+# tempfile re-exec to keep the wizard inline with curl|bash; both
+# approaches hit corner cases (bash trying to read script from /dev/tty,
+# prompt_toolkit/kqueue rejecting fd 0 on macOS). The two-step shape
+# (curl|bash for install, separate `egregore wizard` for setup)
+# sidesteps the whole class of issues and is what most modern installers
+# do (e.g. rustup's "rustup-init then `cargo new`", Homebrew's "install
+# then `brew bundle`").
 
 set -euo pipefail
 
@@ -139,22 +128,25 @@ else
 fi
 
 if [ -n "$PKGMGR" ]; then
-  # Install the TUI deps into user site so python3 can find them
-  $PKGMGR rich prompt_toolkit pyyaml --quiet --user --upgrade 2>/dev/null || true
-fi
-
-# Verify prompt_toolkit is importable
-if ! python3 -c "import prompt_toolkit" 2>/dev/null; then
-  printf '%b\n' "  ${DIM}Falling back to console-only installer (TUI deps unavailable)...${RESET}"
-  # Run console-mode with args
-  python3 src/egregore/installer/tui.py --mode console "$@"
-  exit $?
+  # Install Rich + pyyaml into user site so the installer's plain-text
+  # output works. We deliberately do NOT install prompt_toolkit here:
+  # this script is non-interactive, and the post-install wizard
+  # (`egregore wizard`) gets prompt_toolkit via the venv's egregore
+  # package extras.
+  $PKGMGR rich pyyaml --quiet --user --upgrade 2>/dev/null || true
 fi
 
 echo
-printf '%b\n' "${CYAN}Launching Egregore installer...${RESET}"
+printf '%b\n' "${CYAN}Setting up Egregore…${RESET}"
 echo
 
-# ────────── launch the TUI ────────────────────────────────────────────
+# ────────── run the framework install (non-interactive) ───────────────
+# Always use --mode console: no TUI dialogs in the install path. The
+# wizard (separate, manually invoked) handles every interactive choice.
+#
+# Pass --repo explicitly so tui.py operates on the same EGREGORE_HOME we
+# cloned into. (Without this, tui.py defaults to ~/egregore — which
+# matches when EGREGORE_HOME is unset, but breaks if the user
+# overrode it.)
 
-python3 src/egregore/installer/tui.py "$@"
+python3 src/egregore/installer/tui.py --mode console --repo "$EGREGORE_HOME" "$@"
