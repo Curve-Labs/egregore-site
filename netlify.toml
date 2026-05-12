@@ -39,6 +39,14 @@
   status = 200
   force = true
 
+# Handoff v1 artifacts — proxy to Railway's /h/{id} which serves static HTML
+# with embedded JSON-LD. Must be before the SPA catch-all.
+[[redirects]]
+  from = "/h/:id"
+  to = "https://egregore-production-55f2.up.railway.app/h/:id"
+  status = 200
+  force = true
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
