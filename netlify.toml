@@ -40,6 +40,13 @@
   force = true
 
 # Handoff v1 — proxy all handoff surfaces to Railway. Must be before SPA catch-all.
+# Reply: POST /h/{id}/reply — must be before /h/{id} to match the longer path first
+[[redirects]]
+  from = "/h/:id/reply"
+  to = "https://egregore-production-55f2.up.railway.app/h/:id/reply"
+  status = 200
+  force = true
+
 # View: /h/{id} serves static HTML with embedded JSON-LD
 [[redirects]]
   from = "/h/:id"
