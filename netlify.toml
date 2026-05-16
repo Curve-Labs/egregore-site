@@ -39,12 +39,12 @@
   status = 200
   force = true
 
-# MCP server — proxy to the handoff MCP service for Claude.ai connectors
-[[redirects]]
-  from = "/mcp"
-  to = "https://egregore-handoff-mcp-production.up.railway.app/mcp"
-  status = 200
-  force = true
+# egregore.xyz/mcp is the human-facing setup page (a Next.js route under
+# app/(setup)/mcp). The bare proxy to the MCP server has been removed —
+# users register at /mcp, get a personalised /mcp/u/<token> URL, and
+# paste THAT (the direct Railway URL) into Claude.ai's connector panel.
+# The setup page never needed the proxy; install instructions have
+# always pointed at the Railway URL directly.
 
 # Handoff v1 — proxy all handoff surfaces to Railway. Must be before SPA catch-all.
 # Reply: POST /h/{id}/reply — must be before /h/{id} to match the longer path first
