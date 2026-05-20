@@ -68,6 +68,32 @@
   status = 200
   force = true
 
+# Emissary v0 — proxy emissary read surfaces to Railway. Must be before SPA catch-all.
+# These match only /emissary/e/* — the install-hub pages (/emissary,
+# /emissary/verify, /emissary/i/*) are static Next routes and fall through.
+# Raw agent payload: /emissary/e/{id}/raw — must be before /emissary/e/{id}
+# to match the longer path first.
+[[redirects]]
+  from = "/emissary/e/:id/raw"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id/raw"
+  status = 200
+  force = true
+
+# Human render: /emissary/e/{id} serves the metadata-only HTML preview
+[[redirects]]
+  from = "/emissary/e/:id"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id"
+  status = 200
+  force = true
+
+# Token-bound install entry point: /emissary/i/{token} — a static Next page
+# (out/emissary/i.html) that reads the token from the URL path client-side.
+# Rewrite (not proxy) so the install hub renders for any token.
+[[redirects]]
+  from = "/emissary/i/:token"
+  to = "/emissary/i.html"
+  status = 200
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
