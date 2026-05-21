@@ -2,9 +2,10 @@
 
 // Emissary install hub (/emissary). Two install paths by harness type:
 //   - Agentic CLI harnesses (Claude Code, Codex, Claude Desktop) install the
-//     standalone `emissary` CLI.
+//     egregore-emissary skill via the `npx egregore-emissary` CLI.
 //   - Web chat (claude.ai, ChatGPT) installs the emissary MCP connector.
-// Receiving an emissary needs zero install — installing is only for sending.
+// One install covers both directions — send and receive. Receiving works
+// cold (paste the link), but runs at full fidelity once installed.
 
 import { useState } from "react";
 import { CommandBlock } from "./ui";
@@ -34,11 +35,11 @@ export default function InstallHub({
   const [path, setPath] = useState<Path>("cli");
   const [harness, setHarness] = useState<string>("claude-code");
 
-  // The documented install command (see emissary-v0-build-spec.md §B1).
+  // The install command (see docs/specs/emissary-architecture.md).
   // --token binds the registration to an /emissary/i/{token} funnel.
   const installCmd = installToken
-    ? `npx emissary install --harness=${harness} --token=${installToken}`
-    : `npx emissary install --harness=${harness}`;
+    ? `npx egregore-emissary install --harness=${harness} --token=${installToken}`
+    : `npx egregore-emissary install --harness=${harness}`;
 
   return (
     <div className="setup-stage">
@@ -46,9 +47,10 @@ export default function InstallHub({
         <div className="setup-eyebrow">Emissary Courier</div>
         <h1 className="setup-title">Send an emissary.</h1>
         <p className="setup-sub">
-          An emissary is a portable, structured handoff — a task you hand to
-          someone else&apos;s AI. Receiving one needs nothing installed: paste
-          the link into any harness. Installing is only for sending.
+          An emissary is a portable, runnable task — one you hand to someone
+          else&apos;s AI. Receiving works with no install: paste the link into
+          any harness. Install the egregore-emissary skill and every emissary
+          — sent or received — runs at full fidelity.
         </p>
       </div>
 
@@ -99,11 +101,11 @@ export default function InstallHub({
           </div>
 
           <div className="em-section">
-            <div className="em-section-label">Install the emissary CLI</div>
+            <div className="em-section-label">Install egregore-emissary</div>
             <p className="em-prose">
               Run this in your terminal. It registers your identity, sends a
-              verification email, and installs the <code>emissary</code>{" "}
-              command — and the egregore MCP into{" "}
+              verification email, and installs the egregore-emissary skill and
+              the <code>emissary</code> command — and the egregore MCP into{" "}
               {harness === "claude-desktop" ? "Claude Desktop" : "your harness"}.
             </p>
             <CommandBlock command={installCmd} />
@@ -137,10 +139,11 @@ export default function InstallHub({
         <span>Receiving?</span>
       </div>
       <p className="em-prose" style={{ textAlign: "center", opacity: 0.65 }}>
-        No install needed. Paste any{" "}
+        No install needed for first contact — paste any{" "}
         <code>egregore.xyz/emissary/e/&#123;id&#125;</code> link into Claude
-        Code, Codex, claude.ai, or ChatGPT — the agent reads it and does the
-        work.
+        Code, Codex, claude.ai, or ChatGPT and the agent runs it. Install
+        above and every emissary after runs clean — no summarization, no
+        caveats.
       </p>
     </div>
   );
