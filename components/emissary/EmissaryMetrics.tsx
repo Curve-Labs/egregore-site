@@ -74,9 +74,13 @@ function pct(rate: number): string {
 }
 
 function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // `iso` is a date-only string (YYYY-MM-DD). Build from parts so it's a
+  // *local* date — `new Date("2026-05-20")` parses as UTC midnight, which
+  // renders as the previous day in negative-UTC timezones.
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = y && m && d ? new Date(y, m - 1, d) : new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function fmtDateTime(iso: string): string {
