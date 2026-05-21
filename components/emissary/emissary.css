@@ -50,6 +50,23 @@
   opacity: 0.5;
 }
 
+/* ── Emissary cards (test surface) ── */
+.em-emissary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.em-emissary-card-title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  color: var(--black);
+}
+
 /* ── Section blocks ── */
 .em-section {
   display: flex;
