@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import InstallHub from "@/components/emissary/InstallHub";
+import EmissaryLab from "@/components/emissary/EmissaryLab";
+import PasswordGate from "@/components/emissary/PasswordGate";
 
 export const metadata = {
   title: "Emissary Courier — Send a portable handoff",
@@ -9,8 +11,11 @@ export const metadata = {
 
 export default function EmissaryHubPage() {
   return (
-    <Suspense fallback={null}>
-      <InstallHub />
-    </Suspense>
+    <PasswordGate>
+      <Suspense fallback={null}>
+        <InstallHub />
+      </Suspense>
+      <EmissaryLab />
+    </PasswordGate>
   );
 }
