@@ -8,8 +8,8 @@
 .em-hub {
   /* design tokens — scoped, not :root */
   --bg: #f5f2ed;            /* OUR cream — kept, not the design's #f3ecdf */
-  --bg-2: #ece4d2;
-  --panel: #f8f2e6;
+  --bg-2: var(--bg);        /* tinted panels flattened to the page bg */
+  --panel: var(--bg);       /* tinted panels flattened to the page bg */
   --ink: #1a1410;
   --ink-2: #3b332a;
   --muted: #847865;
