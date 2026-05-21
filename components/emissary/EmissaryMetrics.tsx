@@ -1,10 +1,14 @@
-// EmissaryMetrics — the /emissary/metrics telemetry dashboard. Renders the
-// payload from GET /api/v1/emissary/metrics in the sealed-courier visual
-// language of EmissaryHub. Pure server-renderable: no client hooks, no
-// charting library — the timeseries is plain CSS columns. Every theme-
-// sensitive color is a var(--token) emitted via CSS class, never a hex
-// literal in an inline style — so dark mode keeps working.
+"use client";
 
+// EmissaryMetrics — the /emissary/metrics telemetry dashboard. Client
+// component: the site is a static export, so it fetches its data in the
+// browser from /api/emissary-metrics — a Netlify edge function that
+// injects the secret key. Rendered in the sealed-courier visual language
+// of EmissaryHub; no charting library — the timeseries is plain CSS
+// columns. Every theme-sensitive color is a var(--token) emitted via CSS
+// class, never a hex literal in an inline style — so dark mode keeps working.
+
+import { useEffect, useState } from "react";
 import "./emissary-metrics.css";
 
 // ── Types — mirrors the metrics endpoint contract ──────────────
@@ -57,14 +61,7 @@ export type EmissaryMetricsData = {
   recent_events: MetricsEvent[];
 };
 
-// The project compiles with `strict: false`, so `strictNullChecks` is off
-// and boolean-literal discriminated unions do not narrow. Props are kept as
-// a single flat shape: `data` present means render the dashboard, absent
-// means render the unavailable state with `detail`.
-type Props = {
-  data?: EmissaryMetricsData;
-  detail?: string;
-};
+// Data is fetched client-side — see the default export at the bottom.
 
 // ── Formatting helpers ─────────────────────────────────────────
 
@@ -422,13 +419,65 @@ function RecentActivity({ events }: { events: MetricsEvent[] }) {
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────
+// ── Loading state ──────────────────────────────────────────────
 
-export default function EmissaryMetrics(props: Props) {
-  const { data, detail } = props;
-  if (!data) {
-    return <Unavailable detail={detail} />;
-  }
+function Loading() {
+  return (
+    <Shell>
+      <section>
+        <div className="mx-unavail">
+          <span className="mx-unavail-mark">Reading</span>
+          <h2>Gathering the ledger…</h2>
+          <p>Pulling the latest dispatch figures.</p>
+        </div>
+      </section>
+    </Shell>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────
+//
+// Client component. The site is a static export with no server runtime,
+// so the dashboard fetches its data in the browser from
+// /api/emissary-metrics — a Netlify edge function that adds the secret
+// X-Emissary-Metrics-Key header. The key never reaches the browser.
+
+export default function EmissaryMetrics() {
+  const [data, setData] = useState<EmissaryMetricsData | null>(null);
+  const [detail, setDetail] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch("/api/emissary-metrics", { cache: "no-store" });
+        if (!resp.ok) {
+          if (!cancelled) {
+            setDetail(`Metrics endpoint returned HTTP ${resp.status}.`);
+            setLoading(false);
+          }
+          return;
+        }
+        const json = (await resp.json()) as EmissaryMetricsData;
+        if (!cancelled) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setDetail("Could not reach the metrics endpoint.");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) return <Loading />;
+  if (!data) return <Unavailable detail={detail} />;
 
   return (
     <Shell>
