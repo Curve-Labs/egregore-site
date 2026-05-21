@@ -6,6 +6,10 @@
   NODE_VERSION = "22"
 
 [[edge_functions]]
+  function = "emissary-metrics"
+  path = "/api/emissary-metrics"
+
+[[edge_functions]]
   function = "og"
   path = "/*"
 
