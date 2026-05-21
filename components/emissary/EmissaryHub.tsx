@@ -336,7 +336,7 @@ export default function EmissaryHub() {
 
       <main className="em-main">
         {/* Hero */}
-        <section className="hero">
+        <section className="em-hero">
           <div className="eyebrow">Emissary Courier <span className="dot">·</span> v0.2</div>
           <h1 className="display">Send an <em>emissary</em>.</h1>
           <p className="lede">
