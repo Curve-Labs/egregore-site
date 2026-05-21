@@ -48,10 +48,13 @@ export default function PasswordGate({ children }: { children: ReactNode }) {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflowY: "auto",
         padding: "24px",
         background: "var(--cream)",
       }}
