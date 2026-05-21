@@ -26,8 +26,8 @@ export default function InstallHub({
   // auto-detects the harness, so no --harness flag is needed. --token binds
   // the registration to an /emissary/i/{token} funnel.
   const installCmd = installToken
-    ? `npx egregore-emissary install --token=${installToken}`
-    : `npx egregore-emissary install`;
+    ? `npx egregore-emissary@latest install --token=${installToken}`
+    : `npx egregore-emissary@latest install`;
 
   return (
     <div className="setup-stage">

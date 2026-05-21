@@ -125,9 +125,9 @@ function TerminalPath({ name }: { name: string }) {
       </p>
       <div className="term">
         <span className="cmd">
-          <span className="prompt">$</span>npx <span className="accent">egregore-emissary</span>&nbsp;install
+          <span className="prompt">$</span>npx <span className="accent">egregore-emissary@latest</span>&nbsp;install
         </span>
-        <CopyButton text="npx egregore-emissary install" />
+        <CopyButton text="npx egregore-emissary@latest install" />
       </div>
       <p className="web-note">
         Prompts for name + email if not flagged. No password — verification is a magic link.
