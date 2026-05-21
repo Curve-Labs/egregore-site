@@ -1,0 +1,516 @@
+/* emissary-metrics.css — the /emissary/metrics telemetry dashboard.
+   Built in the same sealed-courier visual language as emissary-hub.css.
+   Every selector is scoped under .em-metrics so the design's bare-element
+   rules never leak into the rest of the site. The design tokens mirror
+   .em-hub exactly — same cream, ink, accent, hairlines — so the dashboard
+   reads as the same manuscript. Every theme-sensitive color is a
+   var(--token); no resolved hex literals reach an inline style. */
+
+.em-metrics {
+  /* design tokens — scoped, not :root — mirror .em-hub */
+  --bg: #f5f2ed;
+  --bg-2: var(--bg);
+  --panel: var(--bg);
+  --ink: #1a1410;
+  --ink-2: #3b332a;
+  --muted: #847865;
+  --muted-2: #a89a85;
+  --line: #d9cfbe;
+  --line-2: #c8bca5;
+  --accent: #d9684a;
+  --accent-soft: #f3dac6;
+  --accent-deep: #a64429;
+  --code: #1a1410;
+  --code-ink: #f0e7d6;
+  --em-serif: 'Spectral', 'Source Serif Pro', Georgia, serif;
+  --em-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --em-sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* full-bleed breakout — the setup layout caps content at 560px */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
+  overflow-x: hidden;
+
+  color: var(--ink);
+  font-family: var(--em-sans);
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+.em-metrics * { box-sizing: border-box; }
+.em-metrics ::selection { background: var(--accent); color: var(--bg); }
+
+/* Page rules — hairline margins, like .em-hub */
+.em-metrics .rules { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.em-metrics .rules .vert { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: 0.6; }
+.em-metrics .rules .vert.l { left: max(24px, calc(50% - 540px)); }
+.em-metrics .rules .vert.r { right: max(24px, calc(50% - 540px)); }
+
+/* Container */
+.em-metrics .mx-main { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 0 32px 120px; }
+
+/* ── Type primitives ──────────────────────────── */
+.em-metrics .eyebrow { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.em-metrics .eyebrow .dot { color: var(--line-2); margin: 0 6px; }
+.em-metrics h1.display { font-family: var(--em-serif); font-weight: 500; font-size: 52px; line-height: 1.04; letter-spacing: -0.02em; color: var(--ink); margin: 14px 0 22px; }
+.em-metrics h1.display em { font-style: italic; font-weight: 500; color: var(--accent-deep); }
+.em-metrics .lede { font-family: var(--em-serif); font-size: 18px; line-height: 1.5; color: var(--ink-2); max-width: 560px; margin: 0 auto; font-weight: 400; text-wrap: pretty; }
+
+.em-metrics .mx-hero { text-align: center; padding: 56px 0 56px; }
+
+/* ── Section header — same as .em-hub .sec-head ─── */
+.em-metrics .sec-head { display: flex; align-items: center; gap: 16px; margin: 0 0 24px; }
+.em-metrics .sec-head .num { font-family: var(--em-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.18em; }
+.em-metrics .sec-head .label { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.em-metrics .sec-head .rule { flex: 1; height: 1px; background: var(--line); }
+
+.em-metrics section { margin-top: 56px; }
+
+/* ── Unavailable state ────────────────────────── */
+.em-metrics .mx-unavail {
+  border: 1px dashed var(--line-2);
+  background: var(--bg-2);
+  border-radius: 14px;
+  padding: 36px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.em-metrics .mx-unavail .mx-unavail-mark {
+  font-family: var(--em-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  padding: 4px 9px;
+  border-radius: 5px;
+}
+.em-metrics .mx-unavail h2 {
+  font-family: var(--em-serif);
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0;
+}
+.em-metrics .mx-unavail p {
+  font-family: var(--em-serif);
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 52ch;
+}
+.em-metrics .mx-unavail .mx-detail {
+  font-family: var(--em-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── Funnel — the headline ────────────────────── */
+.em-metrics .mx-funnel {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.em-metrics .mx-stage {
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.em-metrics .mx-stage + .mx-arrow + .mx-stage { border-left: none; }
+.em-metrics .mx-stage .mx-stage-label {
+  font-family: var(--em-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.em-metrics .mx-stage .mx-stage-value {
+  font-family: var(--em-serif);
+  font-weight: 500;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.em-metrics .mx-stage.is-final .mx-stage-value { color: var(--accent-deep); }
+.em-metrics .mx-stage .mx-stage-sub {
+  font-family: var(--em-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+.em-metrics .mx-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  min-width: 96px;
+}
+.em-metrics .mx-arrow .mx-arrow-rate {
+  font-family: var(--em-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent-deep);
+}
+.em-metrics .mx-arrow .mx-arrow-glyph {
+  color: var(--line-2);
+  font-size: 16px;
+  line-height: 1;
+  margin: 4px 0;
+}
+.em-metrics .mx-arrow .mx-arrow-label {
+  font-family: var(--em-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Timeseries — pure-CSS column chart ───────── */
+.em-metrics .mx-chart {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px 24px 18px;
+}
+.em-metrics .mx-chart-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.em-metrics .mx-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--em-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.em-metrics .mx-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+/* series tints — derived from accent + ink, all token-driven */
+.em-metrics .mx-s-register { background: var(--accent-deep); }
+.em-metrics .mx-s-verify { background: var(--accent); }
+.em-metrics .mx-s-resend_verification { background: var(--line-2); }
+.em-metrics .mx-s-emissary_create { background: var(--ink-2); }
+
+.em-metrics .mx-chart-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 200px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+.em-metrics .mx-col {
+  flex: 1 1 0;
+  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.em-metrics .mx-col-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+}
+.em-metrics .mx-bar {
+  width: 9px;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  transition: height 200ms;
+}
+.em-metrics .mx-col-date {
+  font-family: var(--em-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+.em-metrics .mx-col-total {
+  font-family: var(--em-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.em-metrics .mx-empty {
+  font-family: var(--em-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* ── Stat grid — emissaries / reach ───────────── */
+.em-metrics .mx-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.em-metrics .mx-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.em-metrics .mx-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.em-metrics .mx-panel-title {
+  font-family: var(--em-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.em-metrics .mx-panel-big {
+  font-family: var(--em-serif);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.em-metrics .mx-panel-big .mx-unit {
+  font-family: var(--em-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+/* breakdown rows (by_kind / by_distribution) */
+.em-metrics .mx-break {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.em-metrics .mx-break-label {
+  font-family: var(--em-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.em-metrics .mx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.em-metrics .mx-row-name {
+  font-family: var(--em-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  flex: 0 0 110px;
+  text-transform: capitalize;
+}
+.em-metrics .mx-row-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.em-metrics .mx-row-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.em-metrics .mx-row-count {
+  font-family: var(--em-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  flex: 0 0 34px;
+  text-align: right;
+}
+
+.em-metrics .mx-reach-sub {
+  font-family: var(--em-serif);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* ── Top creators ─────────────────────────────── */
+.em-metrics .mx-creators {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.em-metrics .mx-creator {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.em-metrics .mx-creator:last-child { border-bottom: none; }
+.em-metrics .mx-creator-rank {
+  font-family: var(--em-mono);
+  font-size: 11px;
+  color: var(--accent);
+  flex: 0 0 28px;
+  letter-spacing: 0.08em;
+}
+.em-metrics .mx-creator-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.em-metrics .mx-creator-name {
+  font-family: var(--em-serif);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+}
+.em-metrics .mx-creator-email {
+  font-family: var(--em-mono);
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.em-metrics .mx-creator-count {
+  font-family: var(--em-mono);
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.em-metrics .mx-creator-count strong {
+  font-family: var(--em-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--accent-deep);
+  margin-right: 6px;
+}
+
+/* ── Recent activity feed ─────────────────────── */
+.em-metrics .mx-feed {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.em-metrics .mx-event {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.em-metrics .mx-event:last-child { border-bottom: none; }
+.em-metrics .mx-event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.em-metrics .mx-event-type {
+  font-family: var(--em-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  flex: 0 0 168px;
+}
+.em-metrics .mx-event-user {
+  font-family: var(--em-serif);
+  font-size: 14.5px;
+  color: var(--ink-2);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.em-metrics .mx-event-time {
+  font-family: var(--em-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* footer — same as .em-hub footer */
+.em-metrics footer {
+  margin-top: 96px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-family: var(--em-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.em-metrics footer a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line-2); padding-bottom: 1px; }
+.em-metrics footer a:hover { color: var(--accent-deep); border-color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 760px) {
+  .em-metrics .mx-main { padding: 0 18px 80px; }
+  .em-metrics h1.display { font-size: 38px; }
+  .em-metrics .mx-funnel { grid-template-columns: 1fr; }
+  .em-metrics .mx-arrow {
+    flex-direction: row;
+    gap: 10px;
+    min-width: 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 24px;
+  }
+  .em-metrics .mx-arrow .mx-arrow-glyph { transform: rotate(90deg); margin: 0; }
+  .em-metrics .mx-grid { grid-template-columns: 1fr; }
+  .em-metrics .mx-event-type { flex: 0 0 120px; }
+  .em-metrics .mx-row-name { flex: 0 0 84px; }
+}
