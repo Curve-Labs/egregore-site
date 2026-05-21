@@ -1,6 +1,4 @@
-import { Suspense } from "react";
-import InstallHub from "@/components/emissary/InstallHub";
-import EmissaryLab from "@/components/emissary/EmissaryLab";
+import EmissaryHub from "@/components/emissary/EmissaryHub";
 import PasswordGate from "@/components/emissary/PasswordGate";
 
 export const metadata = {
@@ -12,10 +10,7 @@ export const metadata = {
 export default function EmissaryHubPage() {
   return (
     <PasswordGate>
-      <Suspense fallback={null}>
-        <InstallHub />
-      </Suspense>
-      <EmissaryLab />
+      <EmissaryHub />
     </PasswordGate>
   );
 }
