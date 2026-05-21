@@ -59,7 +59,9 @@
 .em-hub .lede { font-family: var(--em-serif); font-size: 19px; line-height: 1.5; color: var(--ink-2); max-width: 560px; margin: 0 auto; font-weight: 400; text-wrap: pretty; }
 .em-hub .lede .em-word { color: var(--accent-deep); font-style: italic; }
 
-.em-hub .hero { text-align: center; padding: 56px 0 64px; }
+/* .em-hero, not .hero — the site's globals.css .hero (height:800px;
+   display:flex) would otherwise leak in and force the hero 800px tall. */
+.em-hub .em-hero { text-align: center; padding: 56px 0 64px; }
 
 /* ── Section header ───────────────────────────── */
 .em-hub .sec-head { display: flex; align-items: center; gap: 16px; margin: 0 0 28px; }
