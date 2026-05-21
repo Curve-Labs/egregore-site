@@ -39,12 +39,12 @@
   status = 200
   force = true
 
-# MCP server — proxy to the handoff MCP service for Claude.ai connectors
-[[redirects]]
-  from = "/mcp"
-  to = "https://egregore-handoff-mcp-production.up.railway.app/mcp"
-  status = 200
-  force = true
+# egregore.xyz/mcp is the human-facing setup page (a Next.js route under
+# app/(setup)/mcp). The bare proxy to the MCP server has been removed —
+# users register at /mcp, get a personalised /mcp/u/<token> URL, and
+# paste THAT (the direct Railway URL) into Claude.ai's connector panel.
+# The setup page never needed the proxy; install instructions have
+# always pointed at the Railway URL directly.
 
 # Handoff v1 — proxy all handoff surfaces to Railway. Must be before SPA catch-all.
 # Reply: POST /h/{id}/reply — must be before /h/{id} to match the longer path first
@@ -67,6 +67,32 @@
   to = "https://egregore-production-55f2.up.railway.app/api/artifacts/handoff/:splat"
   status = 200
   force = true
+
+# Emissary v0 — proxy emissary read surfaces to Railway. Must be before SPA catch-all.
+# These match only /emissary/e/* — the install-hub pages (/emissary,
+# /emissary/verify, /emissary/i/*) are static Next routes and fall through.
+# Raw agent payload: /emissary/e/{id}/raw — must be before /emissary/e/{id}
+# to match the longer path first.
+[[redirects]]
+  from = "/emissary/e/:id/raw"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id/raw"
+  status = 200
+  force = true
+
+# Human render: /emissary/e/{id} serves the metadata-only HTML preview
+[[redirects]]
+  from = "/emissary/e/:id"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id"
+  status = 200
+  force = true
+
+# Token-bound install entry point: /emissary/i/{token} — a static Next page
+# (out/emissary/i.html) that reads the token from the URL path client-side.
+# Rewrite (not proxy) so the install hub renders for any token.
+[[redirects]]
+  from = "/emissary/i/:token"
+  to = "/emissary/i.html"
+  status = 200
 
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
