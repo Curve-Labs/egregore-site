@@ -25,17 +25,9 @@ function EmissaryRow({
   url: string;
 }) {
   return (
-    <div className="em-section">
+    <div className="em-emissary-card">
       <div className="em-section-label">{label}</div>
-      <div
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "16px",
-          color: "var(--black)",
-        }}
-      >
-        {title}
-      </div>
+      <div className="em-emissary-card-title">{title}</div>
       <p className="em-prose">{desc}</p>
       <div className="em-url-field">
         <code>{url}</code>
@@ -72,7 +64,7 @@ export default function EmissaryLab() {
         url={INSTALL_URL}
       />
 
-      <div className="em-section">
+      <div className="em-emissary-card">
         <div className="em-section-label">MCP · not yet tested</div>
         <p className="em-prose">
           The MCP connector (claude.ai / ChatGPT) is wired through the Web chat
