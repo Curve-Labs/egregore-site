@@ -7,6 +7,7 @@
 // header. The key never reaches the browser.
 
 import EmissaryMetrics from "@/components/emissary/EmissaryMetrics";
+import PasswordGate from "@/components/emissary/PasswordGate";
 
 export const metadata = {
   title: "Emissary telemetry — Emissary Courier",
@@ -15,5 +16,9 @@ export const metadata = {
 };
 
 export default function EmissaryMetricsPage() {
-  return <EmissaryMetrics />;
+  return (
+    <PasswordGate>
+      <EmissaryMetrics />
+    </PasswordGate>
+  );
 }
