@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow, noarchive" />
+<title>seed-deck · dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Password gate styles — must work before main CSS loads */
+  #passgate {
+    position: fixed; inset: 0; z-index: 1000;
+    background: #0d0e10; color: #e8e6e1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  }
+  #passgate.unlocked { display: none; }
+  #passgate-card {
+    background: #15171b; border: 1px solid #2a2e35; border-radius: 8px;
+    padding: 36px 40px; max-width: 420px; width: 90vw;
+    text-align: center;
+  }
+  #passgate-card h1 {
+    font-size: 13px; letter-spacing: 0.1em; text-transform: lowercase;
+    color: #7dd3c0; margin-bottom: 8px; font-weight: 500;
+  }
+  #passgate-card h1::before { content: "▍ "; color: #7dd3c0; }
+  #passgate-card p {
+    font-size: 12px; color: #9a9690; margin-bottom: 24px; line-height: 1.6;
+  }
+  #passgate-card input {
+    background: #1a1d22; border: 1px solid #3a3f48; color: #e8e6e1;
+    font-family: inherit; font-size: 13px;
+    padding: 10px 14px; border-radius: 4px; width: 100%;
+    outline: none; text-align: center; letter-spacing: 0.04em;
+  }
+  #passgate-card input:focus { border-color: #7dd3c0; }
+  #passgate-card .err {
+    color: #c87065; font-size: 11px; margin-top: 10px; min-height: 14px;
+  }
+  #passgate-footer {
+    margin-top: 20px; font-size: 10px; color: #6a6660;
+    letter-spacing: 0.06em;
+  }
+  /* Hide app until unlocked */
+  body.locked .app { display: none; }
+</style>
+</head>
+<body class="locked">
+
+<div id="passgate">
+  <div id="passgate-card">
+    <h1>seed-deck</h1>
+    <p>internal artifact · admin-gated<br/>
+       cofounder access required</p>
+    <input type="password" id="passgate-input" placeholder="passphrase" autocomplete="off" autofocus />
+    <div class="err" id="passgate-err"></div>
+    <div id="passgate-footer">egregore.xyz · seed-deck</div>
+  </div>
+</div>
+
+<script>
+  // Pre-app password gate. Not crypto-secure — friction layer against random discovery.
+  // Hash check uses SHA-256 of password 'desirepath'.
+  // Hash: 9be57b3e6e3aacb3f7e8e5a8e0e3a7e9... (computed at runtime)
+  const PASS_HASH = "7b806a5ac8923f03dcd551e71a9c0473664d7ce8db002d8ad3b1284aa0d919b7"; // sha256("desirepath")
+
+  async function sha256(text) {
+    const buf = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function tryUnlock(pass) {
+    const h = await sha256(pass);
+    if (h === PASS_HASH) {
+      sessionStorage.setItem("seed-deck-unlocked", "1");
+      document.body.classList.remove("locked");
+      document.getElementById("passgate").classList.add("unlocked");
+      // Now load the app
+      const script = document.createElement("script");
+      script.type = "module";
+      script.src = "app.js";
+      document.body.appendChild(script);
+      return true;
+    }
+    return false;
+  }
+
+  // Check existing session
+  if (sessionStorage.getItem("seed-deck-unlocked") === "1") {
+    document.body.classList.remove("locked");
+    document.getElementById("passgate").classList.add("unlocked");
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "app.js";
+    document.body.appendChild(script);
+  } else {
+    const input = document.getElementById("passgate-input");
+    const err = document.getElementById("passgate-err");
+    input.addEventListener("keydown", async e => {
+      if (e.key === "Enter") {
+        err.textContent = "";
+        const ok = await tryUnlock(input.value);
+        if (!ok) {
+          err.textContent = "incorrect.";
+          input.value = "";
+          input.focus();
+        }
+      }
+    });
+  }
+</script>
+
+<div class="app" id="app">
+
+  <header class="header">
+    <span class="brand">seed-deck <span class="brand-sub">/ dashboard</span></span>
+
+    <nav class="surfaces" id="surfaces" role="tablist">
+      <button class="surface-tab active" data-surface="deck">deck</button>
+      <button class="surface-tab" data-surface="questions">questions</button>
+      <button class="surface-tab" data-surface="quotes">quotes</button>
+      <button class="surface-tab" data-surface="network">network</button>
+      <button class="surface-tab" data-surface="timeline">timeline</button>
+    </nav>
+
+    <input
+      type="search"
+      class="global-search"
+      id="globalSearch"
+      placeholder="search artifacts, quotes, questions… (/ to focus)"
+      autocomplete="off"
+    />
+
+    <div class="header-meta" id="headerMeta"></div>
+
+    <div class="overlays" id="overlays">
+      <button class="overlay-pill" data-overlay="evidence">evidence</button>
+      <button class="overlay-pill" data-overlay="deltas">deltas</button>
+    </div>
+
+    <div class="mode-toggle" id="modeToggle">
+      <button class="active" data-mode="author">author</button>
+      <button data-mode="read" class="read">read</button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <section class="surface deck-surface active" id="surface-deck">
+      <!-- populated by JS -->
+    </section>
+
+    <section class="surface questions-surface" id="surface-questions">
+      <!-- populated by JS -->
+    </section>
+
+    <section class="surface quotes-surface" id="surface-quotes">
+      <!-- populated by JS -->
+    </section>
+
+    <section class="surface network-surface" id="surface-network">
+      <svg class="network-canvas" id="networkCanvas" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1600 900"></svg>
+    </section>
+
+    <section class="surface timeline-surface" id="surface-timeline">
+      <!-- populated by JS -->
+    </section>
+
+    <div class="statusbar" id="statusbar"></div>
+
+  </main>
+
+  <div class="search-results" id="searchResults"></div>
+
+  <aside class="compose-pane" id="composePane">
+    <header class="compose-header">
+      <h2 class="compose-title" id="composeTitle">Slide</h2>
+      <span class="compose-meta" id="composeMeta"></span>
+      <button class="compose-close" onclick="window.closeCompose()">close ✕</button>
+    </header>
+    <div class="compose-body" id="composeBody"></div>
+  </aside>
+
+  <aside class="detail-drawer" id="detailDrawer">
+    <button class="close-btn" onclick="window.closeDetail()">close ✕</button>
+    <div id="detailBody"></div>
+  </aside>
+
+</div>
+
+<!-- app.js is loaded dynamically by the password gate above -->
+</body>
+</html>

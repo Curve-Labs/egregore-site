@@ -1,4 +1,16 @@
 User-agent: *
 Allow: /
+Disallow: /seed-deck/
+Disallow: /seed-deck
 
 Sitemap: https://egregore.xyz/sitemap.xml
+
+# AI crawlers — disallow seed-deck explicitly
+User-agent: GPTBot
+Disallow: /seed-deck/
+
+User-agent: ClaudeBot
+Disallow: /seed-deck/
+
+User-agent: anthropic-ai
+Disallow: /seed-deck/
