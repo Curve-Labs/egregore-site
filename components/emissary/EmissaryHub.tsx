@@ -5,8 +5,8 @@
 // setup layout supplies the egregore logo) and --bg is kept as our cream;
 // everything else is the design. The design-tool TweaksPanel is dropped.
 
-import { useState, type FC, type SVGProps } from "react";
-import { register } from "./api";
+import { useState, useEffect, type FC, type SVGProps } from "react";
+import { register, fetchUsage } from "./api";
 import type { McpConfig } from "./api";
 import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
 import "./emissary-hub.css";
@@ -27,6 +27,13 @@ const IconInbox: FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
     <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </svg>
+);
+// Paper-plane — "carried N times" (one tick per receiver who ran it).
+const IconRuns: FC<SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
@@ -232,31 +239,31 @@ const EMISSARY_BASE = "https://egregore.xyz/emissary/e/";
 
 const EMISSARIES: Emissary[] = [
   {
-    id: "spiral",
-    stamp: "I · CLARITY",
-    seal: "S-001",
-    tag: "Live",
-    cat: "Socratic",
-    name: "Spiral",
-    italic: false,
-    desc: "Pressure-tests a half-formed thesis in three descending rings. Each pass tightens the question, until the receiver can say plainly what they want and how to get there.",
-    meta: [["Rings", "3"], ["Run", "~12 min"], ["Best with", "Goals · Theses"]],
-    uuid: "75bedab5-e4da-42c0-a955-cd360388442c",
-    Sigil: SigilSpiral,
-    draft: false,
-  },
-  {
     id: "bootstrap",
-    stamp: "II · BOOTSTRAP",
-    seal: "S-002",
+    stamp: "I · BOOTSTRAP",
+    seal: "S-001",
     tag: "Live",
     cat: "Self-install",
     name: "First Stone",
     italic: false,
     desc: "The bootstrap emissary. Send it to anyone — it walks their AI through installing egregore-emissary. The cold-to-installed conversion, delivered as an emissary itself.",
-    meta: [["Steps", "4"], ["Run", "~3 min"], ["Best with", "First contact"]],
+    meta: [["Steps", "4"], ["Run", "~20 sec"], ["Best with", "First contact"]],
     uuid: "d9ba091e-2083-4546-8243-bae37f168bbc",
     Sigil: SigilBootstrap,
+    draft: false,
+  },
+  {
+    id: "spiral",
+    stamp: "II · CLARITY",
+    seal: "S-002",
+    tag: "Live",
+    cat: "Socratic",
+    name: "Spiral",
+    italic: false,
+    desc: "Pressure-tests a half-formed thesis in three descending rings. Each pass tightens the question, until the receiver can say plainly what they want and how to get there.",
+    meta: [["Rings", "3"], ["Run", "~15 min"], ["Best with", "Goals · Theses"]],
+    uuid: "75bedab5-e4da-42c0-a955-cd360388442c",
+    Sigil: SigilSpiral,
     draft: false,
   },
   {
@@ -268,7 +275,7 @@ const EMISSARIES: Emissary[] = [
     name: "Cartographer",
     italic: true,
     desc: "Charts a domain on the receiver's behalf — sources, claims, contested edges. Returns an annotated map you can hand back as the next emissary.",
-    meta: [["Passes", "2"], ["Run", "~25 min"], ["Best with", "Open questions"]],
+    meta: [["Passes", "2"], ["Run", "~7 min"], ["Best with", "Open questions"]],
     Sigil: SigilCartographer,
     draft: true,
   },
@@ -281,13 +288,13 @@ const EMISSARIES: Emissary[] = [
     name: "Forge",
     italic: true,
     desc: "The emissary that builds emissaries. Run it and it teaches the model, shapes one real task of yours into a runnable handoff, and publishes it — you leave holding a link to send.",
-    meta: [["Steps", "3"], ["Run", "~10 min"], ["Best with", "First emissary"]],
+    meta: [["Steps", "3"], ["Run", "~1 min"], ["Best with", "First emissary"]],
     Sigil: SigilForge,
     draft: true,
   },
 ];
 
-function EmissaryCard({ em }: { em: Emissary }) {
+function EmissaryCard({ em, uses }: { em: Emissary; uses?: number }) {
   const Sigil = em.Sigil;
   const link = em.uuid ? `${EMISSARY_BASE}${em.uuid}` : null;
   return (
@@ -301,6 +308,11 @@ function EmissaryCard({ em }: { em: Emissary }) {
         <div className="em-tags">
           <span className="pill">{em.tag}</span>
           <span>{em.cat}</span>
+          {typeof uses === "number" && (
+            <span className="em-uses" title={`Carried ${uses} time${uses === 1 ? "" : "s"}`}>
+              <IconRuns /> {uses}
+            </span>
+          )}
         </div>
         <h3 className="em-name" style={em.italic ? { fontStyle: "italic" } : undefined}>{em.name}</h3>
         <p className="em-desc">{em.desc}</p>
@@ -330,6 +342,20 @@ function EmissaryCard({ em }: { em: Emissary }) {
 
 // ── Page ───────────────────────────────────────────────
 export default function EmissaryHub() {
+  // Live "carried N times" counts, keyed by emissary uuid. Fetched best-
+  // effort on mount; if the endpoint is unavailable the cards just render
+  // without a count.
+  const [uses, setUses] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const ids = EMISSARIES.map((e) => e.uuid).filter((u): u is string => !!u);
+    if (ids.length === 0) return;
+    fetchUsage(ids)
+      .then(setUses)
+      .catch(() => {
+        /* endpoint not yet deployed / unreachable — show no counts */
+      });
+  }, []);
+
   return (
     <div className="em-hub">
       <div className="rules"><div className="vert l" /><div className="vert r" /></div>
@@ -337,7 +363,6 @@ export default function EmissaryHub() {
       <main className="em-main">
         {/* Hero */}
         <section className="em-hero">
-          <div className="eyebrow">Emissary Courier <span className="dot">·</span> v0.2</div>
           <h1 className="display">Send an <em>emissary</em>.</h1>
           <p className="lede">
             An emissary is a portable, runnable task — handed to{" "}
@@ -361,8 +386,7 @@ export default function EmissaryHub() {
             <p>
               <strong style={{ fontWeight: 500 }}>Receiving?</strong> Paste any{" "}
               <code>egregore.xyz/emissary/e/{`{id}`}</code> link into Claude Code, Codex,
-              claude.ai, or ChatGPT — the agent runs it. Install above and every emissary
-              after runs clean: no summarization, no caveats.
+              claude.ai, or ChatGPT.
             </p>
           </div>
         </section>
@@ -371,18 +395,21 @@ export default function EmissaryHub() {
         <section>
           <div className="sec-head">
             <span className="num">§ 02</span>
-            <span className="label">The Pouch — try one</span>
+            <span className="label">Featured Emissaries</span>
             <span className="rule" />
             <span className="label">{EMISSARIES.length} of {EMISSARIES.length}</span>
           </div>
           <div className="pouch-intro">
             <p>
-              Each emissary carries a job. Copy a link, paste it into your harness, and the
-              receiver runs it. Send one to yourself first to see how it reads.
+              Each emissary carries a workflow. Copy their link, paste it into your harness,
+              and with consent, your agent will run it. Use the First Stone emissary to get
+              started.
             </p>
           </div>
           <div className="pouch">
-            {EMISSARIES.map((em) => <EmissaryCard key={em.id} em={em} />)}
+            {EMISSARIES.map((em) => (
+              <EmissaryCard key={em.id} em={em} uses={em.uuid ? uses[em.uuid] : undefined} />
+            ))}
           </div>
         </section>
 
