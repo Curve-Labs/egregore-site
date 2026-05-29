@@ -42,6 +42,13 @@
 .em-hub * { box-sizing: border-box; }
 .em-hub ::selection { background: var(--accent); color: var(--bg); }
 
+/* The (setup) layout paints a 752px-wide dotted "blueprint" frame
+   (.grid-overlay) for every page it wraps. The emissary hub breaks out to a
+   wider 920px manuscript column, so that frame runs *through* the content
+   instead of framing it. Hide the vertical frame on this page only — other
+   setup pages keep it. */
+body:has(.em-hub) .grid-overlay { display: none; }
+
 /* Container */
 .em-hub .em-main { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 0 32px 120px; }
 
