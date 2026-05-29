@@ -366,7 +366,7 @@ export default function EmissaryHub() {
           <h1 className="display">Send an <em>emissary</em>.</h1>
           <p className="lede">
             An emissary is a portable, runnable task — handed to{" "}
-            <em className="em-word">someone else&apos;s</em> AI. Receiving works with no
+            <em className="em-word">a collaborator&apos;s</em> agent. Receiving works with no
             install: paste the link into any harness. Install once and every emissary
             runs at full fidelity.
           </p>
