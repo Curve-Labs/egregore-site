@@ -42,12 +42,6 @@
 .em-hub * { box-sizing: border-box; }
 .em-hub ::selection { background: var(--accent); color: var(--bg); }
 
-/* Page rules — hairlines at content-column edges, like a manuscript margin */
-.em-hub .rules { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-.em-hub .rules .vert { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: 0.6; }
-.em-hub .rules .vert.l { left: max(24px, calc(50% - 540px)); }
-.em-hub .rules .vert.r { right: max(24px, calc(50% - 540px)); }
-
 /* Container */
 .em-hub .em-main { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 0 32px 120px; }
 
@@ -76,7 +70,6 @@
 .em-hub .channel-tab { background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 14px 12px; text-align: left; cursor: pointer; font: inherit; color: var(--ink); transition: background 120ms, border-color 120ms; display: flex; flex-direction: column; gap: 6px; min-height: 64px; position: relative; }
 .em-hub .channel-tab:hover { background: rgba(255,255,255,0.5); }
 .em-hub .channel-tab[aria-selected="true"] { background: #fff; border-color: var(--line-2); box-shadow: 0 1px 2px rgba(26,20,16,0.06), inset 0 0 0 1px rgba(217,104,74,0.08); }
-.em-hub .channel-tab[aria-selected="true"]::before { content: ''; position: absolute; left: -4px; right: -4px; bottom: -12px; height: 12px; background: linear-gradient(to bottom, #fff, transparent); pointer-events: none; }
 .em-hub .channel-tab .name { font-family: var(--em-serif); font-weight: 500; font-size: 16px; line-height: 1.1; }
 .em-hub .channel-tab .kind { font-family: var(--em-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .em-hub .channel-tab .dot { position: absolute; top: 12px; right: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }

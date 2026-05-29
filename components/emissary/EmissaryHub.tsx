@@ -358,8 +358,6 @@ export default function EmissaryHub() {
 
   return (
     <div className="em-hub">
-      <div className="rules"><div className="vert l" /><div className="vert r" /></div>
-
       <main className="em-main">
         {/* Hero */}
         <section className="em-hero">
