@@ -85,3 +85,19 @@ export async function verify(token: string): Promise<VerifyResponse> {
     `/verify?token=${encodeURIComponent(token)}`,
   );
 }
+
+export type UsageResponse = {
+  counts: Record<string, number>;
+};
+
+// GET /usage?ids=a,b,c — public per-emissary "carried" counts (receipt
+// totals) for the given ids. No auth — counts on published emissaries are
+// public. Returns a { uuid: count } map.
+export async function fetchUsage(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return {};
+  const res = await request<UsageResponse>(
+    "GET",
+    `/usage?ids=${encodeURIComponent(ids.join(","))}`,
+  );
+  return res.counts ?? {};
+}
