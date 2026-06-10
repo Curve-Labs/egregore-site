@@ -72,6 +72,15 @@
   status = 200
   force = true
 
+# Vanity emissary slugs — short memorable URLs for circulated emissaries.
+# Proxy (200) so the URL stays egregore.xyz/emissary/{slug}. Must be before
+# the /emissary/e/:id rules and the SPA catch-all.
+[[redirects]]
+  from = "/emissary/traction"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/fdc3e4fd-aad6-4103-bc29-0fc2cdf91e8a"
+  status = 200
+  force = true
+
 # Emissary v0 — proxy emissary read surfaces to Railway. Must be before SPA catch-all.
 # These match only /emissary/e/* — the install-hub pages (/emissary,
 # /emissary/verify, /emissary/i/*) are static Next routes and fall through.
