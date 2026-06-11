@@ -413,6 +413,34 @@ export default function EmissaryHub() {
           </div>
         </section>
 
+        {/* Platform addresses (spec §2.3/§2.5) */}
+        <section>
+          <div className="sec-head">
+            <span className="num">§ 03</span>
+            <span className="label">Addresses &amp; the shelf</span>
+            <span className="rule" />
+            <span className="label">star on the web, enact in the terminal</span>
+          </div>
+          <div className="pouch-intro">
+            <p>
+              Published emissaries now live at named addresses:{" "}
+              <code>egregore.xyz/@{`{handle}`}</code> is a publisher&apos;s shelf, and{" "}
+              <code>egregore.xyz/@{`{handle}`}/{`{slug}`}</code> always points at the
+              latest version (every <code>/emissary/e/{`{id}`}</code> link keeps meaning
+              that exact version, forever). Browse the categorized shelf at{" "}
+              <a href="/emissary/browse">egregore.xyz/emissary/browse</a>.
+            </p>
+            <p>
+              Star an emissary and it becomes addressable from your own agent:{" "}
+              <em>&ldquo;enact my deep-research emissary&rdquo;</em> resolves the star —
+              pinned to the version you evaluated by default, or following the latest if
+              you opted in — fetches it, and runs it. Stars pin by default, so a
+              publisher updating an emissary never changes what your agent runs without
+              asking you first.
+            </p>
+          </div>
+        </section>
+
         <footer>
           <span>egregore.xyz</span>
           <span>
