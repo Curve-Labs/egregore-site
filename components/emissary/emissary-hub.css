@@ -79,7 +79,7 @@ body:has(.em-hub) .grid-overlay { display: none; }
 /* ── Setup module ─────────────────────────────── */
 .em-hub .setup { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px; margin-top: 8px; }
 
-.em-hub .channel-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--bg-2); border-radius: 10px; padding: 4px; }
+.em-hub .channel-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; background: var(--bg-2); border-radius: 10px; padding: 4px; }
 .em-hub .channel-tab { background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 14px 12px; text-align: left; cursor: pointer; font: inherit; color: var(--ink); transition: background 120ms, border-color 120ms; display: flex; flex-direction: column; gap: 6px; min-height: 64px; position: relative; }
 .em-hub .channel-tab:hover { background: rgba(255,255,255,0.5); }
 .em-hub .channel-tab[aria-selected="true"] { background: #fff; border-color: var(--line-2); box-shadow: 0 1px 2px rgba(26,20,16,0.06), inset 0 0 0 1px rgba(217,104,74,0.08); }
@@ -90,6 +90,11 @@ body:has(.em-hub) .grid-overlay { display: none; }
 .em-hub .channel-tab .glyph { position: absolute; right: 12px; bottom: 10px; width: 20px; height: 20px; color: var(--muted-2); }
 .em-hub .channel-tab[aria-selected="true"] .glyph { color: var(--accent); }
 .em-hub .channel-tab .glyph svg { width: 100%; height: 100%; }
+
+/* Disabled channel — visible on the rail, not yet open. */
+.em-hub .channel-tab.soon-tab { cursor: default; opacity: 0.55; }
+.em-hub .channel-tab.soon-tab:hover { background: transparent; }
+.em-hub .channel-tab .soon { position: absolute; top: 9px; right: 26px; font-family: var(--em-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line-2); border-radius: 4px; padding: 2px 6px 1px; }
 
 .em-hub .channel-body { padding: 26px 22px 22px; }
 
@@ -105,21 +110,7 @@ body:has(.em-hub) .grid-overlay { display: none; }
 .em-hub .copy-btn:hover { background: rgba(240,231,214,0.14); }
 .em-hub .copy-btn.copied { color: var(--accent); border-color: rgba(217,104,74,0.4); background: rgba(217,104,74,0.08); }
 
-/* Inline form (web-chat path) */
-.em-hub .web-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.em-hub .field { display: flex; flex-direction: column; gap: 6px; }
-.em-hub .field.full { grid-column: 1 / -1; }
-.em-hub .field label { font-family: var(--em-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.em-hub .field input { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; font: 14px/1.4 var(--em-sans); color: var(--ink); transition: border-color 120ms, box-shadow 120ms; }
-.em-hub .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(217,104,74,0.12); }
-.em-hub .field .hint { font-family: var(--em-mono); font-size: 10.5px; color: var(--muted-2); letter-spacing: 0.02em; }
-.em-hub .form-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 14px; flex-wrap: wrap; }
-.em-hub .form-foot .flags { font-family: var(--em-mono); font-size: 10.5px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; }
-.em-hub .btn-primary { background: var(--ink); color: var(--bg); border: none; border-radius: 8px; padding: 11px 18px; font: 500 13px/1 var(--em-sans); cursor: pointer; transition: transform 120ms, background 120ms; }
-.em-hub .btn-primary:hover { background: #000; transform: translateY(-1px); }
-.em-hub .btn-primary:disabled { opacity: 0.55; cursor: default; transform: none; }
 .em-hub .web-note { margin: 14px 0 0; font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--muted); }
-.em-hub .web-note.err { color: var(--accent-deep); }
 
 /* Receive-line — quiet utility note */
 .em-hub .receive { display: flex; align-items: flex-start; gap: 14px; padding: 18px 22px; background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: 10px; margin-top: 16px; }
@@ -171,6 +162,17 @@ body:has(.em-hub) .grid-overlay { display: none; }
 .em-hub .draft-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .em-hub .draft-row .dash { flex: 1; height: 1px; background: var(--line); }
 
+/* ── Addresses & the shelf (§ 03) ─────────────── */
+.em-hub .addr-list { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin: 0 0 28px; }
+.em-hub .addr-row { display: flex; align-items: baseline; gap: 22px; padding: 16px 22px; }
+.em-hub .addr-row + .addr-row { border-top: 1px solid var(--line); }
+.em-hub .addr-chip { font-family: var(--em-mono); font-size: 12.5px; color: var(--accent-deep); background: var(--accent-soft); padding: 5px 10px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; min-width: 300px; }
+.em-hub .addr-desc { margin: 0; font-family: var(--em-serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.em-hub .shelf-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 20px; border: 1px solid var(--line-2); border-radius: 8px; background: transparent; font-family: var(--em-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-deep); text-decoration: none; transition: border-color 120ms, background 120ms; }
+.em-hub .shelf-cta:hover { border-color: var(--accent); background: var(--accent-soft); }
+.em-hub .shelf-cta .arr { transition: transform 120ms; }
+.em-hub .shelf-cta:hover .arr { transform: translateX(3px); }
+
 /* Section spacing */
 .em-hub section { margin-top: 64px; }
 
@@ -188,5 +190,6 @@ body:has(.em-hub) .grid-overlay { display: none; }
   .em-hub .em-sigil { padding: 28px; border-right: none; border-bottom: 1px solid var(--line); }
   .em-hub .em-sigil svg { max-width: 120px; max-height: 120px; }
   .em-hub .em-name { font-size: 26px; }
-  .em-hub .web-form { grid-template-columns: 1fr; }
+  .em-hub .addr-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .em-hub .addr-chip { min-width: 0; }
 }
