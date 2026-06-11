@@ -1,0 +1,63 @@
+/* emissary-browse.css — the /emissary/browse shelf page.
+   Mounts under .em-hub (emissary-hub.css supplies every token and
+   primitive: --accent, --line, sec-head, em-copy, footer …). Everything
+   here is scoped under the .em-browse modifier so nothing leaks back
+   into the hub. */
+
+/* ── Category filters — mono chip row ─────────── */
+.em-browse .bw-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 28px; }
+.em-browse .bw-filter { background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 7px 14px; font-family: var(--em-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); cursor: pointer; transition: color 120ms, border-color 120ms, background 120ms; }
+.em-browse .bw-filter:hover { color: var(--accent-deep); border-color: var(--accent); }
+.em-browse .bw-filter[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); }
+
+/* ── States — quiet mono lines, no spinners ───── */
+.em-browse .bw-note { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--muted); margin: 8px 0 0; }
+.em-browse .bw-empty { border: 1px dashed var(--line-2); border-radius: 14px; padding: 48px 28px; text-align: center; }
+.em-browse .bw-empty-line { font-family: var(--em-serif); font-size: 24px; font-weight: 500; color: var(--ink); margin: 0 0 10px; }
+.em-browse .bw-empty-sub { font-family: var(--em-serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 0; }
+.em-browse .bw-empty-sub a { color: var(--accent-deep); text-decoration: none; border-bottom: 1px dotted var(--line-2); padding-bottom: 1px; }
+.em-browse .bw-empty-sub a:hover { border-color: var(--accent); }
+
+/* ── Card grid ─────────────────────────────────── */
+.em-browse .bw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+.em-browse .bw-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; transition: border-color 160ms; }
+.em-browse .bw-card:hover { border-color: var(--line-2); }
+
+/* Top row — kind/category chips + counts */
+.em-browse .bw-tags { display: flex; align-items: center; gap: 8px; font-family: var(--em-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.em-browse .bw-chip { border: 1px solid var(--line-2); border-radius: 4px; padding: 3px 7px; color: var(--muted); }
+.em-browse .bw-chip.cat { background: var(--accent-soft); border-color: transparent; color: var(--accent-deep); }
+.em-browse .bw-counts { margin-left: auto; display: inline-flex; align-items: center; gap: 14px; letter-spacing: 0.08em; }
+.em-browse .bw-stars { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); }
+.em-browse .bw-stars svg { color: var(--accent); flex-shrink: 0; }
+.em-browse .bw-uses { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.em-browse .bw-uses svg { color: var(--accent-deep); flex-shrink: 0; }
+
+/* Title + summary — the hub card's serif rhythm */
+.em-browse .bw-name { font-family: var(--em-serif); font-weight: 500; font-size: 24px; line-height: 1.12; letter-spacing: -0.015em; color: var(--ink); margin: 0; text-wrap: pretty; }
+.em-browse .bw-summary { font-family: var(--em-serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 0; text-wrap: pretty; }
+
+/* Footer — author badge above the address row */
+.em-browse .bw-foot { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Author badge — avatar circle + display + @handle ✓ (the emissary
+   page's sender-badge, in hub tokens) */
+.em-browse .bw-author { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; align-self: flex-start; }
+.em-browse .bw-avatar { width: 32px; height: 32px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--code); color: var(--code-ink); font-family: var(--em-mono); font-size: 12px; font-weight: 500; letter-spacing: 0.02em; flex-shrink: 0; }
+.em-browse .bw-author-id { display: flex; flex-direction: column; gap: 1px; }
+.em-browse .bw-author-name { font-family: var(--em-sans); font-weight: 500; font-size: 13.5px; color: var(--ink); line-height: 1.2; }
+.em-browse .bw-author-handle { font-family: var(--em-mono); font-size: 11.5px; color: var(--muted); line-height: 1.2; }
+.em-browse .bw-author:hover .bw-author-handle { color: var(--accent-deep); }
+.em-browse .bw-check { color: var(--accent); margin-left: 4px; font-weight: 700; }
+
+/* Address row — mono address chip + dark copy button */
+.em-browse .bw-address-row { display: flex; align-items: stretch; gap: 8px; }
+.em-browse .bw-address { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--accent-soft); border-radius: 8px; padding: 9px 12px; font-family: var(--em-mono); font-size: 12px; color: var(--accent-deep); text-decoration: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: filter 120ms; }
+.em-browse .bw-address:hover { filter: brightness(0.96); }
+.em-browse .bw-version { color: var(--muted); font-size: 10.5px; letter-spacing: 0.06em; }
+
+/* Responsive */
+@media (max-width: 760px) {
+  .em-browse .bw-grid { grid-template-columns: 1fr; }
+}

@@ -7,6 +7,7 @@ const API_URL =
   "https://egregore-production-55f2.up.railway.app";
 
 const EMISSARY_BASE = "/api/v1/emissary";
+const PLATFORM_BASE = "/api/v1/platform";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -38,14 +39,14 @@ export type RegisterBody = {
 async function request<T>(
   method: string,
   path: string,
-  opts: { body?: unknown; token?: string } = {},
+  opts: { body?: unknown; token?: string; base?: string } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`;
 
   let resp: Response;
   try {
-    resp = await fetch(`${API_URL}${EMISSARY_BASE}${path}`, {
+    resp = await fetch(`${API_URL}${opts.base ?? EMISSARY_BASE}${path}`, {
       method,
       headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
@@ -100,4 +101,55 @@ export async function fetchUsage(ids: string[]): Promise<Record<string, number>>
     `/usage?ids=${encodeURIComponent(ids.join(","))}`,
   );
   return res.counts ?? {};
+}
+
+// ── Platform (the shelf) ───────────────────────────────────────
+
+// One published (slug-addressed) emissary, joined with its head version's
+// metadata + star count. Shape mirrors GET /api/v1/platform/browse.
+export type BrowseEntry = {
+  owner_handle: string;
+  slug: string;
+  address: string; // "@{handle}/{slug}"
+  head_id: string;
+  topic: string | null;
+  summary: string | null;
+  kind: string | null;
+  category: string | null;
+  version: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  stars: number;
+};
+
+export type BrowseCategory = {
+  slug: string;
+  label: string;
+  curated?: boolean;
+  sort?: number;
+};
+
+export type BrowseResponse = {
+  entries: BrowseEntry[];
+  categories: BrowseCategory[];
+};
+
+// GET /platform/browse — the public categorized shelf. No auth.
+export async function fetchBrowse(): Promise<BrowseResponse> {
+  return request<BrowseResponse>("GET", "/browse", { base: PLATFORM_BASE });
+}
+
+export type PlatformProfile = {
+  handle: string;
+  display: string | null;
+  verified: boolean;
+};
+
+// GET /platform/@{handle} — public profile (display name + verified flag).
+export async function fetchProfile(handle: string): Promise<PlatformProfile> {
+  return request<PlatformProfile>(
+    "GET",
+    `/@${encodeURIComponent(handle)}`,
+    { base: PLATFORM_BASE },
+  );
 }

@@ -6,8 +6,7 @@
 // everything else is the design. The design-tool TweaksPanel is dropped.
 
 import { useState, useEffect, type FC, type SVGProps } from "react";
-import { register, fetchUsage } from "./api";
-import type { McpConfig } from "./api";
+import { fetchUsage } from "./api";
 import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
 import "./emissary-hub.css";
 
@@ -48,16 +47,6 @@ const G_Codex: FC = () => (
     <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
   </svg>
 );
-const G_Web: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-  </svg>
-);
-const G_Chat: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
 
 // ── CopyButton ─────────────────────────────────────────
 function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: string; className?: string; label?: string }) {
@@ -80,14 +69,11 @@ function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: st
 }
 
 // ── Setup section (tabbed channels) ────────────────────
-type ChannelPath = "terminal" | "web";
-type Channel = { id: string; name: string; kind: string; path: ChannelPath; Glyph: FC };
+type Channel = { id: string; name: string; kind: string; Glyph: FC; soon?: boolean };
 
 const CHANNELS: Channel[] = [
-  { id: "claude-code", name: "Claude Code", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Code },
-  { id: "codex", name: "Codex", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Codex },
-  { id: "claude-ai", name: "claude.ai", kind: "Web chat · MCP", path: "web", Glyph: G_Web },
-  { id: "chatgpt", name: "ChatGPT", kind: "Web chat · MCP", path: "web", Glyph: G_Chat },
+  { id: "claude-code", name: "Claude Code", kind: "Agentic · Terminal", Glyph: G_Code },
+  { id: "codex", name: "Codex", kind: "Agentic · Terminal", Glyph: G_Codex, soon: true },
 ];
 
 function SetupModule() {
@@ -104,10 +90,13 @@ function SetupModule() {
               type="button"
               role="tab"
               aria-selected={c.id === active}
-              className="channel-tab"
-              onClick={() => setActive(c.id)}
+              aria-disabled={c.soon || undefined}
+              disabled={c.soon}
+              className={`channel-tab${c.soon ? " soon-tab" : ""}`}
+              onClick={c.soon ? undefined : () => setActive(c.id)}
             >
               <span className="dot" />
+              {c.soon && <span className="soon">Soon</span>}
               <span className="name">{c.name}</span>
               <span className="kind">{c.kind}</span>
               <span className="glyph"><Glyph /></span>
@@ -116,7 +105,7 @@ function SetupModule() {
         })}
       </div>
       <div className="channel-body">
-        {ch.path === "terminal" ? <TerminalPath name={ch.name} /> : <WebPath name={ch.name} channelId={ch.id} />}
+        <TerminalPath name={ch.name} />
       </div>
     </div>
   );
@@ -126,9 +115,9 @@ function TerminalPath({ name }: { name: string }) {
   return (
     <>
       <p className="install-copy">
-        Run this once in {name}&apos;s working directory. It registers your identity,
-        installs the <code>egregore-emissary</code> skill and the <code>emissary</code> command,
-        and wires the egregore MCP into your harness — detected automatically.
+        Run this once in {name}&apos;s working directory. It registers the{" "}
+        <code>egregore-emissary</code> skill and the <code>emissary</code> command —
+        nothing else, no questions asked.
       </p>
       <div className="term">
         <span className="cmd">
@@ -137,84 +126,9 @@ function TerminalPath({ name }: { name: string }) {
         <CopyButton text="npx egregore-emissary@latest install" />
       </div>
       <p className="web-note">
-        Prompts for name + email if not flagged. No password — verification is a magic link.
+        Zero prompts. Your identity is created at your first send — your agent asks your
+        name and email in conversation. Verification is one email click. No password.
       </p>
-    </>
-  );
-}
-
-function WebPath({ name, channelId }: { name: string; channelId: string }) {
-  const [fname, setFname] = useState("");
-  const [email, setEmail] = useState("");
-  const [stage, setStage] = useState<"form" | "submitting" | "done" | "error">("form");
-  const [message, setMessage] = useState("");
-  const [mcp, setMcp] = useState<McpConfig | null>(null);
-
-  const submit = async () => {
-    if (!fname.trim() || !email.trim()) {
-      setStage("error");
-      setMessage("Name and email are both required.");
-      return;
-    }
-    setStage("submitting");
-    try {
-      const res = await register({
-        name: fname.trim(),
-        email: email.trim(),
-        harness: channelId,
-      });
-      setMcp(res.mcp_config);
-      setStage("done");
-    } catch (e) {
-      setStage("error");
-      setMessage(e instanceof Error ? e.message : "Something went wrong — try again.");
-    }
-  };
-
-  if (stage === "done" && mcp) {
-    return (
-      <>
-        <p className="install-copy">
-          Registered. Check your email to verify your identity — we sent your auth
-          header there. Then paste this connector URL into <em>{name} → Settings → Connectors</em>.
-        </p>
-        <div className="term">
-          <span className="cmd">{mcp.server_url}</span>
-          <CopyButton text={mcp.server_url} />
-        </div>
-        <p className="web-note">
-          Auth header: <code>{mcp.header_template}</code> — your token arrives by email.
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <p className="install-copy">
-        {name} installs the emissary MCP connector. Register once — we email a
-        connector URL and an auth header you paste into <em>Settings → Connectors</em>.
-      </p>
-      <div className="web-form">
-        <div className="field">
-          <label>Your name</label>
-          <input value={fname} onChange={(e) => setFname(e.target.value)} placeholder="appears as sender" />
-        </div>
-        <div className="field">
-          <label>Your email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@domain" />
-        </div>
-        <div className="field full">
-          <span className="hint">Bound to your connector token. Verification link goes here. No password.</span>
-        </div>
-      </div>
-      <div className="form-foot">
-        <span className="flags">Free · No password · Magic link</span>
-        <button type="button" className="btn-primary" onClick={submit} disabled={stage === "submitting"}>
-          {stage === "submitting" ? "Registering…" : "Get my connector →"}
-        </button>
-      </div>
-      {stage === "error" && <p className="web-note err">{message}</p>}
     </>
   );
 }
@@ -385,8 +299,7 @@ export default function EmissaryHub() {
             <span className="ic"><IconInbox /></span>
             <p>
               <strong style={{ fontWeight: 500 }}>Receiving?</strong> Paste any{" "}
-              <code>egregore.xyz/emissary/e/{`{id}`}</code> link into Claude Code, Codex,
-              claude.ai, or ChatGPT.
+              <code>egregore.xyz/emissary/e/{`{id}`}</code> link into Claude Code or Codex.
             </p>
           </div>
         </section>
@@ -423,22 +336,36 @@ export default function EmissaryHub() {
           </div>
           <div className="pouch-intro">
             <p>
-              Published emissaries now live at named addresses:{" "}
-              <code>egregore.xyz/@{`{handle}`}</code> is a publisher&apos;s shelf, and{" "}
-              <code>egregore.xyz/@{`{handle}`}/{`{slug}`}</code> always points at the
-              latest version (every <code>/emissary/e/{`{id}`}</code> link keeps meaning
-              that exact version, forever). Browse the categorized shelf at{" "}
-              <a href="/emissary/browse">egregore.xyz/emissary/browse</a>.
-            </p>
-            <p>
-              Star an emissary and it becomes addressable from your own agent:{" "}
-              <em>&ldquo;enact my deep-research emissary&rdquo;</em> resolves the star —
-              pinned to the version you evaluated by default, or following the latest if
-              you opted in — fetches it, and runs it. Stars pin by default, so a
-              publisher updating an emissary never changes what your agent runs without
-              asking you first.
+              Published emissaries live at <em className="em-word">named addresses</em>.
+              A publisher keeps a shelf; every address resolves in any harness.
             </p>
           </div>
+          <div className="addr-list">
+            <div className="addr-row">
+              <span className="addr-chip">egregore.xyz/@{`{handle}`}</span>
+              <p className="addr-desc">A publisher&apos;s shelf — every emissary they&apos;ve put their name to.</p>
+            </div>
+            <div className="addr-row">
+              <span className="addr-chip">egregore.xyz/@{`{handle}`}/{`{slug}`}</span>
+              <p className="addr-desc">A named emissary — always points at the latest version.</p>
+            </div>
+            <div className="addr-row">
+              <span className="addr-chip">/emissary/e/{`{id}`}</span>
+              <p className="addr-desc">A sealed copy — keeps meaning that exact version, forever.</p>
+            </div>
+          </div>
+          <div className="pouch-intro">
+            <p>
+              Star an emissary and it becomes addressable from your own agent:{" "}
+              <em>&ldquo;enact my deep-research emissary&rdquo;</em> resolves the star,
+              fetches it, and runs it. Stars pin by default — to the version you
+              evaluated — so a publisher updating an emissary never changes what your
+              agent runs without asking you first.
+            </p>
+          </div>
+          <a className="shelf-cta" href="/emissary/browse">
+            Browse the shelf <span className="arr">→</span>
+          </a>
         </section>
 
         <footer>

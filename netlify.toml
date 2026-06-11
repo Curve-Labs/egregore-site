@@ -81,14 +81,10 @@
   status = 200
   force = true
 
-# Emissary platform browse page (spec §2.9 step 3) — server-rendered on
-# Railway, reading star counts + categories from the platform tables.
-# Must be before the /emissary/e/:id rules and the SPA catch-all.
-[[redirects]]
-  from = "/emissary/browse"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/browse"
-  status = 200
-  force = true
+# Emissary platform browse page — a static Next route
+# (app/(setup)/emissary/browse) that fetches the shelf client-side from
+# the public platform API. The former Railway proxy is gone; the static
+# file wins over the unforced SPA catch-all.
 
 # Vanity emissary slugs — short memorable URLs for circulated emissaries.
 # Proxy (200) so the URL stays egregore.xyz/emissary/{slug}. Must be before

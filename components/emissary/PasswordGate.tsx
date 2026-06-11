@@ -11,7 +11,17 @@ import "../setup/setup.css";
 const GATE_PASSWORD = "xhd~10!asxc";
 const STORAGE_KEY = "emissary-gate";
 
-export default function PasswordGate({ children }: { children: ReactNode }) {
+export default function PasswordGate({
+  children,
+  password = GATE_PASSWORD,
+  storageKey = STORAGE_KEY,
+}: {
+  children: ReactNode;
+  // Per-surface override — same gate pattern, different password + unlock
+  // memory (e.g. /emissary/browse gates separately from the hub).
+  password?: string;
+  storageKey?: string;
+}) {
   const [unlocked, setUnlocked] = useState(false);
   const [ready, setReady] = useState(false);
   const [value, setValue] = useState("");
@@ -19,18 +29,18 @@ export default function PasswordGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      if (sessionStorage.getItem(STORAGE_KEY) === "1") setUnlocked(true);
+      if (sessionStorage.getItem(storageKey) === "1") setUnlocked(true);
     } catch {
       /* sessionStorage unavailable — fall through to the prompt */
     }
     setReady(true);
-  }, []);
+  }, [storageKey]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (value === GATE_PASSWORD) {
+    if (value === password) {
       try {
-        sessionStorage.setItem(STORAGE_KEY, "1");
+        sessionStorage.setItem(storageKey, "1");
       } catch {
         /* non-fatal — the unlock just won't persist across navigations */
       }
