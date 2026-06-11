@@ -10,7 +10,9 @@ import { Callout } from 'fumadocs-ui/components/callout';
 You need two things installed:
 
 - **git** — [git-scm.com](https://git-scm.com)
-- **Claude Code** — `npm install -g @anthropic-ai/claude-code`
+- **a coding agent** — Claude Code (`npm install -g @anthropic-ai/claude-code`) or
+  OpenAI Codex CLI (`npm install -g @openai/codex`). Claude Code is the integrated
+  runtime; Codex is supported as a launch runtime — see [Runtimes](#runtimes) below.
 
 ## Create Your Egregore
 
@@ -94,7 +96,26 @@ Setup adds an `egregore` shell command to your profile. Open a new terminal:
 egregore
 ```
 
-This opens Claude Code in your Egregore directory, syncs memory, and shows your status.
+This opens your coding agent in your Egregore directory, syncs memory, and shows your status. With both runtimes installed the launcher asks which to use; `egregore --codex` forces Codex.
+
+## Runtimes
+
+**Claude Code** is the integrated runtime: slash commands, hooks, and the full
+command surface work natively.
+
+**OpenAI Codex CLI** is supported as a launch runtime. The launcher renders the
+same startup card, installs the project-local Codex skills, and starts Codex
+with hooks enabled. Differences to know about:
+
+- Codex reserves `/` for built-ins, so Egregore workflows are **skills**: invoke
+  them as `$activity`, `$handoff`, `$save`, … or in natural language ("show
+  activity", "make a handoff").
+- Branching discipline is enforced by a Codex-native branch-guard hook
+  (`.codex/hooks/branch-guard.js`).
+- The behavioral spec Claude Code reads from `CLAUDE.md` is rendered for Codex
+  into `AGENTS.md` automatically — both runtimes follow the same conventions.
+- Interactive choices appear as numbered options in plain text instead of
+  selection menus.
 
 ## First-Time Setup
 
