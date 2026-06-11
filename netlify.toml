@@ -9,6 +9,15 @@
   function = "emissary-metrics"
   path = "/api/emissary-metrics"
 
+# Emissary platform namespace (spec §2.3): /@{handle},
+# /@{handle}/{slug}, /@{handle}/{slug}/raw → Railway. Redirect
+# placeholders can't match the @-prefixed segment, so an edge function
+# proxies the /@* path space. Declared before `og` so addresses resolve
+# first; non-address /@* paths fall through via context.next().
+[[edge_functions]]
+  function = "platform-namespace"
+  path = "/@*"
+
 [[edge_functions]]
   function = "og"
   path = "/*"
@@ -69,6 +78,15 @@
 [[redirects]]
   from = "/api/artifacts/handoff/*"
   to = "https://egregore-production-55f2.up.railway.app/api/artifacts/handoff/:splat"
+  status = 200
+  force = true
+
+# Emissary platform browse page (spec §2.9 step 3) — server-rendered on
+# Railway, reading star counts + categories from the platform tables.
+# Must be before the /emissary/e/:id rules and the SPA catch-all.
+[[redirects]]
+  from = "/emissary/browse"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/browse"
   status = 200
   force = true
 
