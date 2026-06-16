@@ -122,25 +122,25 @@
 # Vanity emissary slugs — the investor data room set (circulated to VCs).
 [[redirects]]
   from = "/emissary/dataroom"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/211ef97c-2364-448d-b9b9-ffd39580e3cb"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/435780ba-7ec0-4062-902e-9bc6cdaaa534"
   status = 200
   force = true
 
 [[redirects]]
   from = "/emissary/deck"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/ba8e9f5e-1ad9-45e5-9be1-23e1bc3f81df"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/5022c35c-91ee-48f4-b2de-8d1a75552d86"
   status = 200
   force = true
 
 [[redirects]]
   from = "/emissary/paper"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/c2e08054-b0b5-4d5a-992d-12772b8f3040"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/ba05fa91-dbc1-44ba-bf2f-80359dfc200f"
   status = 200
   force = true
 
 [[redirects]]
   from = "/emissary/evals"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/233c70a4-30bd-4cf9-8a96-fc8bc6933c43"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/74eeeef1-68a1-42e2-8b3d-d19acb7ee0f9"
   status = 200
   force = true
 
