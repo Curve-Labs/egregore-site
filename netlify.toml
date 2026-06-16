@@ -119,6 +119,31 @@
   status = 200
   force = true
 
+# Vanity emissary slugs — the investor data room set (circulated to VCs).
+[[redirects]]
+  from = "/emissary/dataroom"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/211ef97c-2364-448d-b9b9-ffd39580e3cb"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/deck"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/ba8e9f5e-1ad9-45e5-9be1-23e1bc3f81df"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/paper"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/c2e08054-b0b5-4d5a-992d-12772b8f3040"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/evals"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/233c70a4-30bd-4cf9-8a96-fc8bc6933c43"
+  status = 200
+  force = true
+
 # Emissary v0 — proxy emissary read surfaces to Railway. Must be before SPA catch-all.
 # These match only /emissary/e/* — the install-hub pages (/emissary,
 # /emissary/verify, /emissary/i/*) are static Next routes and fall through.
