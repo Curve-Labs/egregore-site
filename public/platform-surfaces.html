@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en" data-theme="vellum" data-theme-pair="meridian" data-theme-mode="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Emissary Platform — Surface Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ── Meridian role tokens (lifted from design-system dist, vellum/nocturne) ── */
+:root{
+  --serif:"Fraunces",Georgia,serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --paper:#eceef2; --paper-2:#e2e6ec; --card:#f8fafc;
+  --ink:#15212e; --ink-soft:#4d5a68; --ink-faint:#8492a0;
+  --line:#cbd4de; --line-soft:#dde3ea;
+  --t1:#9a7521; --t1-bg:#f3ead0;   /* brass — decided / partial */
+  --t2:#1d7a6e; --t2-bg:#ddefea;   /* teal  — built / plus */
+  --t3:#a8493e; --t3-bg:#f4ddd7;   /* rose  — missing / minus */
+}
+[data-theme-mode="dark"]{
+  --paper:#0e151d; --paper-2:#131c26; --card:#18222e;
+  --ink:#e7ecf2; --ink-soft:#aab6c2; --ink-faint:#76838f;
+  --line:#2a3744; --line-soft:#202b36;
+  --t1:#d8b25a; --t1-bg:#2c2616; --t2:#3fb0a0; --t2-bg:#152b29; --t3:#d2796b; --t3-bg:#2c1c18;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.5;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px;margin:0 auto;padding:72px 28px 120px}
+a{color:var(--t2);text-decoration:none}
+
+/* kicker + headings */
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--t1);display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.kicker .num{border:1px solid var(--t1);border-radius:50%;min-width:26px;height:26px;display:grid;place-items:center;font-size:11px}
+.kicker .rule{flex:1;height:1px;background:var(--line)}
+h1.title{font-family:var(--serif);font-weight:400;font-size:clamp(40px,6vw,68px);line-height:1.02;letter-spacing:-.02em;margin:0 0 18px}
+h1.title em{font-style:italic;color:var(--t1)}
+.lede{font-size:20px;line-height:1.5;color:var(--ink-soft);max-width:680px;margin:0 0 28px}
+.lede b{color:var(--ink);font-weight:500}
+h2.sec{font-family:var(--serif);font-weight:400;font-size:30px;letter-spacing:-.015em;margin:0 0 6px}
+section{margin-top:64px}
+.note{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);line-height:1.6}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:18px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px}
+.legend .dot{display:inline-flex;align-items:center;gap:7px}
+.legend .sw{width:10px;height:10px;border-radius:50%}
+.sw.built{background:var(--t2)} .sw.partial{background:var(--t1)} .sw.missing{background:var(--t3)}
+
+/* the verbs strip */
+.verbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.verb{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink-soft)}
+.verb b{color:var(--t1);font-weight:600}
+
+/* group label */
+.group{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:40px 0 14px;display:flex;align-items:center;gap:12px}
+.group .rule{flex:1;height:1px;background:var(--line-soft)}
+
+/* surface grid */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(min-width:880px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:11px}
+.card.blocker{border-color:var(--t3);box-shadow:0 0 0 1px var(--t3) inset}
+.chead{display:flex;align-items:center;gap:9px}
+.cnum{font-family:var(--mono);font-size:11px;color:var(--ink-faint);min-width:22px}
+.cname{font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.1;flex:1}
+.badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:5px;white-space:nowrap}
+.badge.built{background:var(--t2-bg);color:var(--t2)}
+.badge.partial{background:var(--t1-bg);color:var(--t1)}
+.badge.missing{background:var(--t3-bg);color:var(--t3)}
+.purpose{font-size:14.5px;color:var(--ink-soft);margin:0;line-height:1.45}
+.wire{background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:10px;display:block}
+.wire svg{display:block;width:100%;height:auto}
+.meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);line-height:1.6;border-top:1px solid var(--line-soft);padding-top:9px;margin-top:auto}
+.meta .k{color:var(--ink-soft)}
+.dep{color:var(--t3)}
+
+/* critical path */
+.path{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:13px;padding-left:0}
+.step{position:relative;padding:0 0 22px 30px}
+.step:last-child{padding-bottom:0}
+.step::before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--t1);border:2px solid var(--paper)}
+.step .st{font-family:var(--serif);font-weight:500;font-size:17px;margin:0 0 3px}
+.step .sd{font-size:14px;color:var(--ink-soft);margin:0}
+.step .sn{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+/* decisions */
+.decision{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:18px}
+.dq{font-family:var(--serif);font-size:22px;font-weight:500;margin:0 0 4px}
+.dctx{font-size:14.5px;color:var(--ink-soft);margin:0 0 18px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){.tiles{grid-template-columns:1fr}}
+.tile{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--paper);display:flex;flex-direction:column;gap:10px;position:relative}
+.tile.rec{border-color:var(--t1)}
+.tile .opt{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);font-weight:600}
+.rectag{position:absolute;top:-10px;right:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;background:var(--t1);color:var(--paper);padding:3px 8px;border-radius:5px}
+.tline{display:flex;gap:8px;font-size:13.5px;line-height:1.4}
+.tline .sym{font-family:var(--mono);font-weight:700;flex-shrink:0}
+.tline.plus .sym{color:var(--t2)} .tline.minus .sym{color:var(--t3)}
+.tline span{color:var(--ink-soft)}
+.qlist{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.qlist li{font-size:15px;color:var(--ink-soft);padding-left:18px;position:relative;line-height:1.5}
+.qlist li::before{content:"▸";position:absolute;left:0;color:var(--t1)}
+.qlist b{color:var(--ink);font-weight:500}
+
+footer{margin-top:80px;border-top:1px solid var(--line);padding-top:22px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+/* mode toggle */
+.toggle{position:fixed;top:18px;right:18px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:7px 11px;cursor:pointer}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="(function(){var h=document.documentElement;var m=h.getAttribute('data-theme-mode')==='dark'?'auto':'dark';h.setAttribute('data-theme-mode',m);h.setAttribute('data-theme',m==='dark'?'nocturne':'vellum');})()">◑ mode</button>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="kicker"><span class="num">§</span><span>Emissary Platform · Surface Map</span><span class="rule"></span><span>for Cem · MMXXVI</span></div>
+  <h1 class="title">Every surface, and <em>what's missing</em>.</h1>
+  <p class="lede">An emissary is a portable, runnable task you hand to another person — readable as a page, executable by their agent. The platform is where those live at a permanent address, get discovered, and accumulate proof they work. <b>The publishing/running substrate is real. The product Cem is describing is largely the web account + engagement layer on top of it.</b></p>
+
+  <div class="legend">
+    <span class="dot"><span class="sw built"></span>Built</span>
+    <span class="dot"><span class="sw partial"></span>Partial</span>
+    <span class="dot"><span class="sw missing"></span>Missing</span>
+  </div>
+
+  <div class="verbs">
+    <span class="verb"><b>Compose</b> — author an emissary (agent-conducted)</span>
+    <span class="verb"><b>Publish</b> — give it a permanent address</span>
+    <span class="verb"><b>Carry</b> — a receiver's agent runs it</span>
+    <span class="verb"><b>Star</b> — a human keeps it</span>
+    <span class="verb"><b>Trace</b> — back to author + version</span>
+  </div>
+
+  <!-- SURFACES -->
+  <section>
+    <div class="kicker"><span class="num">01</span><span>The Surfaces</span><span class="rule"></span></div>
+    <h2 class="sec">What the product is made of</h2>
+    <p class="note">Grouped by layer. The account layer is what unblocks everything social.</p>
+
+    <!-- CONTENT LAYER -->
+    <div class="group"><span>Content & Discovery — the substrate (mostly live)</span><span class="rule"></span></div>
+    <div class="grid">
+
+      <div class="card">
+        <div class="chead"><span class="cnum">04</span><span class="cname">Discover · the Shelf</span><span class="badge built">Built</span></div>
+        <p class="purpose">The public catalog. Filter by kind, sort by Most carried / Newest / Most starred, contributors strip.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="8" y="8" width="40" height="12" rx="2"/><rect x="8" y="30" width="55" height="32" rx="3"/><rect x="73" y="30" width="55" height="32" rx="3"/><rect x="138" y="30" width="54" height="32" rx="3"/></g></svg></span>
+        <div class="meta"><span class="k">Just redesigned · live on egregore.xyz</span><br/>Next: search, facets, trending</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">05</span><span class="cname">Emissary view</span><span class="badge built">Built</span></div>
+        <p class="purpose">Server-rendered page (the readable face) + /raw (the agent payload). The thing you actually read &amp; run.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="46" y="8" width="108" height="9" rx="2"/><rect x="40" y="24" width="120" height="5" rx="2"/><rect x="40" y="34" width="120" height="5" rx="2"/><rect x="40" y="44" width="92" height="5" rx="2"/><rect x="40" y="56" width="40" height="9" rx="3"/></g></svg></span>
+        <div class="meta"><span class="k">Live</span><br/>Needs: web Star, "how to run", version lineage UI</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">06</span><span class="cname">Profile (public)</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">The social anchor at /@handle. Display + verified + shelf today; bio/links/featured exist in schema, no UI.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><circle cx="28" cy="24" r="13"/><rect x="50" y="16" width="70" height="7" rx="2"/><rect x="50" y="28" width="46" height="5" rx="2"/><rect x="8" y="48" width="55" height="16" rx="3"/><rect x="73" y="48" width="55" height="16" rx="3"/><rect x="138" y="48" width="54" height="16" rx="3"/></g></svg></span>
+        <div class="meta"><span class="k">High-leverage, cheap</span><br/>Wire up bio · links · featured (already in data)</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">07</span><span class="cname">Compose</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">Authoring is agent-conducted by design — never a form. The harness composes the artifact with you.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="8" y="10" width="184" height="50" rx="4"/><rect x="16" y="18" width="80" height="5" rx="2"/><rect x="16" y="28" width="120" height="5" rx="2"/><rect x="16" y="46" width="46" height="9" rx="3"/></g></svg></span>
+        <div class="meta"><span class="k">Stays in the harness</span><br/>Recommend: keep compose; bring <i>management</i> to web</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">08</span><span class="cname">Publish management</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">My emissaries: list, version, edit metadata, unpublish, see quota. No web view today.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"><rect x="8" y="12" width="184" height="11" rx="2"/><rect x="8" y="28" width="184" height="11" rx="2"/><rect x="8" y="44" width="184" height="11" rx="2"/></g></svg></span>
+        <div class="meta"><span class="dep">depends on → web session</span></div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">09</span><span class="cname">Connect · MCP</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">The agent-onboarding surface — issues the MCP token-URL so an agent client can connect.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="14" y="26" width="40" height="18" rx="3"/><rect x="146" y="26" width="40" height="18" rx="3"/><path d="M54 35 H146" stroke-dasharray="4 4"/><circle cx="100" cy="35" r="6"/></g></svg></span>
+        <div class="meta"><span class="k">Model exists</span><br/>Needs a clean issue-&amp;-explain surface</div>
+      </div>
+
+    </div>
+
+    <!-- ACCOUNT LAYER -->
+    <div class="group"><span>Account layer — the unlock</span><span class="rule"></span></div>
+    <div class="grid">
+
+      <div class="card blocker">
+        <div class="chead"><span class="cnum">03</span><span class="cname">Web session / sign-in</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">There is no web login. This is the single biggest gap — everything social on the web waits on it.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"><rect x="60" y="10" width="80" height="50" rx="5"/><circle cx="100" cy="28" r="8"/><path d="M86 50 a14 14 0 0 1 28 0"/></g></svg></span>
+        <div class="meta"><span class="dep">★ blocks feed · settings · starring · publish-mgmt</span></div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">02</span><span class="cname">Signup (web)</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">POST /register exists (name, email, harness → token + MCP). No web page — identity is minted from CLI/MCP today.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="50" y="12" width="100" height="9" rx="2"/><rect x="50" y="27" width="100" height="9" rx="2"/><rect x="50" y="44" width="50" height="11" rx="3"/></g></svg></span>
+        <div class="meta"><span class="k">API ready</span> · needs the web surface + session</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">02b</span><span class="cname">Email verify</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">Magic-link GET /verify works; the verified-state landing needs polish.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="64" y="16" width="72" height="40" rx="3"/><path d="M64 20 L100 42 L136 20"/></g></svg></span>
+        <div class="meta"><span class="k">Works</span> · reuse mechanism for sign-in?</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">11</span><span class="cname">Settings / Account</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">Edit profile, manage email, rotate auth token &amp; MCP config, set handle, manage quota.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"><rect x="14" y="12" width="50" height="46" rx="3"/><rect x="74" y="14" width="112" height="8" rx="2"/><rect x="74" y="28" width="112" height="8" rx="2"/><rect x="74" y="42" width="80" height="8" rx="2"/></g></svg></span>
+        <div class="meta"><span class="dep">depends on → web session</span> · data &amp; tokens exist</div>
+      </div>
+
+    </div>
+
+    <!-- ENGAGEMENT LAYER -->
+    <div class="group"><span>Engagement layer — the retention loop (net-new)</span><span class="rule"></span></div>
+    <div class="grid">
+
+      <div class="card">
+        <div class="chead"><span class="cnum">10</span><span class="cname">Home / Feed</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">The logged-in default: new from people/topics you follow, recently carried, new versions of what you starred.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"><rect x="8" y="8" width="184" height="15" rx="3"/><rect x="8" y="28" width="184" height="15" rx="3"/><rect x="8" y="48" width="184" height="15" rx="3"/></g></svg></span>
+        <div class="meta"><span class="dep">depends on → session + follow model</span></div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">12</span><span class="cname">Notifications</span><span class="badge missing">Missing</span></div>
+        <p class="purpose">"Your emissary was carried 5×", "someone starred X", "@renc published a new version." Drives return.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"><path d="M92 14 a8 8 0 0 1 16 0 c0 14 6 18 6 22 H86 c0 -4 6 -8 6 -22"/><circle cx="112" cy="14" r="4" fill="currentColor" stroke="none"/><rect x="60" y="48" width="80" height="7" rx="2"/></g></svg></span>
+        <div class="meta"><span class="dep">depends on → session + follow model</span> · Telegram is team-only today</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">01</span><span class="cname">Landing</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">Sells the framework, not the platform. Needs a "publish / browse the shelf" CTA and a path into signup.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"><rect x="30" y="14" width="140" height="10" rx="2"/><rect x="55" y="30" width="90" height="6" rx="2"/><rect x="78" y="46" width="44" height="12" rx="6"/></g></svg></span>
+        <div class="meta"><span class="k">Marketing live</span> · reframe for the platform</div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><span class="cnum">13</span><span class="cname">Admin / Moderation</span><span class="badge partial">Partial</span></div>
+        <p class="purpose">Quota + publish-exempt + metrics exist server-side. Report/abuse handling comes at scale.</p>
+        <span class="wire"><svg viewBox="0 0 200 70"><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".5"><rect x="14" y="12" width="172" height="46" rx="3"/><path d="M30 46 L30 30 M55 46 L55 22 M80 46 L80 36 M105 46 L105 26"/></g></svg></span>
+        <div class="meta"><span class="k">Server-side present</span> · low priority pre-scale</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CRITICAL PATH -->
+  <section>
+    <div class="kicker"><span class="num">02</span><span>The Critical Path</span><span class="rule"></span></div>
+    <h2 class="sec">Everything hangs off one decision and one build</h2>
+    <div class="path" style="margin-top:24px">
+      <div class="step"><p class="st"><span class="sn">1 ·</span> Decide the web-session model</p><p class="sd">Magic-link sign-in vs. token-as-credential. Nothing logged-in can be built until this is chosen. <i>(See §03.)</i></p></div>
+      <div class="step"><p class="st"><span class="sn">2 ·</span> Web signup + sign-in</p><p class="sd">Turn the existing /register + /verify API into real web surfaces with a session.</p></div>
+      <div class="step"><p class="st"><span class="sn">3 ·</span> Profile + Settings</p><p class="sd">Wire up bio/links/featured (already in schema). Cheapest high-visibility win once sessions exist.</p></div>
+      <div class="step"><p class="st"><span class="sn">4 ·</span> Web starring</p><p class="sd">On Shelf + Emissary view. Makes the star metric real — it's all zeros today because there's no signed-in human to star.</p></div>
+      <div class="step"><p class="st"><span class="sn">5 ·</span> Follow → Feed → Notifications</p><p class="sd">The retention loop. Largest net-new build; do last.</p></div>
+    </div>
+  </section>
+
+  <!-- DECISIONS -->
+  <section>
+    <div class="kicker"><span class="num">03</span><span>The Open Decision</span><span class="rule"></span></div>
+    <h2 class="sec">The one that unblocks the rest</h2>
+
+    <div class="decision">
+      <p class="dq">How does a human get a web session?</p>
+      <p class="dctx">Without this there is no logged-in web experience — no starring, no settings, no "my emissaries." Pick before building anything in the engagement or account layers.</p>
+      <div class="tiles">
+        <div class="tile rec">
+          <span class="rectag">Recommended</span>
+          <span class="opt">A · Magic-link sign-in</span>
+          <div class="tline plus"><span class="sym">+</span><span>Reuses the /verify mechanism that already works — no new credential type.</span></div>
+          <div class="tline plus"><span class="sym">+</span><span>Passwordless; matches the email-first identity already minted at register.</span></div>
+          <div class="tline minus"><span class="sym">−</span><span>Email round-trip per new device; needs session cookie + expiry handling.</span></div>
+        </div>
+        <div class="tile">
+          <span class="opt">B · Registration token as web credential</span>
+          <div class="tline plus"><span class="sym">+</span><span>Zero new infra — the token already exists from /register.</span></div>
+          <div class="tline minus"><span class="sym">−</span><span>A long-lived bearer token in the browser is a worse security posture.</span></div>
+          <div class="tline minus"><span class="sym">−</span><span>Conflates the agent (MCP) credential with the human web session.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="qlist">
+      <li><b>Handle = identity?</b> Is @handle the durable identity, or a vanity layer over email? Shapes signup + settings.</li>
+      <li><b>Stars vs. carries as the headline?</b> Carries are honest (agents running things); stars need humans + sessions.</li>
+      <li><b>How much of compose comes to the web?</b> Recommend: composition stays agent-conducted; management comes to web.</li>
+      <li><b>Follow people, topics, or both?</b> Determines the feed's shape.</li>
+      <li><b>Public vs. invite-only?</b> The shelf is gated today (team-gated); signup design depends on when that comes down.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Emissary Platform · Surface Map</span>
+    <span>docs/specs/emissary-platform-surfaces.md</span>
+    <span>Meridian · design-trace</span>
+  </footer>
+</div>
+</body>
+</html>
