@@ -134,8 +134,8 @@ function BrowseCard({
         )}
         <span className="bw-counts">
           {carried > 0 && (
-            <span className="bw-uses" title={`Carried ${carried} time${carried === 1 ? "" : "s"}`}>
-              <IconRuns /> {carried}
+            <span className="bw-uses" title={`Carried ${carried} time${carried === 1 ? "" : "s"} — run by an agent`}>
+              <IconRuns /> {carried} carried
             </span>
           )}
           <span className="bw-stars" title={`${entry.stars} star${entry.stars === 1 ? "" : "s"}`}>
