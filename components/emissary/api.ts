@@ -2,9 +2,13 @@
 // /api/v1/emissary/*. Mirrors the contract frozen in
 // docs/specs/emissary-api-contract.md (curve-labs-core).
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+// Default to same-origin ("") so requests hit /api/v1/* and ride the
+// Netlify redirect → Railway (see netlify.toml). This is what keeps the
+// shelf working off egregore.xyz's CORS allowlist: the preview subdomain
+// and any future host call the API same-origin instead of cross-origin to
+// Railway (which only allowlists egregore.xyz). Local dev sets
+// NEXT_PUBLIC_API_URL to reach the API directly.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 const EMISSARY_BASE = "/api/v1/emissary";
 const PLATFORM_BASE = "/api/v1/platform";
