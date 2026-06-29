@@ -3,7 +3,14 @@
 // EmissaryBrowse — the /emissary/browse page. The categorized shelf of
 // published emissaries, in the hub's manuscript design (it mounts under
 // .em-hub so every token and primitive is shared). This is the social
-// surface: author badges, stars, and addresses lead.
+// surface, so it leads with what the data actually has:
+//
+//   • kind (dialogue / build / documentation) is the populated dimension,
+//     so it's the primary filter — not category, which is empty at launch.
+//   • carries (receipts) is the live social signal, so it's the lead
+//     metric and the default sort; stars ride along quieter.
+//   • the people are the texture of a founder-seeded shelf, so verified
+//     authors get a contributors strip and a real presence on each card.
 //
 // Data is fetched client-side from the public platform API:
 //   GET /api/v1/platform/browse      → entries + categories
@@ -69,21 +76,39 @@ function CopyLink({ text }: { text: string }) {
 
 const EMISSARY_BASE = "https://egregore.xyz/emissary/e/";
 
-// ── Author badge — avatar circle + @handle + ✓ ─────────
-function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformProfile }) {
-  const display = profile?.display || null;
+// Kind → the human label + a short gloss for the legend. The shelf's
+// real organizing axis (categories are empty at launch).
+const KIND_LABEL: Record<string, string> = {
+  dialogue: "Dialogue",
+  build: "Build",
+  documentation: "Documentation",
+};
+function kindLabel(kind: string): string {
+  return KIND_LABEL[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+// ── Avatar — initial disc, reused by card + contributors strip ──
+function Avatar({ display, handle, size = "sm" }: { display?: string | null; handle: string; size?: "sm" | "lg" }) {
   const initial = (display || handle).charAt(0).toUpperCase();
   return (
+    <span className={`bw-avatar ${size}`} aria-hidden="true">{initial}</span>
+  );
+}
+
+// ── Author badge — avatar + display + @handle ✓ ─────────
+function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformProfile }) {
+  const display = profile?.display || null;
+  return (
     <a className="bw-author" href={`/@${handle}`}>
-      <span className="bw-avatar" aria-hidden="true">{initial}</span>
+      <Avatar display={display} handle={handle} />
       <span className="bw-author-id">
-        {display && <span className="bw-author-name">{display}</span>}
-        <span className="bw-author-handle">
-          @{handle}
+        <span className="bw-author-name">
+          {display || `@${handle}`}
           {profile?.verified && (
             <span className="bw-check" title="verified email · egregore.xyz">✓</span>
           )}
         </span>
+        <span className="bw-author-handle">@{handle}</span>
       </span>
     </a>
   );
@@ -92,33 +117,35 @@ function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformPr
 // ── Card ───────────────────────────────────────────────
 function BrowseCard({
   entry,
-  categoryLabel,
   profile,
   uses,
 }: {
   entry: BrowseEntry;
-  categoryLabel?: string;
   profile?: PlatformProfile;
   uses?: number;
 }) {
   const link = `${EMISSARY_BASE}${entry.head_id}`;
+  const carried = uses ?? 0;
   return (
     <article className="bw-card">
       <div className="bw-tags">
-        {entry.kind && <span className="bw-chip">{entry.kind}</span>}
-        {entry.category && <span className="bw-chip cat">{categoryLabel ?? entry.category}</span>}
+        {entry.kind && (
+          <span className={`bw-kind k-${entry.kind}`}>{kindLabel(entry.kind)}</span>
+        )}
         <span className="bw-counts">
+          {carried > 0 && (
+            <span className="bw-uses" title={`Carried ${carried} time${carried === 1 ? "" : "s"}`}>
+              <IconRuns /> {carried}
+            </span>
+          )}
           <span className="bw-stars" title={`${entry.stars} star${entry.stars === 1 ? "" : "s"}`}>
             <IconStar /> {entry.stars}
           </span>
-          {typeof uses === "number" && (
-            <span className="bw-uses" title={`Carried ${uses} time${uses === 1 ? "" : "s"}`}>
-              <IconRuns /> {uses}
-            </span>
-          )}
         </span>
       </div>
-      <h3 className="bw-name">{entry.topic ?? entry.slug}</h3>
+      <h3 className="bw-name">
+        <a href={`/${entry.address}`}>{entry.topic ?? entry.slug}</a>
+      </h3>
       {entry.summary && <p className="bw-summary">{entry.summary}</p>}
       <div className="bw-foot">
         <AuthorBadge handle={entry.owner_handle} profile={profile} />
@@ -133,12 +160,22 @@ function BrowseCard({
   );
 }
 
+type SortKey = "carried" | "recent" | "stars";
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "carried", label: "Most carried" },
+  { key: "recent", label: "Newest" },
+  { key: "stars", label: "Most starred" },
+];
+
 // ── Page ───────────────────────────────────────────────
 export default function EmissaryBrowse() {
   const [state, setState] = useState<"loading" | "error" | "ready">("loading");
   const [entries, setEntries] = useState<BrowseEntry[]>([]);
-  const [categories, setCategories] = useState<BrowseCategory[]>([]);
-  const [filter, setFilter] = useState<string>("all");
+  // Categories are fetched but only used if the shelf ever gets curated
+  // ones; kind is the live filter axis below.
+  const [, setCategories] = useState<BrowseCategory[]>([]);
+  const [filter, setFilter] = useState<string>("all"); // a kind, or "all"
+  const [sort, setSort] = useState<SortKey>("carried");
   // Author profiles, cached per handle — one fetch per author per visit.
   const [profiles, setProfiles] = useState<Record<string, PlatformProfile>>({});
   // Public "carried" counts, keyed by head emissary id. Best-effort.
@@ -183,15 +220,46 @@ export default function EmissaryBrowse() {
     };
   }, []);
 
-  const categoryLabels = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const c of categories) map[c.slug] = c.label;
-    return map;
-  }, [categories]);
+  // Kinds present on the shelf, with counts — the filter row.
+  const kinds = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of entries) {
+      if (e.kind) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([kind, count]) => ({ kind, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries]);
 
-  const visible = useMemo(
-    () => (filter === "all" ? entries : entries.filter((e) => e.category === filter)),
-    [entries, filter],
+  // Contributors — the people behind the shelf, most-published first.
+  const contributors = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of entries) counts[e.owner_handle] = (counts[e.owner_handle] ?? 0) + 1;
+    return Object.entries(counts)
+      .map(([handle, count]) => ({ handle, count, profile: profiles[handle] }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries, profiles]);
+
+  const visible = useMemo(() => {
+    const filtered = filter === "all" ? entries : entries.filter((e) => e.kind === filter);
+    const sorted = [...filtered];
+    if (sort === "carried") {
+      sorted.sort((a, b) => (uses[b.head_id] ?? 0) - (uses[a.head_id] ?? 0));
+    } else if (sort === "stars") {
+      sorted.sort((a, b) => b.stars - a.stars);
+    } else {
+      sorted.sort((a, b) => {
+        const ta = a.updated_at || a.created_at || "";
+        const tb = b.updated_at || b.created_at || "";
+        return tb.localeCompare(ta);
+      });
+    }
+    return sorted;
+  }, [entries, filter, sort, uses]);
+
+  const totalCarries = useMemo(
+    () => Object.values(uses).reduce((n, c) => n + c, 0),
+    [uses],
   );
 
   return (
@@ -199,13 +267,37 @@ export default function EmissaryBrowse() {
       <div className="rules"><div className="vert l" /><div className="vert r" /></div>
 
       <main className="em-main">
-        {/* Hero */}
+        {/* Hero — compact; the shelf is the page, not the headline */}
         <section className="em-hero">
           <h1 className="display">The <em>shelf</em>.</h1>
           <p className="lede">
             Every published emissary, at a named address. Star the ones worth keeping —{" "}
             <em className="em-word">star on the web, enact in the terminal</em>.
           </p>
+
+          {state === "ready" && contributors.length > 0 && (
+            <div className="bw-pulse">
+              <div className="bw-contributors" aria-label="Contributors">
+                {contributors.map(({ handle, count, profile }) => (
+                  <a key={handle} className="bw-contrib" href={`/@${handle}`} title={`${count} published`}>
+                    <Avatar display={profile?.display} handle={handle} />
+                    <span className="bw-contrib-meta">
+                      <span className="bw-contrib-name">
+                        {profile?.display || `@${handle}`}
+                        {profile?.verified && <span className="bw-check" title="verified">✓</span>}
+                      </span>
+                      <span className="bw-contrib-count">{count} published</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+              <p className="bw-stat">
+                <strong>{entries.length}</strong> emissaries · <strong>{contributors.length}</strong>{" "}
+                {contributors.length === 1 ? "author" : "authors"}
+                {totalCarries > 0 && <> · carried <strong>{totalCarries}</strong> times</>}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Shelf */}
@@ -220,26 +312,43 @@ export default function EmissaryBrowse() {
           </div>
 
           {state === "ready" && entries.length > 0 && (
-            <div className="bw-filters" role="group" aria-label="Filter by category">
-              <button
-                type="button"
-                className="bw-filter"
-                aria-pressed={filter === "all"}
-                onClick={() => setFilter("all")}
-              >
-                All
-              </button>
-              {categories.map((c) => (
+            <div className="bw-controls">
+              <div className="bw-filters" role="group" aria-label="Filter by kind">
                 <button
-                  key={c.slug}
                   type="button"
                   className="bw-filter"
-                  aria-pressed={filter === c.slug}
-                  onClick={() => setFilter(c.slug)}
+                  aria-pressed={filter === "all"}
+                  onClick={() => setFilter("all")}
                 >
-                  {c.label}
+                  All <span className="bw-filter-n">{entries.length}</span>
                 </button>
-              ))}
+                {kinds.map(({ kind, count }) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className={`bw-filter k-${kind}`}
+                    aria-pressed={filter === kind}
+                    onClick={() => setFilter(kind)}
+                  >
+                    {kindLabel(kind)} <span className="bw-filter-n">{count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="bw-sort" role="group" aria-label="Sort">
+                <span className="bw-sort-label">Sort</span>
+                {SORTS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className="bw-sort-opt"
+                    aria-pressed={sort === key}
+                    onClick={() => setSort(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -257,7 +366,7 @@ export default function EmissaryBrowse() {
             </div>
           )}
           {state === "ready" && entries.length > 0 && visible.length === 0 && (
-            <p className="bw-note">nothing on this shelf yet — try another category.</p>
+            <p className="bw-note">nothing of this kind yet — try another.</p>
           )}
 
           {visible.length > 0 && (
@@ -266,7 +375,6 @@ export default function EmissaryBrowse() {
                 <BrowseCard
                   key={`${entry.owner_handle}/${entry.slug}`}
                   entry={entry}
-                  categoryLabel={entry.category ? categoryLabels[entry.category] : undefined}
                   profile={profiles[entry.owner_handle]}
                   uses={uses[entry.head_id]}
                 />
