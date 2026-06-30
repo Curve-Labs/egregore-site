@@ -42,7 +42,7 @@ const PAGES = {
   },
   "/docs": {
     title: "Documentation \u2014 Egregore",
-    description: "Architecture, setup, and usage documentation for Egregore \u2014 the shared intelligence layer for organizations using Claude Code.",
+    description: "Architecture, setup, and usage documentation for Egregore \u2014 an agentic operating system for organizations.",
   },
 };
 

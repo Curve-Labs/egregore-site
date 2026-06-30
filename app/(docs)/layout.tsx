@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s | Egregore",
   },
   description:
-    "Documentation for Egregore — a shared intelligence layer for teams using Claude Code.",
+    "Documentation for Egregore — an agentic operating system for organizations.",
   icons: {
     icon: [
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
