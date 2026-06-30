@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://egregore.xyz"),
   title: "Egregore — Claude Code, now multiplayer",
   description:
-    "A shared intelligence layer for teams using Claude Code. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.",
+    "An agentic operating system for organizations. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: "Egregore",
     title: "Egregore — Towards shared minds",
     description:
-      "A shared intelligence layer for teams using Claude Code. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.",
+      "An agentic operating system for organizations. Persistent memory, async handoffs, and accumulated knowledge across sessions and people.",
     images: [
       {
         url: "/og-image.png",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Egregore — Towards shared minds",
     description:
-      "A shared intelligence layer for teams using Claude Code.",
+      "An agentic operating system for organizations.",
     images: ["/og-image.png"],
   },
 };
