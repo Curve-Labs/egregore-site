@@ -25,7 +25,7 @@ function CtaPill() {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText("npx create-egregore@latest --open").then(() => {
+    navigator.clipboard.writeText("npx create-egregore@latest").then(() => {
       const btn = btnRef.current;
       if (!btn) return;
       btn.classList.add("copied");
@@ -37,8 +37,7 @@ function CtaPill() {
     <button className="cta-pill" ref={btnRef} onClick={handleCopy}>
       <span className="cta-text">
         <span className="cmd-npx">npx</span>{" "}
-        <span className="cmd-pkg">create-egregore@latest</span>{" "}
-        <span className="cmd-flag">--open</span>
+        <span className="cmd-pkg">create-egregore@latest</span>
       </span>
       <span className="copied-text">Copied!</span>
       <CopyIcon />

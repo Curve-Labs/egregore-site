@@ -1386,7 +1386,7 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
       </a>
       <Divider />
       <p className="setup-install-note" style={{ textAlign: "center", marginTop: 0 }}>
-        Prefer the OSS path? Run <code style={{ color: "var(--terracotta)" }}>npx create-egregore@latest --open</code> in your terminal.
+        Prefer the OSS path? Run <code style={{ color: "var(--terracotta)" }}>npx create-egregore@latest</code> in your terminal.
       </p>
     </div>
   );
