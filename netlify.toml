@@ -98,6 +98,15 @@
   status = 200
   force = true
 
+# Plugin channel: /emissary/plugin.zip — proxy to the api, which answers
+# with a 302 to the version-pinned GitHub release asset; the redirect
+# passes through to the client so the zip downloads from GitHub.
+[[redirects]]
+  from = "/emissary/plugin.zip"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/plugin.zip"
+  status = 200
+  force = true
+
 # API: publish, extend, get canonical JSON — no Railway URL leaks to users
 [[redirects]]
   from = "/api/artifacts/handoff/*"
