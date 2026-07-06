@@ -1,0 +1,194 @@
+/* Emissary account surface (/emissary/account). Built on globals.css tokens
+   and the setup.css / emissary.css primitives; only the account-specific
+   layout lives here. All colors are role tokens (var(--...)) — no inline hex,
+   so the page stays theme-consistent. */
+
+/* ── Identity card ── */
+.acct-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  flex-wrap: wrap;
+}
+
+.acct-id {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acct-name {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--black);
+}
+
+.acct-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--black);
+}
+
+.acct-handle { color: var(--terracotta); }
+.acct-email { opacity: 0.6; }
+.acct-since { opacity: 0.45; }
+
+/* ── Section header (Stars / Pull) ── */
+.acct-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.acct-section-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.acct-section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--black);
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.acct-section-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.acct-section-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--black);
+  opacity: 0.45;
+}
+
+.acct-empty { opacity: 0.65; }
+.acct-empty a { color: var(--terracotta); }
+
+.acct-stars-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Star rows ── */
+.acct-stars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acct-star {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+}
+
+.acct-star-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.acct-star-addr {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--terracotta);
+  text-decoration: none;
+  word-break: break-all;
+}
+.acct-star-addr:hover { text-decoration: underline; }
+
+.acct-star-topic {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--black);
+  opacity: 0.7;
+}
+
+.acct-star-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acct-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(212, 135, 90, 0.1);
+  color: var(--terracotta);
+}
+
+.acct-chip-mode {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--black);
+  opacity: 0.6;
+}
+
+.acct-chip-alert {
+  background: rgba(212, 135, 90, 0.18);
+  color: var(--terracotta);
+  opacity: 1;
+}
+
+.acct-unstar {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--terracotta);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.acct-unstar:hover { opacity: 0.65; }
+.acct-unstar:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Pull teach block ── */
+.acct-teach {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.acct-teach-note {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--black);
+  opacity: 0.5;
+  margin: 0;
+}

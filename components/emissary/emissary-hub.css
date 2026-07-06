@@ -163,6 +163,25 @@
 .em-hub .draft-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .em-hub .draft-row .dash { flex: 1; height: 1px; background: var(--line); }
 
+/* ── Auth bar + loop (identity spine) ─────────────
+   Scoped tokens (--accent, --ink …) reused from the .em-hub block above —
+   consistent with the rest of this file; no inline hex, no :root writes. */
+.em-hub .em-authbar { display: flex; justify-content: flex-end; padding-top: 22px; }
+.em-hub .em-authlink { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line-2); padding-bottom: 2px; }
+.em-hub .em-authlink:hover { color: var(--accent-deep); border-color: var(--accent); }
+.em-hub .em-authlink .arr { color: var(--accent); }
+
+.em-hub .loop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.em-hub .loop-step { display: flex; flex-direction: column; gap: 8px; padding: 22px 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.em-hub .loop-num { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.16em; color: var(--accent); }
+.em-hub .loop-step h3 { font-family: var(--em-serif); font-weight: 500; font-size: 19px; line-height: 1.1; letter-spacing: -0.01em; color: var(--ink); margin: 2px 0 0; }
+.em-hub .loop-step p { font-family: var(--em-serif); font-size: 14.5px; line-height: 1.5; color: var(--ink-2); margin: 0; text-wrap: pretty; }
+.em-hub .loop-step p code { font-family: var(--em-mono); font-size: 12.5px; color: var(--accent-deep); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+.em-hub .loop-link { margin-top: auto; padding-top: 8px; font-family: var(--em-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-deep); text-decoration: none; }
+.em-hub .loop-link:hover { color: var(--accent); }
+.em-hub .loop-cmd { margin-top: auto; background: var(--code); color: var(--code-ink); border-radius: 10px; padding: 12px 14px; font-family: var(--em-mono); font-size: 13px; }
+.em-hub .loop-cmd .prompt { color: rgba(240,231,214,0.45); margin-right: 8px; user-select: none; }
+
 /* Section spacing */
 .em-hub section { margin-top: 64px; }
 
@@ -181,4 +200,5 @@
   .em-hub .em-sigil svg { max-width: 120px; max-height: 120px; }
   .em-hub .em-name { font-size: 26px; }
   .em-hub .web-form { grid-template-columns: 1fr; }
+  .em-hub .loop { grid-template-columns: 1fr; }
 }

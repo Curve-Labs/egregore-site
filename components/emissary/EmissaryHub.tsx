@@ -5,9 +5,10 @@
 // setup layout supplies the egregore logo) and --bg is kept as our cream;
 // everything else is the design. The design-tool TweaksPanel is dropped.
 
-import { useState, type FC, type SVGProps } from "react";
+import { useEffect, useState, type FC, type SVGProps } from "react";
 import { register } from "./api";
 import type { McpConfig } from "./api";
+import { getSession, type Session } from "./account-api";
 import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
 import "./emissary-hub.css";
 
@@ -328,6 +329,82 @@ function EmissaryCard({ em }: { em: Emissary }) {
   );
 }
 
+// ── Auth chip (identity spine) ─────────────────────────
+// Fail-soft: a signed-in session shows the account link, anything else
+// (signed out / API down) falls back to the sign-in link. Never blocks render.
+function AuthChip() {
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getSession()
+      .then((s) => {
+        if (!cancelled) setSession(s);
+      })
+      .catch(() => {
+        /* signed out or API unreachable — stay anonymous */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (session) {
+    const who = session.handle ? "@" + session.handle : session.email;
+    return (
+      <a className="em-authlink" href="/emissary/account">
+        Signed in as {who} <span className="arr">→</span> Account
+      </a>
+    );
+  }
+  return (
+    <a className="em-authlink" href="/login?next=/emissary/account">
+      Sign in
+    </a>
+  );
+}
+
+// ── The loop (identity spine): browse → ★ → pull ───────
+function LoopSection() {
+  return (
+    <section>
+      <div className="sec-head">
+        <span className="num">§ 03</span>
+        <span className="label">The loop — browse &amp; pull</span>
+        <span className="rule" />
+        <span className="label">directory</span>
+      </div>
+      <div className="loop">
+        <div className="loop-step">
+          <span className="loop-num">01</span>
+          <h3>Browse the directory</h3>
+          <p>
+            See what people are publishing. Every emissary has a page and a
+            canonical link you can open cold.
+          </p>
+          <a className="loop-link" href="/emissary/browse">Browse emissaries →</a>
+        </div>
+        <div className="loop-step">
+          <span className="loop-num">02</span>
+          <h3>★ what you trust</h3>
+          <p>
+            Sign in and star the ones worth keeping. A star pins the version you
+            saw — it stays put until you say otherwise.
+          </p>
+          <a className="loop-link" href="/login?next=/emissary/account">Sign in to star →</a>
+        </div>
+        <div className="loop-step">
+          <span className="loop-num">03</span>
+          <h3>Pull them in your terminal</h3>
+          <p>
+            Run <code>emissary pull</code> — your agent offers each starred
+            emissary to run or install.
+          </p>
+          <div className="loop-cmd"><span className="prompt">$</span>emissary pull</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────
 export default function EmissaryHub() {
   return (
@@ -335,6 +412,9 @@ export default function EmissaryHub() {
       <div className="rules"><div className="vert l" /><div className="vert r" /></div>
 
       <main className="em-main">
+        {/* Auth chip — nav area */}
+        <div className="em-authbar"><AuthChip /></div>
+
         {/* Hero */}
         <section className="em-hero">
           <div className="eyebrow">Emissary Courier <span className="dot">·</span> v0.2</div>
@@ -385,6 +465,9 @@ export default function EmissaryHub() {
             {EMISSARIES.map((em) => <EmissaryCard key={em.id} em={em} />)}
           </div>
         </section>
+
+        {/* The loop — browse → ★ → pull */}
+        <LoopSection />
 
         <footer>
           <span>egregore.xyz</span>
