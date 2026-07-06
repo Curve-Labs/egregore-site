@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FC, type SVGProps } from "react";
+import { useCallback, useEffect, useMemo, useState, type FC, type FormEvent, type SVGProps } from "react";
 import {
   getSession,
   listStars,
+  loginLink,
   starEmissary,
   unstar,
   NotSignedIn,
@@ -21,7 +22,6 @@ import {
 import "./emissary-hub.css";
 
 const INSTALL_COMMAND = "npx egregore-emissary@latest install";
-const PULL_COMMAND = "emissary pull";
 const NEW_COMMAND = "emissary new";
 
 type LoadState = "loading" | "ready" | "error";
@@ -89,10 +89,6 @@ function starKey(star: Star): string {
   return `${star.owner}/${star.slug}`;
 }
 
-function safeNext(path = "/emissary"): string {
-  return `/login?next=${encodeURIComponent(path)}`;
-}
-
 function avatarInitial(handle: string, profile?: PlatformProfile): string {
   return (profile?.display || handle || "e").charAt(0).toUpperCase();
 }
@@ -126,23 +122,33 @@ function CommandCapsule({ command, compact = false }: { command: string; compact
   );
 }
 
-function AuthLink({ authState, session }: { authState: AuthState; session: Session | null }) {
+function AuthLink({
+  authState,
+  session,
+  onSignIn,
+}: {
+  authState: AuthState;
+  session: Session | null;
+  onSignIn: () => void;
+}) {
   if (authState === "loading") return <span className="em-authlink muted">Checking identity</span>;
   if (session) {
     const who = session.handle ? `@${session.handle}` : session.email;
     return <a className="em-authlink" href="/emissary/account">{who} <span>Account</span></a>;
   }
-  return <a className="em-authlink" href={safeNext("/emissary")}>Sign in</a>;
+  return <button type="button" className="em-authlink as-button" onClick={onSignIn}>Sign in</button>;
 }
 
 function AccountRail({
   authState,
   session,
   stars,
+  onSignIn,
 }: {
   authState: AuthState;
   session: Session | null;
   stars: Star[] | null;
+  onSignIn: () => void;
 }) {
   if (authState === "loading") {
     return (
@@ -160,7 +166,7 @@ function AccountRail({
         <div className="rail-label">Account</div>
         <h2>Keep what you find.</h2>
         <p>Sign in with email, star emissaries on the web, then pull them into your harness.</p>
-        <a className="rail-primary" href={safeNext("/emissary")}>Sign in by email</a>
+        <button type="button" className="rail-primary" onClick={onSignIn}>Sign in by email</button>
         <div className="rail-rule" />
         <span className="rail-mini">No password. The CLI binds later with <code>emissary login</code>.</span>
       </aside>
@@ -188,6 +194,86 @@ function AccountRail({
       <p className="rail-mini">Your account page holds handle claim, connected CLIs, revocation, stars, and sign out.</p>
       <a className="rail-primary" href="/emissary/account">Manage account</a>
     </aside>
+  );
+}
+
+function SignInModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [stage, setStage] = useState<"form" | "sending" | "sent">("form");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setStage("form");
+    setError("");
+  }, [open]);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    const addr = email.trim();
+    if (!addr) return;
+    setStage("sending");
+    setError("");
+    try {
+      await loginLink(addr, "/emissary?welcome=1");
+      setStage("sent");
+    } catch (err) {
+      setStage("form");
+      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="signin-layer" role="dialog" aria-modal="true" aria-labelledby="signin-title">
+      <button type="button" className="signin-scrim" aria-label="Close sign in" onClick={onClose} />
+      <div className="signin-modal">
+        <div className="rail-label">Account</div>
+        {stage === "sent" ? (
+          <>
+            <h2 id="signin-title">Check your inbox.</h2>
+            <p>A one-time sign-in link is on its way. Open it here and the directory will remember you.</p>
+            <button type="button" className="hero-secondary" onClick={onClose}>Done</button>
+          </>
+        ) : (
+          <>
+            <h2 id="signin-title">Sign in without leaving.</h2>
+            <p>Email link first. The terminal binds later with <code>emissary login</code>.</p>
+            <form onSubmit={onSubmit} className="signin-form">
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError("");
+                }}
+                placeholder="you@example.com"
+                autoComplete="email"
+                aria-label="Email address"
+                autoFocus
+                required
+              />
+              {error && <span className="signin-error">{error}</span>}
+              <button type="submit" className="rail-primary" disabled={stage === "sending"}>
+                {stage === "sending" ? "Sending..." : "Send link"}
+              </button>
+            </form>
+            <div className="signin-terminal">
+              <span>Use your terminal</span>
+              <CommandCapsule command="emissary login" compact />
+            </div>
+          </>
+        )}
+        <button type="button" className="signin-close" onClick={onClose} aria-label="Close">x</button>
+      </div>
+    </div>
   );
 }
 
@@ -264,11 +350,54 @@ function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformPr
   );
 }
 
+function ThumbnailArt({ kind }: { kind?: string | null }) {
+  if (kind === "dialogue") {
+    return (
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <circle cx="80" cy="80" r="50" />
+        <circle cx="80" cy="80" r="34" />
+        <circle cx="80" cy="80" r="18" />
+        <circle cx="80" cy="80" r="4" />
+        <path d="M80 18v24M80 118v24M18 80h24M118 80h24" />
+      </svg>
+    );
+  }
+
+  if (kind === "documentation") {
+    return (
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <path d="M32 58h96L80 28 32 58Z" />
+        <path d="M42 66v58M66 66v58M94 66v58M118 66v58" />
+        <path d="M30 130h100" />
+      </svg>
+    );
+  }
+
+  if (kind === "executable" || kind === "research") {
+    return (
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <path d="M80 22 92 68 138 80 92 92 80 138 68 92 22 80 68 68 80 22Z" />
+        <circle cx="80" cy="80" r="54" />
+        <path d="M80 12v18M80 130v18M12 80h18M130 80h18" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 160 160" aria-hidden="true">
+      <path d="M80 22 128 80 80 138 32 80 80 22Z" />
+      <path d="M80 46 108 80 80 114 52 80 80 46Z" />
+      <path d="M80 112V58" />
+      <path d="M64 76 80 58 96 76" />
+    </svg>
+  );
+}
+
 function DirectoryThumb({ entry }: { entry: BrowseEntry }) {
   return (
     <div className={`dir-thumb k-${entry.kind || "emissary"}`} aria-hidden="true">
       <span className="thumb-kind">{kindLabel(entry.kind)}</span>
-      <span className="thumb-mark">{(entry.kind || "e").charAt(0).toUpperCase()}</span>
+      <ThumbnailArt kind={entry.kind} />
       <span className="thumb-line wide" />
       <span className="thumb-line" />
       <span className="thumb-line short" />
@@ -327,6 +456,74 @@ function DirectoryCard({
   );
 }
 
+function SocialProof({
+  contributors,
+  totalEntries,
+  totalCarried,
+}: {
+  contributors: { handle: string; count: number; profile?: PlatformProfile }[];
+  totalEntries: number;
+  totalCarried: number;
+}) {
+  const visible = contributors.slice(0, 3);
+  const extra = Math.max(0, contributors.length - visible.length);
+
+  return (
+    <div className="directory-proof">
+      <div className="proof-avatars" aria-label={`${contributors.length} authors`}>
+        {visible.map(({ handle, profile }) => (
+          <a key={handle} href={`/@${handle}`} className="dir-avatar" title={profile?.display || `@${handle}`}>
+            {avatarInitial(handle, profile)}
+          </a>
+        ))}
+        {extra > 0 && <span className="proof-more">+{extra}</span>}
+      </div>
+      <p>
+        <strong>{totalEntries}</strong> emissaries · <strong>{contributors.length}</strong>{" "}
+        {contributors.length === 1 ? "author" : "authors"}
+        {totalCarried > 0 && <> · carried <strong>{totalCarried}</strong> times</>}
+      </p>
+    </div>
+  );
+}
+
+function CompactEntryRow({
+  entry,
+  profile,
+  carried,
+  starred,
+  busy,
+  onToggleStar,
+}: {
+  entry: BrowseEntry;
+  profile?: PlatformProfile;
+  carried: number;
+  starred: boolean;
+  busy: boolean;
+  onToggleStar: (entry: BrowseEntry) => void;
+}) {
+  const copyUrl = `https://egregore.xyz/emissary/e/${entry.head_id}`;
+
+  return (
+    <article className="compact-entry">
+      <a className="compact-title" href={`/${entry.address}`}>{entry.topic || entry.slug}</a>
+      <span className="compact-meta">{kindLabel(entry.kind)} · @{entry.owner_handle}</span>
+      <span className="compact-count"><IconRun /> {carried}</span>
+      <button
+        type="button"
+        className={`star-action${starred ? " is-starred" : ""}`}
+        aria-pressed={starred}
+        disabled={busy}
+        onClick={() => onToggleStar(entry)}
+      >
+        <IconStar /> {starred ? "Starred" : "Star"}
+      </button>
+      <CopyButton value={copyUrl} label="Copy" />
+      {profile?.verified && <span className="compact-verified" title="verified">✓</span>}
+    </article>
+  );
+}
+
 function LoopRail() {
   return (
     <section className="loop-rail" aria-label="Emissary loop">
@@ -349,28 +546,15 @@ function LoopRail() {
   );
 }
 
-function InstallSection() {
+function CreateStrip() {
   return (
-    <section id="install" className="install-section">
-      <div className="sec-head">
-        <span className="num">§ 02</span>
-        <span className="label">Install and bind</span>
-        <span className="rule" />
-        <span className="label">one command</span>
+    <section className="create-strip">
+      <div>
+        <span className="rail-label">Create from the harness</span>
+        <h2>Composition stays with the agent.</h2>
+        <p>The web keeps discovery, identity, stars, and account state. The harness shapes and publishes the address.</p>
       </div>
-      <div className="install-grid">
-        <div className="install-copy">
-          <h2>Install once. Every emissary after that runs clean.</h2>
-          <p>Run the installer in a project working directory. It registers identity, installs the emissary skill and command, and wires the MCP into Claude Code or Codex.</p>
-          <CommandCapsule command={INSTALL_COMMAND} />
-        </div>
-        <div className="install-steps">
-          <div><span>1</span><strong>Sign in</strong><small>Email link, then handle claim.</small></div>
-          <div><span>2</span><strong>Connect agent</strong><small><code>emissary login</code> binds a device.</small></div>
-          <div><span>3</span><strong>Pull stars</strong><small><code>{PULL_COMMAND}</code> closes the loop.</small></div>
-          <div><span>4</span><strong>Create</strong><small><code>{NEW_COMMAND}</code> publishes from the harness.</small></div>
-        </div>
-      </div>
+      <CommandCapsule command={NEW_COMMAND} compact />
     </section>
   );
 }
@@ -388,6 +572,7 @@ export default function EmissaryHub() {
   const [sort, setSort] = useState<SortKey>("carried");
   const [busyStar, setBusyStar] = useState<string | null>(null);
   const [starNote, setStarNote] = useState("");
+  const [signInOpen, setSignInOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -484,8 +669,7 @@ export default function EmissaryHub() {
     entries.forEach((entry) => counts.set(entry.owner_handle, (counts.get(entry.owner_handle) ?? 0) + 1));
     return Array.from(counts.entries())
       .map(([handle, count]) => ({ handle, count, profile: profiles[handle] }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
+      .sort((a, b) => b.count - a.count);
   }, [entries, profiles]);
 
   const totalCarried = useMemo(
@@ -493,9 +677,12 @@ export default function EmissaryHub() {
     [uses],
   );
 
+  const featuredEntries = useMemo(() => visibleEntries.slice(0, 8), [visibleEntries]);
+  const moreEntries = useMemo(() => visibleEntries.slice(8, 14), [visibleEntries]);
+
   const toggleStar = useCallback(async (entry: BrowseEntry) => {
     if (!session) {
-      window.location.href = safeNext("/emissary");
+      setSignInOpen(true);
       return;
     }
 
@@ -553,7 +740,7 @@ export default function EmissaryHub() {
             <a href="#install">Install</a>
             <a href="/emissary/account">Account</a>
           </nav>
-          <AuthLink authState={authState} session={session} />
+          <AuthLink authState={authState} session={session} onSignIn={() => setSignInOpen(true)} />
         </div>
 
         <section className="em-hero">
@@ -567,9 +754,16 @@ export default function EmissaryHub() {
               <a className="hero-primary" href="#directory">Browse emissaries</a>
               <a className="hero-secondary" href="#install">Install once</a>
             </div>
-            <CommandCapsule command={INSTALL_COMMAND} compact />
+            <div id="install">
+              <CommandCapsule command={INSTALL_COMMAND} compact />
+            </div>
           </div>
-          <AccountRail authState={authState} session={session} stars={stars} />
+          <AccountRail
+            authState={authState}
+            session={session}
+            stars={stars}
+            onSignIn={() => setSignInOpen(true)}
+          />
         </section>
 
         <LoopRail />
@@ -584,18 +778,6 @@ export default function EmissaryHub() {
 
           {loadState === "ready" && entries.length > 0 && (
             <>
-              <div className="directory-pulse">
-                <div className="contributors" aria-label="Contributors">
-                  {contributors.map(({ handle, count, profile }) => (
-                    <a key={handle} className="contributor" href={`/@${handle}`} title={`${count} published`}>
-                      <span className="dir-avatar">{avatarInitial(handle, profile)}</span>
-                      <span><strong>{profile?.display || `@${handle}`}{profile?.verified && <b>✓</b>}</strong><small>{count} published</small></span>
-                    </a>
-                  ))}
-                </div>
-                <p><strong>{entries.length}</strong> emissaries · <strong>{contributors.length}</strong> authors{totalCarried > 0 && <> · carried <strong>{totalCarried}</strong> times</>}</p>
-              </div>
-
               <div className="directory-controls">
                 <FilterRail entries={entries} categories={categories} filter={filter} setFilter={setFilter} />
                 <div className="dir-sort" role="group" aria-label="Sort">
@@ -607,6 +789,11 @@ export default function EmissaryHub() {
                   ))}
                 </div>
               </div>
+              <SocialProof
+                contributors={contributors}
+                totalEntries={entries.length}
+                totalCarried={totalCarried}
+              />
             </>
           )}
 
@@ -624,9 +811,9 @@ export default function EmissaryHub() {
             <p className="dir-note">Nothing in this lane yet. Try another filter.</p>
           )}
 
-          {visibleEntries.length > 0 && (
-            <div className="directory-grid">
-              {visibleEntries.map((entry) => (
+          {featuredEntries.length > 0 && (
+            <div className="featured-rail" aria-label="Featured emissaries">
+              {featuredEntries.map((entry) => (
                 <DirectoryCard
                   key={entryKey(entry)}
                   entry={entry}
@@ -639,30 +826,31 @@ export default function EmissaryHub() {
               ))}
             </div>
           )}
+
+          {moreEntries.length > 0 && (
+            <div className="latest-panel">
+              <div className="latest-head">
+                <span className="rail-label">More from this lane</span>
+                <span>{visibleEntries.length - featuredEntries.length} after the rail</span>
+              </div>
+              <div className="latest-list">
+                {moreEntries.map((entry) => (
+                  <CompactEntryRow
+                    key={`compact-${entryKey(entry)}`}
+                    entry={entry}
+                    profile={profiles[entry.owner_handle]}
+                    carried={uses[entry.head_id] ?? 0}
+                    starred={starred.has(entryKey(entry))}
+                    busy={busyStar === entryKey(entry)}
+                    onToggleStar={toggleStar}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
-        <InstallSection />
-
-        <section className="create-section">
-          <div className="sec-head">
-            <span className="num">§ 03</span>
-            <span className="label">Create and manage</span>
-            <span className="rule" />
-            <span className="label">harness first</span>
-          </div>
-          <div className="create-grid">
-            <div>
-              <h2>Composition belongs in the harness.</h2>
-              <p>The web is for discovery, identity, starring, and account state. The agent asks the questions, shapes the mandate, and publishes the address.</p>
-              <CommandCapsule command={NEW_COMMAND} compact />
-            </div>
-            <div>
-              <h2>Account state stays inspectable.</h2>
-              <p>Claim a handle, see connected CLIs, revoke devices, remove stars, and pull your collection without turning the site into a settings maze.</p>
-              <a className="hero-secondary" href="/emissary/account">Open account</a>
-            </div>
-          </div>
-        </section>
+        <CreateStrip />
 
         <footer>
           <span>egregore.xyz</span>
@@ -674,6 +862,7 @@ export default function EmissaryHub() {
           <span>MMXXVI</span>
         </footer>
       </main>
+      <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
   );
 }
