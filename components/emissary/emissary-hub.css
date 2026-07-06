@@ -629,6 +629,8 @@ button.rail-primary {
 }
 
 .featured-rail {
+  width: 100%;
+  max-width: 100%;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 520px;
@@ -637,7 +639,6 @@ button.rail-primary {
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   padding: 2px 0 18px;
-  margin-right: calc(-1 * max(0px, (100vw - 1120px) / 2));
   scrollbar-width: thin;
 }
 
@@ -1136,7 +1137,6 @@ button.rail-primary {
 
   .featured-rail {
     grid-auto-columns: 460px;
-    margin-right: -32px;
   }
 
   .directory-proof,
@@ -1194,7 +1194,6 @@ button.rail-primary {
 
   .featured-rail {
     grid-auto-columns: minmax(300px, 88%);
-    margin-right: -18px;
   }
 
   .dir-card {
