@@ -18,18 +18,26 @@ import {
   revokeToken,
   logout,
   unstar,
+  getPlatformProfile,
+  listPublishedVersions,
   handleError,
   NotSignedIn,
   type Session,
   type Star,
   type Token,
+  type PublishedEmissary,
+  type PublishedVersion,
 } from "./account-api";
-import { CommandBlock } from "./ui";
+import { CommandBlock, CopyButton } from "./ui";
 import "../setup/setup.css";
 import "./emissary.css";
 import "./account.css";
 
 type State = "loading" | "signed-out" | "signed-in" | "error";
+type VersionState =
+  | { state: "loading"; versions: PublishedVersion[] }
+  | { state: "ready"; versions: PublishedVersion[] }
+  | { state: "error"; versions: PublishedVersion[]; message: string };
 
 // The API lane didn't freeze the exact created / last-used keys, so read both.
 function fmtDate(iso?: string | null): string | null {
@@ -63,6 +71,12 @@ export default function AccountFlow() {
   const [stars, setStars] = useState<Star[] | null>(null);
   const [starsError, setStarsError] = useState("");
 
+  // Published shelf
+  const [published, setPublished] = useState<PublishedEmissary[] | null>(null);
+  const [publishedError, setPublishedError] = useState("");
+  const [openVersions, setOpenVersions] = useState<Record<string, boolean>>({});
+  const [versionsBySlug, setVersionsBySlug] = useState<Record<string, VersionState>>({});
+
   // Tokens
   const [tokens, setTokens] = useState<Token[] | null>(null);
   const [tokensError, setTokensError] = useState("");
@@ -91,6 +105,25 @@ export default function AccountFlow() {
     }
   }, []);
 
+  const loadPublished = useCallback(async (handle?: string | null) => {
+    setPublishedError("");
+    setOpenVersions({});
+    setVersionsBySlug({});
+    if (!handle) {
+      setPublished([]);
+      return;
+    }
+
+    setPublished(null);
+    try {
+      const profile = await getPlatformProfile(handle);
+      setPublished(profile.shelf || []);
+    } catch (err) {
+      setPublished([]);
+      setPublishedError(err instanceof Error ? err.message : "Couldn't load your published emissaries.");
+    }
+  }, []);
+
   const loadSession = useCallback(async () => {
     setState("loading");
     try {
@@ -99,6 +132,7 @@ export default function AccountFlow() {
       setState("signed-in");
       loadStars();
       loadTokens();
+      loadPublished(s.handle);
     } catch (err) {
       if (err instanceof NotSignedIn) {
         setState("signed-out");
@@ -107,7 +141,7 @@ export default function AccountFlow() {
       setErrorMsg(err instanceof Error ? err.message : "Couldn't load your account.");
       setState("error");
     }
-  }, [loadStars, loadTokens]);
+  }, [loadStars, loadPublished, loadTokens]);
 
   useEffect(() => {
     loadSession();
@@ -153,6 +187,7 @@ export default function AccountFlow() {
       const s = await getSession();
       setSession(s);
       setHandleDraft("");
+      loadPublished(s.handle);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't claim that handle.";
       // 409 surfaces as the API's detail string; make "taken" unmistakable.
@@ -185,6 +220,32 @@ export default function AccountFlow() {
       setTokensError("Couldn't revoke that CLI — try again.");
     }
     setRevoking(null);
+  }
+
+  async function onToggleVersions(entry: PublishedEmissary) {
+    if (!session?.handle) return;
+    const slug = entry.slug;
+    const willOpen = !openVersions[slug];
+    setOpenVersions((prev) => ({ ...prev, [slug]: willOpen }));
+    if (!willOpen || versionsBySlug[slug]) return;
+
+    setVersionsBySlug((prev) => ({ ...prev, [slug]: { state: "loading", versions: [] } }));
+    try {
+      const res = await listPublishedVersions(session.handle, slug);
+      setVersionsBySlug((prev) => ({
+        ...prev,
+        [slug]: { state: "ready", versions: res.versions || [] },
+      }));
+    } catch (err) {
+      setVersionsBySlug((prev) => ({
+        ...prev,
+        [slug]: {
+          state: "error",
+          versions: [],
+          message: err instanceof Error ? err.message : "Couldn't load versions.",
+        },
+      }));
+    }
   }
 
   async function onSignOut() {
@@ -301,6 +362,11 @@ export default function AccountFlow() {
             {memberSince && <span className="acct-since">member since {memberSince}</span>}
           </div>
         </div>
+        <div className="acct-overview" aria-label="Account summary">
+          <span><strong>{published ? published.length : "..."}</strong> published</span>
+          <span><strong>{stars ? stars.length : "..."}</strong> starred</span>
+          <span><strong>{tokens ? tokens.length : "..."}</strong> CLIs</span>
+        </div>
         <button
           type="button"
           className="setup-btn setup-btn-secondary"
@@ -314,7 +380,7 @@ export default function AccountFlow() {
       {/* Handle: claim (if none) or permanence note (if claimed) */}
       {session?.handle ? (
         <p className="acct-handle-note">
-          Your handle <span className="acct-handle">@{session.handle}</span> is permanent —
+          Your handle <span className="acct-handle">@{session.handle}</span>{" "}is permanent —
           it&apos;s how people address emissaries to you.
         </p>
       ) : (
@@ -362,6 +428,102 @@ export default function AccountFlow() {
           </span>
         </div>
       )}
+
+      {/* Published shelf */}
+      <div className="acct-section">
+        <div className="acct-section-head">
+          <span className="acct-section-label">Published by you</span>
+          <span className="acct-section-rule" />
+          <span className="acct-section-count">{published ? published.length : ""}</span>
+        </div>
+
+        {!session?.handle ? (
+          <p className="em-prose acct-empty">
+            Claim a handle before public addresses can attach to your account.
+          </p>
+        ) : published === null ? (
+          <div className="acct-stars-loading">
+            <div className="setup-spinner-sm" />
+            <span className="em-prose">Loading...</span>
+          </div>
+        ) : publishedError && published.length === 0 ? (
+          <p className="em-prose acct-empty">{publishedError}</p>
+        ) : published.length === 0 ? (
+          <div className="acct-empty-block">
+            <p className="em-prose acct-empty">
+              No public addresses yet. Publish from your harness and they will land here.
+            </p>
+            <CommandBlock command="emissary new" />
+          </div>
+        ) : (
+          <div className="acct-published">
+            {publishedError && <p className="em-prose acct-empty">{publishedError}</p>}
+            {published.map((entry) => {
+              const versionState = versionsBySlug[entry.slug];
+              const addressHref = `/@${session.handle}/${entry.slug}`;
+              const copyUrl = `https://egregore.xyz/@${session.handle}/${entry.slug}`;
+              return (
+                <article className="acct-pub" key={entry.slug}>
+                  <div className="acct-pub-main">
+                    <a className="acct-pub-address" href={addressHref}>{entry.address}</a>
+                    <h2>{entry.topic || entry.slug}</h2>
+                    {entry.summary && <p>{entry.summary}</p>}
+                    <div className="acct-star-tags">
+                      {entry.kind && <span className="acct-chip">{entry.kind}</span>}
+                      {entry.category && <span className="acct-chip acct-chip-mode">{entry.category}</span>}
+                      <span className="acct-chip acct-chip-mode">v{entry.version}</span>
+                      <span className="acct-chip acct-chip-mode">{entry.stars} stars</span>
+                      {fmtDate(entry.updated_at) && (
+                        <span className="acct-chip acct-chip-mode">updated {fmtDate(entry.updated_at)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="acct-pub-actions">
+                    <a className="setup-btn setup-btn-secondary acct-btn-sm" href={addressHref}>Open</a>
+                    <button
+                      type="button"
+                      className="setup-btn setup-btn-secondary acct-btn-sm"
+                      onClick={() => onToggleVersions(entry)}
+                      aria-expanded={!!openVersions[entry.slug]}
+                    >
+                      Versions
+                    </button>
+                    <CopyButton value={copyUrl} label="Copy" />
+                  </div>
+                  {openVersions[entry.slug] && (
+                    <div className="acct-version-panel">
+                      {versionState?.state === "loading" || !versionState ? (
+                        <div className="acct-stars-loading">
+                          <div className="setup-spinner-sm" />
+                          <span className="em-prose">Loading versions...</span>
+                        </div>
+                      ) : versionState.state === "error" ? (
+                        <p className="em-prose acct-empty">{versionState.message}</p>
+                      ) : versionState.versions.length === 0 ? (
+                        <p className="em-prose acct-empty">No version history yet.</p>
+                      ) : (
+                        <div className="acct-version-list">
+                          {versionState.versions.map((version) => (
+                            <a
+                              className="acct-version"
+                              href={`/emissary/e/${version.id}`}
+                              key={version.id}
+                            >
+                              <span>v{version.version}{version.is_head ? " head" : ""}</span>
+                              <strong>{version.topic || "Untitled emissary"}</strong>
+                              {fmtDate(version.created_at) && <small>{fmtDate(version.created_at)}</small>}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Connected CLIs */}
       <div className="acct-section">

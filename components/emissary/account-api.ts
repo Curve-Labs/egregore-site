@@ -36,6 +36,45 @@ export type Star = {
 
 export type StarsResponse = { stars: Star[] };
 
+export type PublishedEmissary = {
+  slug: string;
+  address: string;
+  head_id: string;
+  topic: string | null;
+  summary: string | null;
+  kind: string | null;
+  category: string | null;
+  version: number;
+  updated_at?: string | null;
+  stars: number;
+};
+
+export type PlatformProfile = {
+  handle: string;
+  display: string | null;
+  bio?: string | null;
+  links?: unknown[];
+  featured?: string[];
+  verified: boolean;
+  created_at?: string | null;
+  shelf: PublishedEmissary[];
+};
+
+export type PublishedVersion = {
+  id: string;
+  version: number;
+  parent_version?: string | null;
+  topic?: string | null;
+  summary?: string | null;
+  created_at?: string | null;
+  is_head: boolean;
+};
+
+export type VersionsResponse = {
+  address: string;
+  versions: PublishedVersion[];
+};
+
 // A CLI token minted by `emissary login` / `install`. Field names are kept
 // permissive: the API lane's exact keys for created / last-used weren't frozen
 // at build time, so the account UI reads through the getters below.
@@ -154,6 +193,24 @@ export function claimHandle(handle: string, display?: string): Promise<unknown> 
     "PUT",
     "/api/v1/platform/profile",
     display ? { handle, display } : { handle },
+  );
+}
+
+// GET /platform/@handle — public profile + shelf. Used on the account page as
+// the signed-in user's "published by me" view once they have a handle.
+export function getPlatformProfile(handle: string): Promise<PlatformProfile> {
+  return sameOrigin<PlatformProfile>(
+    "GET",
+    `/api/v1/platform/@${encodeURIComponent(handle)}`,
+  );
+}
+
+// GET /platform/@handle/slug/versions — immutable version lineage for one
+// address. Public read, but shown from account as an inspect/manage action.
+export function listPublishedVersions(handle: string, slug: string): Promise<VersionsResponse> {
+  return sameOrigin<VersionsResponse>(
+    "GET",
+    `/api/v1/platform/@${encodeURIComponent(handle)}/${encodeURIComponent(slug)}/versions`,
   );
 }
 

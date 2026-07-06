@@ -12,7 +12,7 @@
   padding: 20px 22px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--paper);
   flex-wrap: wrap;
 }
 
@@ -43,6 +43,33 @@
 .acct-handle { color: var(--terracotta); }
 .acct-email { opacity: 0.6; }
 .acct-since { opacity: 0.45; }
+
+.acct-overview {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.acct-overview span {
+  min-width: 88px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--black);
+  opacity: 0.66;
+}
+
+.acct-overview strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--terracotta);
+  font-size: 15px;
+  opacity: 1;
+}
 
 /* ── Name: display + inline edit ── */
 .acct-name-row {
@@ -118,7 +145,7 @@
   padding: 20px 22px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--paper);
 }
 
 .acct-claim-copy { margin: 0; opacity: 0.72; }
@@ -243,23 +270,31 @@
 .acct-empty { opacity: 0.65; }
 .acct-empty a { color: var(--terracotta); }
 
+.acct-empty-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .acct-stars-loading {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-/* ── Star rows ── */
-.acct-stars {
+/* ── Published + star rows ── */
+.acct-stars,
+.acct-published {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.acct-star {
+.acct-star,
+.acct-pub {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   padding: 14px 16px;
   border: 1px solid var(--border);
@@ -267,28 +302,47 @@
   background: var(--cream);
 }
 
-.acct-star-main {
+.acct-pub {
+  flex-wrap: wrap;
+}
+
+.acct-star-main,
+.acct-pub-main {
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  flex: 1 1 360px;
 }
 
-.acct-star-addr {
+.acct-star-addr,
+.acct-pub-address {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--terracotta);
   text-decoration: none;
   word-break: break-all;
 }
-.acct-star-addr:hover { text-decoration: underline; }
+.acct-star-addr:hover,
+.acct-pub-address:hover { text-decoration: underline; }
 
-.acct-star-topic {
+.acct-pub h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.16;
+  font-weight: 500;
+  color: var(--black);
+}
+
+.acct-star-topic,
+.acct-pub p {
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.45;
   color: var(--black);
   opacity: 0.7;
+  margin: 0;
 }
 
 .acct-star-tags {
@@ -335,6 +389,71 @@
 .acct-unstar:hover { opacity: 0.65; }
 .acct-unstar:disabled { opacity: 0.4; cursor: default; }
 
+.acct-pub-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.acct-pub-actions .setup-btn {
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 11px;
+  border-radius: 9px;
+}
+
+.acct-version-panel {
+  flex: 1 0 100%;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.acct-version-list {
+  display: grid;
+  gap: 8px;
+}
+
+.acct-version {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--black);
+  background: var(--paper);
+}
+
+.acct-version span,
+.acct-version small {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--black);
+  opacity: 0.52;
+}
+
+.acct-version strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--black);
+  opacity: 0.75;
+}
+
+.acct-version:hover {
+  border-color: var(--terracotta);
+}
+
 /* ── Pull teach block ── */
 .acct-teach {
   display: flex;
@@ -350,4 +469,24 @@
   color: var(--black);
   opacity: 0.5;
   margin: 0;
+}
+
+@media (max-width: 720px) {
+  .acct-overview {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .acct-overview span {
+    flex: 1 1 90px;
+  }
+
+  .acct-pub-actions {
+    justify-content: flex-start;
+    flex: 1 0 100%;
+  }
+
+  .acct-version {
+    grid-template-columns: 1fr;
+  }
 }
