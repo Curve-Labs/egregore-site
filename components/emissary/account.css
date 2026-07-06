@@ -44,6 +44,165 @@
 .acct-email { opacity: 0.6; }
 .acct-since { opacity: 0.45; }
 
+/* ── Name: display + inline edit ── */
+.acct-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.acct-edit {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--terracotta);
+  padding: 0;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.acct-edit:hover { opacity: 1; }
+
+.acct-name-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.acct-name-input {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  width: auto;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.acct-name-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Compact variant of .setup-btn for inline row actions. */
+.acct-btn-sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 9px;
+}
+
+.acct-inline-err {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--terracotta);
+}
+
+/* ── Handle: permanence note + claim ── */
+.acct-handle-note {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--black);
+  opacity: 0.7;
+  margin: 0;
+}
+.acct-handle-note .acct-handle { opacity: 1; }
+
+.acct-claim {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.acct-claim-copy { margin: 0; opacity: 0.72; }
+
+.acct-claim-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.acct-claim-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 220px;
+}
+
+.acct-at {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--terracotta);
+  opacity: 0.8;
+}
+
+.acct-claim-input .setup-input { flex: 1; }
+
+.acct-grammar {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--black);
+  opacity: 0.5;
+  letter-spacing: 0.02em;
+}
+.acct-grammar.is-err { color: var(--terracotta); opacity: 1; }
+
+/* ── Connected CLIs (tokens) ── */
+.acct-tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acct-token {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+}
+
+.acct-token-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.acct-token-harness {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--black);
+}
+
+.acct-token-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--black);
+  opacity: 0.55;
+}
+
+.acct-revoke { flex-shrink: 0; }
+.acct-empty code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--terracotta);
+}
+
 /* ── Section header (Stars / Pull) ── */
 .acct-section {
   display: flex;

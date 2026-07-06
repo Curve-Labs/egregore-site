@@ -36,7 +36,10 @@ export default function LoginFlow() {
 
   useEffect(() => {
     if (!token) return;
-    const dest = next || "/emissary/account";
+    // Default matches the API's new post-verify default (/emissary?welcome=1) so
+    // a link with no explicit next lands on the hub's welcome beat. A supplied
+    // same-origin next still wins.
+    const dest = next || "/emissary?welcome=1";
     window.location.replace(
       "/api/v1/emissary/login-verify?token=" +
         encodeURIComponent(token) +

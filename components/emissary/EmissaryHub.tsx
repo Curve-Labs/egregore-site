@@ -6,8 +6,6 @@
 // everything else is the design. The design-tool TweaksPanel is dropped.
 
 import { useEffect, useState, type FC, type SVGProps } from "react";
-import { register } from "./api";
-import type { McpConfig } from "./api";
 import { getSession, type Session } from "./account-api";
 import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
 import "./emissary-hub.css";
@@ -31,28 +29,6 @@ const IconInbox: FC<SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-// ── Channel glyphs (the four tabs) ─────────────────────
-const G_Code: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-  </svg>
-);
-const G_Codex: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-  </svg>
-);
-const G_Web: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-  </svg>
-);
-const G_Chat: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
-
 // ── CopyButton ─────────────────────────────────────────
 function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: string; className?: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -73,143 +49,29 @@ function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: st
   );
 }
 
-// ── Setup section (tabbed channels) ────────────────────
-type ChannelPath = "terminal" | "web";
-type Channel = { id: string; name: string; kind: string; path: ChannelPath; Glyph: FC };
-
-const CHANNELS: Channel[] = [
-  { id: "claude-code", name: "Claude Code", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Code },
-  { id: "codex", name: "Codex", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Codex },
-  { id: "claude-ai", name: "claude.ai", kind: "Web chat · MCP", path: "web", Glyph: G_Web },
-  { id: "chatgpt", name: "ChatGPT", kind: "Web chat · MCP", path: "web", Glyph: G_Chat },
-];
-
-function SetupModule() {
-  const [active, setActive] = useState("claude-code");
-  const ch = CHANNELS.find((c) => c.id === active) ?? CHANNELS[0];
+// ── Install block ──────────────────────────────────────
+// One command, every harness. No picker — the founder's smoke-test call: a web
+// visitor should see HOW to install first, and it's a single line that
+// auto-detects Claude Code and Codex.
+function InstallBlock() {
   return (
     <div className="setup">
-      <div className="channel-tabs" role="tablist">
-        {CHANNELS.map((c) => {
-          const Glyph = c.Glyph;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="tab"
-              aria-selected={c.id === active}
-              className="channel-tab"
-              onClick={() => setActive(c.id)}
-            >
-              <span className="dot" />
-              <span className="name">{c.name}</span>
-              <span className="kind">{c.kind}</span>
-              <span className="glyph"><Glyph /></span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="channel-body">
-        {ch.path === "terminal" ? <TerminalPath name={ch.name} /> : <WebPath name={ch.name} channelId={ch.id} />}
-      </div>
-    </div>
-  );
-}
-
-function TerminalPath({ name }: { name: string }) {
-  return (
-    <>
-      <p className="install-copy">
-        Run this once in {name}&apos;s working directory. It registers your identity,
-        installs the <code>egregore-emissary</code> skill and the <code>emissary</code> command,
-        and wires the egregore MCP into your harness — detected automatically.
-      </p>
-      <div className="term">
-        <span className="cmd">
-          <span className="prompt">$</span>npx <span className="accent">egregore-emissary@latest</span>&nbsp;install
-        </span>
-        <CopyButton text="npx egregore-emissary@latest install" />
-      </div>
-      <p className="web-note">
-        Prompts for name + email if not flagged. No password — verification is a magic link.
-      </p>
-    </>
-  );
-}
-
-function WebPath({ name, channelId }: { name: string; channelId: string }) {
-  const [fname, setFname] = useState("");
-  const [email, setEmail] = useState("");
-  const [stage, setStage] = useState<"form" | "submitting" | "done" | "error">("form");
-  const [message, setMessage] = useState("");
-  const [mcp, setMcp] = useState<McpConfig | null>(null);
-
-  const submit = async () => {
-    if (!fname.trim() || !email.trim()) {
-      setStage("error");
-      setMessage("Name and email are both required.");
-      return;
-    }
-    setStage("submitting");
-    try {
-      const res = await register({
-        name: fname.trim(),
-        email: email.trim(),
-        harness: channelId,
-      });
-      setMcp(res.mcp_config);
-      setStage("done");
-    } catch (e) {
-      setStage("error");
-      setMessage(e instanceof Error ? e.message : "Something went wrong — try again.");
-    }
-  };
-
-  if (stage === "done" && mcp) {
-    return (
-      <>
+      <div className="install-block">
         <p className="install-copy">
-          Registered. Check your email to verify your identity — we sent your auth
-          header there. Then paste this connector URL into <em>{name} → Settings → Connectors</em>.
+          One command — for every harness. Run it once in your project&apos;s
+          working directory. It registers your identity, installs the{" "}
+          <code>egregore-emissary</code> skill and the <code>emissary</code>{" "}
+          command, and wires the egregore MCP into your harness — no flags to pick.
         </p>
         <div className="term">
-          <span className="cmd">{mcp.server_url}</span>
-          <CopyButton text={mcp.server_url} />
+          <span className="cmd">
+            <span className="prompt">$</span>npx <span className="accent">egregore-emissary@latest</span>&nbsp;install
+          </span>
+          <CopyButton text="npx egregore-emissary@latest install" />
         </div>
-        <p className="web-note">
-          Auth header: <code>{mcp.header_template}</code> — your token arrives by email.
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <p className="install-copy">
-        {name} installs the emissary MCP connector. Register once — we email a
-        connector URL and an auth header you paste into <em>Settings → Connectors</em>.
-      </p>
-      <div className="web-form">
-        <div className="field">
-          <label>Your name</label>
-          <input value={fname} onChange={(e) => setFname(e.target.value)} placeholder="appears as sender" />
-        </div>
-        <div className="field">
-          <label>Your email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@domain" />
-        </div>
-        <div className="field full">
-          <span className="hint">Bound to your connector token. Verification link goes here. No password.</span>
-        </div>
+        <p className="web-note">Works with Claude Code and Codex — detected automatically.</p>
       </div>
-      <div className="form-foot">
-        <span className="flags">Free · No password · Magic link</span>
-        <button type="button" className="btn-primary" onClick={submit} disabled={stage === "submitting"}>
-          {stage === "submitting" ? "Registering…" : "Get my connector →"}
-        </button>
-      </div>
-      {stage === "error" && <p className="web-note err">{message}</p>}
-    </>
+    </div>
   );
 }
 
@@ -332,9 +194,37 @@ function EmissaryCard({ em }: { em: Emissary }) {
 // ── Auth chip (identity spine) ─────────────────────────
 // Fail-soft: a signed-in session shows the account link, anything else
 // (signed out / API down) falls back to the sign-in link. Never blocks render.
+//
+// Welcome beat: the API redirects a just-verified magic link to
+// /emissary?welcome=1. When that flag is present AND a session resolves, the
+// chip pulses in and a short "Signed in as … ✓" toast plays, then settles into
+// the persistent chip. The param is stripped immediately (history.replaceState)
+// so a refresh or shared URL never replays it. prefers-reduced-motion drops the
+// motion to a plain fade. The param is read from window.location in an effect
+// (not useSearchParams) so this stays outside any Suspense requirement and is
+// static-export safe.
+type Beat = "hidden" | "in" | "out";
+
 function AuthChip() {
   const [session, setSession] = useState<Session | null>(null);
+  const [welcome, setWelcome] = useState(false);
+  const [beat, setBeat] = useState<Beat>("hidden");
+
   useEffect(() => {
+    // Detect + strip the welcome flag (client-only).
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("welcome") === "1") {
+        setWelcome(true);
+        params.delete("welcome");
+        const qs = params.toString();
+        const url = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
+        window.history.replaceState(null, "", url);
+      }
+    } catch {
+      /* no window / SSR — skip the beat */
+    }
+
     let cancelled = false;
     getSession()
       .then((s) => {
@@ -347,12 +237,44 @@ function AuthChip() {
       cancelled = true;
     };
   }, []);
+
+  // Play the beat once we have both the flag and a resolved session.
+  useEffect(() => {
+    if (!welcome || !session) return;
+    setBeat("in");
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const dwell = reduce ? 3000 : 3400;
+    const fade = reduce ? 200 : 460;
+    const t1 = setTimeout(() => setBeat("out"), dwell);
+    const t2 = setTimeout(() => setBeat("hidden"), dwell + fade);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [welcome, session]);
+
   if (session) {
     const who = session.handle ? "@" + session.handle : session.email;
     return (
-      <a className="em-authlink" href="/emissary/account">
-        Signed in as {who} <span className="arr">→</span> Account
-      </a>
+      <>
+        <a
+          className={`em-authlink${beat !== "hidden" ? " em-authlink--pulse" : ""}`}
+          href="/emissary/account"
+        >
+          Signed in as {who} <span className="arr">→</span> Account
+        </a>
+        {beat !== "hidden" && (
+          <div
+            className={`em-welcome-toast${beat === "out" ? " leaving" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
+            Signed in as <span className="who">{who}</span> <span className="tick">✓</span>
+          </div>
+        )}
+      </>
     );
   }
   return (
@@ -433,9 +355,9 @@ export default function EmissaryHub() {
             <span className="num">§ 01</span>
             <span className="label">Set up — to send</span>
             <span className="rule" />
-            <span className="label">pick your channel</span>
+            <span className="label">one command</span>
           </div>
-          <SetupModule />
+          <InstallBlock />
           <div className="receive">
             <span className="ic"><IconInbox /></span>
             <p>
