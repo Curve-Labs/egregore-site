@@ -125,15 +125,6 @@
   status = 200
   force = true
 
-# Directory browse page. Exact path — it never shadows the static /emissary/*
-# Next routes (/emissary, /emissary/account, /emissary/verify, /emissary/i/*) or
-# the /emissary/e/* render rules above; every one of those is a different path.
-[[redirects]]
-  from = "/emissary/browse"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/browse"
-  status = 200
-  force = true
-
 # Profile + address render + raw: /@handle, /@handle/slug, /@handle/slug/raw.
 # Splat — no static route begins with /@, so nothing collides.
 [[redirects]]

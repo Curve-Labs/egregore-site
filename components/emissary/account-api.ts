@@ -120,6 +120,15 @@ export function listStars(): Promise<StarsResponse> {
   return sameOrigin<StarsResponse>("GET", "/api/v1/platform/stars");
 }
 
+// POST /platform/stars {owner, slug, mode} — collect an emissary for pull.
+export function starEmissary(
+  owner: string,
+  slug: string,
+  mode: "pin" | "follow" = "pin",
+): Promise<Star> {
+  return sameOrigin<Star>("POST", "/api/v1/platform/stars", { owner, slug, mode });
+}
+
 // DELETE /platform/stars/{owner}/{slug} — remove a star.
 export function unstar(owner: string, slug: string): Promise<{ status: string }> {
   return sameOrigin(

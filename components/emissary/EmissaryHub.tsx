@@ -1,401 +1,674 @@
 "use client";
 
-// EmissaryHub — the /emissary page. Ported from the Claude Design handoff
-// bundle ("Send an emissary"). The design's own header is dropped (the
-// setup layout supplies the egregore logo) and --bg is kept as our cream;
-// everything else is the design. The design-tool TweaksPanel is dropped.
-
-import { useEffect, useState, type FC, type SVGProps } from "react";
-import { getSession, type Session } from "./account-api";
-import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
+import { useCallback, useEffect, useMemo, useState, type FC, type SVGProps } from "react";
+import {
+  getSession,
+  listStars,
+  starEmissary,
+  unstar,
+  NotSignedIn,
+  type Session,
+  type Star,
+} from "./account-api";
+import {
+  fetchBrowse,
+  fetchProfile,
+  fetchUsage,
+  type BrowseCategory,
+  type BrowseEntry,
+  type PlatformProfile,
+} from "./api";
 import "./emissary-hub.css";
 
-// ── Icons ──────────────────────────────────────────────
+const INSTALL_COMMAND = "npx egregore-emissary@latest install";
+const PULL_COMMAND = "emissary pull";
+const NEW_COMMAND = "emissary new";
+
+type LoadState = "loading" | "ready" | "error";
+type AuthState = "loading" | "signed-out" | "signed-in";
+type SortKey = "carried" | "recent" | "stars";
+type FilterAxis = "category" | "kind";
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "carried", label: "Most carried" },
+  { key: "recent", label: "Newest" },
+  { key: "stars", label: "Most starred" },
+];
+
+const KIND_LABELS: Record<string, string> = {
+  build: "Build",
+  dialogue: "Dialogue",
+  documentation: "Documentation",
+  executable: "Executable",
+  brief: "Brief",
+  research: "Research",
+};
+
+const CATEGORY_FALLBACKS = [
+  { key: "dialogue", label: "Dialogue" },
+  { key: "build", label: "Build" },
+  { key: "documentation", label: "Documentation" },
+];
+
 const IconCopy: FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="9" y="9" width="13" height="13" rx="2" />
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
+
 const IconCheck: FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
-const IconInbox: FC<SVGProps<SVGSVGElement>> = (props) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+
+const IconRun: FC<SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
-// ── CopyButton ─────────────────────────────────────────
-function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: string; className?: string; label?: string }) {
+const IconStar: FC<SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" {...props}>
+    <polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2" />
+  </svg>
+);
+
+function kindLabel(kind?: string | null): string {
+  if (!kind) return "Emissary";
+  return KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function entryKey(entry: BrowseEntry): string {
+  return `${entry.owner_handle}/${entry.slug}`;
+}
+
+function starKey(star: Star): string {
+  return `${star.owner}/${star.slug}`;
+}
+
+function safeNext(path = "/emissary"): string {
+  return `/login?next=${encodeURIComponent(path)}`;
+}
+
+function avatarInitial(handle: string, profile?: PlatformProfile): string {
+  return (profile?.display || handle || "e").charAt(0).toUpperCase();
+}
+
+function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
-  const onClick = async () => {
+  const onClick = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
     } catch {
-      /* clipboard blocked — no-op */
+      setCopied(false);
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1400);
-  };
+  }, [value]);
+
   return (
-    <button type="button" className={`${className}${copied ? " copied" : ""}`} onClick={onClick}>
+    <button type="button" className={`em-copy-btn${copied ? " copied" : ""}`} onClick={onClick}>
       {copied ? <IconCheck /> : <IconCopy />}
       {copied ? "Copied" : label}
     </button>
   );
 }
 
-// ── Install block ──────────────────────────────────────
-// One command, every harness. No picker — the founder's smoke-test call: a web
-// visitor should see HOW to install first, and it's a single line that
-// auto-detects Claude Code and Codex.
-function InstallBlock() {
+function CommandCapsule({ command, compact = false }: { command: string; compact?: boolean }) {
   return (
-    <div className="setup">
-      <div className="install-block">
-        <p className="install-copy">
-          One command — for every harness. Run it once in your project&apos;s
-          working directory. It registers your identity, installs the{" "}
-          <code>egregore-emissary</code> skill and the <code>emissary</code>{" "}
-          command, and wires the egregore MCP into your harness — no flags to pick.
-        </p>
-        <div className="term">
-          <span className="cmd">
-            <span className="prompt">$</span>npx <span className="accent">egregore-emissary@latest</span>&nbsp;install
-          </span>
-          <CopyButton text="npx egregore-emissary@latest install" />
-        </div>
-        <p className="web-note">Works with Claude Code and Codex — detected automatically.</p>
-      </div>
+    <div className={`em-command${compact ? " compact" : ""}`}>
+      <code><span>$</span>{command}</code>
+      <CopyButton value={command} />
     </div>
   );
 }
 
-// ── Emissary data ──────────────────────────────────────
-type Emissary = {
-  id: string;
-  stamp: string;
-  seal: string;
-  tag: string;
-  cat: string;
-  name: string;
-  italic: boolean;
-  desc: string;
-  meta: [string, string][];
-  uuid?: string;
-  Sigil: FC;
-  draft: boolean;
-};
+function AuthLink({ authState, session }: { authState: AuthState; session: Session | null }) {
+  if (authState === "loading") return <span className="em-authlink muted">Checking identity</span>;
+  if (session) {
+    const who = session.handle ? `@${session.handle}` : session.email;
+    return <a className="em-authlink" href="/emissary/account">{who} <span>Account</span></a>;
+  }
+  return <a className="em-authlink" href={safeNext("/emissary")}>Sign in</a>;
+}
 
-const EMISSARY_BASE = "https://egregore.xyz/emissary/e/";
+function AccountRail({
+  authState,
+  session,
+  stars,
+}: {
+  authState: AuthState;
+  session: Session | null;
+  stars: Star[] | null;
+}) {
+  if (authState === "loading") {
+    return (
+      <aside className="em-rail">
+        <div className="rail-label">Account</div>
+        <div className="rail-skeleton" />
+        <div className="rail-skeleton short" />
+      </aside>
+    );
+  }
 
-const EMISSARIES: Emissary[] = [
-  {
-    id: "spiral",
-    stamp: "I · CLARITY",
-    seal: "S-001",
-    tag: "Live",
-    cat: "Socratic",
-    name: "Spiral",
-    italic: false,
-    desc: "Pressure-tests a half-formed thesis in three descending rings. Each pass tightens the question, until the receiver can say plainly what they want and how to get there.",
-    meta: [["Rings", "3"], ["Run", "~12 min"], ["Best with", "Goals · Theses"]],
-    uuid: "75bedab5-e4da-42c0-a955-cd360388442c",
-    Sigil: SigilSpiral,
-    draft: false,
-  },
-  {
-    id: "bootstrap",
-    stamp: "II · BOOTSTRAP",
-    seal: "S-002",
-    tag: "Live",
-    cat: "Self-install",
-    name: "First Stone",
-    italic: false,
-    desc: "The bootstrap emissary. Send it to anyone — it walks their AI through installing egregore-emissary. The cold-to-installed conversion, delivered as an emissary itself.",
-    meta: [["Steps", "4"], ["Run", "~3 min"], ["Best with", "First contact"]],
-    uuid: "d9ba091e-2083-4546-8243-bae37f168bbc",
-    Sigil: SigilBootstrap,
-    draft: false,
-  },
-  {
-    id: "cartographer",
-    stamp: "III · RESEARCH",
-    seal: "S-003",
-    tag: "In workshop",
-    cat: "Inquiry",
-    name: "Cartographer",
-    italic: true,
-    desc: "Charts a domain on the receiver's behalf — sources, claims, contested edges. Returns an annotated map you can hand back as the next emissary.",
-    meta: [["Passes", "2"], ["Run", "~25 min"], ["Best with", "Open questions"]],
-    Sigil: SigilCartographer,
-    draft: true,
-  },
-  {
-    id: "forge",
-    stamp: "IV · BUILD",
-    seal: "S-004",
-    tag: "In workshop",
-    cat: "Construction",
-    name: "Forge",
-    italic: true,
-    desc: "The emissary that builds emissaries. Run it and it teaches the model, shapes one real task of yours into a runnable handoff, and publishes it — you leave holding a link to send.",
-    meta: [["Steps", "3"], ["Run", "~10 min"], ["Best with", "First emissary"]],
-    Sigil: SigilForge,
-    draft: true,
-  },
-];
+  if (!session) {
+    return (
+      <aside className="em-rail">
+        <div className="rail-label">Account</div>
+        <h2>Keep what you find.</h2>
+        <p>Sign in with email, star emissaries on the web, then pull them into your harness.</p>
+        <a className="rail-primary" href={safeNext("/emissary")}>Sign in by email</a>
+        <div className="rail-rule" />
+        <span className="rail-mini">No password. The CLI binds later with <code>emissary login</code>.</span>
+      </aside>
+    );
+  }
 
-function EmissaryCard({ em }: { em: Emissary }) {
-  const Sigil = em.Sigil;
-  const link = em.uuid ? `${EMISSARY_BASE}${em.uuid}` : null;
+  const who = session.handle ? `@${session.handle}` : "Handle unclaimed";
   return (
-    <article className={`em-card${em.draft ? " draft" : ""}`}>
-      <div className="em-sigil">
-        <span className="stamp">{em.stamp}</span>
-        <Sigil />
-        <span className="seal">{em.seal}</span>
+    <aside className="em-rail">
+      <div className="rail-label">Account</div>
+      <div className="rail-person">
+        <span className="rail-avatar">{avatarInitial(session.email || "e")}</span>
+        <span>
+          <strong>{who}</strong>
+          <small>{session.email}</small>
+        </span>
       </div>
-      <div className="em-body">
-        <div className="em-tags">
-          <span className="pill">{em.tag}</span>
-          <span>{em.cat}</span>
+      <div className="rail-stats">
+        <span><strong>{stars ? stars.length : "…"}</strong> stars</span>
+        <span><strong>pin</strong> by default</span>
+      </div>
+      <div className="consent-ring" aria-label="Consent ring">
+        <span /><span /><span />
+      </div>
+      <p className="rail-mini">Your account page holds handle claim, connected CLIs, revocation, stars, and sign out.</p>
+      <a className="rail-primary" href="/emissary/account">Manage account</a>
+    </aside>
+  );
+}
+
+function FilterRail({
+  entries,
+  categories,
+  filter,
+  setFilter,
+}: {
+  entries: BrowseEntry[];
+  categories: BrowseCategory[];
+  filter: string;
+  setFilter: (next: string) => void;
+}) {
+  const { axis, options } = useMemo((): { axis: FilterAxis; options: { key: string; label: string; count: number }[] } => {
+    const categoryCounts = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.category) categoryCounts.set(entry.category, (categoryCounts.get(entry.category) ?? 0) + 1);
+    }
+
+    const categoryOptions = categories
+      .map((cat) => ({ key: cat.slug, label: cat.label, count: categoryCounts.get(cat.slug) ?? 0 }))
+      .filter((cat) => cat.count > 0);
+
+    if (categoryOptions.length > 0) return { axis: "category", options: categoryOptions };
+
+    const kindCounts = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.kind) kindCounts.set(entry.kind, (kindCounts.get(entry.kind) ?? 0) + 1);
+    }
+
+    const liveKinds = Array.from(kindCounts.entries()).map(([key, count]) => ({
+      key,
+      label: kindLabel(key),
+      count,
+    }));
+
+    const options = liveKinds.length > 0
+      ? liveKinds
+      : CATEGORY_FALLBACKS.map((item) => ({ ...item, count: 0 }));
+
+    return { axis: "kind", options: options.sort((a, b) => b.count - a.count) };
+  }, [entries, categories]);
+
+  return (
+    <div className="dir-filters" role="group" aria-label={`Filter by ${axis}`}>
+      <button type="button" className="dir-filter" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+        All <span>{entries.length}</span>
+      </button>
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          className="dir-filter"
+          aria-pressed={filter === option.key}
+          onClick={() => setFilter(option.key)}
+        >
+          {option.label} <span>{option.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformProfile }) {
+  return (
+    <a className="dir-author" href={`/@${handle}`}>
+      <span className="dir-avatar">{avatarInitial(handle, profile)}</span>
+      <span>
+        <strong>{profile?.display || `@${handle}`}{profile?.verified && <b title="verified">✓</b>}</strong>
+        <small>@{handle}</small>
+      </span>
+    </a>
+  );
+}
+
+function DirectoryThumb({ entry }: { entry: BrowseEntry }) {
+  return (
+    <div className={`dir-thumb k-${entry.kind || "emissary"}`} aria-hidden="true">
+      <span className="thumb-kind">{kindLabel(entry.kind)}</span>
+      <span className="thumb-mark">{(entry.kind || "e").charAt(0).toUpperCase()}</span>
+      <span className="thumb-line wide" />
+      <span className="thumb-line" />
+      <span className="thumb-line short" />
+    </div>
+  );
+}
+
+function DirectoryCard({
+  entry,
+  profile,
+  carried,
+  starred,
+  busy,
+  onToggleStar,
+}: {
+  entry: BrowseEntry;
+  profile?: PlatformProfile;
+  carried: number;
+  starred: boolean;
+  busy: boolean;
+  onToggleStar: (entry: BrowseEntry) => void;
+}) {
+  const addressHref = `/${entry.address}`;
+  const copyUrl = `https://egregore.xyz/emissary/e/${entry.head_id}`;
+
+  return (
+    <article className="dir-card">
+      <DirectoryThumb entry={entry} />
+      <div className="dir-card-body">
+        <div className="dir-card-top">
+          <span className="dir-kind">{kindLabel(entry.kind)}</span>
+          <span className="dir-counts">
+            <span title={`${carried} carried`}><IconRun /> {carried}</span>
+            <span title={`${entry.stars} stars`}><IconStar /> {entry.stars}</span>
+          </span>
         </div>
-        <h3 className="em-name" style={em.italic ? { fontStyle: "italic" } : undefined}>{em.name}</h3>
-        <p className="em-desc">{em.desc}</p>
-        <div className="em-meta">
-          {em.meta.map(([k, v]) => (
-            <span key={k}>{k} · <strong>{v}</strong></span>
-          ))}
+        <h3><a href={addressHref}>{entry.topic || entry.slug}</a></h3>
+        {entry.summary && <p>{entry.summary}</p>}
+        <div className="dir-card-foot">
+          <AuthorBadge handle={entry.owner_handle} profile={profile} />
+          <div className="dir-actions">
+            <button
+              type="button"
+              className={`star-action${starred ? " is-starred" : ""}`}
+              aria-pressed={starred}
+              disabled={busy}
+              onClick={() => onToggleStar(entry)}
+            >
+              <IconStar /> {starred ? "Starred" : "Star"}
+            </button>
+            <CopyButton value={copyUrl} label="Copy link" />
+          </div>
         </div>
-        {link && em.uuid && (
-          <div className="em-link-row">
-            <div className="em-link">
-              <span className="scheme">{EMISSARY_BASE}</span>
-              <span className="id">{em.uuid.slice(0, 8)}…{em.uuid.slice(-4)}</span>
-            </div>
-            <CopyButton text={link} className="em-copy" label="Copy link" />
-          </div>
-        )}
-        {em.draft && (
-          <div className="draft-row">
-            <span>Draft</span><span className="dash" /><span>Subscribe for release →</span>
-          </div>
-        )}
       </div>
     </article>
   );
 }
 
-// ── Auth chip (identity spine) ─────────────────────────
-// Fail-soft: a signed-in session shows the account link, anything else
-// (signed out / API down) falls back to the sign-in link. Never blocks render.
-//
-// Welcome beat: the API redirects a just-verified magic link to
-// /emissary?welcome=1. When that flag is present AND a session resolves, the
-// chip pulses in and a short "Signed in as … ✓" toast plays, then settles into
-// the persistent chip. The param is stripped immediately (history.replaceState)
-// so a refresh or shared URL never replays it. prefers-reduced-motion drops the
-// motion to a plain fade. The param is read from window.location in an effect
-// (not useSearchParams) so this stays outside any Suspense requirement and is
-// static-export safe.
-type Beat = "hidden" | "in" | "out";
-
-function AuthChip() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [welcome, setWelcome] = useState(false);
-  const [beat, setBeat] = useState<Beat>("hidden");
-
-  useEffect(() => {
-    // Detect + strip the welcome flag (client-only).
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("welcome") === "1") {
-        setWelcome(true);
-        params.delete("welcome");
-        const qs = params.toString();
-        const url = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
-        window.history.replaceState(null, "", url);
-      }
-    } catch {
-      /* no window / SSR — skip the beat */
-    }
-
-    let cancelled = false;
-    getSession()
-      .then((s) => {
-        if (!cancelled) setSession(s);
-      })
-      .catch(() => {
-        /* signed out or API unreachable — stay anonymous */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Play the beat once we have both the flag and a resolved session.
-  useEffect(() => {
-    if (!welcome || !session) return;
-    setBeat("in");
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const dwell = reduce ? 3000 : 3400;
-    const fade = reduce ? 200 : 460;
-    const t1 = setTimeout(() => setBeat("out"), dwell);
-    const t2 = setTimeout(() => setBeat("hidden"), dwell + fade);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [welcome, session]);
-
-  if (session) {
-    const who = session.handle ? "@" + session.handle : session.email;
-    return (
-      <>
-        <a
-          className={`em-authlink${beat !== "hidden" ? " em-authlink--pulse" : ""}`}
-          href="/emissary/account"
-        >
-          Signed in as {who} <span className="arr">→</span> Account
-        </a>
-        {beat !== "hidden" && (
-          <div
-            className={`em-welcome-toast${beat === "out" ? " leaving" : ""}`}
-            role="status"
-            aria-live="polite"
-          >
-            Signed in as <span className="who">{who}</span> <span className="tick">✓</span>
-          </div>
-        )}
-      </>
-    );
-  }
+function LoopRail() {
   return (
-    <a className="em-authlink" href="/login?next=/emissary/account">
-      Sign in
-    </a>
+    <section className="loop-rail" aria-label="Emissary loop">
+      <div>
+        <span>01</span>
+        <h2>Star on the web</h2>
+        <p>The directory is for discovery. A star pins the version you evaluated.</p>
+      </div>
+      <div>
+        <span>02</span>
+        <h2>Pull in terminal</h2>
+        <p>Your harness reads the collection and offers each emissary to run or install.</p>
+      </div>
+      <div>
+        <span>03</span>
+        <h2>Publish from harness</h2>
+        <p>Composition stays agent-conducted. The web receives the address.</p>
+      </div>
+    </section>
   );
 }
 
-// ── The loop (identity spine): browse → ★ → pull ───────
-function LoopSection() {
+function InstallSection() {
   return (
-    <section>
+    <section id="install" className="install-section">
       <div className="sec-head">
-        <span className="num">§ 03</span>
-        <span className="label">The loop — browse &amp; pull</span>
+        <span className="num">§ 02</span>
+        <span className="label">Install and bind</span>
         <span className="rule" />
-        <span className="label">directory</span>
+        <span className="label">one command</span>
       </div>
-      <div className="loop">
-        <div className="loop-step">
-          <span className="loop-num">01</span>
-          <h3>Browse the directory</h3>
-          <p>
-            See what people are publishing. Every emissary has a page and a
-            canonical link you can open cold.
-          </p>
-          <a className="loop-link" href="/emissary/browse">Browse emissaries →</a>
+      <div className="install-grid">
+        <div className="install-copy">
+          <h2>Install once. Every emissary after that runs clean.</h2>
+          <p>Run the installer in a project working directory. It registers identity, installs the emissary skill and command, and wires the MCP into Claude Code or Codex.</p>
+          <CommandCapsule command={INSTALL_COMMAND} />
         </div>
-        <div className="loop-step">
-          <span className="loop-num">02</span>
-          <h3>★ what you trust</h3>
-          <p>
-            Sign in and star the ones worth keeping. A star pins the version you
-            saw — it stays put until you say otherwise.
-          </p>
-          <a className="loop-link" href="/login?next=/emissary/account">Sign in to star →</a>
-        </div>
-        <div className="loop-step">
-          <span className="loop-num">03</span>
-          <h3>Pull them in your terminal</h3>
-          <p>
-            Run <code>emissary pull</code> — your agent offers each starred
-            emissary to run or install.
-          </p>
-          <div className="loop-cmd"><span className="prompt">$</span>emissary pull</div>
+        <div className="install-steps">
+          <div><span>1</span><strong>Sign in</strong><small>Email link, then handle claim.</small></div>
+          <div><span>2</span><strong>Connect agent</strong><small><code>emissary login</code> binds a device.</small></div>
+          <div><span>3</span><strong>Pull stars</strong><small><code>{PULL_COMMAND}</code> closes the loop.</small></div>
+          <div><span>4</span><strong>Create</strong><small><code>{NEW_COMMAND}</code> publishes from the harness.</small></div>
         </div>
       </div>
     </section>
   );
 }
 
-// ── Page ───────────────────────────────────────────────
 export default function EmissaryHub() {
+  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [authState, setAuthState] = useState<AuthState>("loading");
+  const [entries, setEntries] = useState<BrowseEntry[]>([]);
+  const [categories, setCategories] = useState<BrowseCategory[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, PlatformProfile>>({});
+  const [uses, setUses] = useState<Record<string, number>>({});
+  const [session, setSession] = useState<Session | null>(null);
+  const [stars, setStars] = useState<Star[] | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState<SortKey>("carried");
+  const [busyStar, setBusyStar] = useState<string | null>(null);
+  const [starNote, setStarNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getSession()
+      .then((s) => {
+        if (cancelled) return;
+        setSession(s);
+        setAuthState("signed-in");
+        listStars()
+          .then((res) => {
+            if (!cancelled) setStars(res.stars || []);
+          })
+          .catch(() => {
+            if (!cancelled) setStars([]);
+          });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof NotSignedIn) {
+          setAuthState("signed-out");
+          setStars([]);
+          return;
+        }
+        setAuthState("signed-out");
+        setStars([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchBrowse()
+      .then((res) => {
+        if (cancelled) return;
+        const nextEntries = res.entries || [];
+        setEntries(nextEntries);
+        setCategories(res.categories || []);
+        setLoadState("ready");
+
+        const ids = nextEntries.map((entry) => entry.head_id).filter(Boolean);
+        if (ids.length > 0) {
+          fetchUsage(ids)
+            .then((counts) => {
+              if (!cancelled) setUses(counts);
+            })
+            .catch(() => {
+              if (!cancelled) setUses({});
+            });
+        }
+
+        Array.from(new Set(nextEntries.map((entry) => entry.owner_handle))).forEach((handle) => {
+          fetchProfile(handle)
+            .then((profile) => {
+              if (!cancelled) setProfiles((prev) => ({ ...prev, [handle]: profile }));
+            })
+            .catch(() => {
+              /* author badge falls back to the handle */
+            });
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadState("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const starred = useMemo(() => new Set((stars || []).map(starKey)), [stars]);
+
+  const visibleEntries = useMemo(() => {
+    const categoryActive = entries.some((entry) => entry.category === filter);
+    const filtered = filter === "all"
+      ? entries
+      : entries.filter((entry) => categoryActive ? entry.category === filter : entry.kind === filter);
+
+    return [...filtered].sort((a, b) => {
+      if (sort === "carried") return (uses[b.head_id] ?? 0) - (uses[a.head_id] ?? 0);
+      if (sort === "stars") return b.stars - a.stars;
+      const ta = a.updated_at || a.created_at || "";
+      const tb = b.updated_at || b.created_at || "";
+      return tb.localeCompare(ta);
+    });
+  }, [entries, filter, sort, uses]);
+
+  const contributors = useMemo(() => {
+    const counts = new Map<string, number>();
+    entries.forEach((entry) => counts.set(entry.owner_handle, (counts.get(entry.owner_handle) ?? 0) + 1));
+    return Array.from(counts.entries())
+      .map(([handle, count]) => ({ handle, count, profile: profiles[handle] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [entries, profiles]);
+
+  const totalCarried = useMemo(
+    () => Object.values(uses).reduce((sum, count) => sum + count, 0),
+    [uses],
+  );
+
+  const toggleStar = useCallback(async (entry: BrowseEntry) => {
+    if (!session) {
+      window.location.href = safeNext("/emissary");
+      return;
+    }
+
+    const key = entryKey(entry);
+    const wasStarred = starred.has(key);
+    setBusyStar(key);
+    setStarNote("");
+
+    setEntries((current) => current.map((item) => (
+      entryKey(item) === key
+        ? { ...item, stars: Math.max(0, item.stars + (wasStarred ? -1 : 1)) }
+        : item
+    )));
+
+    setStars((current) => {
+      const list = current || [];
+      if (wasStarred) return list.filter((item) => starKey(item) !== key);
+      return [{
+        address: entry.address,
+        owner: entry.owner_handle,
+        slug: entry.slug,
+        mode: "pin",
+        resolved_id: entry.head_id,
+        kind: entry.kind,
+        topic: entry.topic,
+        summary: entry.summary,
+        version: entry.version,
+      }, ...list];
+    });
+
+    try {
+      if (wasStarred) {
+        await unstar(entry.owner_handle, entry.slug);
+      } else {
+        await starEmissary(entry.owner_handle, entry.slug, "pin");
+        setStarNote("Starred. Run emissary pull in your terminal when you want to bring it in.");
+      }
+    } catch (err) {
+      setStarNote(err instanceof Error ? err.message : "Couldn't update that star.");
+      fetchBrowse().then((res) => setEntries(res.entries || [])).catch(() => undefined);
+      listStars().then((res) => setStars(res.stars || [])).catch(() => undefined);
+    } finally {
+      setBusyStar(null);
+    }
+  }, [session, starred]);
+
   return (
     <div className="em-hub">
-      <div className="rules"><div className="vert l" /><div className="vert r" /></div>
+      <div className="rules" aria-hidden="true"><div className="vert l" /><div className="vert r" /></div>
 
       <main className="em-main">
-        {/* Auth chip — nav area */}
-        <div className="em-authbar"><AuthChip /></div>
+        <div className="em-topbar">
+          <nav aria-label="Emissary">
+            <a href="#directory">Directory</a>
+            <a href="#install">Install</a>
+            <a href="/emissary/account">Account</a>
+          </nav>
+          <AuthLink authState={authState} session={session} />
+        </div>
 
-        {/* Hero */}
         <section className="em-hero">
-          <div className="eyebrow">Emissary Courier <span className="dot">·</span> v0.2</div>
-          <h1 className="display">Send an <em>emissary</em>.</h1>
-          <p className="lede">
-            An emissary is a portable, runnable task — handed to{" "}
-            <em className="em-word">someone else&apos;s</em> AI. Receiving works with no
-            install: paste the link into any harness. Install once and every emissary
-            runs at full fidelity.
-          </p>
+          <div className="hero-copy">
+            <div className="eyebrow">Emissary platform <span className="dot">·</span> web-star / agent-pull</div>
+            <h1 className="display">Emissary <em>Directory</em>.</h1>
+            <p className="lede">
+              Portable tasks at named addresses. Star what you trust on the web; pull it into your agent when the work is ready to move.
+            </p>
+            <div className="hero-actions">
+              <a className="hero-primary" href="#directory">Browse emissaries</a>
+              <a className="hero-secondary" href="#install">Install once</a>
+            </div>
+            <CommandCapsule command={INSTALL_COMMAND} compact />
+          </div>
+          <AccountRail authState={authState} session={session} stars={stars} />
         </section>
 
-        {/* Setup */}
-        <section>
+        <LoopRail />
+
+        <section id="directory" className="directory-section">
           <div className="sec-head">
             <span className="num">§ 01</span>
-            <span className="label">Set up — to send</span>
+            <span className="label">Directory feed</span>
             <span className="rule" />
-            <span className="label">one command</span>
+            <span className="label">{loadState === "ready" ? `${visibleEntries.length} visible` : "published"}</span>
           </div>
-          <InstallBlock />
-          <div className="receive">
-            <span className="ic"><IconInbox /></span>
-            <p>
-              <strong style={{ fontWeight: 500 }}>Receiving?</strong> Paste any{" "}
-              <code>egregore.xyz/emissary/e/{`{id}`}</code> link into Claude Code, Codex,
-              claude.ai, or ChatGPT — the agent runs it. Install above and every emissary
-              after runs clean: no summarization, no caveats.
-            </p>
-          </div>
+
+          {loadState === "ready" && entries.length > 0 && (
+            <>
+              <div className="directory-pulse">
+                <div className="contributors" aria-label="Contributors">
+                  {contributors.map(({ handle, count, profile }) => (
+                    <a key={handle} className="contributor" href={`/@${handle}`} title={`${count} published`}>
+                      <span className="dir-avatar">{avatarInitial(handle, profile)}</span>
+                      <span><strong>{profile?.display || `@${handle}`}{profile?.verified && <b>✓</b>}</strong><small>{count} published</small></span>
+                    </a>
+                  ))}
+                </div>
+                <p><strong>{entries.length}</strong> emissaries · <strong>{contributors.length}</strong> authors{totalCarried > 0 && <> · carried <strong>{totalCarried}</strong> times</>}</p>
+              </div>
+
+              <div className="directory-controls">
+                <FilterRail entries={entries} categories={categories} filter={filter} setFilter={setFilter} />
+                <div className="dir-sort" role="group" aria-label="Sort">
+                  <span>Sort</span>
+                  {SORTS.map((item) => (
+                    <button key={item.key} type="button" aria-pressed={sort === item.key} onClick={() => setSort(item.key)}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {starNote && <p className="star-note">{starNote}</p>}
+          {loadState === "loading" && <p className="dir-note">Loading the directory…</p>}
+          {loadState === "error" && <p className="dir-note">The directory could not be reached. Try again in a moment.</p>}
+          {loadState === "ready" && entries.length === 0 && (
+            <div className="dir-empty">
+              <h2>The directory is quiet.</h2>
+              <p>Published emissaries will appear here as named addresses. Create the first from your harness.</p>
+              <CommandCapsule command={NEW_COMMAND} compact />
+            </div>
+          )}
+          {loadState === "ready" && entries.length > 0 && visibleEntries.length === 0 && (
+            <p className="dir-note">Nothing in this lane yet. Try another filter.</p>
+          )}
+
+          {visibleEntries.length > 0 && (
+            <div className="directory-grid">
+              {visibleEntries.map((entry) => (
+                <DirectoryCard
+                  key={entryKey(entry)}
+                  entry={entry}
+                  profile={profiles[entry.owner_handle]}
+                  carried={uses[entry.head_id] ?? 0}
+                  starred={starred.has(entryKey(entry))}
+                  busy={busyStar === entryKey(entry)}
+                  onToggleStar={toggleStar}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* The Pouch */}
-        <section>
+        <InstallSection />
+
+        <section className="create-section">
           <div className="sec-head">
-            <span className="num">§ 02</span>
-            <span className="label">The Pouch — try one</span>
+            <span className="num">§ 03</span>
+            <span className="label">Create and manage</span>
             <span className="rule" />
-            <span className="label">{EMISSARIES.length} of {EMISSARIES.length}</span>
+            <span className="label">harness first</span>
           </div>
-          <div className="pouch-intro">
-            <p>
-              Each emissary carries a job. Copy a link, paste it into your harness, and the
-              receiver runs it. Send one to yourself first to see how it reads.
-            </p>
-          </div>
-          <div className="pouch">
-            {EMISSARIES.map((em) => <EmissaryCard key={em.id} em={em} />)}
+          <div className="create-grid">
+            <div>
+              <h2>Composition belongs in the harness.</h2>
+              <p>The web is for discovery, identity, starring, and account state. The agent asks the questions, shapes the mandate, and publishes the address.</p>
+              <CommandCapsule command={NEW_COMMAND} compact />
+            </div>
+            <div>
+              <h2>Account state stays inspectable.</h2>
+              <p>Claim a handle, see connected CLIs, revoke devices, remove stars, and pull your collection without turning the site into a settings maze.</p>
+              <a className="hero-secondary" href="/emissary/account">Open account</a>
+            </div>
           </div>
         </section>
-
-        {/* The loop — browse → ★ → pull */}
-        <LoopSection />
 
         <footer>
           <span>egregore.xyz</span>
           <span>
-            <a href="https://egregore.xyz">Docs</a> &nbsp;{" "}
-            <a href="https://github.com/Curve-Labs">Source</a> &nbsp;{" "}
+            <a href="/">Home</a> &nbsp;{" "}
+            <a href="/docs">Docs</a> &nbsp;{" "}
             <a href="mailto:info@egregore.xyz">Mail us</a>
           </span>
           <span>MMXXVI</span>

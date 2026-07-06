@@ -2,11 +2,10 @@
 // /api/v1/emissary/*. Mirrors the contract frozen in
 // docs/specs/emissary-api-contract.md (curve-labs-core).
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 const EMISSARY_BASE = "/api/v1/emissary";
+const PLATFORM_BASE = "/api/v1/platform";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -38,14 +37,14 @@ export type RegisterBody = {
 async function request<T>(
   method: string,
   path: string,
-  opts: { body?: unknown; token?: string } = {},
+  opts: { body?: unknown; token?: string; base?: string } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`;
 
   let resp: Response;
   try {
-    resp = await fetch(`${API_URL}${EMISSARY_BASE}${path}`, {
+    resp = await fetch(`${API_URL}${opts.base ?? EMISSARY_BASE}${path}`, {
       method,
       headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
@@ -83,5 +82,63 @@ export async function verify(token: string): Promise<VerifyResponse> {
   return request<VerifyResponse>(
     "GET",
     `/verify?token=${encodeURIComponent(token)}`,
+  );
+}
+
+export type UsageResponse = {
+  counts: Record<string, number>;
+};
+
+export async function fetchUsage(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return {};
+  const res = await request<UsageResponse>(
+    "GET",
+    `/usage?ids=${encodeURIComponent(ids.join(","))}`,
+  );
+  return res.counts ?? {};
+}
+
+export type BrowseEntry = {
+  owner_handle: string;
+  slug: string;
+  address: string;
+  head_id: string;
+  topic: string | null;
+  summary: string | null;
+  kind: string | null;
+  category: string | null;
+  version: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  stars: number;
+};
+
+export type BrowseCategory = {
+  slug: string;
+  label: string;
+  curated?: boolean;
+  sort?: number;
+};
+
+export type BrowseResponse = {
+  entries: BrowseEntry[];
+  categories: BrowseCategory[];
+};
+
+export async function fetchBrowse(): Promise<BrowseResponse> {
+  return request<BrowseResponse>("GET", "/browse", { base: PLATFORM_BASE });
+}
+
+export type PlatformProfile = {
+  handle: string;
+  display: string | null;
+  verified: boolean;
+};
+
+export async function fetchProfile(handle: string): Promise<PlatformProfile> {
+  return request<PlatformProfile>(
+    "GET",
+    `/@${encodeURIComponent(handle)}`,
+    { base: PLATFORM_BASE },
   );
 }
