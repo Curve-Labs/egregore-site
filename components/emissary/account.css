@@ -4,6 +4,19 @@
    so the page stays theme-consistent. */
 
 /* ── Identity card ── */
+.acct-demo-note {
+  padding: 11px 13px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--black);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
 .acct-card {
   display: flex;
   justify-content: space-between;

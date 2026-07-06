@@ -9,6 +9,7 @@
 // the netlify.toml proxies; nothing here holds the Railway URL.
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   getSession,
   listStars,
@@ -50,7 +51,87 @@ const tokenCreated = (t: Token) => t.created_at ?? t.created ?? null;
 const tokenLastUsed = (t: Token) => t.last_used_at ?? t.last_used ?? null;
 const tokenHarness = (t: Token) => t.harness ?? t.label ?? "CLI";
 
+const DEMO_SESSION: Session = {
+  user_id: "demo-user",
+  name: "Oz",
+  email: "oz@example.com",
+  handle: "oz",
+  created_at: "2026-07-01T10:00:00Z",
+};
+
+const DEMO_PUBLISHED: PublishedEmissary[] = [
+  {
+    slug: "compose-redesigned-emissary-flow",
+    address: "@oz/compose-redesigned-emissary-flow",
+    head_id: "demo-head-1",
+    topic: "Compose, the way it should feel - a runnable taste of Egregore's redesigned emissary flow",
+    summary: "A runnable packet that teaches the receiver what an emissary is, then walks through composing one end to end.",
+    kind: "dialogue",
+    category: "dialogue",
+    version: 5,
+    updated_at: "2026-07-05T10:00:00Z",
+    stars: 14,
+  },
+  {
+    slug: "decision-surface-skill",
+    address: "@oz/decision-surface-skill",
+    head_id: "demo-head-2",
+    topic: "The Decision Surface skill - install it into your agent",
+    summary: "A skill that turns scattered options into a page where the tradeoffs are explicit and reviewable.",
+    kind: "build",
+    category: "build",
+    version: 2,
+    updated_at: "2026-07-03T10:00:00Z",
+    stars: 6,
+  },
+];
+
+const DEMO_VERSIONS: Record<string, PublishedVersion[]> = {
+  "compose-redesigned-emissary-flow": [
+    { id: "demo-head-1", version: 5, topic: "Compose redesigned emissary flow", created_at: "2026-07-05T10:00:00Z", is_head: true },
+    { id: "demo-v4", version: 4, topic: "Compose redesigned emissary flow", created_at: "2026-07-04T10:00:00Z", is_head: false },
+    { id: "demo-v3", version: 3, topic: "Compose redesigned emissary flow", created_at: "2026-07-03T10:00:00Z", is_head: false },
+  ],
+  "decision-surface-skill": [
+    { id: "demo-head-2", version: 2, topic: "Decision Surface skill", created_at: "2026-07-03T10:00:00Z", is_head: true },
+    { id: "demo-v1", version: 1, topic: "Decision Surface skill", created_at: "2026-07-02T10:00:00Z", is_head: false },
+  ],
+};
+
+const DEMO_STARS: Star[] = [
+  {
+    address: "@renc/first-stone",
+    owner: "renc",
+    slug: "first-stone",
+    mode: "pin",
+    resolved_id: "demo-star-1",
+    kind: "build",
+    topic: "First Stone",
+    summary: "Bootstrap emissary",
+    version: 1,
+  },
+  {
+    address: "@cem/decision-surface",
+    owner: "cem",
+    slug: "decision-surface",
+    mode: "follow",
+    resolved_id: "demo-star-2",
+    kind: "build",
+    topic: "Decision Surface",
+    summary: "Options into questions",
+    version: 2,
+    updated_since_star: true,
+  },
+];
+
+const DEMO_TOKENS: Token[] = [
+  { id: "demo-token-1", harness: "Codex", created_at: "2026-07-02T10:00:00Z", last_used_at: "2026-07-06T10:00:00Z" },
+  { id: "demo-token-2", harness: "Claude Code", created_at: "2026-07-01T10:00:00Z" },
+];
+
 export default function AccountFlow() {
+  const params = useSearchParams();
+  const demoMode = params.get("demo") === "1";
   const [state, setState] = useState<State>("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -126,6 +207,20 @@ export default function AccountFlow() {
 
   const loadSession = useCallback(async () => {
     setState("loading");
+    if (demoMode) {
+      setSession(DEMO_SESSION);
+      setStars(DEMO_STARS);
+      setTokens(DEMO_TOKENS);
+      setPublished(DEMO_PUBLISHED);
+      setStarsError("");
+      setTokensError("");
+      setPublishedError("");
+      setOpenVersions({});
+      setVersionsBySlug({});
+      setState("signed-in");
+      return;
+    }
+
     try {
       const s = await getSession();
       setSession(s);
@@ -141,7 +236,7 @@ export default function AccountFlow() {
       setErrorMsg(err instanceof Error ? err.message : "Couldn't load your account.");
       setState("error");
     }
-  }, [loadStars, loadPublished, loadTokens]);
+  }, [demoMode, loadStars, loadPublished, loadTokens]);
 
   useEffect(() => {
     loadSession();
@@ -161,6 +256,13 @@ export default function AccountFlow() {
     }
     setSavingName(true);
     setNameError("");
+    if (demoMode) {
+      setSession((prev) => (prev ? { ...prev, name: next } : prev));
+      setEditingName(false);
+      setSavingName(false);
+      return;
+    }
+
     try {
       const updated = await updateName(next);
       setSession((prev) => (prev ? { ...prev, ...updated } : updated));
@@ -181,6 +283,14 @@ export default function AccountFlow() {
     }
     setClaimingHandle(true);
     setHandleErr("");
+    if (demoMode) {
+      setSession((prev) => (prev ? { ...prev, handle: h } : prev));
+      setPublished(DEMO_PUBLISHED);
+      setHandleDraft("");
+      setClaimingHandle(false);
+      return;
+    }
+
     try {
       await claimHandle(h);
       // Re-fetch the authoritative identity — the PUT body shape isn't relied on.
@@ -200,6 +310,8 @@ export default function AccountFlow() {
   async function onUnstar(star: Star) {
     const prev = stars;
     setStars((cur) => (cur || []).filter((s) => !(s.owner === star.owner && s.slug === star.slug)));
+    if (demoMode) return;
+
     try {
       await unstar(star.owner, star.slug);
     } catch {
@@ -213,6 +325,11 @@ export default function AccountFlow() {
     const prev = tokens;
     setRevoking(token.id);
     setTokens((cur) => (cur || []).filter((t) => t.id !== token.id));
+    if (demoMode) {
+      setRevoking(null);
+      return;
+    }
+
     try {
       await revokeToken(token.id);
     } catch {
@@ -228,6 +345,14 @@ export default function AccountFlow() {
     const willOpen = !openVersions[slug];
     setOpenVersions((prev) => ({ ...prev, [slug]: willOpen }));
     if (!willOpen || versionsBySlug[slug]) return;
+
+    if (demoMode) {
+      setVersionsBySlug((prev) => ({
+        ...prev,
+        [slug]: { state: "ready", versions: DEMO_VERSIONS[slug] || [] },
+      }));
+      return;
+    }
 
     setVersionsBySlug((prev) => ({ ...prev, [slug]: { state: "loading", versions: [] } }));
     try {
@@ -250,6 +375,11 @@ export default function AccountFlow() {
 
   async function onSignOut() {
     setSigningOut(true);
+    if (demoMode) {
+      setSigningOut(false);
+      return;
+    }
+
     try {
       await logout();
     } catch {
@@ -309,6 +439,12 @@ export default function AccountFlow() {
 
   return (
     <div className="setup-stage">
+      {demoMode && (
+        <div className="acct-demo-note">
+          Fixture preview - no real account, email, device, star, or publish state is being changed.
+        </div>
+      )}
+
       {/* Identity card */}
       <div className="acct-card">
         <div className="acct-id">
