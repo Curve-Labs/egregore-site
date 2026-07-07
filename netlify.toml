@@ -11,7 +11,23 @@
 
 [[edge_functions]]
   function = "og"
-  path = "/*"
+  path = "/"
+
+[[edge_functions]]
+  function = "og"
+  path = "/research"
+
+[[edge_functions]]
+  function = "og"
+  path = "/research/*"
+
+[[edge_functions]]
+  function = "og"
+  path = "/docs"
+
+[[edge_functions]]
+  function = "og"
+  path = "/docs/*"
 
 [[headers]]
   for = "/llms.txt"

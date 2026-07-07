@@ -158,5 +158,5 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: "/*",
+  path: ["/", "/research", "/research/*", "/docs", "/docs/*"],
 };
