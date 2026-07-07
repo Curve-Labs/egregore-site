@@ -11,7 +11,23 @@
 
 [[edge_functions]]
   function = "og"
-  path = "/*"
+  path = "/"
+
+[[edge_functions]]
+  function = "og"
+  path = "/research"
+
+[[edge_functions]]
+  function = "og"
+  path = "/research/*"
+
+[[edge_functions]]
+  function = "og"
+  path = "/docs"
+
+[[edge_functions]]
+  function = "og"
+  path = "/docs/*"
 
 [[headers]]
   for = "/llms.txt"
@@ -97,6 +113,41 @@
   from = "/emissary/i/:token"
   to = "/emissary/i.html"
   status = 200
+
+# Emissary identity spine — proxy the API-owned identity + platform surfaces to
+# Railway so they're first-party on egregore.xyz (the eg_session cookie must ride
+# the same origin, and Set-Cookie passes through the 200-rewrite). Must be before
+# the SPA catch-all. /login is intentionally NOT proxied — it's a static Next page
+# (out/login.html) that owns the email form and forwards ?token= to login-verify.
+#
+# Identity + platform API: session, login-link, login-verify, logout, device
+# flow, stars CRUD. Splat covers every current and future sub-path.
+[[redirects]]
+  from = "/api/v1/emissary/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/v1/emissary/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/v1/platform/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/v1/platform/:splat"
+  status = 200
+  force = true
+
+# Device-approval page (session-gated). Exact path.
+[[redirects]]
+  from = "/connect"
+  to = "https://egregore-production-55f2.up.railway.app/connect"
+  status = 200
+  force = true
+
+# Profile + address render + raw: /@handle, /@handle/slug, /@handle/slug/raw.
+# Splat — no static route begins with /@, so nothing collides.
+[[redirects]]
+  from = "/@*"
+  to = "https://egregore-production-55f2.up.railway.app/@:splat"
+  status = 200
+  force = true
 
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}

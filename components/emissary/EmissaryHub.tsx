@@ -1,401 +1,868 @@
 "use client";
 
-// EmissaryHub — the /emissary page. Ported from the Claude Design handoff
-// bundle ("Send an emissary"). The design's own header is dropped (the
-// setup layout supplies the egregore logo) and --bg is kept as our cream;
-// everything else is the design. The design-tool TweaksPanel is dropped.
-
-import { useState, type FC, type SVGProps } from "react";
-import { register } from "./api";
-import type { McpConfig } from "./api";
-import { SigilSpiral, SigilBootstrap, SigilCartographer, SigilForge } from "./sigils";
+import { useCallback, useEffect, useMemo, useState, type FC, type FormEvent, type SVGProps } from "react";
+import {
+  getSession,
+  listStars,
+  loginLink,
+  starEmissary,
+  unstar,
+  NotSignedIn,
+  type Session,
+  type Star,
+} from "./account-api";
+import {
+  fetchBrowse,
+  fetchProfile,
+  fetchUsage,
+  type BrowseCategory,
+  type BrowseEntry,
+  type PlatformProfile,
+} from "./api";
 import "./emissary-hub.css";
 
-// ── Icons ──────────────────────────────────────────────
+const INSTALL_COMMAND = "npx egregore-emissary@latest install";
+const NEW_COMMAND = "emissary new";
+
+type LoadState = "loading" | "ready" | "error";
+type AuthState = "loading" | "signed-out" | "signed-in";
+type SortKey = "carried" | "recent" | "stars";
+type FilterAxis = "category" | "kind";
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "carried", label: "Most carried" },
+  { key: "recent", label: "Newest" },
+  { key: "stars", label: "Most starred" },
+];
+
+const KIND_LABELS: Record<string, string> = {
+  build: "Build",
+  dialogue: "Dialogue",
+  documentation: "Documentation",
+  executable: "Executable",
+  brief: "Brief",
+  research: "Research",
+};
+
+const CATEGORY_FALLBACKS = [
+  { key: "dialogue", label: "Dialogue" },
+  { key: "build", label: "Build" },
+  { key: "documentation", label: "Documentation" },
+];
+
 const IconCopy: FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="9" y="9" width="13" height="13" rx="2" />
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
+
 const IconCheck: FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
-const IconInbox: FC<SVGProps<SVGSVGElement>> = (props) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+
+const IconRun: FC<SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
-// ── Channel glyphs (the four tabs) ─────────────────────
-const G_Code: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-  </svg>
-);
-const G_Codex: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-  </svg>
-);
-const G_Web: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-  </svg>
-);
-const G_Chat: FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+const IconStar: FC<SVGProps<SVGSVGElement>> = (props) => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" {...props}>
+    <polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2" />
   </svg>
 );
 
-// ── CopyButton ─────────────────────────────────────────
-function CopyButton({ text, className = "copy-btn", label = "Copy" }: { text: string; className?: string; label?: string }) {
+function kindLabel(kind?: string | null): string {
+  if (!kind) return "Emissary";
+  return KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function entryKey(entry: BrowseEntry): string {
+  return `${entry.owner_handle}/${entry.slug}`;
+}
+
+function starKey(star: Star): string {
+  return `${star.owner}/${star.slug}`;
+}
+
+function avatarInitial(handle: string, profile?: PlatformProfile): string {
+  return (profile?.display || handle || "e").charAt(0).toUpperCase();
+}
+
+function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
-  const onClick = async () => {
+  const onClick = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
     } catch {
-      /* clipboard blocked — no-op */
+      setCopied(false);
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1400);
-  };
+  }, [value]);
+
   return (
-    <button type="button" className={`${className}${copied ? " copied" : ""}`} onClick={onClick}>
+    <button type="button" className={`em-copy-btn${copied ? " copied" : ""}`} onClick={onClick}>
       {copied ? <IconCheck /> : <IconCopy />}
       {copied ? "Copied" : label}
     </button>
   );
 }
 
-// ── Setup section (tabbed channels) ────────────────────
-type ChannelPath = "terminal" | "web";
-type Channel = { id: string; name: string; kind: string; path: ChannelPath; Glyph: FC };
-
-const CHANNELS: Channel[] = [
-  { id: "claude-code", name: "Claude Code", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Code },
-  { id: "codex", name: "Codex", kind: "Agentic · Terminal", path: "terminal", Glyph: G_Codex },
-  { id: "claude-ai", name: "claude.ai", kind: "Web chat · MCP", path: "web", Glyph: G_Web },
-  { id: "chatgpt", name: "ChatGPT", kind: "Web chat · MCP", path: "web", Glyph: G_Chat },
-];
-
-function SetupModule() {
-  const [active, setActive] = useState("claude-code");
-  const ch = CHANNELS.find((c) => c.id === active) ?? CHANNELS[0];
+function CommandCapsule({ command, compact = false }: { command: string; compact?: boolean }) {
   return (
-    <div className="setup">
-      <div className="channel-tabs" role="tablist">
-        {CHANNELS.map((c) => {
-          const Glyph = c.Glyph;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="tab"
-              aria-selected={c.id === active}
-              className="channel-tab"
-              onClick={() => setActive(c.id)}
-            >
-              <span className="dot" />
-              <span className="name">{c.name}</span>
-              <span className="kind">{c.kind}</span>
-              <span className="glyph"><Glyph /></span>
-            </button>
-          );
-        })}
+    <div className={`em-command${compact ? " compact" : ""}`}>
+      <code><span>$</span>{command}</code>
+      <CopyButton value={command} />
+    </div>
+  );
+}
+
+function AuthLink({
+  authState,
+  session,
+  onSignIn,
+}: {
+  authState: AuthState;
+  session: Session | null;
+  onSignIn: () => void;
+}) {
+  if (authState === "loading") return <span className="em-authlink muted">Checking identity</span>;
+  if (session) {
+    const who = session.handle ? `@${session.handle}` : session.email;
+    return <a className="em-authlink" href="/emissary/account">{who} <span>Account</span></a>;
+  }
+  return <button type="button" className="em-authlink as-button" onClick={onSignIn}>Sign in</button>;
+}
+
+function AccountRail({
+  authState,
+  session,
+  stars,
+  onSignIn,
+}: {
+  authState: AuthState;
+  session: Session | null;
+  stars: Star[] | null;
+  onSignIn: () => void;
+}) {
+  if (authState === "loading") {
+    return (
+      <aside className="em-rail">
+        <div className="rail-label">Account</div>
+        <div className="rail-skeleton" />
+        <div className="rail-skeleton short" />
+      </aside>
+    );
+  }
+
+  if (!session) {
+    return (
+      <aside className="em-rail">
+        <div className="rail-label">Account</div>
+        <h2>Keep what you find.</h2>
+        <p>Sign in with email, star emissaries on the web, then pull them into your harness.</p>
+        <button type="button" className="rail-primary" onClick={onSignIn}>Sign in by email</button>
+        <div className="rail-rule" />
+        <span className="rail-mini">No password. The CLI binds later with <code>emissary login</code>.</span>
+      </aside>
+    );
+  }
+
+  const who = session.handle ? `@${session.handle}` : "Handle unclaimed";
+  return (
+    <aside className="em-rail">
+      <div className="rail-label">Account</div>
+      <div className="rail-person">
+        <span className="rail-avatar">{avatarInitial(session.email || "e")}</span>
+        <span>
+          <strong>{who}</strong>
+          <small>{session.email}</small>
+        </span>
       </div>
-      <div className="channel-body">
-        {ch.path === "terminal" ? <TerminalPath name={ch.name} /> : <WebPath name={ch.name} channelId={ch.id} />}
+      <div className="rail-stats">
+        <span><strong>{stars ? stars.length : "…"}</strong> stars</span>
+        <span><strong>pin</strong> by default</span>
+      </div>
+      <div className="consent-ring" aria-label="Consent ring">
+        <span /><span /><span />
+      </div>
+      <p className="rail-mini">Your account page holds handle claim, connected CLIs, revocation, stars, and sign out.</p>
+      <a className="rail-primary" href="/emissary/account">Manage account</a>
+    </aside>
+  );
+}
+
+function SignInModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [stage, setStage] = useState<"form" | "sending" | "sent">("form");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setStage("form");
+    setError("");
+  }, [open]);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    const addr = email.trim();
+    if (!addr) return;
+    setStage("sending");
+    setError("");
+    try {
+      await loginLink(addr, "/emissary?welcome=1");
+      setStage("sent");
+    } catch (err) {
+      setStage("form");
+      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="signin-layer" role="dialog" aria-modal="true" aria-labelledby="signin-title">
+      <button type="button" className="signin-scrim" aria-label="Close sign in" onClick={onClose} />
+      <div className="signin-modal">
+        <div className="rail-label">Account</div>
+        {stage === "sent" ? (
+          <>
+            <h2 id="signin-title">Check your inbox.</h2>
+            <p>A one-time sign-in link is on its way. Open it here and the directory will remember you.</p>
+            <button type="button" className="hero-secondary" onClick={onClose}>Done</button>
+          </>
+        ) : (
+          <>
+            <h2 id="signin-title">Sign in without leaving.</h2>
+            <p>Email link first. The terminal binds later with <code>emissary login</code>.</p>
+            <form onSubmit={onSubmit} className="signin-form">
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError("");
+                }}
+                placeholder="you@example.com"
+                autoComplete="email"
+                aria-label="Email address"
+                autoFocus
+                required
+              />
+              {error && <span className="signin-error">{error}</span>}
+              <button type="submit" className="rail-primary" disabled={stage === "sending"}>
+                {stage === "sending" ? "Sending..." : "Send link"}
+              </button>
+            </form>
+            <div className="signin-terminal">
+              <span>Use your terminal</span>
+              <CommandCapsule command="emissary login" compact />
+            </div>
+          </>
+        )}
+        <button type="button" className="signin-close" onClick={onClose} aria-label="Close">x</button>
       </div>
     </div>
   );
 }
 
-function TerminalPath({ name }: { name: string }) {
+function FilterRail({
+  entries,
+  categories,
+  filter,
+  setFilter,
+}: {
+  entries: BrowseEntry[];
+  categories: BrowseCategory[];
+  filter: string;
+  setFilter: (next: string) => void;
+}) {
+  const { axis, options } = useMemo((): { axis: FilterAxis; options: { key: string; label: string; count: number }[] } => {
+    const categoryCounts = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.category) categoryCounts.set(entry.category, (categoryCounts.get(entry.category) ?? 0) + 1);
+    }
+
+    const categoryOptions = categories
+      .map((cat) => ({ key: cat.slug, label: cat.label, count: categoryCounts.get(cat.slug) ?? 0 }))
+      .filter((cat) => cat.count > 0);
+
+    if (categoryOptions.length > 0) return { axis: "category", options: categoryOptions };
+
+    const kindCounts = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.kind) kindCounts.set(entry.kind, (kindCounts.get(entry.kind) ?? 0) + 1);
+    }
+
+    const liveKinds = Array.from(kindCounts.entries()).map(([key, count]) => ({
+      key,
+      label: kindLabel(key),
+      count,
+    }));
+
+    const options = liveKinds.length > 0
+      ? liveKinds
+      : CATEGORY_FALLBACKS.map((item) => ({ ...item, count: 0 }));
+
+    return { axis: "kind", options: options.sort((a, b) => b.count - a.count) };
+  }, [entries, categories]);
+
   return (
-    <>
-      <p className="install-copy">
-        Run this once in {name}&apos;s working directory. It registers your identity,
-        installs the <code>egregore-emissary</code> skill and the <code>emissary</code> command,
-        and wires the egregore MCP into your harness — detected automatically.
-      </p>
-      <div className="term">
-        <span className="cmd">
-          <span className="prompt">$</span>npx <span className="accent">egregore-emissary@latest</span>&nbsp;install
-        </span>
-        <CopyButton text="npx egregore-emissary@latest install" />
-      </div>
-      <p className="web-note">
-        Prompts for name + email if not flagged. No password — verification is a magic link.
-      </p>
-    </>
+    <div className="dir-filters" role="group" aria-label={`Filter by ${axis}`}>
+      <button type="button" className="dir-filter" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+        All <span>{entries.length}</span>
+      </button>
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          className="dir-filter"
+          aria-pressed={filter === option.key}
+          onClick={() => setFilter(option.key)}
+        >
+          {option.label} <span>{option.count}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
-function WebPath({ name, channelId }: { name: string; channelId: string }) {
-  const [fname, setFname] = useState("");
-  const [email, setEmail] = useState("");
-  const [stage, setStage] = useState<"form" | "submitting" | "done" | "error">("form");
-  const [message, setMessage] = useState("");
-  const [mcp, setMcp] = useState<McpConfig | null>(null);
+function AuthorBadge({ handle, profile }: { handle: string; profile?: PlatformProfile }) {
+  return (
+    <a className="dir-author" href={`/@${handle}`}>
+      <span className="dir-avatar">{avatarInitial(handle, profile)}</span>
+      <span>
+        <strong>{profile?.display || `@${handle}`}{profile?.verified && <b title="verified">✓</b>}</strong>
+        <small>@{handle}</small>
+      </span>
+    </a>
+  );
+}
 
-  const submit = async () => {
-    if (!fname.trim() || !email.trim()) {
-      setStage("error");
-      setMessage("Name and email are both required.");
-      return;
-    }
-    setStage("submitting");
-    try {
-      const res = await register({
-        name: fname.trim(),
-        email: email.trim(),
-        harness: channelId,
-      });
-      setMcp(res.mcp_config);
-      setStage("done");
-    } catch (e) {
-      setStage("error");
-      setMessage(e instanceof Error ? e.message : "Something went wrong — try again.");
-    }
-  };
-
-  if (stage === "done" && mcp) {
+function ThumbnailArt({ kind }: { kind?: string | null }) {
+  if (kind === "dialogue") {
     return (
-      <>
-        <p className="install-copy">
-          Registered. Check your email to verify your identity — we sent your auth
-          header there. Then paste this connector URL into <em>{name} → Settings → Connectors</em>.
-        </p>
-        <div className="term">
-          <span className="cmd">{mcp.server_url}</span>
-          <CopyButton text={mcp.server_url} />
-        </div>
-        <p className="web-note">
-          Auth header: <code>{mcp.header_template}</code> — your token arrives by email.
-        </p>
-      </>
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <circle cx="80" cy="80" r="50" />
+        <circle cx="80" cy="80" r="34" />
+        <circle cx="80" cy="80" r="18" />
+        <circle cx="80" cy="80" r="4" />
+        <path d="M80 18v24M80 118v24M18 80h24M118 80h24" />
+      </svg>
+    );
+  }
+
+  if (kind === "documentation") {
+    return (
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <path d="M32 58h96L80 28 32 58Z" />
+        <path d="M42 66v58M66 66v58M94 66v58M118 66v58" />
+        <path d="M30 130h100" />
+      </svg>
+    );
+  }
+
+  if (kind === "executable" || kind === "research") {
+    return (
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <path d="M80 22 92 68 138 80 92 92 80 138 68 92 22 80 68 68 80 22Z" />
+        <circle cx="80" cy="80" r="54" />
+        <path d="M80 12v18M80 130v18M12 80h18M130 80h18" />
+      </svg>
     );
   }
 
   return (
-    <>
-      <p className="install-copy">
-        {name} installs the emissary MCP connector. Register once — we email a
-        connector URL and an auth header you paste into <em>Settings → Connectors</em>.
-      </p>
-      <div className="web-form">
-        <div className="field">
-          <label>Your name</label>
-          <input value={fname} onChange={(e) => setFname(e.target.value)} placeholder="appears as sender" />
-        </div>
-        <div className="field">
-          <label>Your email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@domain" />
-        </div>
-        <div className="field full">
-          <span className="hint">Bound to your connector token. Verification link goes here. No password.</span>
-        </div>
-      </div>
-      <div className="form-foot">
-        <span className="flags">Free · No password · Magic link</span>
-        <button type="button" className="btn-primary" onClick={submit} disabled={stage === "submitting"}>
-          {stage === "submitting" ? "Registering…" : "Get my connector →"}
-        </button>
-      </div>
-      {stage === "error" && <p className="web-note err">{message}</p>}
-    </>
+    <svg viewBox="0 0 160 160" aria-hidden="true">
+      <path d="M80 22 128 80 80 138 32 80 80 22Z" />
+      <path d="M80 46 108 80 80 114 52 80 80 46Z" />
+      <path d="M80 112V58" />
+      <path d="M64 76 80 58 96 76" />
+    </svg>
   );
 }
 
-// ── Emissary data ──────────────────────────────────────
-type Emissary = {
-  id: string;
-  stamp: string;
-  seal: string;
-  tag: string;
-  cat: string;
-  name: string;
-  italic: boolean;
-  desc: string;
-  meta: [string, string][];
-  uuid?: string;
-  Sigil: FC;
-  draft: boolean;
-};
-
-const EMISSARY_BASE = "https://egregore.xyz/emissary/e/";
-
-const EMISSARIES: Emissary[] = [
-  {
-    id: "spiral",
-    stamp: "I · CLARITY",
-    seal: "S-001",
-    tag: "Live",
-    cat: "Socratic",
-    name: "Spiral",
-    italic: false,
-    desc: "Pressure-tests a half-formed thesis in three descending rings. Each pass tightens the question, until the receiver can say plainly what they want and how to get there.",
-    meta: [["Rings", "3"], ["Run", "~12 min"], ["Best with", "Goals · Theses"]],
-    uuid: "75bedab5-e4da-42c0-a955-cd360388442c",
-    Sigil: SigilSpiral,
-    draft: false,
-  },
-  {
-    id: "bootstrap",
-    stamp: "II · BOOTSTRAP",
-    seal: "S-002",
-    tag: "Live",
-    cat: "Self-install",
-    name: "First Stone",
-    italic: false,
-    desc: "The bootstrap emissary. Send it to anyone — it walks their AI through installing egregore-emissary. The cold-to-installed conversion, delivered as an emissary itself.",
-    meta: [["Steps", "4"], ["Run", "~3 min"], ["Best with", "First contact"]],
-    uuid: "d9ba091e-2083-4546-8243-bae37f168bbc",
-    Sigil: SigilBootstrap,
-    draft: false,
-  },
-  {
-    id: "cartographer",
-    stamp: "III · RESEARCH",
-    seal: "S-003",
-    tag: "In workshop",
-    cat: "Inquiry",
-    name: "Cartographer",
-    italic: true,
-    desc: "Charts a domain on the receiver's behalf — sources, claims, contested edges. Returns an annotated map you can hand back as the next emissary.",
-    meta: [["Passes", "2"], ["Run", "~25 min"], ["Best with", "Open questions"]],
-    Sigil: SigilCartographer,
-    draft: true,
-  },
-  {
-    id: "forge",
-    stamp: "IV · BUILD",
-    seal: "S-004",
-    tag: "In workshop",
-    cat: "Construction",
-    name: "Forge",
-    italic: true,
-    desc: "The emissary that builds emissaries. Run it and it teaches the model, shapes one real task of yours into a runnable handoff, and publishes it — you leave holding a link to send.",
-    meta: [["Steps", "3"], ["Run", "~10 min"], ["Best with", "First emissary"]],
-    Sigil: SigilForge,
-    draft: true,
-  },
-];
-
-function EmissaryCard({ em }: { em: Emissary }) {
-  const Sigil = em.Sigil;
-  const link = em.uuid ? `${EMISSARY_BASE}${em.uuid}` : null;
+function DirectoryThumb({ entry }: { entry: BrowseEntry }) {
   return (
-    <article className={`em-card${em.draft ? " draft" : ""}`}>
-      <div className="em-sigil">
-        <span className="stamp">{em.stamp}</span>
-        <Sigil />
-        <span className="seal">{em.seal}</span>
-      </div>
-      <div className="em-body">
-        <div className="em-tags">
-          <span className="pill">{em.tag}</span>
-          <span>{em.cat}</span>
+    <div className={`dir-thumb k-${entry.kind || "emissary"}`} aria-hidden="true">
+      <span className="thumb-kind">{kindLabel(entry.kind)}</span>
+      <ThumbnailArt kind={entry.kind} />
+      <span className="thumb-line wide" />
+      <span className="thumb-line" />
+      <span className="thumb-line short" />
+    </div>
+  );
+}
+
+function DirectoryCard({
+  entry,
+  profile,
+  carried,
+  starred,
+  busy,
+  onToggleStar,
+}: {
+  entry: BrowseEntry;
+  profile?: PlatformProfile;
+  carried: number;
+  starred: boolean;
+  busy: boolean;
+  onToggleStar: (entry: BrowseEntry) => void;
+}) {
+  const addressHref = `/${entry.address}`;
+  const copyUrl = `https://egregore.xyz/emissary/e/${entry.head_id}`;
+
+  return (
+    <article className="dir-card">
+      <DirectoryThumb entry={entry} />
+      <div className="dir-card-body">
+        <div className="dir-card-top">
+          <span className="dir-kind">{kindLabel(entry.kind)}</span>
+          <span className="dir-counts">
+            <span title={`${carried} carried`}><IconRun /> {carried}</span>
+            <span title={`${entry.stars} stars`}><IconStar /> {entry.stars}</span>
+          </span>
         </div>
-        <h3 className="em-name" style={em.italic ? { fontStyle: "italic" } : undefined}>{em.name}</h3>
-        <p className="em-desc">{em.desc}</p>
-        <div className="em-meta">
-          {em.meta.map(([k, v]) => (
-            <span key={k}>{k} · <strong>{v}</strong></span>
-          ))}
+        <h3><a href={addressHref}>{entry.topic || entry.slug}</a></h3>
+        {entry.summary && <p>{entry.summary}</p>}
+        <div className="dir-card-foot">
+          <AuthorBadge handle={entry.owner_handle} profile={profile} />
+          <div className="dir-actions">
+            <button
+              type="button"
+              className={`star-action${starred ? " is-starred" : ""}`}
+              aria-pressed={starred}
+              disabled={busy}
+              onClick={() => onToggleStar(entry)}
+            >
+              <IconStar /> {starred ? "Starred" : "Star"}
+            </button>
+            <CopyButton value={copyUrl} label="Copy link" />
+          </div>
         </div>
-        {link && em.uuid && (
-          <div className="em-link-row">
-            <div className="em-link">
-              <span className="scheme">{EMISSARY_BASE}</span>
-              <span className="id">{em.uuid.slice(0, 8)}…{em.uuid.slice(-4)}</span>
-            </div>
-            <CopyButton text={link} className="em-copy" label="Copy link" />
-          </div>
-        )}
-        {em.draft && (
-          <div className="draft-row">
-            <span>Draft</span><span className="dash" /><span>Subscribe for release →</span>
-          </div>
-        )}
       </div>
     </article>
   );
 }
 
-// ── Page ───────────────────────────────────────────────
+function SocialProof({
+  contributors,
+  totalEntries,
+  totalCarried,
+}: {
+  contributors: { handle: string; count: number; profile?: PlatformProfile }[];
+  totalEntries: number;
+  totalCarried: number;
+}) {
+  const visible = contributors.slice(0, 3);
+  const extra = Math.max(0, contributors.length - visible.length);
+
+  return (
+    <div className="directory-proof">
+      <div className="proof-avatars" aria-label={`${contributors.length} authors`}>
+        {visible.map(({ handle, profile }) => (
+          <a key={handle} href={`/@${handle}`} className="dir-avatar" title={profile?.display || `@${handle}`}>
+            {avatarInitial(handle, profile)}
+          </a>
+        ))}
+        {extra > 0 && <span className="proof-more">+{extra}</span>}
+      </div>
+      <p>
+        <strong>{totalEntries}</strong> emissaries · <strong>{contributors.length}</strong>{" "}
+        {contributors.length === 1 ? "author" : "authors"}
+        {totalCarried > 0 && <> · carried <strong>{totalCarried}</strong> times</>}
+      </p>
+    </div>
+  );
+}
+
+function CompactEntryRow({
+  entry,
+  profile,
+  carried,
+  starred,
+  busy,
+  onToggleStar,
+}: {
+  entry: BrowseEntry;
+  profile?: PlatformProfile;
+  carried: number;
+  starred: boolean;
+  busy: boolean;
+  onToggleStar: (entry: BrowseEntry) => void;
+}) {
+  const copyUrl = `https://egregore.xyz/emissary/e/${entry.head_id}`;
+
+  return (
+    <article className="compact-entry">
+      <a className="compact-title" href={`/${entry.address}`}>{entry.topic || entry.slug}</a>
+      <span className="compact-meta">{kindLabel(entry.kind)} · @{entry.owner_handle}</span>
+      <span className="compact-count"><IconRun /> {carried}</span>
+      <button
+        type="button"
+        className={`star-action${starred ? " is-starred" : ""}`}
+        aria-pressed={starred}
+        disabled={busy}
+        onClick={() => onToggleStar(entry)}
+      >
+        <IconStar /> {starred ? "Starred" : "Star"}
+      </button>
+      <CopyButton value={copyUrl} label="Copy" />
+      {profile?.verified && <span className="compact-verified" title="verified">✓</span>}
+    </article>
+  );
+}
+
+function LoopRail() {
+  return (
+    <section className="loop-rail" aria-label="Emissary loop">
+      <div>
+        <span>01</span>
+        <h2>Star on the web</h2>
+        <p>The directory is for discovery. A star pins the version you evaluated.</p>
+      </div>
+      <div>
+        <span>02</span>
+        <h2>Pull in terminal</h2>
+        <p>Your harness reads the collection and offers each emissary to run or install.</p>
+      </div>
+      <div>
+        <span>03</span>
+        <h2>Publish from harness</h2>
+        <p>Composition stays agent-conducted. The web receives the address.</p>
+      </div>
+    </section>
+  );
+}
+
+function CreateStrip() {
+  return (
+    <section className="create-strip">
+      <div>
+        <span className="rail-label">Create from the harness</span>
+        <h2>Composition stays with the agent.</h2>
+        <p>The web keeps discovery, identity, stars, and account state. The harness shapes and publishes the address.</p>
+      </div>
+      <CommandCapsule command={NEW_COMMAND} compact />
+    </section>
+  );
+}
+
 export default function EmissaryHub() {
+  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [authState, setAuthState] = useState<AuthState>("loading");
+  const [entries, setEntries] = useState<BrowseEntry[]>([]);
+  const [categories, setCategories] = useState<BrowseCategory[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, PlatformProfile>>({});
+  const [uses, setUses] = useState<Record<string, number>>({});
+  const [session, setSession] = useState<Session | null>(null);
+  const [stars, setStars] = useState<Star[] | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState<SortKey>("carried");
+  const [busyStar, setBusyStar] = useState<string | null>(null);
+  const [starNote, setStarNote] = useState("");
+  const [signInOpen, setSignInOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getSession()
+      .then((s) => {
+        if (cancelled) return;
+        setSession(s);
+        setAuthState("signed-in");
+        listStars()
+          .then((res) => {
+            if (!cancelled) setStars(res.stars || []);
+          })
+          .catch(() => {
+            if (!cancelled) setStars([]);
+          });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof NotSignedIn) {
+          setAuthState("signed-out");
+          setStars([]);
+          return;
+        }
+        setAuthState("signed-out");
+        setStars([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchBrowse()
+      .then((res) => {
+        if (cancelled) return;
+        const nextEntries = res.entries || [];
+        setEntries(nextEntries);
+        setCategories(res.categories || []);
+        setLoadState("ready");
+
+        const ids = nextEntries.map((entry) => entry.head_id).filter(Boolean);
+        if (ids.length > 0) {
+          fetchUsage(ids)
+            .then((counts) => {
+              if (!cancelled) setUses(counts);
+            })
+            .catch(() => {
+              if (!cancelled) setUses({});
+            });
+        }
+
+        Array.from(new Set(nextEntries.map((entry) => entry.owner_handle))).forEach((handle) => {
+          fetchProfile(handle)
+            .then((profile) => {
+              if (!cancelled) setProfiles((prev) => ({ ...prev, [handle]: profile }));
+            })
+            .catch(() => {
+              /* author badge falls back to the handle */
+            });
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadState("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const starred = useMemo(() => new Set((stars || []).map(starKey)), [stars]);
+
+  const visibleEntries = useMemo(() => {
+    const categoryActive = entries.some((entry) => entry.category === filter);
+    const filtered = filter === "all"
+      ? entries
+      : entries.filter((entry) => categoryActive ? entry.category === filter : entry.kind === filter);
+
+    return [...filtered].sort((a, b) => {
+      if (sort === "carried") return (uses[b.head_id] ?? 0) - (uses[a.head_id] ?? 0);
+      if (sort === "stars") return b.stars - a.stars;
+      const ta = a.updated_at || a.created_at || "";
+      const tb = b.updated_at || b.created_at || "";
+      return tb.localeCompare(ta);
+    });
+  }, [entries, filter, sort, uses]);
+
+  const contributors = useMemo(() => {
+    const counts = new Map<string, number>();
+    entries.forEach((entry) => counts.set(entry.owner_handle, (counts.get(entry.owner_handle) ?? 0) + 1));
+    return Array.from(counts.entries())
+      .map(([handle, count]) => ({ handle, count, profile: profiles[handle] }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries, profiles]);
+
+  const totalCarried = useMemo(
+    () => Object.values(uses).reduce((sum, count) => sum + count, 0),
+    [uses],
+  );
+
+  const featuredEntries = useMemo(() => visibleEntries.slice(0, 8), [visibleEntries]);
+  const moreEntries = useMemo(() => visibleEntries.slice(8, 14), [visibleEntries]);
+
+  const toggleStar = useCallback(async (entry: BrowseEntry) => {
+    if (!session) {
+      setSignInOpen(true);
+      return;
+    }
+
+    const key = entryKey(entry);
+    const wasStarred = starred.has(key);
+    setBusyStar(key);
+    setStarNote("");
+
+    setEntries((current) => current.map((item) => (
+      entryKey(item) === key
+        ? { ...item, stars: Math.max(0, item.stars + (wasStarred ? -1 : 1)) }
+        : item
+    )));
+
+    setStars((current) => {
+      const list = current || [];
+      if (wasStarred) return list.filter((item) => starKey(item) !== key);
+      return [{
+        address: entry.address,
+        owner: entry.owner_handle,
+        slug: entry.slug,
+        mode: "pin",
+        resolved_id: entry.head_id,
+        kind: entry.kind,
+        topic: entry.topic,
+        summary: entry.summary,
+        version: entry.version,
+      }, ...list];
+    });
+
+    try {
+      if (wasStarred) {
+        await unstar(entry.owner_handle, entry.slug);
+      } else {
+        await starEmissary(entry.owner_handle, entry.slug, "pin");
+        setStarNote("Starred. Run emissary pull in your terminal when you want to bring it in.");
+      }
+    } catch (err) {
+      setStarNote(err instanceof Error ? err.message : "Couldn't update that star.");
+      fetchBrowse().then((res) => setEntries(res.entries || [])).catch(() => undefined);
+      listStars().then((res) => setStars(res.stars || [])).catch(() => undefined);
+    } finally {
+      setBusyStar(null);
+    }
+  }, [session, starred]);
+
   return (
     <div className="em-hub">
-      <div className="rules"><div className="vert l" /><div className="vert r" /></div>
+      <div className="rules" aria-hidden="true"><div className="vert l" /><div className="vert r" /></div>
 
       <main className="em-main">
-        {/* Hero */}
+        <div className="em-topbar">
+          <nav aria-label="Emissary">
+            <a href="#directory">Directory</a>
+            <a href="#install">Install</a>
+            <a href="/emissary/account">Account</a>
+          </nav>
+          <AuthLink authState={authState} session={session} onSignIn={() => setSignInOpen(true)} />
+        </div>
+
         <section className="em-hero">
-          <div className="eyebrow">Emissary Courier <span className="dot">·</span> v0.2</div>
-          <h1 className="display">Send an <em>emissary</em>.</h1>
-          <p className="lede">
-            An emissary is a portable, runnable task — handed to{" "}
-            <em className="em-word">someone else&apos;s</em> AI. Receiving works with no
-            install: paste the link into any harness. Install once and every emissary
-            runs at full fidelity.
-          </p>
+          <div className="hero-copy">
+            <div className="eyebrow">Emissary platform <span className="dot">·</span> web-star / agent-pull</div>
+            <h1 className="display">Emissary <em>Directory</em>.</h1>
+            <p className="lede">
+              Portable tasks at named addresses. Star what you trust on the web; pull it into your agent when the work is ready to move.
+            </p>
+            <div className="hero-actions">
+              <a className="hero-primary" href="#directory">Browse emissaries</a>
+              <a className="hero-secondary" href="#install">Install once</a>
+            </div>
+            <div id="install">
+              <CommandCapsule command={INSTALL_COMMAND} compact />
+            </div>
+          </div>
+          <AccountRail
+            authState={authState}
+            session={session}
+            stars={stars}
+            onSignIn={() => setSignInOpen(true)}
+          />
         </section>
 
-        {/* Setup */}
-        <section>
+        <LoopRail />
+
+        <section id="directory" className="directory-section">
           <div className="sec-head">
             <span className="num">§ 01</span>
-            <span className="label">Set up — to send</span>
+            <span className="label">Directory feed</span>
             <span className="rule" />
-            <span className="label">pick your channel</span>
+            <span className="label">{loadState === "ready" ? `${visibleEntries.length} visible` : "published"}</span>
           </div>
-          <SetupModule />
-          <div className="receive">
-            <span className="ic"><IconInbox /></span>
-            <p>
-              <strong style={{ fontWeight: 500 }}>Receiving?</strong> Paste any{" "}
-              <code>egregore.xyz/emissary/e/{`{id}`}</code> link into Claude Code, Codex,
-              claude.ai, or ChatGPT — the agent runs it. Install above and every emissary
-              after runs clean: no summarization, no caveats.
-            </p>
-          </div>
+
+          {loadState === "ready" && entries.length > 0 && (
+            <>
+              <div className="directory-controls">
+                <FilterRail entries={entries} categories={categories} filter={filter} setFilter={setFilter} />
+                <div className="dir-sort" role="group" aria-label="Sort">
+                  <span>Sort</span>
+                  {SORTS.map((item) => (
+                    <button key={item.key} type="button" aria-pressed={sort === item.key} onClick={() => setSort(item.key)}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <SocialProof
+                contributors={contributors}
+                totalEntries={entries.length}
+                totalCarried={totalCarried}
+              />
+            </>
+          )}
+
+          {starNote && <p className="star-note">{starNote}</p>}
+          {loadState === "loading" && <p className="dir-note">Loading the directory…</p>}
+          {loadState === "error" && <p className="dir-note">The directory could not be reached. Try again in a moment.</p>}
+          {loadState === "ready" && entries.length === 0 && (
+            <div className="dir-empty">
+              <h2>The directory is quiet.</h2>
+              <p>Published emissaries will appear here as named addresses. Create the first from your harness.</p>
+              <CommandCapsule command={NEW_COMMAND} compact />
+            </div>
+          )}
+          {loadState === "ready" && entries.length > 0 && visibleEntries.length === 0 && (
+            <p className="dir-note">Nothing in this lane yet. Try another filter.</p>
+          )}
+
+          {featuredEntries.length > 0 && (
+            <div className="featured-rail" aria-label="Featured emissaries">
+              {featuredEntries.map((entry) => (
+                <DirectoryCard
+                  key={entryKey(entry)}
+                  entry={entry}
+                  profile={profiles[entry.owner_handle]}
+                  carried={uses[entry.head_id] ?? 0}
+                  starred={starred.has(entryKey(entry))}
+                  busy={busyStar === entryKey(entry)}
+                  onToggleStar={toggleStar}
+                />
+              ))}
+            </div>
+          )}
+
+          {moreEntries.length > 0 && (
+            <div className="latest-panel">
+              <div className="latest-head">
+                <span className="rail-label">More from this lane</span>
+                <span>{visibleEntries.length - featuredEntries.length} after the rail</span>
+              </div>
+              <div className="latest-list">
+                {moreEntries.map((entry) => (
+                  <CompactEntryRow
+                    key={`compact-${entryKey(entry)}`}
+                    entry={entry}
+                    profile={profiles[entry.owner_handle]}
+                    carried={uses[entry.head_id] ?? 0}
+                    starred={starred.has(entryKey(entry))}
+                    busy={busyStar === entryKey(entry)}
+                    onToggleStar={toggleStar}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* The Pouch */}
-        <section>
-          <div className="sec-head">
-            <span className="num">§ 02</span>
-            <span className="label">The Pouch — try one</span>
-            <span className="rule" />
-            <span className="label">{EMISSARIES.length} of {EMISSARIES.length}</span>
-          </div>
-          <div className="pouch-intro">
-            <p>
-              Each emissary carries a job. Copy a link, paste it into your harness, and the
-              receiver runs it. Send one to yourself first to see how it reads.
-            </p>
-          </div>
-          <div className="pouch">
-            {EMISSARIES.map((em) => <EmissaryCard key={em.id} em={em} />)}
-          </div>
-        </section>
+        <CreateStrip />
 
         <footer>
           <span>egregore.xyz</span>
           <span>
-            <a href="https://egregore.xyz">Docs</a> &nbsp;{" "}
-            <a href="https://github.com/Curve-Labs">Source</a> &nbsp;{" "}
+            <a href="/">Home</a> &nbsp;{" "}
+            <a href="/docs">Docs</a> &nbsp;{" "}
             <a href="mailto:info@egregore.xyz">Mail us</a>
           </span>
           <span>MMXXVI</span>
         </footer>
       </main>
+      <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
   );
 }

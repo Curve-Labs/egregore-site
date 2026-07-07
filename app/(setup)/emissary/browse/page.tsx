@@ -7,9 +7,9 @@ export const metadata = {
     "Browse published emissaries, star the ones worth keeping, and pull them into your agent from the terminal.",
 };
 
-export default function EmissaryHubPage() {
+export default function EmissaryBrowsePage() {
   return (
-    <PasswordGate>
+    <PasswordGate password="emissary-cor" storageKey="emissary-browse-gate">
       <EmissaryHub />
     </PasswordGate>
   );
