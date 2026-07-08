@@ -172,6 +172,10 @@ body:has(.em-hub) .grid-overlay { display: none; }
 .em-hub .shelf-cta:hover { border-color: var(--accent); background: var(--accent-soft); }
 .em-hub .shelf-cta .arr { transition: transform 120ms; }
 .em-hub .shelf-cta:hover .arr { transform: translateX(3px); }
+.em-hub .shelf-ctas { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.em-hub .shelf-ctas .shelf-cta { margin-top: 0; }
+.em-hub .shelf-cta.ghost { color: var(--muted); }
+.em-hub .shelf-cta.ghost:hover { color: var(--accent-deep); }
 
 /* Section spacing */
 .em-hub section { margin-top: 64px; }

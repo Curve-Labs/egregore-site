@@ -363,15 +363,21 @@ export default function EmissaryHub() {
               agent runs without asking you first.
             </p>
           </div>
-          <a className="shelf-cta" href="/emissary/browse">
-            Browse the shelf <span className="arr">→</span>
-          </a>
+          <div className="shelf-ctas">
+            <a className="shelf-cta" href="/emissary/browse">
+              Browse the shelf <span className="arr">→</span>
+            </a>
+            <a className="shelf-cta ghost" href="/emissary/account">
+              Sign in · your account <span className="arr">→</span>
+            </a>
+          </div>
         </section>
 
         <footer>
           <span>egregore.xyz</span>
           <span>
             <a href="https://egregore.xyz">Docs</a> &nbsp;{" "}
+            <a href="/emissary/account">Account</a> &nbsp;{" "}
             <a href="https://github.com/Curve-Labs">Source</a> &nbsp;{" "}
             <a href="mailto:info@egregore.xyz">Mail us</a>
           </span>
