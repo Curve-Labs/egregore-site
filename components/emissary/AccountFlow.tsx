@@ -22,10 +22,12 @@ import {
   getPlatformProfile,
   listPublishedVersions,
   handleError,
+  createConnector,
   NotSignedIn,
   type Session,
   type Star,
   type Token,
+  type Connector,
   type PublishedEmissary,
   type PublishedVersion,
 } from "./account-api";
@@ -179,6 +181,11 @@ export default function AccountFlow() {
   const [tokensError, setTokensError] = useState("");
   const [revoking, setRevoking] = useState<string | null>(null);
 
+  // MCP connector (Connect ChatGPT / Claude)
+  const [connector, setConnector] = useState<Connector | null>(null);
+  const [connectorError, setConnectorError] = useState("");
+  const [mintingConnector, setMintingConnector] = useState(false);
+
   const loadStars = useCallback(async () => {
     setStars(null);
     setStarsError("");
@@ -201,6 +208,21 @@ export default function AccountFlow() {
       setTokensError(err instanceof Error ? err.message : "Couldn't load connected CLIs.");
     }
   }, []);
+
+  const onGenerateConnector = useCallback(async () => {
+    setMintingConnector(true);
+    setConnectorError("");
+    try {
+      setConnector(await createConnector("mcp"));
+      void loadTokens(); // the minted token shows up under Connected CLIs
+    } catch (err) {
+      setConnectorError(
+        err instanceof Error ? err.message : "Couldn't generate a connector link.",
+      );
+    } finally {
+      setMintingConnector(false);
+    }
+  }, [loadTokens]);
 
   const loadPublished = useCallback(async (handle?: string | null) => {
     setPublishedError("");
@@ -726,6 +748,46 @@ export default function AccountFlow() {
               Compose with your agent. The site receives the public address when it is ready.
             </p>
             <CommandBlock command="emissary new" />
+          </section>
+
+          <section className="acct-panel">
+            <div className="acct-section-head">
+              <span className="acct-section-label">Connect ChatGPT / Claude</span>
+              <span className="acct-section-rule" />
+            </div>
+            <p className="acct-panel-copy">
+              Create emissaries straight from ChatGPT or Claude — no install. Generate
+              your personal connector link and add it in the app&apos;s connector settings.
+            </p>
+            {connector ? (
+              <>
+                <CommandBlock command={connector.connector_url} />
+                <p className="acct-panel-copy">
+                  <strong>ChatGPT:</strong> Settings → Connectors → Add → paste the URL.
+                  <br />
+                  <strong>Claude:</strong> Settings → Connectors → Add custom connector →
+                  paste the URL.
+                </p>
+                {!connector.verified && (
+                  <p className="em-prose acct-empty">
+                    Verify your email to create emissaries — check your inbox.
+                  </p>
+                )}
+                <p className="em-prose acct-empty">
+                  This is a connected token — revoke it under Connected CLIs anytime.
+                </p>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="setup-btn setup-btn-primary acct-btn-sm"
+                onClick={onGenerateConnector}
+                disabled={mintingConnector}
+              >
+                {mintingConnector ? "Generating..." : "Generate connector link"}
+              </button>
+            )}
+            {connectorError && <p className="em-prose acct-empty">{connectorError}</p>}
           </section>
 
           <section className="acct-panel">
