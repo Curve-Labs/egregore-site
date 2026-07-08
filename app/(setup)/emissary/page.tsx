@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function EmissaryHubPage() {
   return (
-    <PasswordGate>
+    <PasswordGate password="egregore-cor">
       <EmissaryHub />
     </PasswordGate>
   );
