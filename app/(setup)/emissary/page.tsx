@@ -2,9 +2,9 @@ import EmissaryHub from "@/components/emissary/EmissaryHub";
 import PasswordGate from "@/components/emissary/PasswordGate";
 
 export const metadata = {
-  title: "Emissary Courier — Send a portable handoff",
+  title: "Emissary Directory — Browse and collect emissaries",
   description:
-    "An emissary is a portable, runnable task you hand to a collaborator's agent. Install egregore-emissary once — it sends and receives. The link works cold; installed, every emissary runs at full fidelity.",
+    "Browse published emissaries, star the ones worth keeping, and pull them into your agent from the terminal.",
 };
 
 export default function EmissaryHubPage() {

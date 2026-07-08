@@ -2,12 +2,6 @@
 // /api/v1/emissary/*. Mirrors the contract frozen in
 // docs/specs/emissary-api-contract.md (curve-labs-core).
 
-// Default to same-origin ("") so requests hit /api/v1/* and ride the
-// Netlify redirect → Railway (see netlify.toml). This is what keeps the
-// shelf working off egregore.xyz's CORS allowlist: the preview subdomain
-// and any future host call the API same-origin instead of cross-origin to
-// Railway (which only allowlists egregore.xyz). Local dev sets
-// NEXT_PUBLIC_API_URL to reach the API directly.
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 const EMISSARY_BASE = "/api/v1/emissary";
@@ -95,9 +89,6 @@ export type UsageResponse = {
   counts: Record<string, number>;
 };
 
-// GET /usage?ids=a,b,c — public per-emissary "carried" counts (receipt
-// totals) for the given ids. No auth — counts on published emissaries are
-// public. Returns a { uuid: count } map.
 export async function fetchUsage(ids: string[]): Promise<Record<string, number>> {
   if (ids.length === 0) return {};
   const res = await request<UsageResponse>(
@@ -107,14 +98,10 @@ export async function fetchUsage(ids: string[]): Promise<Record<string, number>>
   return res.counts ?? {};
 }
 
-// ── Platform (the shelf) ───────────────────────────────────────
-
-// One published (slug-addressed) emissary, joined with its head version's
-// metadata + star count. Shape mirrors GET /api/v1/platform/browse.
 export type BrowseEntry = {
   owner_handle: string;
   slug: string;
-  address: string; // "@{handle}/{slug}"
+  address: string;
   head_id: string;
   topic: string | null;
   summary: string | null;
@@ -138,7 +125,6 @@ export type BrowseResponse = {
   categories: BrowseCategory[];
 };
 
-// GET /platform/browse — the public categorized shelf. No auth.
 export async function fetchBrowse(): Promise<BrowseResponse> {
   return request<BrowseResponse>("GET", "/browse", { base: PLATFORM_BASE });
 }
@@ -149,7 +135,6 @@ export type PlatformProfile = {
   verified: boolean;
 };
 
-// GET /platform/@{handle} — public profile (display name + verified flag).
 export async function fetchProfile(handle: string): Promise<PlatformProfile> {
   return request<PlatformProfile>(
     "GET",

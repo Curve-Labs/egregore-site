@@ -17,8 +17,6 @@ export default function PasswordGate({
   storageKey = STORAGE_KEY,
 }: {
   children: ReactNode;
-  // Per-surface override — same gate pattern, different password + unlock
-  // memory (e.g. /emissary/browse gates separately from the hub).
   password?: string;
   storageKey?: string;
 }) {
@@ -77,7 +75,7 @@ export default function PasswordGate({
           display: "flex",
           flexDirection: "column",
           gap: "14px",
-          background: "#fff",
+          background: "var(--paper, #fff)",
           border: "1px solid var(--border)",
           borderRadius: "16px",
           padding: "28px",
