@@ -198,6 +198,19 @@
   opacity: 0.4;
 }
 
+/* ── Sign-in form (/login) ── */
+.em-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Full-width, centered label — the sign-in CTA is the page's single action. */
+.em-login-submit {
+  justify-content: center;
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .em-harness-grid { grid-template-columns: 1fr; }
 }
