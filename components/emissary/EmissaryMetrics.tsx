@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import "./emissary-metrics.css";
+import "./meridian.css";
 
 // ── Types — mirrors the metrics endpoint contract ──────────────
 
@@ -102,7 +103,7 @@ function titleCase(s: string): string {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="em-metrics">
+    <div className="em-metrics meridian">
       <div className="rules">
         <div className="vert l" />
         <div className="vert r" />

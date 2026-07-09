@@ -12,6 +12,7 @@ import { CommandBlock } from "./ui";
 import McpConnectorFlow from "./McpConnectorFlow";
 import "../setup/setup.css";
 import "./emissary.css";
+import "./meridian.css";
 
 type Path = "cli" | "web";
 
@@ -30,7 +31,7 @@ export default function InstallHub({
     : `npx egregore-emissary@latest install`;
 
   return (
-    <div className="setup-stage">
+    <div className="setup-stage meridian">
       <div>
         <div className="setup-eyebrow">Emissary Courier</div>
         <h1 className="setup-title">Send an emissary.</h1>

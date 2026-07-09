@@ -14,6 +14,7 @@ export type Session = {
   name: string | null;
   email: string;
   handle?: string | null;
+  badge?: string;
   // Optional — surfaced as "member since" when the API provides it.
   created_at?: string | null;
 };

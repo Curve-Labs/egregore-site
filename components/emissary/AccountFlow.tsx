@@ -33,6 +33,7 @@ import { CommandBlock, CopyButton } from "./ui";
 import "../setup/setup.css";
 import "./emissary.css";
 import "./account.css";
+import "./meridian.css";
 
 // The emissary MCP server's OAuth connector endpoint — paste into Claude/ChatGPT
 // connectors; the OAuth flow (Connect → sign in → Allow) handles identity, so
@@ -79,6 +80,7 @@ const DEMO_SESSION: Session = {
   name: "Oz",
   email: "oz@example.com",
   handle: "oz",
+  badge: "founding member",
   created_at: "2026-07-01T10:00:00Z",
 };
 
@@ -414,7 +416,7 @@ export default function AccountFlow() {
 
   if (state === "loading") {
     return (
-      <div className="setup-stage">
+      <div className="setup-stage meridian">
         <div className="em-result">
           <div className="setup-spinner" />
           <p className="em-prose">Loading your account…</p>
@@ -425,7 +427,7 @@ export default function AccountFlow() {
 
   if (state === "error") {
     return (
-      <div className="setup-stage">
+      <div className="setup-stage meridian">
         <div className="setup-stage-centered">
           <h1 className="setup-title">Account</h1>
           <p className="setup-sub">{errorMsg}</p>
@@ -439,7 +441,7 @@ export default function AccountFlow() {
 
   if (state === "signed-out") {
     return (
-      <div className="setup-stage">
+      <div className="setup-stage meridian">
         <div className="setup-stage-centered">
           <div className="setup-eyebrow">Emissary · account</div>
           <h1 className="setup-title">You&apos;re signed out</h1>
@@ -465,7 +467,7 @@ export default function AccountFlow() {
   const tokensCount = tokens ? tokens.length : "...";
 
   return (
-    <div className="setup-stage acct-console">
+    <div className="setup-stage acct-console meridian">
       {demoMode && (
         <div className="acct-demo-note">
           Fixture preview - no real account, email, device, star, or publish state is being changed.
@@ -515,6 +517,11 @@ export default function AccountFlow() {
               <button type="button" className="acct-edit" onClick={startNameEdit}>
                 Edit
               </button>
+              {session?.badge ? (
+                <span className="acct-mbadge">
+                  <span className="acct-mbadge-ring" aria-hidden="true" /> {session.badge}
+                </span>
+              ) : null}
             </div>
           )}
           {nameError && <span className="acct-inline-err">{nameError}</span>}
@@ -805,7 +812,6 @@ export default function AccountFlow() {
                       className="acct-unstar"
                       onClick={() => onUnstar(star)}
                       aria-label={`Unstar ${star.address}`}
-                      title="Remove star"
                     >
                       ★
                     </button>

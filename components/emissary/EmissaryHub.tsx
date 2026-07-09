@@ -20,6 +20,7 @@ import {
   type PlatformProfile,
 } from "./api";
 import "./emissary-hub.css";
+import "./meridian.css";
 
 const INSTALL_COMMAND = "npx egregore-emissary@latest install";
 const NEW_COMMAND = "emissary new";
@@ -32,7 +33,7 @@ type FilterAxis = "category" | "kind";
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "carried", label: "Most carried" },
   { key: "recent", label: "Newest" },
-  { key: "stars", label: "Most starred" },
+  { key: "stars", label: "Most collected" },
 ];
 
 const KIND_LABELS: Record<string, string> = {
@@ -443,10 +444,11 @@ function DirectoryCard({
               type="button"
               className={`star-action${starred ? " is-starred" : ""}`}
               aria-pressed={starred}
+              aria-label={starred ? `Remove star for ${entry.address}` : `Star ${entry.address}`}
               disabled={busy}
               onClick={() => onToggleStar(entry)}
             >
-              <IconStar /> {starred ? "Starred" : "Star"}
+              <IconStar />
             </button>
             <CopyButton value={copyUrl} label="Copy link" />
           </div>
@@ -513,10 +515,11 @@ function CompactEntryRow({
         type="button"
         className={`star-action${starred ? " is-starred" : ""}`}
         aria-pressed={starred}
+        aria-label={starred ? `Remove star for ${entry.address}` : `Star ${entry.address}`}
         disabled={busy}
         onClick={() => onToggleStar(entry)}
       >
-        <IconStar /> {starred ? "Starred" : "Star"}
+        <IconStar />
       </button>
       <CopyButton value={copyUrl} label="Copy" />
       {profile?.verified && <span className="compact-verified" title="verified">✓</span>}
@@ -730,7 +733,7 @@ export default function EmissaryHub() {
   }, [session, starred]);
 
   return (
-    <div className="em-hub">
+    <div className="em-hub meridian">
       <div className="rules" aria-hidden="true"><div className="vert l" /><div className="vert r" /></div>
 
       <main className="em-main">

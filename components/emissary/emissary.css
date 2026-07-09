@@ -16,29 +16,29 @@
   gap: 4px;
   padding: 14px 16px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line, #cbd4de);
   border-radius: 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   text-align: left;
   font-family: var(--font-sans);
-  color: var(--black);
+  color: var(--ink, #15212e);
 }
 
 .em-harness:hover {
-  background: rgba(212, 135, 90, 0.06);
-  border-color: var(--terracotta);
+  background: color-mix(in srgb, var(--t1, #9a7521) 6%, transparent);
+  border-color: var(--t1, #9a7521);
 }
 
 .em-harness.is-selected {
-  background: rgba(212, 135, 90, 0.08);
-  border-color: var(--terracotta);
+  background: color-mix(in srgb, var(--t1, #9a7521) 8%, transparent);
+  border-color: var(--t1, #9a7521);
 }
 
 .em-harness-name {
   font-family: var(--font-serif);
   font-size: 16px;
-  color: var(--black);
+  color: var(--ink, #15212e);
 }
 
 .em-harness-kind {
@@ -46,7 +46,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--black);
+  color: var(--ink, #15212e);
   opacity: 0.5;
 }
 
@@ -56,15 +56,15 @@
   flex-direction: column;
   gap: 10px;
   padding: 18px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line, #cbd4de);
   border-radius: 14px;
-  background: #fff;
+  background: var(--card, #f8fafc);
 }
 
 .em-emissary-card-title {
   font-family: var(--font-serif);
   font-size: 17px;
-  color: var(--black);
+  color: var(--ink, #15212e);
 }
 
 /* ── Section blocks ── */
@@ -79,7 +79,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--black);
+  color: var(--ink, #15212e);
   opacity: 0.45;
 }
 
@@ -89,7 +89,7 @@
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.65;
-  color: var(--black);
+  color: var(--ink, #15212e);
 }
 
 .em-steps li {
@@ -100,21 +100,21 @@
 .em-prose code {
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--terracotta);
+  color: var(--t1, #9a7521);
 }
 
 .em-prose {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.65;
-  color: var(--black);
+  color: var(--ink, #15212e);
   opacity: 0.78;
 }
 
 /* ── Copyable URL field (verify result, MCP URL) ── */
 .em-url-field {
-  background: var(--cream);
-  border: 1px solid var(--border);
+  background: var(--paper, #eceef2);
+  border: 1px solid var(--line, #cbd4de);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -126,7 +126,7 @@
 .em-url-field code {
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--black);
+  color: var(--ink, #15212e);
   flex: 1 1 240px;
   word-break: break-all;
 }
@@ -138,17 +138,17 @@
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--black);
+  color: var(--ink, #15212e);
 }
 
 .em-banner-error {
-  border: 1px solid var(--terracotta);
-  background: rgba(212, 135, 90, 0.08);
+  border: 1px solid var(--t3, #a8493e);
+  background: color-mix(in srgb, var(--t3, #a8493e) 8%, transparent);
 }
 
 .em-banner-ok {
-  border: 1px solid rgba(90, 138, 78, 0.35);
-  background: rgba(90, 138, 78, 0.08);
+  border: 1px solid color-mix(in srgb, var(--t2, #1d7a6e) 35%, transparent);
+  background: color-mix(in srgb, var(--t2, #1d7a6e) 8%, transparent);
 }
 
 /* ── Verify / result centered states ── */
@@ -170,9 +170,9 @@
   justify-content: center;
 }
 
-.em-result-icon-ok { background: #5a8a4e; }
-.em-result-icon-err { background: var(--terracotta); }
-.em-result-icon svg { stroke: #fff; }
+.em-result-icon-ok { background: var(--t2, #1d7a6e); }
+.em-result-icon-err { background: var(--t3, #a8493e); }
+.em-result-icon svg { stroke: var(--card, #f8fafc); }
 
 /* ── Divider between the two install paths ── */
 .em-or {
@@ -186,7 +186,7 @@
 .em-or::after {
   content: '';
   flex: 1;
-  border-top: 1px dotted rgba(59, 45, 33, 0.2);
+  border-top: 1px dotted color-mix(in srgb, var(--line, #cbd4de) 80%, transparent);
 }
 
 .em-or span {
@@ -194,7 +194,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--black);
+  color: var(--ink, #15212e);
   opacity: 0.4;
 }
 

@@ -3,28 +3,29 @@
    install/account/creation as adjacent product controls. */
 
 .em-hub {
-  --bg: #f5f2ed;
-  --paper: #fbfaf6;
-  --card: #f8f4ee;
-  --card-2: #fffdf8;
-  --ink: #19130f;
-  --ink-soft: #40362d;
-  --muted: #82796b;
-  --muted-2: #a79d8e;
-  --line: #ded5c7;
-  --line-2: #cbbfac;
-  --accent: #d9684a;
-  --accent-bg: #f3d9c8;
-  --accent-deep: #a7482f;
-  --sage: #5d6b4e;
-  --sage-bg: #edf0e6;
-  --blue: #526a78;
-  --blue-bg: #e8eef0;
-  --terminal: #1d1611;
-  --terminal-ink: #f1e7d8;
-  --serif: 'Spectral', 'Source Serif Pro', Georgia, serif;
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --bg: #eceef2;
+  --paper: #f8fafc;
+  --card: #f8fafc;
+  --card-2: #f8fafc;
+  --ink: #15212e;
+  --ink-soft: #4d5a68;
+  --muted: #8492a0;
+  --muted-2: #8492a0;
+  --line: #cbd4de;
+  --line-2: #bcc6d2;
+  --accent: #9a7521;
+  --accent-bg: #f3ead0;
+  --accent-deep: #9a7521;
+  --sage: #1d7a6e;
+  --sage-bg: #ddefea;
+  --blue: #2c4a6b;
+  --blue-bg: #e2e6ec;
+  --error: #a8493e;
+  --terminal: #0e151d;
+  --terminal-ink: #e7ecf2;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Hanken Grotesk", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
 
   width: 100vw;
   position: relative;
@@ -259,7 +260,7 @@ button.rail-primary {
 }
 
 .em-command code span {
-  color: color-mix(in srgb, var(--terminal-ink) 48%, transparent);
+  color: #3fb0a0;
   margin-right: 8px;
   user-select: none;
 }
@@ -290,8 +291,8 @@ button.rail-primary {
 }
 
 .em-copy-btn.copied {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  color: #3fb0a0;
+  border-color: color-mix(in srgb, #3fb0a0 48%, transparent);
 }
 
 .em-rail {
@@ -663,14 +664,18 @@ button.rail-primary {
   position: relative;
   min-height: 100%;
   border-right: 1px solid var(--line);
-  background: var(--accent-bg);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
   color: var(--accent-deep);
   padding: 18px;
   overflow: hidden;
 }
 
-.dir-thumb.k-dialogue { background: var(--sage-bg); color: var(--sage); }
-.dir-thumb.k-documentation { background: var(--blue-bg); color: var(--blue); }
+.dir-thumb.k-build { background: color-mix(in srgb, var(--accent) 12%, var(--card)); color: var(--accent); }
+.dir-thumb.k-dialogue { background: color-mix(in srgb, var(--sage) 12%, var(--card)); color: var(--sage); }
+.dir-thumb.k-research { background: color-mix(in srgb, var(--blue) 12%, var(--card)); color: var(--blue); }
+.dir-thumb.k-executable { background: color-mix(in srgb, var(--ink) 8%, var(--card)); color: var(--ink-soft); }
+.dir-thumb.k-documentation,
+.dir-thumb.k-brief { background: color-mix(in srgb, var(--line) 42%, var(--card)); color: var(--muted); }
 
 .thumb-kind {
   position: absolute;
@@ -1011,7 +1016,7 @@ button.rail-primary {
   border-radius: 8px;
   background: var(--card-2);
   padding: 22px;
-  box-shadow: 0 18px 44px -34px rgba(25, 19, 15, 0.55);
+  box-shadow: 0 18px 44px -34px rgba(21, 33, 46, 0.45);
 }
 
 .signin-modal h2 {
@@ -1062,7 +1067,7 @@ button.rail-primary {
 }
 
 .signin-error {
-  color: var(--accent-deep);
+  color: var(--error);
   font-family: var(--mono);
   font-size: 11px;
 }

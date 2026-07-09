@@ -17,6 +17,7 @@ import { loginLink } from "./account-api";
 import { CheckIcon } from "./ui";
 import "../setup/setup.css";
 import "./emissary.css";
+import "./meridian.css";
 
 function safeNext(raw: string | null): string | null {
   if (!raw) return null;
@@ -65,7 +66,7 @@ export default function LoginFlow() {
 
   if (stage === "verifying") {
     return (
-      <div className="setup-stage">
+      <div className="setup-stage meridian">
         <div className="em-result">
           <div className="setup-spinner" />
           <p className="em-prose">Signing you in…</p>
@@ -76,7 +77,7 @@ export default function LoginFlow() {
 
   if (stage === "sent") {
     return (
-      <div className="setup-stage">
+      <div className="setup-stage meridian">
         <div className="em-result">
           <div className="em-result-icon em-result-icon-ok">
             <CheckIcon />
@@ -92,7 +93,7 @@ export default function LoginFlow() {
   }
 
   return (
-    <div className="setup-stage">
+    <div className="setup-stage meridian">
       <div className="setup-stage-centered">
         <div className="setup-eyebrow">Emissary · sign in</div>
         <h1 className="setup-title">Sign in</h1>

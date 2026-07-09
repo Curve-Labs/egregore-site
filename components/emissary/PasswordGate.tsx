@@ -7,6 +7,7 @@
 
 import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import "../setup/setup.css";
+import "./meridian.css";
 
 const GATE_PASSWORD = "xhd~10!asxc";
 const STORAGE_KEY = "emissary-gate";
@@ -55,6 +56,7 @@ export default function PasswordGate({
 
   return (
     <div
+      className="meridian"
       style={{
         position: "fixed",
         inset: 0,
@@ -64,7 +66,7 @@ export default function PasswordGate({
         justifyContent: "center",
         overflowY: "auto",
         padding: "24px",
-        background: "var(--cream)",
+        background: "var(--paper)",
       }}
     >
       <form
@@ -75,8 +77,8 @@ export default function PasswordGate({
           display: "flex",
           flexDirection: "column",
           gap: "14px",
-          background: "var(--paper, #fff)",
-          border: "1px solid var(--border)",
+          background: "var(--card)",
+          border: "1px solid var(--line)",
           borderRadius: "16px",
           padding: "28px",
         }}
@@ -87,7 +89,7 @@ export default function PasswordGate({
             fontSize: "11px",
             textTransform: "uppercase",
             letterSpacing: "0.12em",
-            color: "var(--terracotta)",
+            color: "var(--t1)",
           }}
         >
           Emissary · internal
@@ -96,7 +98,7 @@ export default function PasswordGate({
           style={{
             fontFamily: "var(--font-serif)",
             fontSize: "20px",
-            color: "var(--black)",
+            color: "var(--ink)",
           }}
         >
           This page is gated
@@ -106,7 +108,7 @@ export default function PasswordGate({
             fontFamily: "var(--font-sans)",
             fontSize: "14px",
             lineHeight: 1.55,
-            color: "var(--black)",
+            color: "var(--ink)",
             opacity: 0.7,
             margin: 0,
           }}
@@ -127,11 +129,11 @@ export default function PasswordGate({
           style={{
             padding: "10px 12px",
             borderRadius: "10px",
-            border: `1px solid ${error ? "var(--terracotta)" : "var(--border)"}`,
+            border: `1px solid ${error ? "var(--t3)" : "var(--line)"}`,
             fontFamily: "var(--font-mono)",
             fontSize: "14px",
-            background: "var(--cream)",
-            color: "var(--black)",
+            background: "var(--paper)",
+            color: "var(--ink)",
           }}
         />
         {error && (
@@ -139,7 +141,7 @@ export default function PasswordGate({
             style={{
               fontFamily: "var(--font-sans)",
               fontSize: "13px",
-              color: "var(--terracotta)",
+              color: "var(--t3)",
             }}
           >
             Wrong password.
