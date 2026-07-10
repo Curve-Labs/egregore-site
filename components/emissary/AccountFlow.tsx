@@ -22,12 +22,10 @@ import {
   getPlatformProfile,
   listPublishedVersions,
   handleError,
-  createConnector,
   NotSignedIn,
   type Session,
   type Star,
   type Token,
-  type Connector,
   type PublishedEmissary,
   type PublishedVersion,
 } from "./account-api";
@@ -35,6 +33,13 @@ import { CommandBlock, CopyButton } from "./ui";
 import "../setup/setup.css";
 import "./emissary.css";
 import "./account.css";
+
+// The emissary MCP server's OAuth connector endpoint — paste into Claude/ChatGPT
+// connectors; the OAuth flow (Connect → sign in → Allow) handles identity, so
+// nothing needs to be minted or pasted as a key.
+const MCP_CONNECTOR_URL =
+  process.env.NEXT_PUBLIC_MCP_URL ??
+  "https://egregore-handoff-mcp-production.up.railway.app/mcp";
 
 type State = "loading" | "signed-out" | "signed-in" | "error";
 type VersionState =
@@ -181,11 +186,6 @@ export default function AccountFlow() {
   const [tokensError, setTokensError] = useState("");
   const [revoking, setRevoking] = useState<string | null>(null);
 
-  // MCP connector (Connect ChatGPT / Claude)
-  const [connector, setConnector] = useState<Connector | null>(null);
-  const [connectorError, setConnectorError] = useState("");
-  const [mintingConnector, setMintingConnector] = useState(false);
-
   const loadStars = useCallback(async () => {
     setStars(null);
     setStarsError("");
@@ -208,21 +208,6 @@ export default function AccountFlow() {
       setTokensError(err instanceof Error ? err.message : "Couldn't load connected CLIs.");
     }
   }, []);
-
-  const onGenerateConnector = useCallback(async () => {
-    setMintingConnector(true);
-    setConnectorError("");
-    try {
-      setConnector(await createConnector("mcp"));
-      void loadTokens(); // the minted token shows up under Connected CLIs
-    } catch (err) {
-      setConnectorError(
-        err instanceof Error ? err.message : "Couldn't generate a connector link.",
-      );
-    } finally {
-      setMintingConnector(false);
-    }
-  }, [loadTokens]);
 
   const loadPublished = useCallback(async (handle?: string | null) => {
     setPublishedError("");
@@ -756,38 +741,21 @@ export default function AccountFlow() {
               <span className="acct-section-rule" />
             </div>
             <p className="acct-panel-copy">
-              Create emissaries straight from ChatGPT or Claude — no install. Generate
-              your personal connector link and add it in the app&apos;s connector settings.
+              Create emissaries straight from ChatGPT or Claude — no install, no keys.
+              Add this connector, click <strong>Connect</strong>, and sign in with your
+              Egregore email.
             </p>
-            {connector ? (
-              <>
-                <CommandBlock command={connector.connector_url} />
-                <p className="acct-panel-copy">
-                  <strong>ChatGPT:</strong> Settings → Connectors → Add → paste the URL.
-                  <br />
-                  <strong>Claude:</strong> Settings → Connectors → Add custom connector →
-                  paste the URL.
-                </p>
-                {!connector.verified && (
-                  <p className="em-prose acct-empty">
-                    Verify your email to create emissaries — check your inbox.
-                  </p>
-                )}
-                <p className="em-prose acct-empty">
-                  This is a connected token — revoke it under Connected CLIs anytime.
-                </p>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="setup-btn setup-btn-primary acct-btn-sm"
-                onClick={onGenerateConnector}
-                disabled={mintingConnector}
-              >
-                {mintingConnector ? "Generating..." : "Generate connector link"}
-              </button>
-            )}
-            {connectorError && <p className="em-prose acct-empty">{connectorError}</p>}
+            <CommandBlock command={MCP_CONNECTOR_URL} />
+            <p className="acct-panel-copy">
+              <strong>Claude:</strong> Settings → Connectors → Add custom connector →
+              paste the URL → Connect → sign in → Allow.
+              <br />
+              <strong>ChatGPT:</strong> Settings → Connectors → Add → paste the URL →
+              Connect → sign in → Allow.
+            </p>
+            <p className="em-prose acct-empty">
+              Each connection appears under Connected CLIs and can be revoked anytime.
+            </p>
           </section>
 
           <section className="acct-panel">
