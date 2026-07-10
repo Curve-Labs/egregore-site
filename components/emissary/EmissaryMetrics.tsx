@@ -122,14 +122,6 @@ function Shell({ children }: { children: React.ReactNode }) {
           </p>
         </section>
         {children}
-        <footer>
-          <span>egregore.xyz</span>
-          <span>
-            <a href="/emissary">Courier</a> &nbsp; <a href="https://egregore.xyz">Docs</a>{" "}
-            &nbsp; <a href="mailto:info@egregore.xyz">Mail us</a>
-          </span>
-          <span>MMXXVI</span>
-        </footer>
       </main>
     </div>
   );

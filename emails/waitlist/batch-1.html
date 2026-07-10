@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Egregore</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; background-color: #F5F0EB; }
+    .wrapper { width: 100%; background-color: #F5F0EB; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header-image img { width: 100%; height: auto; display: block; }
+    .content { padding: 40px 36px; background-color: #F5F0EB; }
+    .logo { margin-bottom: 32px; }
+    .logo img { height: 28px; }
+    p { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.7; color: #3B2D21; margin: 0 0 16px; }
+    a { color: #E7794B; text-decoration: none; }
+    .greeting { font-size: 15px; line-height: 1.7; color: #3B2D21; margin: 0 0 8px; }
+    .editable { background-color: rgba(231, 121, 75, 0.08); border-left: 2px solid #E7794B; padding: 2px 8px; display: inline; }
+    .opener { border-left: 2px solid rgba(231, 121, 75, 0.3); padding-left: 14px; margin: 0 0 24px; }
+    .opener p { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.7; color: #3B2D21; }
+    .section-title { font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #16100B; line-height: 1.3; margin: 0 0 24px; }
+    .step { margin-bottom: 20px; }
+    .step-number { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 12px; color: #E7794B; letter-spacing: 1px; margin: 0 0 4px; }
+    .step-title { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 400; color: #16100B; margin: 0 0 6px; line-height: 1.3; }
+    .step-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #7A6B5D; margin: 0; }
+    .step-desc a { color: #E7794B; text-decoration: none; }
+    .code-block { background-color: #1D1611; border-radius: 12px; padding: 16px 20px; margin: 20px 0 28px; text-align: left; }
+    .code-block code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 14px; color: #F5F0EB; }
+    .signature { margin-top: 32px; }
+    .signature p { margin: 0; font-size: 15px; color: #3B2D21; }
+    .footer { padding: 24px 36px; text-align: left; }
+    .footer p { font-size: 12px; color: #A89A8C; margin: 0 0 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+    .footer a { color: #7A6B5D; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="left">
+          <div class="container">
+
+            <!-- HEADER IMAGE -->
+            <div class="header-image">
+              <img src="../header-waitlist.png" alt="Egregore" width="600" />
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+              <div class="logo">
+                <img src="../logo.svg" alt="egregore" height="28" />
+              </div>
+
+              <!-- GREETING -->
+              <p class="greeting">
+                <span class="editable">{{FIRST_NAME}}</span>,
+              </p>
+
+              <!-- PERSONALIZED OPENER — 1-3 sentences, generated per person -->
+              <div class="opener">
+                <p><span class="editable">{{PERSONALIZED_OPENER}}</span></p>
+              </div>
+
+              <!-- WHAT EGREGORE IS -->
+              <p>
+                Egregore is a shared intelligence layer for teams using AI. The traces of your team's work accumulate into a living knowledge graph. Decisions, handoffs, context. Every agent and every person draws from it. Over time, the system learns how your organization thinks.
+              </p>
+
+              <!-- WE PICKED YOU -->
+              <p>
+                We picked a small group from the waitlist to go first. People who can help us find what breaks before public launch. You're one of them.
+              </p>
+
+              <!-- ◆ -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;"><tr><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td><td width="6%" align="center" style="font-size: 0; line-height: 0; padding: 0 12px;"><div style="width: 6px; height: 6px; background: rgba(59,45,33,0.15); transform: rotate(45deg); -webkit-transform: rotate(45deg);"></div></td><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td></tr></table>
+
+              <!-- GETTING STARTED GUIDE -->
+              <p class="section-title">
+                Getting started takes about five minutes.
+              </p>
+
+              <div class="steps" style="margin: 0 0 0 0;">
+                <div class="step">
+                  <p class="step-number">01</p>
+                  <p class="step-title">Open your terminal</p>
+                  <p class="step-desc">You'll need Claude Code installed. If you don't have it yet, <a href="https://docs.anthropic.com/en/docs/claude-code">get it here</a>.</p>
+                </div>
+
+                <div class="step">
+                  <p class="step-number">02</p>
+                  <p class="step-title">Run the installer</p>
+                </div>
+              </div>
+
+              <div class="code-block">
+                <code>npx create-egregore@latest</code>
+              </div>
+
+              <div class="steps">
+                <div class="step">
+                  <p class="step-number">03</p>
+                  <p class="step-title">Follow the onboarding</p>
+                  <p class="step-desc">The system will orient you, connect you to your team, and start building shared memory from the first session.</p>
+                </div>
+              </div>
+
+              <!-- FEEDBACK + SLACK (in passing) -->
+              <p>
+                We want to hear about your early experiences. What you love, what breaks, where you get stuck. We set up a <a href="{{SLACK_INVITE_URL}}" style="color: #E7794B; text-decoration: none;">Slack channel</a> for early adopters to talk directly with the team.
+              </p>
+
+              <!-- ◆ -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;"><tr><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td><td width="6%" align="center" style="font-size: 0; line-height: 0; padding: 0 12px;"><div style="width: 6px; height: 6px; background: rgba(59,45,33,0.15); transform: rotate(45deg); -webkit-transform: rotate(45deg);"></div></td><td style="border-top: 1px dotted rgba(59,45,33,0.2); font-size: 0; line-height: 0;" width="47%">&nbsp;</td></tr></table>
+
+              <!-- EXPLORE -->
+              <p style="font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 11px; color: #A89A8C; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 16px;">
+                Explore
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid rgba(212, 201, 188, 0.5); vertical-align: top; width: 120px;">
+                    <a href="https://egregore.xyz" style="font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 14px; color: #E7794B; text-decoration: none;">egregore.xyz</a>
+                  </td>
+                  <td style="padding: 12px 0 12px 16px; border-bottom: 1px solid rgba(212, 201, 188, 0.5); vertical-align: top;">
+                    <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #7A6B5D;">The product, the thesis, the roadmap</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; vertical-align: top; width: 120px;">
+                    <a href="https://github.com/egregore-labs/egregore" style="font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 14px; color: #E7794B; text-decoration: none;">GitHub</a>
+                  </td>
+                  <td style="padding: 12px 0 12px 16px; vertical-align: top;">
+                    <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #7A6B5D;">The source is open. A &#9733; genuinely makes our week.</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- SIGN-OFF -->
+              <div class="signature">
+                <p>&#8212; Egregore</p>
+              </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="footer">
+              <p style="font-style: italic;">This message was composed by Egregore Zero, the first instance of the system you signed up for. It read what you wrote, and wrote back.</p>
+              <p><a href="https://egregore.xyz">egregore.xyz</a> &middot; <a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></p>
+            </div>
+
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

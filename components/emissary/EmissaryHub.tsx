@@ -22,7 +22,6 @@ import {
 import "./emissary-hub.css";
 import "./meridian.css";
 
-const INSTALL_COMMAND = "npx egregore-emissary@latest install";
 const NEW_COMMAND = "emissary new";
 
 type LoadState = "loading" | "ready" | "error";
@@ -320,15 +319,20 @@ function FilterRail({
   }, [entries, categories]);
 
   return (
-    <div className="dir-filters" role="group" aria-label={`Filter by ${axis}`}>
-      <button type="button" className="dir-filter" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-        All <span>{entries.length}</span>
+    <div className="catrail" role="group" aria-label={`Filter by ${axis}`}>
+      <button
+        type="button"
+        className={`chip${filter === "all" ? " on" : ""}`}
+        aria-pressed={filter === "all"}
+        onClick={() => setFilter("all")}
+      >
+        all <span>{entries.length}</span>
       </button>
-      {options.map((option) => (
+      {options.map((option, index) => (
         <button
           key={option.key}
           type="button"
-          className="dir-filter"
+          className={`chip k${(index % 5) + 1}${filter === option.key ? " on" : ""}`}
           aria-pressed={filter === option.key}
           onClick={() => setFilter(option.key)}
         >
@@ -667,21 +671,19 @@ export default function EmissaryHub() {
     });
   }, [entries, filter, sort, uses]);
 
-  const contributors = useMemo(() => {
-    const counts = new Map<string, number>();
-    entries.forEach((entry) => counts.set(entry.owner_handle, (counts.get(entry.owner_handle) ?? 0) + 1));
-    return Array.from(counts.entries())
-      .map(([handle, count]) => ({ handle, count, profile: profiles[handle] }))
-      .sort((a, b) => b.count - a.count);
-  }, [entries, profiles]);
-
-  const totalCarried = useMemo(
-    () => Object.values(uses).reduce((sum, count) => sum + count, 0),
-    [uses],
-  );
-
-  const featuredEntries = useMemo(() => visibleEntries.slice(0, 8), [visibleEntries]);
-  const moreEntries = useMemo(() => visibleEntries.slice(8, 14), [visibleEntries]);
+  const defaultView = filter === "all" && sort === "carried";
+  const sortLabel = SORTS.find((item) => item.key === sort)?.label.toLowerCase() || "most carried";
+  const featuredEntries = useMemo(() => {
+    if (!defaultView) return [];
+    return [...entries].sort((a, b) => b.stars - a.stars).slice(0, 3);
+  }, [defaultView, entries]);
+  const featuredKeys = useMemo(() => new Set(featuredEntries.map(entryKey)), [featuredEntries]);
+  const gridEntries = useMemo(() => (
+    defaultView
+      ? visibleEntries.filter((entry) => !featuredKeys.has(entryKey(entry)))
+      : visibleEntries
+  ), [defaultView, featuredKeys, visibleEntries]);
+  const showSparseCell = loadState === "ready" && entries.length > 0 && entries.length <= 6 && visibleEntries.length > 0;
 
   const toggleStar = useCallback(async (entry: BrowseEntry) => {
     if (!session) {
@@ -721,7 +723,7 @@ export default function EmissaryHub() {
         await unstar(entry.owner_handle, entry.slug);
       } else {
         await starEmissary(entry.owner_handle, entry.slug, "pin");
-        setStarNote("Starred. Run emissary pull in your terminal when you want to bring it in.");
+        setStarNote("Added. Run emissary pull in your terminal when you want to bring it in.");
       }
     } catch (err) {
       setStarNote(err instanceof Error ? err.message : "Couldn't update that star.");
@@ -734,57 +736,14 @@ export default function EmissaryHub() {
 
   return (
     <div className="em-hub meridian">
-      <div className="rules" aria-hidden="true"><div className="vert l" /><div className="vert r" /></div>
-
       <main className="em-main">
-        <div className="em-topbar">
-          <nav aria-label="Emissary">
-            <a href="#directory">Directory</a>
-            <a href="#install">Install</a>
-            <a href="/emissary/account">Account</a>
-          </nav>
-          <AuthLink authState={authState} session={session} onSignIn={() => setSignInOpen(true)} />
-        </div>
-
-        <section className="em-hero">
-          <div className="hero-copy">
-            <div className="eyebrow">Emissary platform <span className="dot">·</span> web-star / agent-pull</div>
-            <h1 className="display">Emissary <em>Directory</em>.</h1>
-            <p className="lede">
-              Portable tasks at named addresses. Star what you trust on the web; pull it into your agent when the work is ready to move.
-            </p>
-            <div className="hero-actions">
-              <a className="hero-primary" href="#directory">Browse emissaries</a>
-              <a className="hero-secondary" href="#install">Install once</a>
-            </div>
-            <div id="install">
-              <CommandCapsule command={INSTALL_COMMAND} compact />
-            </div>
-          </div>
-          <AccountRail
-            authState={authState}
-            session={session}
-            stars={stars}
-            onSignIn={() => setSignInOpen(true)}
-          />
-        </section>
-
-        <LoopRail />
-
         <section id="directory" className="directory-section">
-          <div className="sec-head">
-            <span className="num">§ 01</span>
-            <span className="label">Directory feed</span>
-            <span className="rule" />
-            <span className="label">{loadState === "ready" ? `${visibleEntries.length} visible` : "published"}</span>
-          </div>
-
           {loadState === "ready" && entries.length > 0 && (
-            <>
-              <div className="directory-controls">
-                <FilterRail entries={entries} categories={categories} filter={filter} setFilter={setFilter} />
+            <div className="directory-controls">
+              <FilterRail entries={entries} categories={categories} filter={filter} setFilter={setFilter} />
+              <div className="sortrow">
+                <span>sort</span>
                 <div className="dir-sort" role="group" aria-label="Sort">
-                  <span>Sort</span>
                   {SORTS.map((item) => (
                     <button key={item.key} type="button" aria-pressed={sort === item.key} onClick={() => setSort(item.key)}>
                       {item.label}
@@ -792,12 +751,7 @@ export default function EmissaryHub() {
                   ))}
                 </div>
               </div>
-              <SocialProof
-                contributors={contributors}
-                totalEntries={entries.length}
-                totalCarried={totalCarried}
-              />
-            </>
+            </div>
           )}
 
           {starNote && <p className="star-note">{starNote}</p>}
@@ -814,32 +768,13 @@ export default function EmissaryHub() {
             <p className="dir-note">Nothing in this lane yet. Try another filter.</p>
           )}
 
-          {featuredEntries.length > 0 && (
-            <div className="featured-rail" aria-label="Featured emissaries">
-              {featuredEntries.map((entry) => (
-                <DirectoryCard
-                  key={entryKey(entry)}
-                  entry={entry}
-                  profile={profiles[entry.owner_handle]}
-                  carried={uses[entry.head_id] ?? 0}
-                  starred={starred.has(entryKey(entry))}
-                  busy={busyStar === entryKey(entry)}
-                  onToggleStar={toggleStar}
-                />
-              ))}
-            </div>
-          )}
-
-          {moreEntries.length > 0 && (
-            <div className="latest-panel">
-              <div className="latest-head">
-                <span className="rail-label">More from this lane</span>
-                <span>{visibleEntries.length - featuredEntries.length} after the rail</span>
-              </div>
-              <div className="latest-list">
-                {moreEntries.map((entry) => (
-                  <CompactEntryRow
-                    key={`compact-${entryKey(entry)}`}
+          {defaultView && featuredEntries.length > 0 && (
+            <div className="dir-block">
+              <span className="featlabel">featured</span>
+              <div className="featured-strip" aria-label="Featured emissaries">
+                {featuredEntries.map((entry) => (
+                  <DirectoryCard
+                    key={entryKey(entry)}
                     entry={entry}
                     profile={profiles[entry.owner_handle]}
                     carried={uses[entry.head_id] ?? 0}
@@ -851,19 +786,32 @@ export default function EmissaryHub() {
               </div>
             </div>
           )}
+
+          {(gridEntries.length > 0 || showSparseCell) && (
+            <div className="dir-block">
+              <span className="featlabel">{sortLabel}</span>
+              <div className="directory-grid" aria-label={`${sortLabel} emissaries`}>
+                {gridEntries.map((entry) => (
+                  <DirectoryCard
+                    key={entryKey(entry)}
+                    entry={entry}
+                    profile={profiles[entry.owner_handle]}
+                    carried={uses[entry.head_id] ?? 0}
+                    starred={starred.has(entryKey(entry))}
+                    busy={busyStar === entryKey(entry)}
+                    onToggleStar={toggleStar}
+                  />
+                ))}
+                {showSparseCell && (
+                  <div className="growth-cell">
+                    <strong>{entries.length}</strong> emissaries and counting
+                    <span>new ones land here first</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </section>
-
-        <CreateStrip />
-
-        <footer>
-          <span>egregore.xyz</span>
-          <span>
-            <a href="/">Home</a> &nbsp;{" "}
-            <a href="/docs">Docs</a> &nbsp;{" "}
-            <a href="mailto:info@egregore.xyz">Mail us</a>
-          </span>
-          <span>MMXXVI</span>
-        </footer>
       </main>
       <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
