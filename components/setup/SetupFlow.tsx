@@ -136,7 +136,6 @@ function InstallCommand({ setupToken, label = "Install" }: { setupToken: string;
 
 function OAuthCallback({ onAuth }: { onAuth: (token: string, user: GithubUser) => void }) {
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -147,7 +146,6 @@ function OAuthCallback({ onAuth }: { onAuth: (token: string, user: GithubUser) =
     }
     exchangeCode(code)
       .then(({ github_token, user }) => {
-        router.replace("/setup");
         onAuth(github_token, user);
       })
       .catch((err: Error) => setError(err.message));
@@ -216,9 +214,15 @@ function OrgPicker({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getOrgs(token)
+    const controller = new AbortController();
+    getOrgs(token, controller.signal)
       .then((data) => { setOrgs(data); setLoading(false); })
-      .catch((err: Error) => { setError(err.message); setLoading(false); });
+      .catch((err: Error) => {
+        if (err.name === "AbortError") return;
+        setError(err.message);
+        setLoading(false);
+      });
+    return () => controller.abort();
   }, [token]);
 
   if (loading) {
@@ -1248,8 +1252,6 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
       <OAuthCallback
         onAuth={(token, u) => {
           writeSessionAuth(token, u);
-          setGithubToken(token);
-          setUser(u);
           if (typeof window !== "undefined") {
             const savedInvite = sessionStorage.getItem("egregore_invite");
             if (savedInvite) {
