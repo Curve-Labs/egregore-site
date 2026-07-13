@@ -86,6 +86,7 @@ export type OrgReposResponse = {
 export type SetupResult = {
   org_slug: string;
   setup_token: string;
+  repo_name?: string;
   telegram_invite_link?: string;
   telegram_group_link?: string;
   org_name?: string;
@@ -110,6 +111,20 @@ export type InviteInfo = {
   invited_by: string;
 };
 
+export type GithubSearchUser = {
+  login: string;
+  avatar_url?: string;
+  profile_url?: string;
+};
+
+export type InviteResult = {
+  invite_url: string;
+  invited_username: string;
+  github_invite: { status: string; reason?: string };
+  memory_access?: { repo: string; status: string };
+  managed_access?: { repo: string; status: string }[];
+};
+
 export type UserProfile = {
   name: string;
   telegram_username?: string;
@@ -128,6 +143,17 @@ export async function getOrgs(token: string, signal?: AbortSignal): Promise<Setu
 
 export async function getOrgRepos(token: string, org: string): Promise<OrgReposResponse> {
   return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
+}
+
+export async function searchGithubUsers(
+  token: string,
+  query: string,
+  org?: string,
+  signal?: AbortSignal,
+): Promise<{ users: GithubSearchUser[] }> {
+  const params = new URLSearchParams({ q: query });
+  if (org) params.set("org", org);
+  return request("GET", `/api/github/users/search?${params.toString()}`, { token, signal });
 }
 
 export type AppInstallationStatus = {
@@ -186,6 +212,13 @@ export async function getInviteInfo(inviteToken: string): Promise<InviteInfo> {
 
 export async function acceptInvite(token: string, inviteToken: string): Promise<SetupResult> {
   return request("POST", `/api/org/invite/${inviteToken}/accept`, { token });
+}
+
+export async function inviteTeammate(
+  token: string,
+  body: { github_org: string; github_username: string; repo_name: string; slug: string },
+): Promise<InviteResult> {
+  return request("POST", "/api/org/invite", { token, body });
 }
 
 export async function getUserProfile(token: string): Promise<UserProfile> {

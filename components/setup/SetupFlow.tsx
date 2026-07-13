@@ -16,7 +16,10 @@ import {
   checkAppInstallation,
   getUserProfile,
   updateUserProfile,
+  searchGithubUsers,
+  inviteTeammate,
   type GithubUser,
+  type GithubSearchUser,
   type OrgInfo,
   type OrgInstance,
   type SetupOrgsResponse,
@@ -81,6 +84,300 @@ function Divider() {
   return (
     <div className="setup-divider" aria-hidden>
       <span className="diamond" />
+    </div>
+  );
+}
+
+type InviteAttempt = {
+  user: GithubSearchUser;
+  status: "inviting" | "invited" | "error";
+  inviteUrl?: string;
+  error?: string;
+};
+
+function isGithubLogin(value: string) {
+  return /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(value);
+}
+
+function InviteTeammates({
+  token,
+  user,
+  org,
+  result,
+  onContinue,
+}: {
+  token: string;
+  user: GithubUser;
+  org: OrgInfo & { is_personal?: boolean };
+  result: SetupResult;
+  onContinue: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GithubSearchUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [attempts, setAttempts] = useState<InviteAttempt[]>([]);
+  const [copiedLogin, setCopiedLogin] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = "setup-invite-results";
+  const trimmedQuery = query.trim();
+
+  useEffect(() => {
+    if (trimmedQuery.length < 2) {
+      setResults([]);
+      setSearching(false);
+      setSearchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setSearching(true);
+      setSearchError(null);
+      searchGithubUsers(
+        token,
+        trimmedQuery,
+        org.is_personal ? undefined : org.login,
+        controller.signal,
+      )
+        .then(({ users }) => {
+          setResults(users.filter((candidate) => candidate.login.toLowerCase() !== user.login.toLowerCase()));
+          setSearching(false);
+          setActiveIndex(0);
+        })
+        .catch((err: Error) => {
+          if (err.name === "AbortError") return;
+          setSearchError(err.message);
+          setSearching(false);
+        });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [org.is_personal, org.login, token, trimmedQuery, user.login]);
+
+  const attemptedLogins = new Set(attempts.map((attempt) => attempt.user.login.toLowerCase()));
+  const candidates = results.filter((candidate) => !attemptedLogins.has(candidate.login.toLowerCase()));
+  const hasExactResult = candidates.some(
+    (candidate) => candidate.login.toLowerCase() === trimmedQuery.toLowerCase(),
+  );
+  if (
+    isGithubLogin(trimmedQuery) &&
+    trimmedQuery.toLowerCase() !== user.login.toLowerCase() &&
+    !attemptedLogins.has(trimmedQuery.toLowerCase()) &&
+    !hasExactResult
+  ) {
+    candidates.push({ login: trimmedQuery });
+  }
+
+  const invite = async (candidate: GithubSearchUser) => {
+    setOpen(false);
+    setQuery("");
+    setAttempts((current) => [
+      ...current.filter((attempt) => attempt.user.login.toLowerCase() !== candidate.login.toLowerCase()),
+      { user: candidate, status: "inviting" },
+    ]);
+
+    try {
+      const invitation = await inviteTeammate(token, {
+        github_org: org.login,
+        github_username: candidate.login,
+        repo_name: result.repo_name || "egregore",
+        slug: result.org_slug,
+      });
+      const failedManagedRepo = invitation.managed_access?.find((access) => access.status === "collaborator_failed");
+      const accessFailed =
+        invitation.github_invite.status === "collaborator_failed" ||
+        invitation.memory_access?.status === "collaborator_failed" ||
+        Boolean(failedManagedRepo);
+
+      setAttempts((current) => current.map((attempt) =>
+        attempt.user.login.toLowerCase() === candidate.login.toLowerCase()
+          ? {
+              ...attempt,
+              status: accessFailed ? "error" : "invited",
+              inviteUrl: invitation.invite_url,
+              error: accessFailed
+                ? invitation.github_invite.reason || "The invite link was created, but some repository access could not be granted."
+                : undefined,
+            }
+          : attempt,
+      ));
+    } catch (err) {
+      setAttempts((current) => current.map((attempt) =>
+        attempt.user.login.toLowerCase() === candidate.login.toLowerCase()
+          ? { ...attempt, status: "error", error: err instanceof Error ? err.message : "Could not send invite." }
+          : attempt,
+      ));
+    } finally {
+      inputRef.current?.focus();
+    }
+  };
+
+  const copyInvite = async (login: string, inviteUrl: string) => {
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopiedLogin(login);
+    window.setTimeout(() => setCopiedLogin((current) => current === login ? null : current), 2000);
+  };
+
+  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open || candidates.length === 0) {
+      if (event.key === "ArrowDown" && trimmedQuery.length >= 2) setOpen(true);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((current) => (current + 1) % candidates.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((current) => (current - 1 + candidates.length) % candidates.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      void invite(candidates[activeIndex] || candidates[0]);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  };
+
+  const invitedCount = attempts.filter((attempt) => attempt.status === "invited").length;
+  const inviteInProgress = attempts.some((attempt) => attempt.status === "inviting");
+
+  return (
+    <div className="setup-stage">
+      <div className="setup-stage-centered setup-invite-heading">
+        <p className="setup-eyebrow">Bring someone in</p>
+        <p className="setup-title setup-title-lg">Invite your first teammate</p>
+        <p className="setup-sub">
+          Search by GitHub name. We&apos;ll grant access and create their personal setup link.
+        </p>
+      </div>
+
+      <div className="setup-invite-search">
+        <label className="setup-input-label" htmlFor="setup-invite-input">GitHub name</label>
+        <div className="setup-invite-input-wrap">
+          <input
+            ref={inputRef}
+            id="setup-invite-input"
+            className="setup-input setup-invite-input"
+            type="text"
+            value={query}
+            placeholder="Start typing a name or username"
+            autoComplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={open && trimmedQuery.length >= 2}
+            aria-controls={listboxId}
+            aria-activedescendant={open && candidates[activeIndex] ? `setup-invite-${candidates[activeIndex].login}` : undefined}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+              setActiveIndex(0);
+            }}
+            onFocus={() => { if (trimmedQuery.length >= 2) setOpen(true); }}
+            onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+            onKeyDown={onSearchKeyDown}
+          />
+          {searching && <span className="setup-invite-search-spinner" aria-label="Searching"><SmallSpinner /></span>}
+        </div>
+
+        {open && trimmedQuery.length >= 2 && (
+          <div className="setup-invite-results" id={listboxId} role="listbox">
+            {candidates.map((candidate, index) => {
+              const direct = !candidate.avatar_url && candidate.login.toLowerCase() === trimmedQuery.toLowerCase();
+              return (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  id={`setup-invite-${candidate.login}`}
+                  key={candidate.login}
+                  className={`setup-invite-result ${index === activeIndex ? "is-active" : ""}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => void invite(candidate)}
+                >
+                  {candidate.avatar_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="setup-invite-avatar" src={candidate.avatar_url} alt="" />
+                  )}
+                  <span className="setup-invite-person">
+                    <span className="setup-invite-login">@{candidate.login}</span>
+                    <span className="setup-invite-meta">
+                      {direct ? "Invite by exact username" : org.is_personal ? "GitHub user" : `Member of ${org.login}`}
+                    </span>
+                  </span>
+                  <span className="setup-invite-result-action">Invite</span>
+                </button>
+              );
+            })}
+            {!searching && candidates.length === 0 && !searchError && (
+              <p className="setup-invite-empty">No matching GitHub users found.</p>
+            )}
+            {searchError && <p className="setup-invite-empty setup-invite-search-error">{searchError}</p>}
+          </div>
+        )}
+      </div>
+
+      {attempts.length > 0 && (
+        <div className="setup-invite-attempts" aria-live="polite">
+          {attempts.map((attempt) => (
+            <div
+              className={`setup-invite-attempt is-${attempt.status} ${attempt.user.avatar_url ? "has-avatar" : ""}`}
+              key={attempt.user.login}
+            >
+              {attempt.user.avatar_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="setup-invite-avatar" src={attempt.user.avatar_url} alt="" />
+              )}
+              <span className="setup-invite-person">
+                <span className="setup-invite-login">@{attempt.user.login}</span>
+                <span className="setup-invite-meta">
+                  {attempt.status === "inviting" && "Granting access and creating their link"}
+                  {attempt.status === "invited" && "GitHub access sent. Their setup link is ready."}
+                  {attempt.status === "error" && attempt.error}
+                </span>
+              </span>
+              {attempt.status === "inviting" && <SmallSpinner />}
+              {attempt.status === "invited" && attempt.inviteUrl && (
+                <button
+                  type="button"
+                  className="setup-invite-copy"
+                  onClick={() => void copyInvite(attempt.user.login, attempt.inviteUrl!)}
+                >
+                  {copiedLogin === attempt.user.login ? <><CheckIcon size={12} /> Copied</> : <><CopyIcon /> Copy link</>}
+                </button>
+              )}
+              {attempt.status === "error" && (
+                <button type="button" className="setup-invite-retry" onClick={() => void invite(attempt.user)}>
+                  Try again
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="setup-actions setup-invite-actions">
+        <p className="setup-install-note">
+          {inviteInProgress
+            ? "Finishing your invite"
+            : invitedCount > 0
+              ? `${invitedCount} invited`
+              : "You can invite more people later from Egregore."}
+        </p>
+        <button
+          type="button"
+          className="setup-btn setup-btn-primary"
+          disabled={inviteInProgress}
+          onClick={onContinue}
+        >
+          {inviteInProgress ? "Inviting..." : invitedCount > 0 ? "Continue to install" : "Skip for now"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -688,6 +985,7 @@ function TelegramStep({
 
 function SetupProgress({
   token,
+  user,
   org,
   repos = [],
   joinRepoName,
@@ -706,6 +1004,7 @@ function SetupProgress({
   const [result, setResult] = useState<SetupResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [telegramConnected, setTelegramConnected] = useState(false);
+  const [showInviteStep, setShowInviteStep] = useState(true);
 
   useEffect(() => {
     const action = org.has_egregore
@@ -760,6 +1059,18 @@ function SetupProgress({
   }
 
   if (!result) return null;
+
+  if (!org.has_egregore && showInviteStep) {
+    return (
+      <InviteTeammates
+        token={token}
+        user={user}
+        org={org}
+        result={result}
+        onContinue={() => setShowInviteStep(false)}
+      />
+    );
+  }
 
   return (
     <div className="setup-stage">

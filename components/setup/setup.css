@@ -213,6 +213,202 @@
   font-weight: 500;
 }
 
+/* ── Teammate invite picker ── */
+.setup-invite-heading {
+  padding-bottom: 0;
+}
+
+.setup-invite-heading .setup-sub {
+  margin-bottom: 0;
+}
+
+.setup-input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--black) 58%, transparent);
+}
+
+.setup-invite-search {
+  position: relative;
+}
+
+.setup-invite-input-wrap {
+  position: relative;
+}
+
+.setup-invite-input {
+  padding-right: 44px;
+}
+
+.setup-invite-search-spinner {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  display: inline-flex;
+  transform: translateY(-50%);
+}
+
+.setup-invite-results {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg, var(--cream));
+}
+
+.setup-invite-result {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--black);
+  cursor: pointer;
+  text-align: left;
+}
+
+.setup-invite-result:last-of-type {
+  border-bottom: 0;
+}
+
+.setup-invite-result:hover,
+.setup-invite-result.is-active {
+  background: color-mix(in srgb, var(--terracotta) 8%, transparent);
+}
+
+.setup-invite-result:focus-visible,
+.setup-invite-copy:focus-visible,
+.setup-invite-retry:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: -2px;
+}
+
+.setup-invite-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.setup-invite-person {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setup-invite-login {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--black);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-invite-meta {
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--black) 56%, transparent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-invite-result-action {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--terracotta);
+}
+
+.setup-invite-empty {
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: color-mix(in srgb, var(--black) 55%, transparent);
+  text-align: center;
+}
+
+.setup-invite-search-error {
+  color: var(--terracotta);
+}
+
+.setup-invite-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-invite-attempt {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+}
+
+.setup-invite-attempt.is-error {
+  border-color: color-mix(in srgb, var(--terracotta) 56%, var(--border));
+  background: color-mix(in srgb, var(--terracotta) 5%, transparent);
+}
+
+.setup-invite-attempt.is-error .setup-invite-meta {
+  color: var(--terracotta);
+  white-space: normal;
+}
+
+.setup-invite-copy,
+.setup-invite-retry {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--black);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.setup-invite-copy:hover,
+.setup-invite-retry:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.setup-invite-actions {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px dotted var(--border);
+}
+
+.setup-invite-actions .setup-install-note {
+  margin-top: 0;
+}
+
 /* ── Option cards (org picker, instance picker, repo picker, consent radios) ── */
 .setup-option-list {
   display: flex;
@@ -686,4 +882,17 @@
   .setup-install-body { padding: 12px 14px; }
   .setup-install-body code { font-size: 11px; }
   .grid-overlay { display: none; }
+  .setup-invite-attempt { align-items: flex-start; flex-wrap: wrap; }
+  .setup-invite-attempt.has-avatar .setup-invite-copy,
+  .setup-invite-attempt.has-avatar .setup-invite-retry { margin-left: 46px; }
+  .setup-invite-actions { align-items: flex-start; flex-direction: column; }
+  .setup-invite-actions .setup-btn { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setup-stage,
+  .setup-spinner,
+  .setup-spinner-sm {
+    animation: none;
+  }
 }
