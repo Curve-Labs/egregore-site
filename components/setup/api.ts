@@ -16,6 +16,7 @@ export function getGitHubAuthUrl(): string {
 type RequestOpts = {
   body?: unknown;
   token?: string;
+  signal?: AbortSignal;
 };
 
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
@@ -26,6 +27,7 @@ async function request<T>(method: string, path: string, opts: RequestOpts = {}):
     method,
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal,
   });
 
   const data = await resp.json();
@@ -120,8 +122,8 @@ export async function exchangeCode(code: string): Promise<{ github_token: string
   return request("POST", "/api/auth/github/callback", { body: { code } });
 }
 
-export async function getOrgs(token: string): Promise<SetupOrgsResponse> {
-  return request("GET", "/api/org/setup/orgs", { token });
+export async function getOrgs(token: string, signal?: AbortSignal): Promise<SetupOrgsResponse> {
+  return request("GET", "/api/org/setup/orgs", { token, signal });
 }
 
 export async function getOrgRepos(token: string, org: string): Promise<OrgReposResponse> {
