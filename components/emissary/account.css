@@ -11,19 +11,19 @@
 }
 
 .acct-console {
-  --acct-paper: color-mix(in srgb, var(--cream) 82%, white);
-  --acct-card: color-mix(in srgb, var(--cream) 72%, white);
-  --acct-card-strong: color-mix(in srgb, var(--cream) 56%, white);
-  --acct-line: color-mix(in srgb, var(--border) 78%, var(--black));
-  --acct-muted: color-mix(in srgb, var(--black) 54%, transparent);
-  --acct-faint: color-mix(in srgb, var(--black) 34%, transparent);
-  --acct-wash: color-mix(in srgb, var(--terracotta) 9%, transparent);
-  --acct-terminal: var(--terminal-bg, var(--black));
-  --acct-art-bg: color-mix(in srgb, var(--terracotta) 18%, var(--cream));
-  --acct-art-ink: var(--terracotta);
+  --acct-paper: var(--paper);
+  --acct-card: var(--card);
+  --acct-card-strong: var(--paper-2);
+  --acct-line: var(--line);
+  --acct-muted: var(--ink-soft);
+  --acct-faint: var(--ink-faint);
+  --acct-wash: color-mix(in srgb, var(--t1) 9%, transparent);
+  --acct-terminal: #0e151d;
+  --acct-art-bg: color-mix(in srgb, var(--t1) 12%, var(--card));
+  --acct-art-ink: var(--t1);
 
   gap: 22px;
-  color: var(--black);
+  color: var(--ink);
 }
 
 .acct-console .setup-btn {
@@ -32,25 +32,35 @@
 
 .acct-console .setup-install-body {
   min-width: 0;
+  border: 1px solid #2a3744;
   border-radius: 8px;
   background: var(--acct-terminal);
+  color: #e7ecf2;
   padding: 12px 13px;
 }
 
 .acct-console .setup-install-body code {
-  color: color-mix(in srgb, var(--cream) 88%, white);
+  color: #e7ecf2;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
 .acct-console .setup-install-copy {
+  color: #aab6c2;
+  border-color: #2a3744;
   padding: 5px 8px;
   font-size: 10px;
+}
+
+.acct-console .setup-install-copy:hover {
+  color: #3fb0a0;
+  border-color: #3fb0a0;
 }
 
 .acct-demo-note {
   max-width: 620px;
   padding: 10px 12px;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--line);
   border-radius: 8px;
   background: var(--acct-paper);
   color: var(--acct-muted);
@@ -67,7 +77,7 @@
   gap: 18px;
   align-items: stretch;
   padding: 22px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--acct-paper);
 }
@@ -102,6 +112,32 @@
   flex-wrap: wrap;
 }
 
+.acct-mbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  background: var(--t1-bg);
+  border: 1px solid color-mix(in srgb, var(--t1) 40%, transparent);
+  color: var(--t1);
+  white-space: nowrap;
+}
+
+.acct-mbadge-ring {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  box-shadow: inset 0 0 0 2.5px transparent, inset 0 0 0 3.5px currentColor;
+  opacity: .85;
+}
+
 .acct-name {
   margin: 0;
   font-family: var(--font-serif);
@@ -109,14 +145,14 @@
   font-weight: 500;
   line-height: 0.94;
   letter-spacing: 0;
-  color: var(--black);
+  color: var(--ink);
 }
 
 .acct-edit {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--terracotta);
+  color: var(--t1);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 10px;
@@ -146,7 +182,7 @@
 .acct-grammar {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--terracotta);
+  color: var(--t3);
 }
 
 .acct-meta {
@@ -161,7 +197,7 @@
 .acct-handle,
 .acct-pub-address,
 .acct-star-addr {
-  color: var(--terracotta);
+  color: var(--t1);
 }
 
 .acct-email,
@@ -188,7 +224,7 @@
 .acct-overview span {
   min-width: 106px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--acct-muted);
   font-family: var(--font-mono);
@@ -199,7 +235,7 @@
 .acct-overview strong {
   display: block;
   margin-bottom: 3px;
-  color: var(--terracotta);
+  color: var(--t1);
   font-size: 18px;
   font-weight: 600;
 }
@@ -211,7 +247,7 @@
   gap: 14px;
   min-width: 0;
   padding: 14px;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--line);
 }
 
 .acct-tool-head {
@@ -225,7 +261,7 @@
 }
 
 .acct-tool-head a {
-  color: var(--terracotta);
+  color: var(--prussian);
   text-decoration: none;
 }
 
@@ -246,7 +282,7 @@
   display: grid;
   gap: 12px;
   padding: 18px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--acct-paper);
 }
@@ -271,7 +307,7 @@
 }
 
 .acct-at {
-  color: var(--terracotta);
+  color: var(--t1);
   font-family: var(--font-mono);
   font-size: 15px;
 }
@@ -285,7 +321,7 @@
 }
 
 .acct-grammar.is-err {
-  color: var(--terracotta);
+  color: var(--t3);
 }
 
 /* Main dashboard */
@@ -318,7 +354,7 @@
 
 .acct-panel {
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--acct-paper);
 }
@@ -336,7 +372,7 @@
 
 .acct-section-head-strong h2 {
   margin: 4px 0 0;
-  color: var(--black);
+  color: var(--ink);
   font-family: var(--font-serif);
   font-size: 30px;
   font-weight: 500;
@@ -347,7 +383,7 @@
   flex: 1;
   min-width: 24px;
   height: 1px;
-  background: var(--border);
+  background: var(--line);
 }
 
 .acct-section-count {
@@ -368,11 +404,11 @@
 }
 
 .acct-empty a {
-  color: var(--terracotta);
+  color: var(--prussian);
 }
 
 .acct-empty code {
-  color: var(--terracotta);
+  color: var(--t1);
   font-family: var(--font-mono);
 }
 
@@ -397,7 +433,7 @@
   display: grid;
   grid-template-columns: 168px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--acct-card);
 }
@@ -413,33 +449,33 @@
   background:
     linear-gradient(to bottom, color-mix(in srgb, var(--acct-art-bg) 88%, white), var(--acct-art-bg));
   text-decoration: none;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--line);
 }
 
 .acct-pub-build {
-  --acct-art-bg: color-mix(in srgb, var(--terracotta) 24%, var(--cream));
-  --acct-art-ink: var(--terracotta);
+  --acct-art-bg: color-mix(in srgb, var(--t1) 12%, var(--card));
+  --acct-art-ink: var(--t1);
 }
 
 .acct-pub-dialogue {
-  --acct-art-bg: color-mix(in srgb, var(--blue-muted) 22%, var(--cream));
-  --acct-art-ink: var(--blue-muted);
+  --acct-art-bg: color-mix(in srgb, var(--t2) 12%, var(--card));
+  --acct-art-ink: var(--t2);
 }
 
 .acct-pub-executable {
-  --acct-art-bg: color-mix(in srgb, var(--black) 10%, var(--cream));
-  --acct-art-ink: color-mix(in srgb, var(--black) 72%, var(--terracotta));
+  --acct-art-bg: color-mix(in srgb, var(--ink) 8%, var(--card));
+  --acct-art-ink: var(--ink-soft);
 }
 
 .acct-pub-documentation,
 .acct-pub-brief {
-  --acct-art-bg: color-mix(in srgb, var(--border) 48%, var(--cream));
+  --acct-art-bg: color-mix(in srgb, var(--line) 42%, var(--card));
   --acct-art-ink: var(--acct-muted);
 }
 
 .acct-pub-research {
-  --acct-art-bg: color-mix(in srgb, var(--blue-muted) 14%, var(--cream));
-  --acct-art-ink: color-mix(in srgb, var(--blue-muted) 72%, var(--black));
+  --acct-art-bg: color-mix(in srgb, var(--prussian) 12%, var(--card));
+  --acct-art-ink: var(--prussian);
 }
 
 .acct-art-label {
@@ -544,7 +580,7 @@
 
 .acct-pub h3 {
   margin: 0;
-  color: var(--black);
+  color: var(--ink);
   font-family: var(--font-serif);
   font-size: 25px;
   font-weight: 500;
@@ -570,7 +606,7 @@
   padding: 4px 8px;
   border-radius: 999px;
   background: var(--acct-wash);
-  color: var(--terracotta);
+  color: var(--t1);
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -578,14 +614,14 @@
 }
 
 .acct-chip-mode {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: transparent;
   color: var(--acct-muted);
 }
 
 .acct-chip-alert {
-  background: var(--acct-wash);
-  color: var(--terracotta);
+  background: var(--t2-bg);
+  color: var(--t2);
 }
 
 .acct-pub-actions {
@@ -604,7 +640,7 @@
 .acct-version-panel {
   grid-column: 1 / -1;
   padding: 13px 15px 15px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   background: var(--acct-paper);
 }
 
@@ -619,9 +655,9 @@
   align-items: center;
   gap: 10px;
   padding: 9px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--black);
+  color: var(--ink);
   text-decoration: none;
 }
 
@@ -644,7 +680,7 @@
 }
 
 .acct-version:hover {
-  border-color: var(--terracotta);
+  border-color: var(--t1);
 }
 
 /* Rail lists */
@@ -660,7 +696,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-top: 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .acct-star-main,
@@ -672,7 +708,7 @@
 }
 
 .acct-token-harness {
-  color: var(--black);
+  color: var(--ink);
   font-family: var(--font-serif);
   font-size: 16px;
 }
@@ -692,15 +728,20 @@
   flex: 0 0 auto;
 }
 
+.acct-revoke:hover {
+  border-color: var(--t3);
+  color: var(--t3);
+}
+
 .acct-unstar {
   flex: 0 0 auto;
   align-self: flex-start;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
-  color: var(--terracotta);
+  color: var(--t1);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 14px;
@@ -708,7 +749,8 @@
 }
 
 .acct-unstar:hover {
-  border-color: var(--terracotta);
+  border-color: var(--t3);
+  color: var(--t3);
 }
 
 @media (max-width: 980px) {
@@ -719,7 +761,7 @@
 
   .acct-hero-tools {
     border-left: none;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
     padding: 16px 0 0;
   }
 
@@ -748,7 +790,7 @@
   .acct-pub-art {
     min-height: 132px;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
   }
 
   .acct-art-mark {
@@ -787,5 +829,207 @@
 
   .acct-version {
     grid-template-columns: 1fr;
+  }
+}
+
+/* MERIDIAN console arrangement */
+.acct-console {
+  gap: 18px;
+}
+
+.acct-identity-band {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--acct-paper);
+}
+
+.acct-avatar-large {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.acct-identity-band .acct-identity {
+  min-width: 0;
+  gap: 8px;
+}
+
+.acct-identity-band .acct-name-row {
+  align-items: center;
+  gap: 10px;
+}
+
+.acct-identity-band .acct-name {
+  font-size: clamp(34px, 4.5vw, 52px);
+  line-height: 1;
+}
+
+.acct-meta {
+  gap: 6px 0;
+}
+
+.acct-meta span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.acct-meta span + span::before {
+  content: "·";
+  margin: 0 9px;
+  color: var(--acct-faint);
+}
+
+.acct-verified {
+  color: var(--t2);
+}
+
+.acct-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.acct-overview span {
+  min-width: 132px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--acct-paper);
+  color: var(--acct-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.acct-overview strong {
+  display: inline;
+  margin: 0 7px 0 0;
+  color: var(--t1);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.acct-sections {
+  display: grid;
+  gap: 16px;
+}
+
+.acct-sections .acct-section {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--acct-paper);
+}
+
+.acct-section-stars,
+.acct-section-devices,
+.acct-danger {
+  scroll-margin-top: 72px;
+}
+
+.acct-panel-copy,
+.acct-cli-note {
+  margin: 0;
+  color: var(--acct-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.acct-cli-note {
+  color: var(--acct-faint);
+}
+
+.acct-cli-note code {
+  color: var(--t1);
+  font-family: var(--font-mono);
+}
+
+.devrow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.devrow .acct-token-main,
+.devrow .acct-star-main {
+  flex: 1 1 auto;
+}
+
+.devrow .acct-token-meta {
+  color: var(--ink-faint);
+}
+
+.acct-tokens {
+  gap: 8px;
+}
+
+.acct-revoke {
+  align-self: center;
+  flex: 0 0 auto;
+  color: var(--t3);
+  border-color: color-mix(in srgb, var(--t3) 38%, var(--line));
+}
+
+.acct-revoke:hover {
+  border-color: var(--t3);
+  color: var(--t3);
+}
+
+.acct-signout {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.acct-danger .acct-section-label {
+  color: var(--acct-faint);
+}
+
+.danger-row {
+  justify-content: space-between;
+}
+
+@media (max-width: 700px) {
+  .acct-identity-band {
+    align-items: flex-start;
+  }
+
+  .acct-meta span + span::before {
+    margin: 0 7px;
+  }
+
+  .acct-overview span {
+    flex: 1 1 120px;
+  }
+
+  .devrow,
+  .danger-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .acct-revoke,
+  .acct-signout {
+    align-self: flex-start;
   }
 }

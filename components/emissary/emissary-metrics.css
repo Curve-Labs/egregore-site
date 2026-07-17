@@ -8,23 +8,23 @@
 
 .em-metrics {
   /* design tokens — scoped, not :root — mirror .em-hub */
-  --bg: #f5f2ed;
-  --bg-2: var(--bg);
-  --panel: var(--bg);
-  --ink: #1a1410;
-  --ink-2: #3b332a;
-  --muted: #847865;
-  --muted-2: #a89a85;
-  --line: #d9cfbe;
-  --line-2: #c8bca5;
-  --accent: #d9684a;
-  --accent-soft: #f3dac6;
-  --accent-deep: #a64429;
-  --code: #1a1410;
-  --code-ink: #f0e7d6;
-  --em-serif: 'Spectral', 'Source Serif Pro', Georgia, serif;
-  --em-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --em-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --bg: #eceef2;
+  --bg-2: #e2e6ec;
+  --panel: #f8fafc;
+  --ink: #15212e;
+  --ink-2: #4d5a68;
+  --muted: #8492a0;
+  --muted-2: #8492a0;
+  --line: #cbd4de;
+  --line-2: #bcc6d2;
+  --accent: #9a7521;
+  --accent-soft: #f3ead0;
+  --accent-deep: #9a7521;
+  --code: #0e151d;
+  --code-ink: #e7ecf2;
+  --em-serif: "Fraunces", Georgia, serif;
+  --em-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --em-sans: "Hanken Grotesk", system-ui, sans-serif;
 
   /* full-bleed breakout — the setup layout caps content at 560px */
   width: 100vw;

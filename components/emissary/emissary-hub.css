@@ -3,28 +3,29 @@
    install/account/creation as adjacent product controls. */
 
 .em-hub {
-  --bg: #f5f2ed;
-  --paper: #fbfaf6;
-  --card: #f8f4ee;
-  --card-2: #fffdf8;
-  --ink: #19130f;
-  --ink-soft: #40362d;
-  --muted: #82796b;
-  --muted-2: #a79d8e;
-  --line: #ded5c7;
-  --line-2: #cbbfac;
-  --accent: #d9684a;
-  --accent-bg: #f3d9c8;
-  --accent-deep: #a7482f;
-  --sage: #5d6b4e;
-  --sage-bg: #edf0e6;
-  --blue: #526a78;
-  --blue-bg: #e8eef0;
-  --terminal: #1d1611;
-  --terminal-ink: #f1e7d8;
-  --serif: 'Spectral', 'Source Serif Pro', Georgia, serif;
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --bg: #eceef2;
+  --paper: #f8fafc;
+  --card: #f8fafc;
+  --card-2: #f8fafc;
+  --ink: #15212e;
+  --ink-soft: #4d5a68;
+  --muted: #8492a0;
+  --muted-2: #8492a0;
+  --line: #cbd4de;
+  --line-2: #bcc6d2;
+  --accent: #9a7521;
+  --accent-bg: #f3ead0;
+  --accent-deep: #9a7521;
+  --sage: #1d7a6e;
+  --sage-bg: #ddefea;
+  --blue: #2c4a6b;
+  --blue-bg: #e2e6ec;
+  --error: #a8493e;
+  --terminal: #0e151d;
+  --terminal-ink: #e7ecf2;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Hanken Grotesk", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
 
   width: 100vw;
   position: relative;
@@ -64,7 +65,7 @@
   z-index: 1;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 32px 120px;
+  padding: 34px 32px 104px;
 }
 
 .em-topbar {
@@ -259,7 +260,7 @@ button.rail-primary {
 }
 
 .em-command code span {
-  color: color-mix(in srgb, var(--terminal-ink) 48%, transparent);
+  color: #3fb0a0;
   margin-right: 8px;
   user-select: none;
 }
@@ -290,8 +291,8 @@ button.rail-primary {
 }
 
 .em-copy-btn.copied {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  color: #3fb0a0;
+  border-color: color-mix(in srgb, #3fb0a0 48%, transparent);
 }
 
 .em-rail {
@@ -488,7 +489,7 @@ button.rail-primary {
 }
 
 .directory-section {
-  margin-top: 72px;
+  margin-top: 0;
 }
 
 .directory-proof {
@@ -546,64 +547,113 @@ button.rail-primary {
 }
 
 .directory-controls {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
+  display: grid;
+  gap: 13px;
   margin-bottom: 24px;
 }
 
-.dir-filters {
+.catrail {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.dir-filter,
+.chip,
 .dir-sort button,
 .star-action {
   border: 1px solid var(--line-2);
-  background: transparent;
+  background: var(--card);
   color: var(--ink-soft);
   cursor: pointer;
   font-family: var(--mono);
   transition: background 120ms, border-color 120ms, color 120ms, opacity 120ms;
 }
 
-.dir-filter {
+.chip {
   min-height: 34px;
   border-radius: 999px;
   padding: 0 13px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.06em;
+  text-transform: lowercase;
 }
 
-.dir-filter span {
+.chip span {
   color: var(--muted);
   margin-left: 4px;
 }
 
-.dir-filter:hover,
+.chip.k1 {
+  background: color-mix(in srgb, var(--prussian) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--prussian) 25%, var(--line));
+}
+
+.chip.k2 {
+  background: color-mix(in srgb, var(--brass) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--brass) 28%, var(--line));
+}
+
+.chip.k3 {
+  background: color-mix(in srgb, var(--teal) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--teal) 25%, var(--line));
+}
+
+.chip.k4 {
+  background: color-mix(in srgb, var(--rose) 9%, var(--card));
+  border-color: color-mix(in srgb, var(--rose) 22%, var(--line));
+}
+
+.chip.k5 {
+  background: color-mix(in srgb, var(--sky) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--sky) 25%, var(--line));
+}
+
+.chip:hover,
 .dir-sort button:hover,
 .star-action:hover {
   border-color: var(--accent);
   color: var(--accent-deep);
 }
 
-.dir-filter[aria-pressed="true"] {
-  background: var(--accent);
+.chip.on,
+.chip[aria-pressed="true"] {
+  background: var(--accent-bg);
   border-color: var(--accent);
-  color: var(--bg);
+  color: var(--accent-deep);
 }
 
-.dir-filter[aria-pressed="true"] span { color: color-mix(in srgb, var(--bg) 78%, transparent); }
+.chip.on span,
+.chip[aria-pressed="true"] span {
+  color: color-mix(in srgb, var(--accent-deep) 68%, var(--muted));
+}
+
+.sortrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 3px;
+}
+
+.sortrow > span,
+.featlabel {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 .dir-sort {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 80%, white);
 }
 
 .dir-sort span {
@@ -628,18 +678,22 @@ button.rail-primary {
   color: var(--accent-deep);
 }
 
-.featured-rail {
-  width: 100%;
-  max-width: 100%;
+.dir-block {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 520px;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.featured-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  padding: 2px 0 18px;
-  scrollbar-width: thin;
+}
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(430px, 100%), 1fr));
+  gap: 14px;
 }
 
 .dir-card {
@@ -650,8 +704,47 @@ button.rail-primary {
   border-radius: 8px;
   overflow: hidden;
   background: var(--card-2);
-  scroll-snap-align: start;
   transition: border-color 150ms, transform 150ms;
+}
+
+.featured-strip .dir-card {
+  grid-template-columns: 1fr;
+  min-height: 390px;
+}
+
+.featured-strip .dir-thumb {
+  min-height: 158px;
+  border-right: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.growth-cell {
+  min-height: 238px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 58%, transparent);
+  color: var(--muted);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.growth-cell strong {
+  color: var(--accent-deep);
+  font-size: 18px;
+}
+
+.growth-cell span {
+  color: var(--muted);
+  text-transform: none;
 }
 
 .dir-card:hover {
@@ -663,14 +756,18 @@ button.rail-primary {
   position: relative;
   min-height: 100%;
   border-right: 1px solid var(--line);
-  background: var(--accent-bg);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
   color: var(--accent-deep);
   padding: 18px;
   overflow: hidden;
 }
 
-.dir-thumb.k-dialogue { background: var(--sage-bg); color: var(--sage); }
-.dir-thumb.k-documentation { background: var(--blue-bg); color: var(--blue); }
+.dir-thumb.k-build { background: color-mix(in srgb, var(--accent) 12%, var(--card)); color: var(--accent); }
+.dir-thumb.k-dialogue { background: color-mix(in srgb, var(--sage) 12%, var(--card)); color: var(--sage); }
+.dir-thumb.k-research { background: color-mix(in srgb, var(--blue) 12%, var(--card)); color: var(--blue); }
+.dir-thumb.k-executable { background: color-mix(in srgb, var(--ink) 8%, var(--card)); color: var(--ink-soft); }
+.dir-thumb.k-documentation,
+.dir-thumb.k-brief { background: color-mix(in srgb, var(--line) 42%, var(--card)); color: var(--muted); }
 
 .thumb-kind {
   position: absolute;
@@ -1011,7 +1108,7 @@ button.rail-primary {
   border-radius: 8px;
   background: var(--card-2);
   padding: 22px;
-  box-shadow: 0 18px 44px -34px rgba(25, 19, 15, 0.55);
+  box-shadow: 0 18px 44px -34px rgba(21, 33, 46, 0.45);
 }
 
 .signin-modal h2 {
@@ -1062,7 +1159,7 @@ button.rail-primary {
 }
 
 .signin-error {
-  color: var(--accent-deep);
+  color: var(--error);
   font-family: var(--mono);
   font-size: 11px;
 }
@@ -1135,6 +1232,10 @@ button.rail-primary {
     grid-template-columns: 1fr;
   }
 
+  .featured-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .featured-rail {
     grid-auto-columns: 460px;
   }
@@ -1194,6 +1295,10 @@ button.rail-primary {
 
   .featured-rail {
     grid-auto-columns: minmax(300px, 88%);
+  }
+
+  .featured-strip {
+    grid-template-columns: 1fr;
   }
 
   .dir-card {

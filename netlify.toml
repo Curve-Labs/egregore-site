@@ -9,6 +9,15 @@
   function = "emissary-metrics"
   path = "/api/emissary-metrics"
 
+# Emissary platform namespace (spec §2.3): /@{handle},
+# /@{handle}/{slug}, /@{handle}/{slug}/raw → Railway. Redirect
+# placeholders can't match the @-prefixed segment, so an edge function
+# proxies the /@* path space. Declared before `og` so addresses resolve
+# first; non-address /@* paths fall through via context.next().
+[[edge_functions]]
+  function = "platform-namespace"
+  path = "/@*"
+
 [[edge_functions]]
   function = "og"
   path = "/"
@@ -81,10 +90,82 @@
   status = 200
   force = true
 
+# Emissary + platform JSON API (/api/v1/*) — same-origin for the browse
+# shelf and any page fetching the platform API (Railway CORS allowlist is
+# egregore.xyz, so the site must call these same-origin). Must be before
+# the SPA catch-all.
+[[redirects]]
+  from = "/api/v1/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/v1/:splat"
+  status = 200
+  force = true
+
+# Emissary package preview endpoints (manifest + raw skill) — agents
+# inspect these before consenting to install.
+[[redirects]]
+  from = "/emissary/manifest.json"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/raw/*"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/raw/:splat"
+  status = 200
+  force = true
+
+# Plugin channel: /emissary/plugin.zip — proxy to the api, which answers
+# with a 302 to the version-pinned GitHub release asset; the redirect
+# passes through to the client so the zip downloads from GitHub.
+[[redirects]]
+  from = "/emissary/plugin.zip"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/plugin.zip"
+  status = 200
+  force = true
+
 # API: publish, extend, get canonical JSON — no Railway URL leaks to users
 [[redirects]]
   from = "/api/artifacts/handoff/*"
   to = "https://egregore-production-55f2.up.railway.app/api/artifacts/handoff/:splat"
+  status = 200
+  force = true
+
+# Emissary platform browse page — a static Next route
+# (app/(setup)/emissary/browse) that fetches the shelf client-side from
+# the public platform API. The former Railway proxy is gone; the static
+# file wins over the unforced SPA catch-all.
+
+# Vanity emissary slugs — short memorable URLs for circulated emissaries.
+# Proxy (200) so the URL stays egregore.xyz/emissary/{slug}. Must be before
+# the /emissary/e/:id rules and the SPA catch-all.
+[[redirects]]
+  from = "/emissary/traction"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/fdc3e4fd-aad6-4103-bc29-0fc2cdf91e8a"
+  status = 200
+  force = true
+
+# Vanity emissary slugs — the investor data room set (circulated to VCs).
+[[redirects]]
+  from = "/emissary/dataroom"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/435780ba-7ec0-4062-902e-9bc6cdaaa534"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/deck"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/5022c35c-91ee-48f4-b2de-8d1a75552d86"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/paper"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/ba05fa91-dbc1-44ba-bf2f-80359dfc200f"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/emissary/evals"
+  to = "https://egregore-production-55f2.up.railway.app/emissary/e/74eeeef1-68a1-42e2-8b3d-d19acb7ee0f9"
   status = 200
   force = true
 
@@ -138,6 +219,22 @@
 [[redirects]]
   from = "/connect"
   to = "https://egregore-production-55f2.up.railway.app/connect"
+  status = 200
+  force = true
+
+# MCP OAuth 2.1 authorization server (goal: emissary-mcp-oauth). The MCP server's
+# protected-resource metadata names egregore.xyz as the issuer, so the OAuth
+# endpoints must be first-party here (and /oauth/authorize needs the eg_session
+# cookie for the consent page). Must be before the SPA catch-all.
+[[redirects]]
+  from = "/.well-known/oauth-authorization-server"
+  to = "https://egregore-production-55f2.up.railway.app/.well-known/oauth-authorization-server"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/oauth/*"
+  to = "https://egregore-production-55f2.up.railway.app/oauth/:splat"
   status = 200
   force = true
 

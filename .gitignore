@@ -4,3 +4,7 @@ node_modules
 out
 dist
 .vercel
+
+# OS + build noise
+.DS_Store
+*.tsbuildinfo

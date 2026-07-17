@@ -14,6 +14,7 @@ export type Session = {
   name: string | null;
   email: string;
   handle?: string | null;
+  badge?: string;
   // Optional — surfaced as "member since" when the API provides it.
   created_at?: string | null;
 };
@@ -226,6 +227,29 @@ export async function listTokens(): Promise<Token[]> {
 // DELETE /emissary/tokens/{id} — revoke a connected CLI.
 export function revokeToken(id: string): Promise<{ status: string }> {
   return sameOrigin("DELETE", `/api/v1/emissary/tokens/${encodeURIComponent(id)}`);
+}
+
+// ── MCP connector ──────────────────────────────────────────────
+
+export type Connector = {
+  connector_url: string; // https://<host>/mcp/u/<token> — paste into ChatGPT / Claude
+  server_url: string; // https://<host>/mcp — the Bearer-header form
+  header_template: string; // "Authorization: Bearer {auth_token}"
+  auth_token: string;
+  handle?: string | null;
+  verified: boolean;
+};
+
+// POST /emissary/connector — mint an MCP connector bound to this account. Returns
+// the personalised /mcp/u/<token> URL to paste into ChatGPT or Claude (surfaces
+// that take a bare connector URL), plus the Bearer-header form. The token is a
+// normal auth token — it shows up under Connected CLIs and is revocable there.
+export function createConnector(harness?: string): Promise<Connector> {
+  return sameOrigin<Connector>(
+    "POST",
+    "/api/v1/emissary/connector",
+    harness ? { harness } : {},
+  );
 }
 
 // ── Handle grammar ─────────────────────────────────────────────

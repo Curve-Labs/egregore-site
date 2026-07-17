@@ -9,6 +9,7 @@ import { useCallback, useState } from "react";
 import { register } from "./api";
 import type { McpConfig } from "./api";
 import { CopyButton } from "./ui";
+import "./meridian.css";
 
 type Stage =
   | { name: "form" }
@@ -75,7 +76,7 @@ export default function McpConnectorFlow({
     );
     const clientLabel = harness === "chatgpt" ? "ChatGPT" : "Claude.ai";
     return (
-      <div className="em-section">
+      <div className="em-section meridian">
         <div className="em-banner em-banner-ok">
           Identity created for <strong>{stage.email}</strong>. We sent a
           verification email — verify when you can. You can already send
@@ -116,7 +117,7 @@ export default function McpConnectorFlow({
 
   const submitting = stage.name === "submitting";
   return (
-    <form className="em-section" onSubmit={onSubmit}>
+    <form className="em-section meridian" onSubmit={onSubmit}>
       <div className="em-section">
         <div className="em-section-label">Web chat</div>
         <p className="em-prose">
@@ -196,7 +197,7 @@ export default function McpConnectorFlow({
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: 11,
-            color: "var(--black)",
+            color: "var(--ink)",
             opacity: 0.55,
             textTransform: "uppercase",
             letterSpacing: "0.08em",

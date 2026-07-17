@@ -72,7 +72,7 @@ export function CommandBlock({ command }: { command: string }) {
     });
   }, [command]);
   return (
-    <div className="setup-install-body">
+    <div className="setup-install-body meridian-nocturne">
       <code>{command}</code>
       <button
         type="button"
