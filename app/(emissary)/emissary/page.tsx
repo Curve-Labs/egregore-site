@@ -1,16 +1,30 @@
-import EmissaryHub from "@/components/emissary/EmissaryHub";
-import PasswordGate from "@/components/emissary/PasswordGate";
+import type { Metadata } from "next";
+import EmissaryLanding from "@/components/emissary/EmissaryLanding";
 
-export const metadata = {
-  title: "Emissary Directory — Browse and collect emissaries",
+// Ungated front door — the referral target for decks and outreach.
+// The directory itself stays gated at /emissary/browse.
+export const metadata: Metadata = {
+  title: "Emissaries — portable, runnable tasks for any AI",
   description:
-    "Browse published emissaries, star the ones worth keeping, and pull them into your agent from the terminal.",
+    "An emissary is a portable, runnable task — one you hand to someone else's AI. Paste the link into any harness and the agent runs it.",
+  openGraph: {
+    title: "Emissaries — portable, runnable tasks for any AI",
+    description:
+      "An emissary is a portable, runnable task — one you hand to someone else's AI. Paste the link into any harness and the agent runs it.",
+    url: "https://egregore.xyz/emissary",
+    siteName: "Egregore",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Emissaries — portable, runnable tasks for any AI",
+    description:
+      "An emissary is a portable, runnable task — one you hand to someone else's AI.",
+    images: ["/og-image.png"],
+  },
 };
 
-export default function EmissaryHubPage() {
-  return (
-    <PasswordGate password="egregore-cor">
-      <EmissaryHub />
-    </PasswordGate>
-  );
+export default function EmissaryLandingPage() {
+  return <EmissaryLanding />;
 }
