@@ -76,6 +76,14 @@
 # always pointed at the Railway URL directly.
 
 # Handoff v1 — proxy all handoff surfaces to Railway. Must be before SPA catch-all.
+# GitHub OAuth callback — same-origin so its Set-Cookie creates the durable
+# HttpOnly Agent Desk session on egregore.xyz.
+[[redirects]]
+  from = "/api/auth/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/auth/:splat"
+  status = 200
+  force = true
+
 # Reply: POST /h/{id}/reply — must be before /h/{id} to match the longer path first
 [[redirects]]
   from = "/h/:id/reply"

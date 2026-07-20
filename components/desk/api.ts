@@ -166,12 +166,14 @@ export type BatchImport = {
   preview: BatchPreview;
 };
 
-async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+async function request<T>(path: string, token: string | null, init: RequestInit = {}): Promise<T> {
+  const baseUrl = token ? API_URL : "";
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });
@@ -188,12 +190,12 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
   return data as T;
 }
 
-export async function getMemberships(token: string): Promise<Membership[]> {
-  const profile = await request<{ memberships?: Membership[] }>("/api/user/profile", token);
+export async function getMemberships(token: string | null): Promise<Membership[]> {
+  const profile = await request<{ memberships?: Membership[] }>("/api/v1/tasks/desk/session", token);
   return profile.memberships || [];
 }
 
-export async function listTasks(token: string, orgSlug: string): Promise<Task[]> {
+export async function listTasks(token: string | null, orgSlug: string): Promise<Task[]> {
   const data = await request<{ tasks: Task[] }>(
     `/api/v1/tasks?org_slug=${encodeURIComponent(orgSlug)}`,
     token,
@@ -201,11 +203,11 @@ export async function listTasks(token: string, orgSlug: string): Promise<Task[]>
   return data.tasks;
 }
 
-export function getTask(token: string, taskId: string): Promise<TaskDetail> {
+export function getTask(token: string | null, taskId: string): Promise<TaskDetail> {
   return request(`/api/v1/tasks/${encodeURIComponent(taskId)}`, token);
 }
 
-export async function listWorkers(token: string, orgSlug: string): Promise<Worker[]> {
+export async function listWorkers(token: string | null, orgSlug: string): Promise<Worker[]> {
   const data = await request<{ workers: Worker[] }>(
     `/api/v1/tasks/desk/workers?org_slug=${encodeURIComponent(orgSlug)}`,
     token,
@@ -213,7 +215,7 @@ export async function listWorkers(token: string, orgSlug: string): Promise<Worke
   return data.workers;
 }
 
-export function createTask(token: string, body: CreateTask, requestId: string): Promise<Task> {
+export function createTask(token: string | null, body: CreateTask, requestId: string): Promise<Task> {
   return request("/api/v1/tasks", token, {
     method: "POST",
     headers: { "X-Idempotency-Key": requestId },
@@ -222,7 +224,7 @@ export function createTask(token: string, body: CreateTask, requestId: string): 
 }
 
 export function previewTaskBatch(
-  token: string,
+  token: string | null,
   orgSlug: string,
   markdown: string,
 ): Promise<BatchPreview> {
@@ -233,7 +235,7 @@ export function previewTaskBatch(
 }
 
 export function importTaskBatch(
-  token: string,
+  token: string | null,
   orgSlug: string,
   markdown: string,
   requestId: string,
@@ -245,7 +247,7 @@ export function importTaskBatch(
   });
 }
 
-export function approvePlan(token: string, task: Task): Promise<Task> {
+export function approvePlan(token: string | null, task: Task): Promise<Task> {
   return request(`/api/v1/tasks/${task.id}/approve-plan`, token, {
     method: "POST",
     body: JSON.stringify({
@@ -257,7 +259,7 @@ export function approvePlan(token: string, task: Task): Promise<Task> {
 }
 
 export function answerQuestion(
-  token: string,
+  token: string | null,
   task: Task,
   questionId: string,
   text: string,
@@ -272,7 +274,7 @@ export function answerQuestion(
   });
 }
 
-export function cancelTask(token: string, task: Task): Promise<Task> {
+export function cancelTask(token: string | null, task: Task): Promise<Task> {
   return request(`/api/v1/tasks/${task.id}/cancel`, token, {
     method: "POST",
     body: JSON.stringify({ expected_row_version: task.row_version }),

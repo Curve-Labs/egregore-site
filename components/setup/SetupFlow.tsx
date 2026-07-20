@@ -11,6 +11,7 @@ import {
   getTelegramStatus,
   getInviteInfo,
   acceptInvite,
+  consumeGitHubAuthReturn,
   getGitHubAuthUrl,
   checkTelegramMembership,
   checkAppInstallation,
@@ -1565,8 +1566,11 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
           writeSessionAuth(token, u);
           if (typeof window !== "undefined") {
             const savedInvite = sessionStorage.getItem("egregore_invite");
+            const authReturn = consumeGitHubAuthReturn();
             if (savedInvite) {
               router.replace(`/join?invite=${savedInvite}`);
+            } else if (authReturn) {
+              router.replace(authReturn);
             } else {
               router.replace("/setup");
             }
