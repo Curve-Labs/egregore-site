@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getOrgs, inviteTeammate, searchGithubUsers } from "./api";
+import {
+  consumeGitHubAuthReturn,
+  getGitHubAuthUrl,
+  getOrgs,
+  inviteTeammate,
+  searchGithubUsers,
+} from "./api";
 
 describe("setup organization API", () => {
   afterEach(() => {
@@ -84,5 +90,22 @@ describe("setup organization API", () => {
         }),
       }),
     );
+  });
+
+  it("returns from GitHub OAuth to the Desk without entering setup", () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", {
+      location: { origin: "https://egregore.xyz" },
+      sessionStorage: {
+        getItem: (key: string) => values.get(key) || null,
+        setItem: (key: string, value: string) => values.set(key, value),
+        removeItem: (key: string) => values.delete(key),
+      },
+    });
+    vi.stubGlobal("sessionStorage", window.sessionStorage);
+
+    expect(getGitHubAuthUrl("/desk")).toContain("github.com/login/oauth/authorize");
+    expect(consumeGitHubAuthReturn()).toBe("/desk");
+    expect(consumeGitHubAuthReturn()).toBeNull();
   });
 });

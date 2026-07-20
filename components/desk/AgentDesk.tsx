@@ -22,6 +22,7 @@ import {
   type TaskStatus,
   type Worker,
 } from "./api";
+import { getGitHubAuthUrl } from "../setup/api";
 import "./desk.css";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -71,21 +72,25 @@ function EmptyDesk({ onCreate }: { onCreate: () => void }) {
 }
 
 function SignIn() {
+  function signIn() {
+    window.location.assign(getGitHubAuthUrl("/desk"));
+  }
+
   return (
     <main className="desk-auth">
       <a href="/" className="desk-logo"><img src="/logo_egregore.svg" alt="Egregore" /></a>
       <div className="desk-auth-copy">
         <span className="desk-kicker">Agent Desk</span>
         <h1>Your team&apos;s work,<br />running in one place.</h1>
-        <p>Sign in through setup once. Your GitHub session is reused here to show only organizations you belong to.</p>
-        <a className="desk-button desk-button-dark" href="/setup">Sign in with GitHub <ArrowIcon /></a>
+        <p>Sign in with GitHub to see the work and workers for organizations you belong to.</p>
+        <button className="desk-button desk-button-dark" onClick={signIn}>Sign in with GitHub <ArrowIcon /></button>
       </div>
     </main>
   );
 }
 
 function CreatePanel({ org, onClose, onCreated, token }: {
-  org: string; token: string; onClose: () => void; onCreated: (task: Task) => void;
+  org: string; token: string | null; onClose: () => void; onCreated: (task: Task) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -169,7 +174,7 @@ Describe the next outcome.`;
 
 function ImportPanel({ org, onClose, onImported, token }: {
   org: string;
-  token: string;
+  token: string | null;
   onClose: () => void;
   onImported: (result: BatchImport) => void;
 }) {
@@ -262,7 +267,7 @@ function ImportPanel({ org, onClose, onImported, token }: {
   );
 }
 
-function Detail({ detail, token, onChanged }: { detail: TaskDetail; token: string; onChanged: () => void }) {
+function Detail({ detail, token, onChanged }: { detail: TaskDetail; token: string | null; onChanged: () => void }) {
   const [action, setAction] = useState("");
   const [error, setError] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -330,6 +335,7 @@ function Detail({ detail, token, onChanged }: { detail: TaskDetail; token: strin
 export default function AgentDesk() {
   const [token, setToken] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [org, setOrg] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -342,16 +348,37 @@ export default function AgentDesk() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => { setToken(sessionStorage.getItem(TOKEN_KEY)); setHydrated(true); }, []);
   useEffect(() => {
-    if (!token) return;
-    getMemberships(token).then((items) => {
-      setMemberships(items); setOrg((current) => current || items[0]?.org_slug || "");
-    }).catch((cause) => setError(cause instanceof Error ? cause.message : "Could not load organizations"));
-  }, [token]);
+    let cancelled = false;
+    async function openDesk() {
+      const savedToken = sessionStorage.getItem(TOKEN_KEY);
+      setToken(savedToken);
+      try {
+        let items: Membership[];
+        try {
+          items = await getMemberships(savedToken);
+        } catch (firstCause) {
+          if (!savedToken) throw firstCause;
+          sessionStorage.removeItem(TOKEN_KEY);
+          setToken(null);
+          items = await getMemberships(null);
+        }
+        if (cancelled) return;
+        setMemberships(items);
+        setOrg((current) => current || items[0]?.org_slug || "");
+        setAuthenticated(true);
+      } catch {
+        if (!cancelled) setAuthenticated(false);
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    }
+    openDesk();
+    return () => { cancelled = true; };
+  }, []);
 
   const refresh = useCallback(async (quiet = false) => {
-    if (!token || !org) return;
+    if (!authenticated || !org) return;
     if (!quiet) setLoading(true);
     try {
       const [nextTasks, nextWorkers] = await Promise.all([listTasks(token, org), listWorkers(token, org)]);
@@ -361,17 +388,17 @@ export default function AgentDesk() {
       else setDetail(null);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not refresh the desk"); }
     finally { setLoading(false); }
-  }, [token, org, selectedId]);
+  }, [authenticated, token, org, selectedId]);
 
   useEffect(() => { refresh(); }, [org, token]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!token || !org) return;
+    if (!authenticated || !org) return;
     const timer = window.setInterval(() => refresh(true), 5000);
     return () => window.clearInterval(timer);
-  }, [token, org, refresh]);
+  }, [authenticated, org, refresh]);
 
   async function selectTask(id: string) {
-    if (!token) return;
+    if (!authenticated) return;
     setSelectedId(id); setDetail(null);
     try { setDetail(await getTask(token, id)); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load task"); }
   }
@@ -380,7 +407,7 @@ export default function AgentDesk() {
     setCreating(false);
     setSelectedId(task.id);
     setTasks((current) => [task, ...current.filter((item) => item.id !== task.id)]);
-    if (!token) return;
+    if (!authenticated) return;
     try { setDetail(await getTask(token, task.id)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Task started, but its detail could not be loaded"); }
   }
@@ -389,7 +416,7 @@ export default function AgentDesk() {
     setImporting(false);
     const first = result.tasks[0];
     if (first) setSelectedId(first.id);
-    if (!token || !org) return;
+    if (!authenticated || !org) return;
     try {
       const nextTasks = await listTasks(token, org);
       setTasks(nextTasks);
@@ -410,7 +437,7 @@ export default function AgentDesk() {
   const healthyWorkers = workers.filter((worker) => ["healthy", "busy"].includes(worker.status)).length;
 
   if (!hydrated) return <div className="desk-loading">Opening desk…</div>;
-  if (!token) return <SignIn />;
+  if (!authenticated) return <SignIn />;
 
   return (
     <div className="desk-shell">

@@ -5,12 +5,26 @@ const API_URL =
 const GITHUB_CLIENT_ID = "Iv23li2obNsAjakoK2RE";
 const GITHUB_SCOPE = "";
 
-export function getGitHubAuthUrl(): string {
+const GITHUB_RETURN_KEY = "egregore_github_return";
+
+export function getGitHubAuthUrl(returnTo?: string): string {
   if (typeof window === "undefined") return "";
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes("\\")) {
+    sessionStorage.setItem(GITHUB_RETURN_KEY, returnTo);
+  }
   const redirectUri = `${window.location.origin}/callback`;
   let url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   if (GITHUB_SCOPE) url += `&scope=${GITHUB_SCOPE}`;
   return url;
+}
+
+export function consumeGitHubAuthReturn(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = sessionStorage.getItem(GITHUB_RETURN_KEY);
+  sessionStorage.removeItem(GITHUB_RETURN_KEY);
+  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\")
+    ? value
+    : null;
 }
 
 type RequestOpts = {
@@ -134,7 +148,18 @@ export type UserProfile = {
 // ── API ────────────────────────────────────────────────────────
 
 export async function exchangeCode(code: string): Promise<{ github_token: string; user: GithubUser }> {
-  return request("POST", "/api/auth/github/callback", { body: { code } });
+  const authBase = typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+    ? API_URL
+    : "";
+  const resp = await fetch(`${authBase}/api/auth/github/callback`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data as { github_token: string; user: GithubUser };
 }
 
 export async function getOrgs(token: string, signal?: AbortSignal): Promise<SetupOrgsResponse> {
