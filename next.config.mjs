@@ -5,6 +5,9 @@ const withMDX = createMDX();
 /** @type {import('next').NextConfig} */
 const config = {
   output: 'export',
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     unoptimized: true,
   },

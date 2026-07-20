@@ -147,6 +147,32 @@ input:focus, textarea:focus, select:focus { border-color: #958b7f; box-shadow: 0
 .desk-create-panel footer { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--desk-line); display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .desk-create-panel footer p { color: var(--desk-muted); font-size: 10px; max-width: 240px; }
 
+.desk-import-panel { width: min(720px, 100vw); }
+.desk-import-body { padding: 28px 34px 40px; }
+.desk-import-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.desk-import-intro p { max-width: 470px; color: var(--desk-muted); font-size: 12px; }
+.desk-import-intro code { color: var(--desk-ink); font-family: var(--font-mono); font-size: 10px; }
+.desk-file-button { flex: 0 0 auto; border-bottom: 1px solid var(--desk-ink); font-size: 11px; font-weight: 600; cursor: pointer; }
+.desk-file-button input { display: none; }
+.desk-markdown-label { display: flex; flex-direction: column; gap: 7px; font-size: 11px; font-weight: 600; }
+.desk-markdown-label textarea { width: 100%; min-height: 430px; padding: 14px; resize: vertical; font-family: var(--font-mono); font-size: 11px; line-height: 1.55; tab-size: 2; }
+.desk-import-body > footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--desk-line); display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.desk-import-body > footer p { color: var(--desk-muted); font-size: 10px; max-width: 300px; }
+.desk-import-error { white-space: pre-line; padding: 12px 0 0; }
+.desk-batch-summary { display: flex; justify-content: space-between; gap: 30px; align-items: flex-end; padding-bottom: 22px; border-bottom: 1px solid var(--desk-ink); }
+.desk-batch-summary h3 { margin-top: 7px; font-family: var(--font-serif); font-size: 31px; font-weight: 400; }
+.desk-batch-summary dl { display: flex; gap: 24px; }
+.desk-batch-summary dl div { text-align: right; }
+.desk-batch-summary dt { color: var(--desk-muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
+.desk-batch-summary dd { font-family: var(--font-serif); font-size: 25px; }
+.desk-batch-tasks { list-style: none; }
+.desk-batch-tasks li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 14px; padding: 17px 0; border-bottom: 1px solid var(--desk-line); }
+.desk-batch-tasks li > span { color: var(--desk-orange); font-family: var(--font-mono); font-size: 10px; padding-top: 2px; }
+.desk-batch-tasks strong { display: block; font-size: 13px; }
+.desk-batch-tasks p, .desk-batch-tasks small { display: block; color: var(--desk-muted); font-size: 10px; margin-top: 3px; }
+.desk-batch-tasks small { color: var(--desk-blue); }
+.desk-edit-markdown { margin-top: 16px; padding: 0; border: 0; border-bottom: 1px solid var(--desk-ink); background: none; font-size: 11px; cursor: pointer; }
+
 .desk-auth { min-height: 100vh; padding: 30px 38px; display: flex; flex-direction: column; background: var(--desk-paper); position: relative; overflow: hidden; }
 .desk-auth::after { content: ""; position: absolute; width: 58vw; height: 58vw; max-width: 760px; max-height: 760px; border-radius: 50%; right: -12vw; bottom: -25vw; border: 1px solid var(--desk-line); box-shadow: 0 0 0 9vw rgba(215,121,79,.07), 0 0 0 18vw rgba(102,140,165,.05); }
 .desk-auth-copy { margin: auto 0 auto max(6vw, 40px); width: min(680px, 70vw); position: relative; z-index: 1; }
@@ -159,6 +185,7 @@ input:focus, textarea:focus, select:focus { border-color: #958b7f; box-shadow: 0
   .desk-topbar-actions { gap: 10px; }
   .desk-org span { display: none; }
   .desk-org select { max-width: 110px; }
+  .desk-import-trigger { min-height: 34px; padding: 0 10px; }
   .desk-workspace { display: block; }
   .desk-sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--desk-line); }
   .desk-sidebar-head, .desk-filters { display: none; }
@@ -171,6 +198,9 @@ input:focus, textarea:focus, select:focus { border-color: #958b7f; box-shadow: 0
   .desk-run-grid > div + div { border-left: 0; border-top: 1px solid var(--desk-line); padding: 34px 0 0; }
   .desk-form-row { grid-template-columns: 1fr; }
   .desk-create-panel > header, .desk-create-panel form { padding-left: 22px; padding-right: 22px; }
+  .desk-import-body { padding-left: 22px; padding-right: 22px; }
+  .desk-import-intro { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .desk-import-body > footer { align-items: flex-start; flex-direction: column; }
   .desk-auth { padding: 24px; }
   .desk-auth-copy { margin-left: 0; width: 100%; }
   .desk-auth h1 { font-size: 44px; line-height: .94; }

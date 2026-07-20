@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   TOKEN_KEY,
   answerQuestion,
@@ -11,6 +11,10 @@ import {
   getTask,
   listTasks,
   listWorkers,
+  importTaskBatch,
+  previewTaskBatch,
+  type BatchImport,
+  type BatchPreview,
   type CreateTask,
   type Membership,
   type Task,
@@ -138,6 +142,126 @@ function CreatePanel({ org, onClose, onCreated, token }: {
   );
 }
 
+const BATCH_EXAMPLE = `# Development batch
+Defaults:
+- organization: curvelabs
+- network: off
+- base branch: main
+
+## T001 — First outcome
+Kind: code
+Repository: Curve-Labs/egregore
+Priority: high
+Preferred executor: codex
+
+### Outcome
+Describe what should be true when this is complete.
+
+### Acceptance criteria
+- Add concrete evidence of completion.
+
+## T002 — Follow-up task
+Kind: research
+Depends on: T001
+
+### Outcome
+Describe the next outcome.`;
+
+function ImportPanel({ org, onClose, onImported, token }: {
+  org: string;
+  token: string;
+  onClose: () => void;
+  onImported: (result: BatchImport) => void;
+}) {
+  const [markdown, setMarkdown] = useState("");
+  const [preview, setPreview] = useState<BatchPreview | null>(null);
+  const [working, setWorking] = useState<"preview" | "import" | "">("");
+  const [error, setError] = useState("");
+
+  function updateMarkdown(value: string) {
+    setMarkdown(value);
+    setPreview(null);
+    setError("");
+  }
+
+  async function readFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    updateMarkdown(await file.text());
+  }
+
+  async function runPreview() {
+    setWorking("preview");
+    setError("");
+    try {
+      setPreview(await previewTaskBatch(token, org, markdown));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not preview batch");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function runImport() {
+    setWorking("import");
+    setError("");
+    try {
+      onImported(await importTaskBatch(token, org, markdown, crypto.randomUUID()));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not import batch");
+      setWorking("");
+    }
+  }
+
+  return (
+    <div className="desk-panel-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <aside className="desk-create-panel desk-import-panel" aria-label="Import Markdown batch">
+        <header>
+          <div><span className="desk-kicker">Batch import</span><h2>Put a development list on the desk.</h2></div>
+          <button className="desk-icon-button" onClick={onClose} aria-label="Close"><CloseIcon /></button>
+        </header>
+        <div className="desk-import-body">
+          {!preview ? <>
+            <div className="desk-import-intro">
+              <p>Paste one Markdown file. Each <code>## T001 — Title</code> becomes a task; <code>Depends on</code> sets the execution order.</p>
+              <label className="desk-file-button">Choose .md file<input type="file" accept=".md,text/markdown,text/plain" onChange={readFile} /></label>
+            </div>
+            <label className="desk-markdown-label">Markdown
+              <textarea
+                rows={24}
+                value={markdown}
+                onChange={(event) => updateMarkdown(event.target.value)}
+                placeholder={BATCH_EXAMPLE.replace("curvelabs", org)}
+                autoFocus
+                spellCheck={false}
+              />
+            </label>
+          </> : <div className="desk-batch-preview">
+            <div className="desk-batch-summary">
+              <div><span className="desk-kicker">Validated batch</span><h3>{preview.title}</h3></div>
+              <dl><div><dt>Tasks</dt><dd>{preview.task_count}</dd></div><div><dt>Dependencies</dt><dd>{preview.dependency_count}</dd></div></dl>
+            </div>
+            <ol className="desk-batch-tasks">
+              {preview.tasks.map((task) => <li key={task.ref}>
+                <span>{task.ref}</span>
+                <div><strong>{task.title}</strong><p>{task.kind} · {task.repository || "no repository"} · {task.executor_preference || "auto"}</p>{task.depends_on.length > 0 && <small>After {task.depends_on.join(", ")}</small>}</div>
+              </li>)}
+            </ol>
+            <button className="desk-edit-markdown" onClick={() => setPreview(null)}>← Edit Markdown</button>
+          </div>}
+          {error && <p className="desk-error desk-import-error" role="alert">{error}</p>}
+          <footer>
+            <p>{preview ? "All tasks are created together and sent to planning." : "Preview validates every task before anything is created."}</p>
+            {preview
+              ? <button className="desk-button desk-button-dark" disabled={!!working} onClick={runImport}>{working === "import" ? "Importing…" : `Import ${preview.task_count} tasks`} <ArrowIcon /></button>
+              : <button className="desk-button desk-button-dark" disabled={!markdown.trim() || !!working} onClick={runPreview}>{working === "preview" ? "Validating…" : "Preview batch"} <ArrowIcon /></button>}
+          </footer>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 function Detail({ detail, token, onChanged }: { detail: TaskDetail; token: string; onChanged: () => void }) {
   const [action, setAction] = useState("");
   const [error, setError] = useState("");
@@ -214,6 +338,7 @@ export default function AgentDesk() {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -260,6 +385,21 @@ export default function AgentDesk() {
     catch (cause) { setError(cause instanceof Error ? cause.message : "Task started, but its detail could not be loaded"); }
   }
 
+  async function handleImported(result: BatchImport) {
+    setImporting(false);
+    const first = result.tasks[0];
+    if (first) setSelectedId(first.id);
+    if (!token || !org) return;
+    try {
+      const nextTasks = await listTasks(token, org);
+      setTasks(nextTasks);
+      if (first) setDetail(await getTask(token, first.id));
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Tasks were imported, but the desk could not refresh");
+    }
+  }
+
   const filtered = useMemo(() => tasks.filter((task) => {
     if (filter === "attention") return ["needs_input", "awaiting_plan_approval", "ready_for_you", "failed"].includes(task.status);
     if (filter === "active") return ACTIVE.has(task.status);
@@ -274,12 +414,13 @@ export default function AgentDesk() {
 
   return (
     <div className="desk-shell">
-      <header className="desk-topbar"><a href="/" className="desk-logo"><img src="/logo_egregore.svg" alt="Egregore" /></a><span className="desk-topbar-title">Desk</span><div className="desk-topbar-actions"><label className="desk-org"><span>Organization</span><select value={org} onChange={(e) => { setOrg(e.target.value); setSelectedId(""); }}>{memberships.map((m) => <option key={m.org_slug} value={m.org_slug}>{m.org_name || m.org_slug}</option>)}</select></label><span className="desk-workers"><i className={healthyWorkers ? "is-live" : ""} />{healthyWorkers}/{workers.length} workers</span><button className="desk-button desk-button-dark" onClick={() => setCreating(true)}>New task <span>+</span></button></div></header>
+      <header className="desk-topbar"><a href="/" className="desk-logo"><img src="/logo_egregore.svg" alt="Egregore" /></a><span className="desk-topbar-title">Desk</span><div className="desk-topbar-actions"><label className="desk-org"><span>Organization</span><select value={org} onChange={(e) => { setOrg(e.target.value); setSelectedId(""); }}>{memberships.map((m) => <option key={m.org_slug} value={m.org_slug}>{m.org_name || m.org_slug}</option>)}</select></label><span className="desk-workers"><i className={healthyWorkers ? "is-live" : ""} />{healthyWorkers}/{workers.length} workers</span><button className="desk-button desk-button-light desk-import-trigger" onClick={() => setImporting(true)}>Import Markdown</button><button className="desk-button desk-button-dark" onClick={() => setCreating(true)}>New task <span>+</span></button></div></header>
       <div className="desk-workspace">
         <aside className="desk-sidebar"><div className="desk-sidebar-head"><div><span className="desk-kicker">Organization work</span><strong>{tasks.length} tasks</strong></div><button className="desk-refresh" onClick={() => refresh()} aria-label="Refresh">↻</button></div><nav className="desk-filters" aria-label="Task filters">{(["all", "attention", "active", "done"] as Filter[]).map((item) => <button key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item === "attention" ? "Needs you" : item}<span>{item === "all" ? tasks.length : item === "attention" ? attentionCount : item === "active" ? tasks.filter((t) => ACTIVE.has(t.status)).length : tasks.filter((t) => TERMINAL.has(t.status)).length}</span></button>)}</nav><div className="desk-task-list">{filtered.map((task) => <button key={task.id} className={`desk-task ${selectedId === task.id ? "is-selected" : ""}`} onClick={() => selectTask(task.id)}><div><StatusMark status={task.status} /><span>{STATUS_LABEL[task.status]}</span><time>{relativeTime(task.updated_at)}</time></div><strong>{task.title}</strong><p>{task.repository || task.kind}</p></button>)}</div></aside>
         <main className="desk-content">{error && <div className="desk-banner" role="alert">{error}<button onClick={() => setError("")}>Dismiss</button></div>}{loading && !detail ? <div className="desk-loading">Loading work…</div> : !tasks.length ? <EmptyDesk onCreate={() => setCreating(true)} /> : detail ? <Detail detail={detail} token={token} onChanged={() => refresh()} /> : <div className="desk-loading">Loading task…</div>}</main>
       </div>
       {creating && <CreatePanel org={org} token={token} onClose={() => setCreating(false)} onCreated={handleCreated} />}
+      {importing && <ImportPanel org={org} token={token} onClose={() => setImporting(false)} onImported={handleImported} />}
     </div>
   );
 }

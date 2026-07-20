@@ -34,6 +34,8 @@ export type Task = {
   cancel_requested?: boolean;
   updated_at?: string;
   created_at?: string;
+  batch_id?: string | null;
+  batch_ref?: string | null;
 };
 
 export type TaskStep = {
@@ -127,6 +129,43 @@ export type CreateTask = {
   acceptance_criteria: string[];
 };
 
+export type BatchPreviewTask = {
+  ref: string;
+  title: string;
+  description: string;
+  kind: Task["kind"];
+  priority: number;
+  repository?: string | null;
+  base_branch?: string | null;
+  executor_preference?: "claude" | "codex" | null;
+  network_policy: "off" | "allowed";
+  acceptance_criteria: string[];
+  constraints: string[];
+  depends_on: string[];
+};
+
+export type BatchPreview = {
+  title: string;
+  source_hash: string;
+  defaults: Record<string, string>;
+  tasks: BatchPreviewTask[];
+  dependencies: Array<{
+    task_ref: string;
+    depends_on_ref: string;
+    policy: "require_done";
+  }>;
+  execution_order: string[];
+  task_count: number;
+  dependency_count: number;
+};
+
+export type BatchImport = {
+  batch: { id: string; title?: string };
+  tasks: Task[];
+  reused: boolean;
+  preview: BatchPreview;
+};
+
 async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -137,7 +176,15 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
     },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const detail = data.detail;
+    const message = typeof detail === "string"
+      ? detail
+      : Array.isArray(detail?.errors)
+        ? detail.errors.join("\n")
+        : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
   return data as T;
 }
 
@@ -171,6 +218,30 @@ export function createTask(token: string, body: CreateTask, requestId: string): 
     method: "POST",
     headers: { "X-Idempotency-Key": requestId },
     body: JSON.stringify(body),
+  });
+}
+
+export function previewTaskBatch(
+  token: string,
+  orgSlug: string,
+  markdown: string,
+): Promise<BatchPreview> {
+  return request("/api/v1/task-batches/preview", token, {
+    method: "POST",
+    body: JSON.stringify({ org_slug: orgSlug, markdown }),
+  });
+}
+
+export function importTaskBatch(
+  token: string,
+  orgSlug: string,
+  markdown: string,
+  requestId: string,
+): Promise<BatchImport> {
+  return request("/api/v1/task-batches/import", token, {
+    method: "POST",
+    headers: { "X-Idempotency-Key": requestId },
+    body: JSON.stringify({ org_slug: orgSlug, markdown }),
   });
 }
 
