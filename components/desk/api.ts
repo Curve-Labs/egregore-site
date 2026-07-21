@@ -106,6 +106,7 @@ export type TaskDetail = Task & {
 export type Worker = {
   id: string;
   status: "healthy" | "busy" | "degraded" | "auth_expired" | "quota_paused" | "offline";
+  capabilities?: string[];
   models?: string[];
   queues?: string[];
   capacity?: {
