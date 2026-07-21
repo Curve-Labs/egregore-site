@@ -16,9 +16,9 @@ const SOURCES = [
   "https://egregore-production-55f2.up.railway.app/api/artifacts/egregore/egregore-demo-deck",
 ];
 
-const OG_TITLE = "Egregore — organizational infrastructure for human-AI teams";
+const OG_TITLE = "Egregore: Organizational infrastructure for human-AI teams";
 const OG_DESCRIPTION =
-  "One shared memory for your team and its agents — everyone sees what was done, why it was done, and where to continue.";
+  "One shared memory for your team and its agents. Everyone sees what was done, why it was done, and where to continue.";
 
 const OG_TAGS = [
   `<meta property="og:type" content="article" />`,
