@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
-
-// egregore.xyz/demo — the shareable demo link. Serves the published demo-deck
-// artifact under this URL so the share card is controlled here, not by the
-// artifact's stored metadata. The artifact HTML carries its own Simple
-// Analytics snippet, so opens are recorded under the /demo path.
+// demo — serve the demo-deck artifact at egregore.xyz/demo.
 //
-// Source order matters: curvelabs is the canonical org slug; the egregore
-// copy is a legacy row from the 2026-07-20 slug rename (since reversed) that
-// still serves already-shared links. Preferring curvelabs means a fresh
-// publish of the deck takes over /demo automatically.
+// The site is a static export, so this can't be a Next route handler;
+// like the /@* platform namespace, an edge function does the serving.
+// The artifact API injects its own OG block at serve time — we strip it
+// and set the card copy here, so what Telegram/WhatsApp show for
+// egregore.xyz/demo is owned by this file, not by the artifact row.
+//
+// Source order: curvelabs is the canonical org slug; the egregore copy
+// is a legacy row from the 2026-07-20 slug rename (since reversed) that
+// still serves already-circulated links. Preferring curvelabs means a
+// fresh publish of the deck takes over /demo automatically.
+
 const SOURCES = [
   "https://egregore-production-55f2.up.railway.app/api/artifacts/curvelabs/egregore-demo-deck",
   "https://egregore-production-55f2.up.railway.app/api/artifacts/egregore/egregore-demo-deck",
@@ -29,15 +31,13 @@ const OG_TAGS = [
   `<meta name="twitter:description" content="${OG_DESCRIPTION}" />`,
 ].join("\n");
 
-// The artifact API injects its own OG block at serve time; strip it so the
-// tags above are the only ones link scrapers see.
 const INJECTED_OG_BLOCK =
   /<meta property="og:type"[\s\S]*?twitter:description" content="[^"]*" \/>\n?/;
 
-export async function GET() {
-  for (const url of SOURCES) {
+export default async () => {
+  for (const src of SOURCES) {
     try {
-      const res = await fetch(url, { next: { revalidate: 300 } });
+      const res = await fetch(src);
       if (!res.ok) continue;
       let html = (await res.text()).replace(INJECTED_OG_BLOCK, "");
 
@@ -49,19 +49,19 @@ export async function GET() {
         html = html.replace("<head>", "<head>\n" + OG_TAGS);
       }
 
-      return new NextResponse(html, {
+      return new Response(html, {
         headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, max-age=300",
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=300",
         },
       });
     } catch {
       // fall through to the next source
     }
   }
-  // Both sources unreachable — send the visitor to the artifact URL directly.
-  return NextResponse.redirect(
+  // Both sources unreachable — send the visitor to the artifact directly.
+  return Response.redirect(
     "https://egregore.xyz/view/egregore/egregore-demo-deck",
     307,
   );
-}
+};
