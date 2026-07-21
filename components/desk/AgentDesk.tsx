@@ -44,6 +44,7 @@ function liveExecutors(workers: Worker[]): Array<"claude" | "codex"> {
     const heartbeat = worker.last_heartbeat_at ? new Date(worker.last_heartbeat_at).getTime() : 0;
     return ["healthy", "busy"].includes(worker.status)
       && heartbeat >= cutoff
+      && worker.capabilities?.includes("code")
       && worker.queues?.includes(`tasks:${executor}`);
   }));
 }
@@ -460,7 +461,7 @@ export default function AgentDesk() {
     return true;
   }), [tasks, filter]);
   const attentionCount = tasks.filter((task) => ["needs_input", "awaiting_plan_approval", "ready_for_you", "failed"].includes(task.status)).length;
-  const executorWorkers = workers.filter((worker) => worker.queues?.some((queue) => queue === "tasks:claude" || queue === "tasks:codex"));
+  const executorWorkers = workers.filter((worker) => worker.capabilities?.includes("code") && worker.queues?.some((queue) => queue === "tasks:claude" || queue === "tasks:codex"));
   const liveExecutorLanes = liveExecutors(workers);
   const availableSlots = executorWorkers.reduce((total, worker) => total + (worker.capacity?.available_slots || 0), 0);
 
