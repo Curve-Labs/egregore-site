@@ -19,6 +19,10 @@
   path = "/@*"
 
 [[edge_functions]]
+  function = "demo"
+  path = "/demo"
+
+[[edge_functions]]
   function = "og"
   path = "/"
 
