@@ -107,6 +107,16 @@ export type Worker = {
   id: string;
   status: "healthy" | "busy" | "degraded" | "auth_expired" | "quota_paused" | "offline";
   models?: string[];
+  queues?: string[];
+  capacity?: {
+    cpu_count?: number;
+    load_per_cpu?: number | null;
+    memory_available_mb?: number | null;
+    disk_free_mb?: number;
+    max_parallel_jobs?: number;
+    current_jobs?: number;
+    available_slots?: number;
+  };
   current_run_id?: string | null;
   last_heartbeat_at?: string | null;
 };
@@ -247,13 +257,18 @@ export function importTaskBatch(
   });
 }
 
-export function approvePlan(token: string | null, task: Task): Promise<Task> {
+export function approvePlan(
+  token: string | null,
+  task: Task,
+  executor?: "claude" | "codex",
+): Promise<Task> {
   return request(`/api/v1/tasks/${task.id}/approve-plan`, token, {
     method: "POST",
     body: JSON.stringify({
       plan_version: task.plan_version,
       plan_content_hash: task.plan_content_hash,
       channel: "desk",
+      executor,
     }),
   });
 }
@@ -278,5 +293,12 @@ export function cancelTask(token: string | null, task: Task): Promise<Task> {
   return request(`/api/v1/tasks/${task.id}/cancel`, token, {
     method: "POST",
     body: JSON.stringify({ expected_row_version: task.row_version }),
+  });
+}
+
+export function completeTask(token: string | null, task: Task): Promise<Task> {
+  return request(`/api/v1/tasks/${task.id}/complete`, token, {
+    method: "POST",
+    body: JSON.stringify({ expected_row_version: task.row_version, channel: "desk" }),
   });
 }
