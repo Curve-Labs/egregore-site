@@ -23,6 +23,10 @@
   path = "/demo"
 
 [[edge_functions]]
+  function = "deck"
+  path = "/deck"
+
+[[edge_functions]]
   function = "og"
   path = "/"
 
@@ -274,13 +278,6 @@
   force = true
 
 # /view/{org} falls through to SPA catch-all → React Router handles listing page
-
-# Canonical public shortcut for the Curve Labs raise deck.
-[[redirects]]
-  from = "/deck"
-  to = "/view/curvelabs/egregore-raise-deck"
-  status = 301
-  force = true
 
 [[redirects]]
   from = "/*"
