@@ -303,3 +303,18 @@ export function completeTask(token: string | null, task: Task): Promise<Task> {
     body: JSON.stringify({ expected_row_version: task.row_version, channel: "desk" }),
   });
 }
+
+export function retryTask(
+  token: string | null,
+  task: Task,
+  executor?: "claude" | "codex",
+): Promise<Task> {
+  return request(`/api/v1/tasks/${task.id}/retry`, token, {
+    method: "POST",
+    body: JSON.stringify({
+      expected_row_version: task.row_version,
+      executor,
+      channel: "desk",
+    }),
+  });
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { approvePlan, completeTask, getMemberships, type Task } from "./api";
+import { approvePlan, completeTask, getMemberships, retryTask, type Task } from "./api";
 
 const task = {
   id: "task-3",
@@ -68,6 +68,26 @@ describe("Agent Desk API", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ expected_row_version: 7, channel: "desk" }),
+      }),
+    );
+  });
+
+  it("retries a failed task with row-version fencing and selected executor", async () => {
+    const failed = { ...task, status: "failed" as const };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...failed, status: "queued" }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await retryTask(null, failed, "codex");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tasks/task-3/retry",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          expected_row_version: 7,
+          executor: "codex",
+          channel: "desk",
+        }),
       }),
     );
   });

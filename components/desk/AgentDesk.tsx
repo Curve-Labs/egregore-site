@@ -14,6 +14,7 @@ import {
   listWorkers,
   importTaskBatch,
   previewTaskBatch,
+  retryTask,
   type BatchImport,
   type BatchPreview,
   type CreateTask,
@@ -335,6 +336,13 @@ function Detail({ detail, token, workers, onChanged }: { detail: TaskDetail; tok
         <section className="desk-plan-ready desk-complete-ready">
           <div><span className="desk-kicker">Review handoff</span><h2>Accept the output when you are finished reviewing it.</h2><p>Marking this task done releases any tasks that depend on it. It does not merge or deploy the pull request.</p></div>
           <button className="desk-button desk-button-dark" disabled={!!action} onClick={() => run("complete", () => completeTask(token, detail))}>{action === "complete" ? "Completing…" : "Mark done"} <ArrowIcon /></button>
+        </section>
+      )}
+
+      {detail.status === "failed" && (
+        <section className="desk-plan-ready desk-complete-ready">
+          <div><span className="desk-kicker">Run failed</span><h2>Retry from the saved branch.</h2><p>The next attempt keeps the approved plan and prior failure context. Existing fix-round limits still apply.</p></div>
+          <div className="desk-plan-actions"><label>Execution lane<select value={approvalExecutor} onChange={(event) => setApprovalExecutor(event.target.value as "" | "claude" | "codex")}><option value="">No live executor</option>{executors.map((executor) => <option key={executor} value={executor}>{executor === "claude" ? "Claude" : "Codex"}</option>)}</select></label><button className="desk-button desk-button-dark" disabled={!!action || !approvalExecutor} onClick={() => run("retry", () => retryTask(token, detail, approvalExecutor || undefined))}>{action === "retry" ? "Retrying…" : "Retry task"} <ArrowIcon /></button></div>
         </section>
       )}
 
