@@ -1,0 +1,153 @@
+.meridian.meridian {
+  --paper: #eceef2;
+  --paper-2: #e2e6ec;
+  --card: #f8fafc;
+  --ink: #15212e;
+  --ink-soft: #4d5a68;
+  --ink-faint: #8492a0;
+  --line: #cbd4de;
+  --line-soft: #dde3ea;
+  --prussian: #2c4a6b;
+  --prussian-bright: #3f74ad;
+  --brass: #9a7521;
+  --brass-bright: #c0962f;
+  --teal: #1d7a6e;
+  --teal-bright: #2f9d8c;
+  --rose: #a8493e;
+  --rose-bright: #c25c4e;
+  --sky: #3a6b96;
+  --t1: #9a7521;
+  --t1-bg: #f3ead0;
+  --t2: #1d7a6e;
+  --t2-bg: #ddefea;
+  --t3: #a8493e;
+  --t3-bg: #f4ddd7;
+  --grain: .04;
+  --contour: #bcc6d2;
+  --shadow: 0 1px 2px rgba(21,33,46,.06),0 12px 34px -18px rgba(21,33,46,.34);
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Hanken Grotesk", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --cream: var(--paper);
+  --black: var(--ink);
+  --border: var(--line);
+  --terracotta: var(--t1);
+  --blue-muted: var(--prussian);
+  --terminal-bg: #0e151d;
+}
+
+.meridian-nocturne {
+  --paper: #0e151d;
+  --paper-2: #131c26;
+  --card: #18222e;
+  --ink: #e7ecf2;
+  --ink-soft: #aab6c2;
+  --ink-faint: #76838f;
+  --line: #2a3744;
+  --line-soft: #202b36;
+  --brass: #d8b25a;
+  --teal: #3fb0a0;
+  --rose: #d2796b;
+}
+
+body:has(.meridian) {
+  background: #eceef2;
+  color: #15212e;
+}
+
+.setup-page:has(.meridian),
+.setup-main:has(.meridian) {
+  background: #eceef2;
+}
+
+.meridian ::selection {
+  background: var(--t1);
+  color: var(--card);
+}
+
+.meridian .setup-input:focus {
+  border-color: var(--t1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--t1) 18%, transparent);
+}
+
+.meridian .setup-option:hover,
+.meridian .setup-option.is-selected {
+  background: color-mix(in srgb, var(--t1) 7%, transparent);
+  border-color: var(--t1);
+}
+
+.meridian .setup-badge-join,
+.meridian .setup-status-connected,
+.meridian .setup-membership-in {
+  color: var(--t2);
+}
+
+.meridian .setup-check svg,
+.meridian .setup-success-check svg {
+  stroke: var(--card);
+}
+
+.meridian .setup-radio-dot {
+  background: var(--card);
+}
+
+.meridian .setup-install-body {
+  background: #0e151d;
+  color: #e7ecf2;
+  border: 1px solid #2a3744;
+}
+
+.meridian .setup-install-body code {
+  color: #e7ecf2;
+  font-family: var(--font-mono);
+}
+
+.meridian .setup-install-copy {
+  color: #aab6c2;
+  border-color: #2a3744;
+}
+
+.meridian .setup-install-copy:hover {
+  border-color: #3fb0a0;
+  color: #3fb0a0;
+}
+
+.meridian .setup-success-check {
+  background: var(--t2);
+}
+
+.meridian .setup-divider::before,
+.meridian .setup-divider::after,
+.meridian .setup-after {
+  border-color: color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.meridian .setup-divider .diamond {
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.meridian .setup-status-info {
+  background: var(--t2-bg);
+  border-color: color-mix(in srgb, var(--t2) 30%, transparent);
+}
+
+.meridian .setup-btn-accent,
+.meridian .setup-option.is-selected .setup-check,
+.meridian .setup-option.is-selected .setup-radio {
+  background: var(--t1);
+  border-color: var(--t1);
+  color: var(--card);
+}
+
+.meridian .setup-error {
+  color: var(--t3);
+}
+
+.meridian .setup-spinner,
+.meridian .setup-spinner-sm {
+  border-color: var(--line);
+  border-top-color: var(--t1);
+}
