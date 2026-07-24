@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 type Verification =
   | "device"
+  | "ready"
   | "cancelled"
   | "checking"
   | "confirmed"
@@ -23,6 +24,7 @@ export default function ConnectResult() {
     () => ({
       outcome: searchParams.get("checkout"),
       sessionId: searchParams.get("session_id"),
+      intent: searchParams.get("intent"),
       deviceCode: searchParams.get("code"),
     }),
     [searchParams],
@@ -36,6 +38,8 @@ export default function ConnectResult() {
       ? "cancelled"
       : checkout.outcome === "success" && checkout.sessionId
         ? "checking"
+        : checkout.intent && checkout.sessionId
+          ? "ready"
         : "unknown",
   );
 
@@ -85,6 +89,11 @@ export default function ConnectResult() {
       title: "Opening device approval.",
       body: "Continue in the secure Egregore device flow.",
     },
+    ready: {
+      marker: "ready",
+      title: "Connect this Egregore.",
+      body: "Add the hosted graph, coordination state, and Connected infrastructure to the Egregore already on this machine.",
+    },
     confirmed: {
       marker: "confirmed",
       title: "Payment confirmed.",
@@ -116,6 +125,10 @@ export default function ConnectResult() {
       body: "Return to the terminal and start the Connect flow again.",
     },
   }[verification];
+  const checkoutStart =
+    checkout.intent && checkout.sessionId
+      ? `/api/billing/checkout/${encodeURIComponent(checkout.sessionId)}/start?intent=${encodeURIComponent(checkout.intent)}`
+      : "";
 
   return (
     <main className="upgrade-page">
@@ -131,6 +144,18 @@ export default function ConnectResult() {
         <p className="upgrade-kicker">Subscription / {content.marker}</p>
         <h1>{content.title}</h1>
         <p className="upgrade-lede">{content.body}</p>
+        {verification === "ready" && (
+          <div className="upgrade-offer">
+            <p className="upgrade-price">
+              <strong>€500</strong>
+              <span>per month</span>
+            </p>
+            <p>
+              Markdown, Git history, branches, and memory stay in place. After
+              payment, the CLI projects the existing history into the graph.
+            </p>
+          </div>
+        )}
 
         {!deviceApproval && !cancelled && verification !== "unknown" && (
           <ol className="upgrade-steps">
@@ -158,10 +183,19 @@ export default function ConnectResult() {
           </ol>
         )}
 
-        <div className="upgrade-actions">
-          <p>Return to the terminal to continue.</p>
-          <Link href="/">egregore.xyz ↗</Link>
-        </div>
+        {verification === "ready" ? (
+          <div className="upgrade-checkout">
+            <a className="upgrade-checkout-button" href={checkoutStart}>
+              Continue to Stripe
+            </a>
+            <p>Promotion codes for one or three free months are entered in Stripe.</p>
+          </div>
+        ) : (
+          <div className="upgrade-actions">
+            <p>Return to the terminal to continue.</p>
+            <Link href="/">egregore.xyz ↗</Link>
+          </div>
+        )}
       </section>
 
       <footer className="upgrade-footer">
