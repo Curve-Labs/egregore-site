@@ -16,10 +16,14 @@ export function getGitHubAuthUrl(): string {
 type RequestOpts = {
   body?: unknown;
   token?: string;
+  headers?: Record<string, string>;
 };
 
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(opts.headers || {}),
+  };
   if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`;
 
   const resp = await fetch(`${API_URL}${path}`, {
@@ -114,6 +118,31 @@ export type UserProfile = {
   memberships?: { org_slug: string; org_name: string; in_telegram_group: boolean }[];
 };
 
+export type ConnectContext = {
+  connection_intent_id: string;
+  status: string;
+  plan: "connect";
+  organization: {
+    slug: string;
+    name: string;
+    github_org: string;
+  };
+  actor: GithubUser;
+  instance: {
+    mode?: string;
+    repo_name?: string;
+    managed_repo_count?: number;
+    launcher_version?: string;
+  };
+  checkout_session_id?: string | null;
+};
+
+export type CheckoutStatus = {
+  checkout_status: string;
+  payment_status: string;
+  payment_confirmed: boolean;
+};
+
 // ── API ────────────────────────────────────────────────────────
 
 export async function exchangeCode(code: string): Promise<{ github_token: string; user: GithubUser }> {
@@ -192,4 +221,38 @@ export async function getUserProfile(token: string): Promise<UserProfile> {
 
 export async function updateUserProfile(token: string, body: { telegram_username: string }): Promise<void> {
   await request("POST", "/api/user/profile", { token, body });
+}
+
+export async function getConnectContext(
+  intentId: string,
+  ticket: string,
+): Promise<ConnectContext> {
+  return request(
+    "GET",
+    `/api/billing/connect/${encodeURIComponent(intentId)}/context`,
+    { headers: { "X-Connect-Ticket": ticket } },
+  );
+}
+
+export async function createConnectCheckout(
+  intentId: string,
+  ticket: string,
+): Promise<{ checkout_session_id: string; checkout_url: string }> {
+  return request(
+    "POST",
+    `/api/billing/connect/${encodeURIComponent(intentId)}/checkout`,
+    {
+      headers: { "X-Connect-Ticket": ticket },
+      body: { plan: "connect" },
+    },
+  );
+}
+
+export async function getConnectCheckoutStatus(
+  sessionId: string,
+): Promise<CheckoutStatus> {
+  return request(
+    "GET",
+    `/api/billing/checkout/${encodeURIComponent(sessionId)}/status`,
+  );
 }
