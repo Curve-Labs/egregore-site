@@ -101,6 +101,42 @@
   line-height: 1.65;
 }
 
+.upgrade-offer {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.45fr) 1fr;
+  gap: 36px;
+  align-items: end;
+  margin-top: 38px;
+  padding: 24px 0;
+  border-top: 1px solid var(--upgrade-border);
+  border-bottom: 1px solid var(--upgrade-border);
+  color: var(--upgrade-copy);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.upgrade-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.upgrade-price strong {
+  color: var(--upgrade-ink);
+  font-family: var(--font-serif);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.upgrade-price span {
+  color: var(--upgrade-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .upgrade-steps {
   margin-top: 56px;
   border-top: 1px solid var(--upgrade-border);
@@ -153,6 +189,38 @@
   border-bottom: 1px solid var(--upgrade-accent);
 }
 
+.upgrade-checkout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 34px;
+}
+
+.upgrade-checkout-button {
+  flex: 0 0 auto;
+  padding: 14px 20px;
+  border: 1px solid var(--upgrade-accent);
+  background: var(--upgrade-accent);
+  color: var(--upgrade-page-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.upgrade-checkout-button:hover {
+  background: transparent;
+  color: var(--upgrade-accent);
+}
+
+.upgrade-checkout p {
+  color: var(--upgrade-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .upgrade-footer {
   padding-top: 20px;
   color: var(--upgrade-muted);
@@ -182,9 +250,16 @@
   }
 
   .upgrade-actions,
+  .upgrade-checkout,
+  .upgrade-offer,
   .upgrade-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .upgrade-offer {
+    display: flex;
+    gap: 18px;
   }
 }
 
