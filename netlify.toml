@@ -134,10 +134,12 @@
   status = 200
   force = true
 
-# Device-approval page (session-gated). Exact path.
+# Device-approval page (session-gated). Billing/package selection owns the
+# public /connect route in the Next.js site; CLI device verification remains
+# an API-rendered surface at /connect/device.
 [[redirects]]
-  from = "/connect"
-  to = "https://egregore-production-55f2.up.railway.app/connect"
+  from = "/connect/device"
+  to = "https://egregore-production-55f2.up.railway.app/connect/device"
   status = 200
   force = true
 
