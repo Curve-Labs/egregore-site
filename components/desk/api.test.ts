@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { approvePlan, completeTask, getMemberships, retryTask, type Task } from "./api";
+import { approvePlan, completeTask, createTask, getMemberships, retryTask, type Task } from "./api";
 
 const task = {
   id: "task-3",
@@ -53,6 +53,31 @@ describe("Agent Desk API", () => {
           channel: "desk",
           executor: "claude",
         }),
+      }),
+    );
+  });
+
+  it("sends blind dual planning for a significant task", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => task });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createTask(null, {
+      org_slug: "curvelabs",
+      title: "Plan significant work",
+      description: "Compare independent approaches.",
+      kind: "code",
+      repository: "Curve-Labs/egregore",
+      base_branch: "develop",
+      planner_policy: "blind_dual",
+      network_policy: "off",
+      acceptance_criteria: [],
+    }, "request-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tasks",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"planner_policy":"blind_dual"'),
       }),
     );
   });
