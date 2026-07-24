@@ -1,0 +1,197 @@
+.upgrade-body {
+  --upgrade-page-bg: #1d1611;
+  --upgrade-ink: rgba(255, 255, 255, 0.92);
+  --upgrade-copy: rgba(255, 255, 255, 0.75);
+  --upgrade-muted: rgba(255, 255, 255, 0.5);
+  --upgrade-border: rgba(255, 255, 255, 0.08);
+  --upgrade-accent: #d4875a;
+  --upgrade-grid: rgba(255, 255, 255, 0.025);
+  min-height: 100vh;
+  background: var(--upgrade-page-bg);
+  color: var(--upgrade-ink);
+  color-scheme: dark;
+}
+
+.upgrade-page {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 32px 44px 28px;
+  background: var(--upgrade-page-bg);
+  color: var(--upgrade-ink);
+}
+
+.upgrade-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--upgrade-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--upgrade-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.upgrade-header,
+.upgrade-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.upgrade-header {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--upgrade-border);
+}
+
+.upgrade-wordmark {
+  color: var(--upgrade-ink);
+  font-family: var(--font-serif);
+  font-size: 25px;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+}
+
+.upgrade-environment,
+.upgrade-kicker {
+  color: var(--upgrade-accent);
+}
+
+.upgrade-result {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  margin: auto;
+  padding: 72px 0;
+}
+
+.upgrade-kicker {
+  margin-bottom: 22px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.upgrade-result h1 {
+  max-width: 720px;
+  color: var(--upgrade-ink);
+  font-family: var(--font-serif);
+  font-size: clamp(48px, 7vw, 92px);
+  font-weight: 400;
+  line-height: 0.96;
+  letter-spacing: -0.025em;
+}
+
+.upgrade-lede {
+  max-width: 620px;
+  margin-top: 28px;
+  color: var(--upgrade-copy);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.upgrade-steps {
+  margin-top: 56px;
+  border-top: 1px solid var(--upgrade-border);
+  list-style: none;
+}
+
+.upgrade-steps li {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 18px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--upgrade-border);
+}
+
+.upgrade-steps li > span {
+  padding-top: 2px;
+  color: var(--upgrade-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.upgrade-steps strong {
+  color: var(--upgrade-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.upgrade-steps p {
+  margin-top: 6px;
+  color: var(--upgrade-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.upgrade-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 34px;
+  color: var(--upgrade-muted);
+  font-size: 13px;
+}
+
+.upgrade-actions a {
+  color: var(--upgrade-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--upgrade-accent);
+}
+
+.upgrade-footer {
+  padding-top: 20px;
+  color: var(--upgrade-muted);
+  border-top: 1px solid var(--upgrade-border);
+}
+
+.upgrade-page ::selection {
+  background: var(--upgrade-accent);
+  color: var(--upgrade-page-bg);
+}
+
+@media (max-width: 640px) {
+  .upgrade-page {
+    padding: 22px 20px;
+  }
+
+  .upgrade-result {
+    padding: 52px 0;
+  }
+
+  .upgrade-result h1 {
+    font-size: clamp(42px, 16vw, 64px);
+  }
+
+  .upgrade-lede {
+    font-size: 16px;
+  }
+
+  .upgrade-actions,
+  .upgrade-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upgrade-page *,
+  .upgrade-page *::before,
+  .upgrade-page *::after {
+    scroll-behavior: auto !important;
+  }
+}

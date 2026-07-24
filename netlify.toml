@@ -238,6 +238,14 @@
   status = 200
   force = true
 
+# Connected billing status. The upgrade return page stays static and resilient;
+# this narrow proxy only verifies the completed Checkout session.
+[[redirects]]
+  from = "/api/billing/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/billing/:splat"
+  status = 200
+  force = true
+
 # MCP OAuth 2.1 authorization server (goal: emissary-mcp-oauth). The MCP server's
 # protected-resource metadata names egregore.xyz as the issuer, so the OAuth
 # endpoints must be first-party here (and /oauth/authorize needs the eg_session
