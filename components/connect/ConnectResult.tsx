@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Verification =
+  | "device"
   | "cancelled"
   | "checking"
   | "confirmed"
@@ -16,18 +17,22 @@ type CheckoutStatus = {
   payment_confirmed?: boolean;
 };
 
-export default function UpgradeResult() {
+export default function ConnectResult() {
   const searchParams = useSearchParams();
   const checkout = useMemo(
     () => ({
       outcome: searchParams.get("checkout"),
       sessionId: searchParams.get("session_id"),
+      deviceCode: searchParams.get("code"),
     }),
     [searchParams],
   );
+  const deviceApproval = Boolean(checkout.deviceCode);
   const cancelled = ["cancelled", "canceled"].includes(checkout.outcome ?? "");
   const [verification, setVerification] = useState<Verification>(
-    cancelled
+    deviceApproval
+      ? "device"
+      : cancelled
       ? "cancelled"
       : checkout.outcome === "success" && checkout.sessionId
         ? "checking"
@@ -35,7 +40,19 @@ export default function UpgradeResult() {
   );
 
   useEffect(() => {
-    if (cancelled || checkout.outcome !== "success" || !checkout.sessionId) {
+    if (!checkout.deviceCode) return;
+    window.location.replace(
+      `/connect/device?code=${encodeURIComponent(checkout.deviceCode)}`,
+    );
+  }, [checkout.deviceCode]);
+
+  useEffect(() => {
+    if (
+      deviceApproval ||
+      cancelled ||
+      checkout.outcome !== "success" ||
+      !checkout.sessionId
+    ) {
       return;
     }
 
@@ -60,9 +77,14 @@ export default function UpgradeResult() {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [cancelled, checkout.outcome, checkout.sessionId]);
+  }, [deviceApproval, cancelled, checkout.outcome, checkout.sessionId]);
 
   const content = {
+    device: {
+      marker: "device approval",
+      title: "Opening device approval.",
+      body: "Continue in the secure Egregore device flow.",
+    },
     confirmed: {
       marker: "confirmed",
       title: "Payment confirmed.",
@@ -110,7 +132,7 @@ export default function UpgradeResult() {
         <h1>{content.title}</h1>
         <p className="upgrade-lede">{content.body}</p>
 
-        {!cancelled && verification !== "unknown" && (
+        {!deviceApproval && !cancelled && verification !== "unknown" && (
           <ol className="upgrade-steps">
             <li>
               <span>01</span>
