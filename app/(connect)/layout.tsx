@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../globals.css";
-import "./upgrade.css";
+import "./connect.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://egregore.xyz"),
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function UpgradeLayout({
+export default function ConnectLayout({
   children,
 }: {
   children: React.ReactNode;

@@ -231,14 +231,15 @@
   status = 200
   force = true
 
-# Device-approval page (session-gated). Exact path.
+# Device-approval page (session-gated). /connect is owned by the static
+# Connect flow; device codes are dispatched here without changing origin.
 [[redirects]]
-  from = "/connect"
+  from = "/connect/device"
   to = "https://egregore-production-55f2.up.railway.app/connect"
   status = 200
   force = true
 
-# Connected billing status. The upgrade return page stays static and resilient;
+# Connected billing status. The Connect return page stays static and resilient;
 # this narrow proxy only verifies the completed Checkout session.
 [[redirects]]
   from = "/api/billing/*"
