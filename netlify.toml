@@ -231,11 +231,12 @@
   status = 200
   force = true
 
-# Device-approval page (session-gated). /connect is owned by the static
-# Connect flow; device codes are dispatched here without changing origin.
+# Device-approval page (session-gated). Billing/package selection owns the
+# public /connect route in the Next.js site; CLI device verification remains
+# an API-rendered surface at /connect/device.
 [[redirects]]
   from = "/connect/device"
-  to = "https://egregore-production-55f2.up.railway.app/connect"
+  to = "https://egregore-production-55f2.up.railway.app/connect/device"
   status = 200
   force = true
 

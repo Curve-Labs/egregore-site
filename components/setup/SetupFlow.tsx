@@ -32,6 +32,10 @@ import {
   type AppInstallationStatus,
 } from "./api";
 import { isAdmin } from "./auth";
+import {
+  pollTelegramConnection,
+  type TelegramConnectionPhase,
+} from "./telegram-polling";
 import "./setup.css";
 
 const API_URL =
@@ -871,14 +875,16 @@ function TelegramStep({
   isFounder,
   telegramInviteLink,
   telegramGroupLink,
-  telegramConnected,
+  telegramConnectionPhase = "waiting",
+  onRetryTelegram,
   orgSlug,
   githubToken,
 }: {
   isFounder: boolean;
   telegramInviteLink?: string;
   telegramGroupLink?: string;
-  telegramConnected: boolean;
+  telegramConnectionPhase?: TelegramConnectionPhase;
+  onRetryTelegram?: () => void;
   orgSlug: string;
   githubToken: string;
 }) {
@@ -892,6 +898,10 @@ function TelegramStep({
   }, [orgSlug, githubToken, isFounder]);
 
   if (isFounder) {
+    const telegramConnected = telegramConnectionPhase === "connected";
+    const connectionDelayed = telegramConnectionPhase === "delayed";
+    const connectionError = telegramConnectionPhase === "error";
+
     return (
       <div className="setup-telegram">
         <p className="setup-eyebrow" style={{ textAlign: "left", marginBottom: 0 }}>Step 2 — Connect Telegram</p>
@@ -919,14 +929,39 @@ function TelegramStep({
                 rel="noopener noreferrer"
                 className="setup-btn setup-btn-accent"
                 style={{ alignSelf: "flex-start" }}
+                onClick={onRetryTelegram}
               >
                 <TelegramIcon /> Add bot to group
               </a>
             )}
-            <div className="setup-status-waiting">
-              <SmallSpinner />
-              <span>Waiting for bot to connect…</span>
+            <div className="setup-status-waiting" role="status" aria-live="polite">
+              {telegramConnectionPhase === "waiting" && <SmallSpinner />}
+              <span>
+                {connectionDelayed
+                  ? "Telegram has not confirmed the connection yet."
+                  : connectionError
+                    ? "Egregore could not check the Telegram connection."
+                    : "Waiting for bot to connect…"}
+              </span>
             </div>
+            {(connectionDelayed || connectionError) && (
+              <>
+                {connectionDelayed && (
+                  <p className="setup-telegram-recovery">
+                    If the bot is already in the group, send{" "}
+                    <code>/start@Egregore_clbot org_{orgSlug}</code> in that group.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="setup-btn setup-btn-secondary setup-btn-compact"
+                  style={{ alignSelf: "flex-start" }}
+                  onClick={onRetryTelegram}
+                >
+                  Check connection
+                </button>
+              </>
+            )}
             <p className="setup-install-note" style={{ marginTop: 0 }}>
               Select the group you just created. Notifications, handoffs, and questions will appear there.
             </p>
@@ -1004,8 +1039,10 @@ function SetupProgress({
   const [status, setStatus] = useState<"working" | "done" | "error">("working");
   const [result, setResult] = useState<SetupResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [telegramConnected, setTelegramConnected] = useState(false);
   const [showInviteStep, setShowInviteStep] = useState(true);
+  const [telegramConnectionPhase, setTelegramConnectionPhase] =
+    useState<TelegramConnectionPhase>("waiting");
+  const [telegramPollRevision, setTelegramPollRevision] = useState(0);
 
   useEffect(() => {
     const action = org.has_egregore
@@ -1027,14 +1064,29 @@ function SetupProgress({
 
   useEffect(() => {
     if (!result?.org_slug) return;
-    const id = setInterval(async () => {
-      try {
-        const s = await getTelegramStatus(result.org_slug);
-        if (s.connected) { setTelegramConnected(true); clearInterval(id); }
-      } catch { /* ignore */ }
-    }, 3000);
-    return () => clearInterval(id);
-  }, [result?.org_slug]);
+    const controller = new AbortController();
+    setTelegramConnectionPhase("waiting");
+
+    void pollTelegramConnection({
+      check: async () => {
+        const telegramStatus = await getTelegramStatus(
+          result.org_slug,
+          controller.signal,
+        );
+        return telegramStatus.connected;
+      },
+      signal: controller.signal,
+    }).then((phase) => {
+      if (phase !== "cancelled") setTelegramConnectionPhase(phase);
+    });
+
+    return () => controller.abort();
+  }, [result?.org_slug, telegramPollRevision]);
+
+  const retryTelegramConnection = () => {
+    setTelegramConnectionPhase("waiting");
+    setTelegramPollRevision((revision) => revision + 1);
+  };
 
   if (status === "working") {
     return (
@@ -1092,7 +1144,8 @@ function SetupProgress({
         isFounder={!org.has_egregore}
         telegramInviteLink={result.telegram_invite_link}
         telegramGroupLink={result.telegram_group_link}
-        telegramConnected={telegramConnected}
+        telegramConnectionPhase={telegramConnectionPhase}
+        onRetryTelegram={retryTelegramConnection}
         orgSlug={result.org_slug}
         githubToken={token}
       />
@@ -1373,7 +1426,6 @@ function InviteAccept({
       <TelegramStep
         isFounder={false}
         telegramGroupLink={result.telegram_group_link}
-        telegramConnected={false}
         orgSlug={result.org_slug}
         githubToken={token}
       />
