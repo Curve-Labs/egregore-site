@@ -32,7 +32,6 @@ type RequestOpts = {
   token?: string;
   signal?: AbortSignal;
   headers?: Record<string, string>;
-  signal?: AbortSignal;
 };
 
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
