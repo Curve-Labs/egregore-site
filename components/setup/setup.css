@@ -167,6 +167,11 @@
 }
 .setup-btn-accent:hover { opacity: 0.9; }
 
+.setup-btn-compact {
+  padding: 9px 14px;
+  font-size: 12px;
+}
+
 .setup-actions {
   display: flex;
   justify-content: space-between;
@@ -584,6 +589,20 @@
   font-size: 12px;
   color: var(--black);
   opacity: 0.55;
+}
+
+.setup-telegram-recovery {
+  max-width: 520px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--black);
+  opacity: 0.7;
+}
+
+.setup-telegram-recovery code {
+  color: var(--terracotta);
 }
 
 /* ── Spinner ── */
