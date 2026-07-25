@@ -17,6 +17,7 @@ type RequestOpts = {
   body?: unknown;
   token?: string;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 };
 
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
@@ -30,6 +31,7 @@ async function request<T>(method: string, path: string, opts: RequestOpts = {}):
     method,
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal,
   });
 
   const data = await resp.json();
@@ -199,8 +201,11 @@ export async function joinOrg(
   });
 }
 
-export async function getTelegramStatus(slug: string): Promise<TelegramStatusResponse> {
-  return request("GET", `/api/org/telegram/status/${slug}`);
+export async function getTelegramStatus(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<TelegramStatusResponse> {
+  return request("GET", `/api/org/telegram/status/${slug}`, { signal });
 }
 
 export async function checkTelegramMembership(slug: string, githubToken: string): Promise<TelegramMembership> {
