@@ -181,18 +181,16 @@ function ActivationStatus({
   const description = activationComplete
     ? "The historical graph backfill is complete. Your local Markdown and Git history remain the source of truth."
     : backfillActive
-      ? "Keep the terminal open while sessions, artifacts, quests, and ingest history are projected into the graph."
-      : "Keep the terminal open. It is continuing with provisioning and the historical graph backfill.";
+      ? "You can close this page. Keep the terminal open while sessions, artifacts, quests, and ingest history are projected into the graph."
+      : "You can close this page. Keep the terminal open while provisioning and the historical graph backfill continue.";
   const terminalTitle = activationComplete
     ? "Backfill complete"
-    : backfillActive
-      ? "Backfill is running in the terminal"
-      : "Keep the terminal open";
+    : "You can close this page";
   const terminalDetail = activationComplete
     ? "Return to the terminal for the final backfill counts."
     : backfillActive
-      ? "The terminal will show the exact counts when projection finishes."
-      : "Provisioning continues there automatically after payment.";
+      ? "Keep the terminal open. It will show the exact counts when projection finishes."
+      : "Keep the terminal open. Provisioning continues there automatically after payment.";
 
   return (
     <div className="setup-stage connect-flow">
