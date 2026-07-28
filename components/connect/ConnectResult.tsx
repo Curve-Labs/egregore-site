@@ -177,7 +177,7 @@ export default function ConnectResult() {
               <span>03</span>
               <div>
                 <strong>Backfill</strong>
-                <p>Existing memory is enriched without replacing local files.</p>
+                <p>Existing memory is enriched without replacing the filesystem.</p>
               </div>
             </li>
           </ol>
@@ -200,7 +200,7 @@ export default function ConnectResult() {
 
       <footer className="upgrade-footer">
         <span>Egregore Connect</span>
-        <span>Local memory remains the source of truth.</span>
+        <span>The filesystem remains the source of truth.</span>
       </footer>
     </main>
   );
