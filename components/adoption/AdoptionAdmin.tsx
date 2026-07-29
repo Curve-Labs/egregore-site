@@ -131,7 +131,27 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SignIn({ detail }: { detail?: string }) {
+function SignIn({ detail, onToken }: { detail?: string; onToken: () => void }) {
+  const [token, setToken] = useState("");
+  // OAuth builds redirect_uri from window.location.origin, and only
+  // egregore.xyz is registered on the GitHub App — so on a Netlify deploy
+  // preview GitHub refuses with "redirect_uri is not associated with this
+  // application". Rather than register every ephemeral preview domain on
+  // the production OAuth app, allow pasting a token directly. Same storage
+  // and same server-side ADMIN_USERS check as the OAuth path; it only skips
+  // the browser round-trip that the preview domain breaks.
+  const isPreview =
+    typeof window !== "undefined" &&
+    !/^https:\/\/(www\.)?egregore\.xyz$/.test(window.location.origin);
+
+  function save() {
+    const t = token.trim();
+    if (!t) return;
+    window.sessionStorage.setItem(TOKEN_KEY, t);
+    setToken("");
+    onToken();
+  }
+
   return (
     <Shell>
       <section>
@@ -147,6 +167,53 @@ function SignIn({ detail }: { detail?: string }) {
           <a className="ad-btn" href={getGitHubAuthUrl("/adoption/admin")}>
             Sign in with GitHub
           </a>
+
+          <div
+            style={{
+              marginTop: 30,
+              paddingTop: 22,
+              borderTop: "1px solid var(--line)",
+              maxWidth: 460,
+              marginInline: "auto",
+            }}
+          >
+            <p style={{ fontSize: 13, marginBottom: 12 }}>
+              {isPreview
+                ? "GitHub sign-in only works on egregore.xyz — this preview domain isn't registered on the OAuth app. Paste a GitHub token instead."
+                : "Or paste a GitHub token."}
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && save()}
+                placeholder="ghp_…"
+                aria-label="GitHub token"
+                style={{
+                  flex: 1,
+                  fontFamily: "var(--mono)",
+                  fontSize: 12,
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--line-2)",
+                  background: "var(--bg)",
+                  color: "var(--ink)",
+                }}
+              />
+              <button
+                className="ad-btn"
+                style={{ marginTop: 0, whiteSpace: "nowrap" }}
+                onClick={save}
+              >
+                Use token
+              </button>
+            </div>
+            <span className="ad-detail">
+              Kept in this tab only (sessionStorage). The API still checks it
+              against the admin list.
+            </span>
+          </div>
         </div>
       </section>
     </Shell>
@@ -210,7 +277,18 @@ export default function AdoptionAdmin() {
         </section>
       </Shell>
     );
-  if (needsAuth) return <SignIn detail={detail} />;
+  if (needsAuth)
+    return (
+      <SignIn
+        detail={detail}
+        onToken={() => {
+          setNeedsAuth(false);
+          setDetail(undefined);
+          setLoading(true);
+          void load();
+        }}
+      />
+    );
   if (!data)
     return (
       <Shell>
