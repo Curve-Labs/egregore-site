@@ -1,54 +1,32 @@
 "use client";
 
-// AdoptionMetrics — the public /adoption board. Client component: the site
-// is a static export, so it fetches in the browser from /api/adoption-metrics,
-// a Netlify edge function that injects the secret key. Same sealed-manuscript
-// language as EmissaryMetrics; no charting library — the series is plain CSS
-// columns. Theme-sensitive colors are var(--token) applied via className;
-// inline styles carry computed geometry only.
+// AdoptionMetrics — /adoption, the shareable board.
 //
-// Editorial rule this file exists to enforce: every number on this page is
-// one we can defend if someone checks it.
+// Same light theme as /adoption/admin and /desk. Carries no org slugs, no
+// creator handles, no user handles: other organisations' names are their
+// business, and keeping identities out of this payload means publishing the
+// page can never leak them by accident.
 //
-//   * Installs come from the org registry — real completed setups — not npm.
-//     npm's headline is ~83% publish-day registry mirror traffic, so we show
-//     the organic figure and label the raw one as inflated.
-//   * Clone counts are deliberately absent. Over a representative fortnight
-//     the repo saw 181 unique cloners against 50 unique page visitors; more
-//     cloners than humans who opened the page means that series is bots.
-//   * Internal orgs and test fixtures are excluded server-side.
+// npm downloads are deliberately absent. 82 distinct versions of
+// create-egregore were downloaded in one week, including releases months
+// old that no human would install — that traffic is registry mirrors and
+// security scanners. Excluding publish days removed the spike but not the
+// baseline, so there is no threshold at which the number becomes true. It
+// is not shown at all rather than shown cleaner.
+//
+// GitHub clone counts are absent for the same reason: 181 unique cloners
+// against 50 unique page visitors over one fortnight. More cloners than
+// humans who opened the page means bots.
 
 import { useEffect, useState } from "react";
 import "./adoption-metrics.css";
 
-// ── Types — mirrors get_public_adoption() ──────────────────────
+export type ExternalEntry = { value: number | null; delta_30d?: number };
 
-export type ExternalEntry = {
-  value: number | null;
-  captured_on?: string;
-  delta_30d?: number;
-  prev_on?: string;
-  source?: string;
-  subject?: string;
-};
-
-export type AdoptionPoint = {
-  day: string;
-  installs: number;
-  active_orgs: number;
-  active_users: number;
-  sessions: number;
-};
-
-export type AdoptionCommand = {
-  command: string;
-  runs: number;
-  orgs: number;
-};
+export type AdoptionCommand = { command: string; runs: number; orgs: number };
 
 export type AdoptionData = {
   window_days: number;
-  series_days: number;
   installs: { total: number; window: number; basis: string };
   activity: {
     orgs_active: number;
@@ -57,80 +35,30 @@ export type AdoptionData = {
     orgs_ever_active: number;
     teams_multi_member: number;
   };
-  timeseries: AdoptionPoint[];
   commands: AdoptionCommand[];
-  external: {
-    headline: Record<string, ExternalEntry>;
-    by_subject: Record<string, Record<string, Record<string, ExternalEntry>>>;
-  };
-  coverage: {
-    installs_observed: number;
-    orgs_ever_reporting: number;
-    reporting_rate: number | null;
-    note: string;
-  };
-  excludes_internal: boolean;
+  external: { headline: Record<string, ExternalEntry> };
+  coverage: { installs_observed: number; orgs_ever_reporting: number };
 };
 
-// ── Formatting ─────────────────────────────────────────────────
-
 const nf = new Intl.NumberFormat("en-US");
-
-function fmtDate(iso: string): string {
-  // Date-only strings must be built from parts — `new Date("2026-07-11")`
-  // parses as UTC midnight and renders as the previous day west of UTC.
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = y && m && d ? new Date(y, m - 1, d) : new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function num(e: ExternalEntry | undefined): number | null {
-  return e && e.value !== null && e.value !== undefined ? e.value : null;
-}
-
-function Delta({ entry }: { entry?: ExternalEntry }) {
-  if (!entry || entry.delta_30d === undefined) return null;
-  const d = entry.delta_30d;
-  if (d === 0) return <span className="ad-delta is-flat">no change · 30d</span>;
-  return (
-    <span className={`ad-delta${d < 0 ? " is-flat" : ""}`}>
-      {d > 0 ? "+" : ""}
-      {nf.format(d)} · 30d
-    </span>
-  );
-}
-
-// ── Chrome ─────────────────────────────────────────────────────
+const num = (e?: ExternalEntry) =>
+  e && e.value !== null && e.value !== undefined ? e.value : null;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="ad-metrics">
-      <div className="rules">
-        <div className="vert l" />
-        <div className="vert r" />
-      </div>
+    <div className="ad">
       <main className="ad-main">
-        <section className="ad-hero">
-          <div className="eyebrow">
-            Egregore <span className="dot">·</span> Adoption
-          </div>
-          <h1 className="display">
-            Who is actually <em>using</em> this.
-          </h1>
-          <p className="lede">
-            Organizations that installed Egregore and kept working in it —
-            counted from the registry and from sessions, not from download
-            badges. Our own orgs and test fixtures are excluded.
-          </p>
-        </section>
+        <div className="ad-head">
+          <span className="ad-head-mark">egregore</span>
+          <span className="ad-head-sep">/</span>
+          <span className="ad-head-label">Adoption</span>
+        </div>
         {children}
         <footer>
           <span>egregore.xyz</span>
           <span>
             <a href="https://github.com/egregore-labs/egregore">Source</a>{" "}
-            &nbsp; <a href="/docs">Docs</a> &nbsp;{" "}
-            <a href="mailto:info@egregore.xyz">Mail us</a>
+            &nbsp; <a href="/docs">Docs</a>
           </span>
           <span>MMXXVI</span>
         </footer>
@@ -139,291 +67,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Loading() {
-  return (
-    <Shell>
-      <section>
-        <div className="ad-empty">Reading the registry…</div>
-      </section>
-    </Shell>
-  );
-}
-
-function Unavailable({ detail }: { detail?: string }) {
-  return (
-    <Shell>
-      <section>
-        <div className="ad-unavail">
-          <span className="ad-unavail-mark">Signal lost</span>
-          <h2>Adoption metrics unavailable</h2>
-          <p>
-            The metrics endpoint isn&apos;t answering. This is expected until{" "}
-            <code>/api/v1/adoption/public</code> ships and{" "}
-            <code>ADOPTION_METRICS_KEY</code> is set on the site.
-          </p>
-          {detail ? <span className="ad-detail">{detail}</span> : null}
-        </div>
-      </section>
-    </Shell>
-  );
-}
-
-// ── § 01 — Installs and activity ───────────────────────────────
-
-function Headline({ d }: { d: AdoptionData }) {
-  const { installs, activity, window_days } = d;
-  return (
-    <section>
-      <div className="sec-head">
-        <span className="num">§ 01</span>
-        <span className="label">Installs &amp; activity</span>
-        <span className="rule" />
-        <span className="label">last {window_days} days</span>
-      </div>
-      <div className="ad-stats">
-        <div className="ad-stat is-accent">
-          <span className="ad-stat-label">Organizations</span>
-          <span className="ad-stat-value">{nf.format(installs.total)}</span>
-          <span className="ad-stat-sub">installed all-time</span>
-        </div>
-        <div className="ad-stat">
-          <span className="ad-stat-label">New</span>
-          <span className="ad-stat-value">{nf.format(installs.window)}</span>
-          <span className="ad-stat-sub">in the last {window_days} days</span>
-        </div>
-        <div className="ad-stat is-accent">
-          <span className="ad-stat-label">Active orgs</span>
-          <span className="ad-stat-value">{nf.format(activity.orgs_active)}</span>
-          <span className="ad-stat-sub">ran a session in window</span>
-        </div>
-        <div className="ad-stat">
-          <span className="ad-stat-label">Active people</span>
-          <span className="ad-stat-value">{nf.format(activity.users_active)}</span>
-          <span className="ad-stat-sub">distinct humans</span>
-        </div>
-        <div className="ad-stat">
-          <span className="ad-stat-label">Sessions</span>
-          <span className="ad-stat-value">{nf.format(activity.sessions)}</span>
-          <span className="ad-stat-sub">work sessions started</span>
-        </div>
-        <div className="ad-stat">
-          <span className="ad-stat-label">Teams</span>
-          <span className="ad-stat-value">
-            {nf.format(activity.teams_multi_member)}
-          </span>
-          <span className="ad-stat-sub">more than one member</span>
-        </div>
-      </div>
-      <p className="ad-note">
-        <strong>What counts as an install.</strong> {installs.basis} It never
-        counts people who joined someone else&apos;s org, so the real number is
-        higher than this one — we would rather undercount.
-      </p>
-    </section>
-  );
-}
-
-// ── § 02 — Series ──────────────────────────────────────────────
-
-const SERIES: { key: keyof Omit<AdoptionPoint, "day">; label: string }[] = [
-  { key: "sessions", label: "Sessions" },
-  { key: "active_orgs", label: "Active orgs" },
-  { key: "active_users", label: "Active people" },
-  { key: "installs", label: "New installs" },
-];
-
-function Series({ points, days }: { points: AdoptionPoint[]; days: number }) {
-  const peak = Math.max(
-    1,
-    ...points.flatMap((p) => SERIES.map((s) => p[s.key] ?? 0)),
-  );
-  return (
-    <section>
-      <div className="sec-head">
-        <span className="num">§ 02</span>
-        <span className="label">Over time</span>
-        <span className="rule" />
-        <span className="label">{days} days</span>
-      </div>
-      <div className="ad-chart">
-        <div className="ad-chart-legend">
-          {SERIES.map((s) => (
-            <span key={s.key} className="ad-legend-item">
-              <span className={`ad-legend-swatch ad-s-${s.key}`} />
-              {s.label}
-            </span>
-          ))}
-        </div>
-        {points.length === 0 ? (
-          <div className="ad-empty">No activity recorded yet.</div>
-        ) : (
-          <div className="ad-chart-plot">
-            {points.map((p, i) => (
-              <div key={p.day} className="ad-col">
-                <div className="ad-col-bars">
-                  {SERIES.map((s) => {
-                    const v = p[s.key] ?? 0;
-                    const h = Math.round((v / peak) * 100);
-                    return (
-                      <div
-                        key={s.key}
-                        className={`ad-bar ad-s-${s.key}`}
-                        style={{ height: `${h}%` }}
-                        title={`${fmtDate(p.day)} — ${s.label}: ${v}`}
-                      />
-                    );
-                  })}
-                </div>
-                {/* Label roughly every 7th column so the axis stays legible. */}
-                <span className="ad-col-date">
-                  {i % 7 === 0 ? fmtDate(p.day) : " "}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ── § 03 — What people run ─────────────────────────────────────
-
-function Commands({ commands }: { commands: AdoptionCommand[] }) {
-  const peak = Math.max(1, ...commands.map((c) => c.runs));
-  return (
-    <section>
-      <div className="sec-head">
-        <span className="num">§ 03</span>
-        <span className="label">What people run</span>
-        <span className="rule" />
-        <span className="label">commands</span>
-      </div>
-      {commands.length === 0 ? (
-        <div className="ad-empty">No command telemetry in this window.</div>
-      ) : (
-        <div className="ad-rank">
-          {commands.map((c) => (
-            <div key={c.command} className="ad-rank-row">
-              <span className="ad-rank-name">/{c.command}</span>
-              <span className="ad-rank-track">
-                <span
-                  className="ad-rank-fill"
-                  style={{ width: `${Math.round((c.runs / peak) * 100)}%` }}
-                />
-              </span>
-              <span className="ad-rank-value">
-                {nf.format(c.runs)} · {c.orgs} {c.orgs === 1 ? "org" : "orgs"}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      <p className="ad-note">
-        <strong>A floor, not a census.</strong> Command telemetry is emitted
-        best-effort by the agent, so these counts under-report — particularly
-        for commands whose skills don&apos;t emit reliably. Session counts above
-        are measured by the shell and are exact.
-      </p>
-    </section>
-  );
-}
-
-// ── § 04 — Open source ─────────────────────────────────────────
-
-function OpenSource({ h }: { h: Record<string, ExternalEntry> }) {
-  const stars = num(h.stars);
-  const forks = num(h.forks);
-  const contributors = num(h.contributors);
-  const prsMerged = num(h.prs_merged);
-  const prsOpen = num(h.prs_open);
-  const issuesOpen = num(h.issues_open);
-  const organic = num(h.downloads_organic);
-  const raw = num(h.downloads_raw);
-
-  const any =
-    [stars, forks, contributors, prsMerged, organic].some((v) => v !== null);
-
-  return (
-    <section>
-      <div className="sec-head">
-        <span className="num">§ 04</span>
-        <span className="label">Open source</span>
-        <span className="rule" />
-        <span className="label">egregore-labs/egregore</span>
-      </div>
-      {!any ? (
-        <div className="ad-empty">
-          External signals haven&apos;t been captured yet — the daily snapshot
-          job hasn&apos;t run.
-        </div>
-      ) : (
-        <div className="ad-stats">
-          {stars !== null && (
-            <div className="ad-stat is-accent">
-              <span className="ad-stat-label">Stars</span>
-              <span className="ad-stat-value">{nf.format(stars)}</span>
-              <Delta entry={h.stars} />
-            </div>
-          )}
-          {forks !== null && (
-            <div className="ad-stat">
-              <span className="ad-stat-label">Forks</span>
-              <span className="ad-stat-value">{nf.format(forks)}</span>
-              <Delta entry={h.forks} />
-            </div>
-          )}
-          {contributors !== null && (
-            <div className="ad-stat">
-              <span className="ad-stat-label">Contributors</span>
-              <span className="ad-stat-value">{nf.format(contributors)}</span>
-              <span className="ad-stat-sub">with merged commits</span>
-            </div>
-          )}
-          {prsMerged !== null && (
-            <div className="ad-stat">
-              <span className="ad-stat-label">PRs merged</span>
-              <span className="ad-stat-value">{nf.format(prsMerged)}</span>
-              <span className="ad-stat-sub">
-                {prsOpen !== null ? `${nf.format(prsOpen)} open` : " "}
-              </span>
-            </div>
-          )}
-          {issuesOpen !== null && (
-            <div className="ad-stat">
-              <span className="ad-stat-label">Issues open</span>
-              <span className="ad-stat-value">{nf.format(issuesOpen)}</span>
-              <span className="ad-stat-sub">on the OSS repo</span>
-            </div>
-          )}
-          {organic !== null && (
-            <div className="ad-stat">
-              <span className="ad-stat-label">npm installs</span>
-              <span className="ad-stat-value">{nf.format(organic)}</span>
-              <span className="ad-stat-sub">30d, organic</span>
-            </div>
-          )}
-        </div>
-      )}
-      {organic !== null && raw !== null && raw > organic ? (
-        <p className="ad-note">
-          <strong>Why npm says a bigger number.</strong> The raw 30-day count
-          for <code>create-egregore</code> is {nf.format(raw)}, but{" "}
-          {Math.round(((raw - organic) / raw) * 100)}% of it lands on days we
-          published a release — registry mirrors re-downloading the package, not
-          people installing it. We report the {nf.format(organic)} that happened
-          on quiet days.
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
-// ── Page ───────────────────────────────────────────────────────
-
 export default function AdoptionMetrics() {
   const [data, setData] = useState<AdoptionData | null>(null);
-  const [detail, setDetail] = useState<string | undefined>(undefined);
+  const [detail, setDetail] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -455,15 +101,169 @@ export default function AdoptionMetrics() {
     };
   }, []);
 
-  if (loading) return <Loading />;
-  if (!data) return <Unavailable detail={detail} />;
+  if (loading)
+    return (
+      <Shell>
+        <section>
+          <div className="ad-empty">Reading the registry…</div>
+        </section>
+      </Shell>
+    );
+
+  if (!data)
+    return (
+      <Shell>
+        <section>
+          <div className="ad-panel">
+            <span className="ad-mark">Signal lost</span>
+            <h2>Adoption metrics unavailable</h2>
+            <p>The metrics endpoint isn&apos;t answering right now.</p>
+            {detail ? <span className="ad-detail">{detail}</span> : null}
+          </div>
+        </section>
+      </Shell>
+    );
+
+  const h = data.external?.headline ?? {};
+  const stars = num(h.stars);
+  const forks = num(h.forks);
+  const contributors = num(h.contributors);
+  const prsMerged = num(h.prs_merged);
+  const a = data.activity;
 
   return (
     <Shell>
-      <Headline d={data} />
-      <Series points={data.timeseries ?? []} days={data.series_days} />
-      <Commands commands={data.commands ?? []} />
-      <OpenSource h={data.external?.headline ?? {}} />
+      <section className="ad-hero">
+        <h1>
+          Who is actually <em>using</em> this.
+        </h1>
+        <p>
+          Organisations that installed Egregore and kept working in it —
+          counted from the registry and from real sessions, never from download
+          badges. Our own orgs and test fixtures are excluded.
+        </p>
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 01</span>
+          <span className="ad-sec-label">The funnel</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">last {data.window_days} days</span>
+        </div>
+        <div className="ad-funnel">
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(data.installs.total)}</span>
+            <span className="ad-step-l">Registered</span>
+            <span className="ad-step-s">
+              {nf.format(data.installs.window)} this month
+            </span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(a.orgs_ever_active)}</span>
+            <span className="ad-step-l">Ever ran a session</span>
+            <span className="ad-step-s">got past setup</span>
+          </div>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">{nf.format(a.orgs_active)}</span>
+            <span className="ad-step-l">Active this month</span>
+            <span className="ad-step-s">
+              {nf.format(a.users_active)} people · {nf.format(a.sessions)}{" "}
+              sessions
+            </span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(a.teams_multi_member)}</span>
+            <span className="ad-step-l">Teams</span>
+            <span className="ad-step-s">more than one member</span>
+          </div>
+        </div>
+        <p className="ad-note">
+          <strong>What counts as an install.</strong> {data.installs.basis} Only{" "}
+          {data.coverage.orgs_ever_reporting} of{" "}
+          {data.coverage.installs_observed} have ever reported telemetry, so
+          every figure here is a floor rather than a census.
+        </p>
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 02</span>
+          <span className="ad-sec-label">What people run</span>
+          <span className="ad-sec-rule" />
+        </div>
+        {data.commands.length === 0 ? (
+          <div className="ad-empty">No command telemetry in this window.</div>
+        ) : (
+          <div className="ad-tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th className="num">Runs</th>
+                  <th className="num">Orgs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.commands.map((c) => (
+                  <tr key={c.command}>
+                    <td className="ad-org">/{c.command}</td>
+                    <td className="num">{nf.format(c.runs)}</td>
+                    <td className="num ad-dim">{c.orgs}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="ad-note">
+          <strong>A floor, not a census.</strong> Command telemetry is emitted
+          best-effort by the agent, so these under-report. Session counts above
+          are measured by the shell and are exact.
+        </p>
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 03</span>
+          <span className="ad-sec-label">Open source</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">egregore-labs/egregore</span>
+        </div>
+        <div className="ad-funnel">
+          <div className="ad-step">
+            <span className="ad-step-n">
+              {stars !== null ? nf.format(stars) : "—"}
+            </span>
+            <span className="ad-step-l">Stars</span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">
+              {forks !== null ? nf.format(forks) : "—"}
+            </span>
+            <span className="ad-step-l">Forks</span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">
+              {contributors !== null ? nf.format(contributors) : "—"}
+            </span>
+            <span className="ad-step-l">Contributors</span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">
+              {prsMerged !== null ? nf.format(prsMerged) : "—"}
+            </span>
+            <span className="ad-step-l">PRs merged</span>
+          </div>
+        </div>
+        <p className="ad-note">
+          <strong>No download counts here, on purpose.</strong> npm reports
+          thousands, but 82 separate versions were pulled in a single week —
+          including releases months old that nobody would install by hand. That
+          is mirrors and scanners, not people. Repository clone counts fail the
+          same test: more unique cloners than unique visitors to the page.
+        </p>
+      </section>
     </Shell>
   );
 }

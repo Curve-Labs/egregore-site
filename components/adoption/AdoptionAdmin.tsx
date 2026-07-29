@@ -1,18 +1,25 @@
 "use client";
 
-// AdoptionAdmin — the internal god's-eye adoption view at /adoption/admin.
+// AdoptionAdmin — /adoption/admin. The diligence surface.
 //
-// Auth differs from the public board on purpose. The public page is fronted
-// by a Netlify edge function holding a shared secret, because it has nothing
-// sensitive in it. This one carries org slugs, creator handles and per-org
-// activity, so it is gated on a real GitHub token: the browser sends
-// Authorization: Bearer <token> straight to the Railway API, which checks
-// membership in ADMIN_USERS server-side (api/auth.py). Same pattern and same
-// sessionStorage key as /desk, so signing into one signs into the other.
+// Built around one question: who is actually using this, and how do you
+// know? So the centrepiece is a named evidence table, not stat tiles.
+// Aggregate counts ("11 active orgs") are unfalsifiable to an outsider and
+// uninformative to us — the first thing anyone asks is "who?", and the
+// answer has to be a list with dates on it.
 //
-// Note the API is called at its absolute origin rather than through a
-// Netlify proxy — CORS on the API already allows egregore.xyz with the
-// Authorization header, and this avoids exposing /api/admin/* on the site.
+// active_days is the column that matters. 349 sessions across 76 days is a
+// habit; 7 sessions in one afternoon is a trial. Both are real and they are
+// not the same claim, so the table shows both rather than collapsing them
+// into one number.
+//
+// Identity comes from memberships -> users (the `people` field), never from
+// orgs.created_by — that column is NULL for 7 orgs and hid a live client
+// from this very board while he sat in the database the whole time.
+//
+// Auth: GitHub token straight to Railway, checked against ADMIN_USERS
+// server-side. Deliberately not PasswordGate, which ships its password in
+// the bundle — this page carries other organisations' names.
 
 import { useCallback, useEffect, useState } from "react";
 import { TOKEN_KEY } from "../desk/api";
@@ -23,7 +30,24 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://egregore-production-55f2.up.railway.app";
 
-// ── Types — mirrors get_admin_adoption() ───────────────────────
+type OrgRow = {
+  slug: string;
+  name: string | null;
+  created_by: string | null;
+  people: string | null;
+  created_at: string;
+  is_internal: boolean;
+  members: number;
+  sessions_window: number;
+  sessions_total: number;
+  active_days: number;
+  users: number;
+  first_seen: string | null;
+  last_activity: string | null;
+  commands: string | null;
+  framework_version: string | null;
+  platform: string | null;
+};
 
 type Summary = {
   installs_total: number;
@@ -35,19 +59,6 @@ type Summary = {
   teams_multi_member: number;
 };
 
-type OrgRow = {
-  slug: string;
-  name: string | null;
-  created_by: string | null;
-  created_at: string;
-  is_internal: boolean;
-  members: number;
-  sessions_window: number;
-  last_activity: string | null;
-  framework_version: string | null;
-  platform: string | null;
-};
-
 type VersionRow = {
   framework_version: string;
   platform: string;
@@ -56,62 +67,62 @@ type VersionRow = {
   last_seen: string | null;
 };
 
-type CommandRow = { command: string; runs: number; orgs: number };
-
 type AdminData = {
   window_days: number;
   summary: { external: Summary; all: Summary; internal_orgs: number };
   orgs: OrgRow[];
   versions: VersionRow[];
-  commands: { external: CommandRow[]; all: CommandRow[] };
-  coverage: {
-    installs_observed: number;
-    orgs_ever_reporting: number;
-    reporting_rate: number | null;
-    note: string;
-  };
+  coverage: { installs_observed: number; orgs_ever_reporting: number };
 };
 
 const nf = new Intl.NumberFormat("en-US");
 
-function fmtWhen(iso: string | null): string {
+function day(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function ago(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86_400_000);
+}
+
+// Status is derived from behaviour, not from a field. Anything else would
+// be us deciding who counts.
+function status(o: OrgRow): { label: string; cls: string } {
+  if (o.is_internal) return { label: "ours", cls: "is-ours" };
+  const d = ago(o.last_activity);
+  if (d === null) return { label: "never ran", cls: "is-gone" };
+  if (o.active_days >= 10 && d <= 14) return { label: "using it", cls: "is-live" };
+  if (d <= 14) return { label: "trialling", cls: "is-trial" };
+  return { label: `quiet ${d}d`, cls: "is-gone" };
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="ad-metrics">
-      <div className="rules">
-        <div className="vert l" />
-        <div className="vert r" />
-      </div>
+    <div className="ad">
       <main className="ad-main">
-        <section className="ad-hero">
-          <div className="eyebrow">
-            Egregore <span className="dot">·</span> Adoption <span className="dot">·</span> Internal
-          </div>
-          <h1 className="display">
-            The <em>whole</em> picture.
-          </h1>
-          <p className="lede">
-            Every registered organization, including our own and the test
-            fixtures. Numbers here are unfiltered — the public board shows the
-            external subset.
-          </p>
-        </section>
+        <div className="ad-head">
+          <span className="ad-head-mark">egregore</span>
+          <span className="ad-head-sep">/</span>
+          <span className="ad-head-label">Adoption · internal</span>
+          <span className="ad-head-right">
+            {new Date().toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </span>
+        </div>
         {children}
         <footer>
           <span>egregore.xyz · internal</span>
           <span>
-            <a href="/adoption">Public board</a> &nbsp; <a href="/desk">Desk</a>
+            <a href="/desk">Desk</a> &nbsp; <a href="/adoption">Public board</a>
           </span>
           <span>MMXXVI</span>
         </footer>
@@ -124,20 +135,11 @@ function SignIn({ detail }: { detail?: string }) {
   return (
     <Shell>
       <section>
-        <div className="ad-signin">
-          <span className="ad-unavail-mark">Restricted</span>
-          <h2
-            style={{
-              fontFamily: "var(--ad-serif)",
-              fontSize: 24,
-              fontWeight: 500,
-              margin: "12px 0 10px",
-            }}
-          >
-            Sign in to continue
-          </h2>
-          <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--muted)" }}>
-            This view carries other organizations&apos; names and activity. It
+        <div className="ad-panel">
+          <span className="ad-mark">Restricted</span>
+          <h2>Sign in to continue</h2>
+          <p>
+            This page carries other organisations&apos; names and activity. It
             is limited to Egregore admins.
           </p>
           {detail ? <span className="ad-detail">{detail}</span> : null}
@@ -151,34 +153,12 @@ function SignIn({ detail }: { detail?: string }) {
   );
 }
 
-function Stat({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className={`ad-stat${accent ? " is-accent" : ""}`}>
-      <span className="ad-stat-label">{label}</span>
-      <span className="ad-stat-value">
-        {typeof value === "number" ? nf.format(value) : value}
-      </span>
-      {sub ? <span className="ad-stat-sub">{sub}</span> : null}
-    </div>
-  );
-}
-
 export default function AdoptionAdmin() {
   const [data, setData] = useState<AdminData | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
-  const [detail, setDetail] = useState<string | undefined>(undefined);
+  const [detail, setDetail] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
-  const [showInternal, setShowInternal] = useState(true);
+  const [showOurs, setShowOurs] = useState(false);
 
   const load = useCallback(async () => {
     const token =
@@ -200,7 +180,7 @@ export default function AdoptionAdmin() {
         setDetail(
           resp.status === 403
             ? "That account is not on the admin list."
-            : "Session expired.",
+            : "Session expired — sign in again.",
         );
         setLoading(false);
         return;
@@ -222,147 +202,193 @@ export default function AdoptionAdmin() {
     void load();
   }, [load]);
 
-  if (loading) {
+  if (loading)
     return (
       <Shell>
         <section>
-          <div className="ad-empty">Loading…</div>
+          <div className="ad-empty">Reading the registry…</div>
         </section>
       </Shell>
     );
-  }
   if (needsAuth) return <SignIn detail={detail} />;
-  if (!data) {
+  if (!data)
     return (
       <Shell>
         <section>
-          <div className="ad-unavail">
-            <span className="ad-unavail-mark">Signal lost</span>
+          <div className="ad-panel">
+            <span className="ad-mark">Signal lost</span>
             <h2>Adoption data unavailable</h2>
             {detail ? <span className="ad-detail">{detail}</span> : null}
           </div>
         </section>
       </Shell>
     );
-  }
 
   const ext = data.summary.external;
-  const all = data.summary.all;
-  const orgs = showInternal
-    ? data.orgs
-    : data.orgs.filter((o) => !o.is_internal);
+  const all = data.orgs.filter((o) => showOurs || !o.is_internal);
+  const withUse = all.filter((o) => o.sessions_total > 0);
+  const returned = withUse.filter((o) => o.active_days > 1).length;
+  const deepest = Math.max(1, ...withUse.map((o) => o.active_days));
 
   return (
     <Shell>
-      <section>
-        <div className="sec-head">
-          <span className="num">§ 01</span>
-          <span className="label">External</span>
-          <span className="rule" />
-          <span className="label">last {data.window_days} days</span>
-        </div>
-        <div className="ad-stats">
-          <Stat label="Orgs" value={ext.installs_total} sub="external installs" accent />
-          <Stat label="New" value={ext.installs_window} sub="in window" />
-          <Stat label="Active orgs" value={ext.orgs_active_window} sub="ran a session" accent />
-          <Stat label="Active people" value={ext.users_active_window} />
-          <Stat label="Sessions" value={ext.sessions_window} />
-          <Stat label="Teams" value={ext.teams_multi_member} sub="2+ members" />
-        </div>
-        <p className="ad-note">
-          <strong>Coverage.</strong> {data.coverage.orgs_ever_reporting} of{" "}
-          {data.coverage.installs_observed} external orgs have ever sent
-          telemetry
-          {data.coverage.reporting_rate !== null
-            ? ` (${Math.round(data.coverage.reporting_rate * 100)}%)`
-            : ""}
-          . {data.coverage.note}
+      <section className="ad-hero">
+        <h1>
+          Who is actually <em>using</em> this.
+        </h1>
+        <p>
+          Every organisation that registered, what they did, and when they last
+          showed up. Named, unfiltered, straight from the registry and the
+          session log.
         </p>
       </section>
 
       <section>
-        <div className="sec-head">
-          <span className="num">§ 02</span>
-          <span className="label">Including our own</span>
-          <span className="rule" />
-          <span className="label">{data.summary.internal_orgs} internal orgs</span>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 01</span>
+          <span className="ad-sec-label">The funnel</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">external only</span>
         </div>
-        <div className="ad-stats">
-          <Stat label="All orgs" value={all.installs_total} sub="registry total" />
-          <Stat label="Active orgs" value={all.orgs_active_window} />
-          <Stat label="Active people" value={all.users_active_window} />
-          <Stat label="Sessions" value={all.sessions_window} />
+        <div className="ad-funnel">
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(ext.installs_total)}</span>
+            <span className="ad-step-l">Registered</span>
+            <span className="ad-step-s">completed setup</span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(ext.orgs_ever_active)}</span>
+            <span className="ad-step-l">Ever ran a session</span>
+            <span className="ad-step-s">
+              {ext.installs_total - ext.orgs_ever_active} never started
+            </span>
+          </div>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">{nf.format(returned)}</span>
+            <span className="ad-step-l">Came back</span>
+            <span className="ad-step-s">active on more than one day</span>
+          </div>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">
+              {nf.format(ext.orgs_active_window)}
+            </span>
+            <span className="ad-step-l">Active this month</span>
+            <span className="ad-step-s">
+              {nf.format(ext.users_active_window)} people ·{" "}
+              {nf.format(ext.sessions_window)} sessions
+            </span>
+          </div>
         </div>
+        <p className="ad-note">
+          <strong>Read the drop-off, not the first number.</strong> Registering
+          costs nothing and proves nothing. Coming back on a second day is the
+          first honest signal, and staying past a fortnight is the only one
+          that means anything.
+        </p>
       </section>
 
       <section>
-        <div className="sec-head">
-          <span className="num">§ 03</span>
-          <span className="label">Organizations</span>
-          <span className="rule" />
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 02</span>
+          <span className="ad-sec-label">Every organisation</span>
+          <span className="ad-sec-rule" />
           <button
             className="ad-btn"
             style={{ marginTop: 0, padding: "5px 12px", fontSize: 10 }}
-            onClick={() => setShowInternal((v) => !v)}
+            onClick={() => setShowOurs((v) => !v)}
           >
-            {showInternal ? "Hide internal" : "Show all"}
+            {showOurs ? "Hide ours" : "Show ours"}
           </button>
         </div>
-        <div className="ad-table-wrap">
+        <div className="ad-tablewrap">
           <table>
             <thead>
               <tr>
-                <th>Org</th>
-                <th>Created by</th>
-                <th>Members</th>
-                <th>Sessions</th>
-                <th>Last active</th>
-                <th>Version</th>
-                <th>Platform</th>
+                <th>Organisation</th>
+                <th>People</th>
+                <th className="num">Active days</th>
+                <th style={{ width: 110 }}>Depth</th>
+                <th className="num">Sessions</th>
+                <th>First</th>
+                <th>Last</th>
+                <th>Status</th>
+                <th>Commands used</th>
               </tr>
             </thead>
             <tbody>
-              {orgs.map((o) => (
-                <tr key={o.slug} className={o.is_internal ? "is-internal" : ""}>
-                  <td>
-                    {o.slug}{" "}
-                    {o.is_internal ? (
-                      <span className="ad-tag">ours</span>
-                    ) : o.sessions_window > 0 ? (
-                      <span className="ad-tag is-live">live</span>
-                    ) : null}
-                  </td>
-                  <td>{o.created_by ?? "—"}</td>
-                  <td>{o.members}</td>
-                  <td>{o.sessions_window ? nf.format(o.sessions_window) : "—"}</td>
-                  <td>{fmtWhen(o.last_activity)}</td>
-                  <td>{o.framework_version ?? "—"}</td>
-                  <td>{o.platform ?? "—"}</td>
-                </tr>
-              ))}
+              {all.map((o) => {
+                const s = status(o);
+                return (
+                  <tr key={o.slug}>
+                    <td>
+                      <span className="ad-org">{o.slug}</span>
+                    </td>
+                    <td>
+                      <span className="ad-who">{o.people || "—"}</span>
+                    </td>
+                    <td className="num">
+                      <span className={o.active_days > 1 ? "ad-num" : "ad-dim"}>
+                        {o.active_days || "—"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="ad-bartrack">
+                        <span
+                          className={`ad-bar${o.active_days >= 10 ? " is-deep" : ""}`}
+                          style={{
+                            width: `${Math.round((o.active_days / deepest) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                    </td>
+                    <td className="num">
+                      {o.sessions_total ? nf.format(o.sessions_total) : "—"}
+                    </td>
+                    <td className="ad-who">{day(o.first_seen)}</td>
+                    <td className="ad-who">{day(o.last_activity)}</td>
+                    <td>
+                      <span className={`ad-chip ${s.cls}`}>{s.label}</span>
+                    </td>
+                    <td className="ad-who">
+                      {o.commands
+                        ? o.commands
+                            .split(", ")
+                            .slice(0, 6)
+                            .map((c) => `/${c}`)
+                            .join(" ")
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <p className="ad-note">
+          <strong>People come from memberships, not the registering handle.</strong>{" "}
+          <code>created_by</code> is empty on seven orgs — keying on it is what
+          hid a live install from this board while it sat in the database.
+        </p>
       </section>
 
       <section>
-        <div className="sec-head">
-          <span className="num">§ 04</span>
-          <span className="label">Versions in the wild</span>
-          <span className="rule" />
-          <span className="label">from health check-ins</span>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 03</span>
+          <span className="ad-sec-label">Versions in the wild</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">of those reporting</span>
         </div>
         {data.versions.length === 0 ? (
           <div className="ad-empty">No check-ins recorded.</div>
         ) : (
-          <div className="ad-table-wrap">
+          <div className="ad-tablewrap">
             <table>
               <thead>
                 <tr>
                   <th>Framework</th>
                   <th>Platform</th>
-                  <th>Orgs</th>
-                  <th>Users</th>
+                  <th className="num">Orgs</th>
+                  <th className="num">Users</th>
                   <th>Last seen</th>
                 </tr>
               </thead>
@@ -370,57 +396,37 @@ export default function AdoptionAdmin() {
                 {data.versions.map((v, i) => (
                   <tr key={`${v.framework_version}-${v.platform}-${i}`}>
                     <td>v{v.framework_version}</td>
-                    <td>{v.platform}</td>
-                    <td>{v.orgs}</td>
-                    <td>{v.users}</td>
-                    <td>{fmtWhen(v.last_seen)}</td>
+                    <td className="ad-who">{v.platform}</td>
+                    <td className="num">{v.orgs}</td>
+                    <td className="num">{v.users}</td>
+                    <td className="ad-who">{day(v.last_seen)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        <p className="ad-note">
-          Health check-ins require a GitHub token, so this covers a minority of
-          installs. Read it as &ldquo;of those reporting&rdquo; — anyone still on
-          an old framework version is worth chasing.
-        </p>
       </section>
 
       <section>
-        <div className="sec-head">
-          <span className="num">§ 05</span>
-          <span className="label">Commands</span>
-          <span className="rule" />
-          <span className="label">external / all</span>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 04</span>
+          <span className="ad-sec-label">What this cannot see</span>
+          <span className="ad-sec-rule" />
         </div>
-        <div className="ad-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Command</th>
-                <th>External runs</th>
-                <th>External orgs</th>
-                <th>All runs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.commands.all.map((c) => {
-                const e = data.commands.external.find(
-                  (x) => x.command === c.command,
-                );
-                return (
-                  <tr key={c.command}>
-                    <td>/{c.command}</td>
-                    <td>{e ? nf.format(e.runs) : "—"}</td>
-                    <td>{e ? e.orgs : "—"}</td>
-                    <td>{nf.format(c.runs)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <p className="ad-note">
+          <strong>
+            {data.coverage.orgs_ever_reporting} of{" "}
+            {data.coverage.installs_observed} registered orgs have ever sent
+            telemetry.
+          </strong>{" "}
+          Installs made through <code>bin/init-gh.sh</code> — the{" "}
+          <code>gh</code> option in the public docs — never register, and until
+          recently their sessions were discarded on arrival without a trace.
+          That is now recorded, so the size of the gap becomes knowable rather
+          than assumed. Anyone with <code>DO_NOT_TRACK</code> set is invisible
+          by design. Every figure above is a floor.
+        </p>
       </section>
     </Shell>
   );
