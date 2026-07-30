@@ -467,55 +467,38 @@ export default function AdoptionAdmin() {
       <section>
         <div className="ad-sec">
           <span className="ad-sec-num">§ 03</span>
-          <span className="ad-sec-label">create-egregore</span>
+          <span className="ad-sec-label">Activation</span>
           <span className="ad-sec-rule" />
-          <span className="ad-sec-label">npm vs reality</span>
+          <span className="ad-sec-label">last {data.window_days} days</span>
         </div>
-        <div className="ad-tablewrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Measure</th>
-                <th className="num">30 days</th>
-                <th>What it actually counts</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="ad-org">npm downloads, raw</td>
-                <td className="num">{npmRaw !== null ? nf.format(npmRaw) : "—"}</td>
-                <td className="ad-who">Every fetch, including mirrors and scanners</td>
-              </tr>
-              <tr>
-                <td className="ad-org">npm, publish days excluded</td>
-                <td className="num">{npmOrganic !== null ? nf.format(npmOrganic) : "—"}</td>
-                <td className="ad-who">Removes the release spike, not the baseline</td>
-              </tr>
-              <tr>
-                <td className="ad-org">Registrations</td>
-                <td className="num">{nf.format(ext.installs_window)}</td>
-                <td className="ad-who">Setup completed and org created — verifiable</td>
-              </tr>
-              <tr>
-                <td className="ad-org">Ran a session</td>
-                <td className="num">{nf.format(ext.orgs_active_window)}</td>
-                <td className="ad-who">Opened Egregore and worked in it</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="ad-funnel">
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(ext.installs_window)}</span>
+            <span className="ad-step-l">Registered</span>
+            <span className="ad-step-s">setup completed, org created</span>
+          </div>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">{nf.format(ext.orgs_active_window)}</span>
+            <span className="ad-step-l">Ran a session</span>
+            <span className="ad-step-s">
+              {ext.installs_window
+                ? `${Math.round((ext.orgs_active_window / ext.installs_window) * 100)}% activation`
+                : "—"}
+            </span>
+          </div>
         </div>
         <p className="ad-note">
-          <strong>The npm figures cannot be reconciled, and that is the finding.</strong>{" "}
-          In one week <strong>82 distinct versions</strong> of{" "}
-          <code>create-egregore</code> were downloaded, including releases
-          months old that no human would install by hand. Real users run{" "}
-          <code>npx create-egregore@latest</code> and always get the newest.
-          Even the publish-day-excluded number is roughly{" "}
-          {npmOrganic && ext.installs_window
-            ? Math.round(npmOrganic / ext.installs_window)
-            : "50"}
-          × the registrations. There is no threshold at which npm becomes a
-          measure of installs — it is shown here only so nobody quotes it.
+          <strong>npm downloads are deliberately not in this funnel.</strong>{" "}
+          The raw 30-day count for <code>create-egregore</code> is{" "}
+          {npmRaw !== null ? nf.format(npmRaw) : "—"}, and{" "}
+          {npmOrganic !== null ? nf.format(npmOrganic) : "—"} with publish days
+          excluded — but <strong>82 distinct versions</strong> were downloaded
+          in a single week, including releases months old that nobody installs
+          by hand. Excluding publish days removes the release spike, not the
+          scanner baseline underneath. Setting that number beside registrations
+          invents a collapse that never happened: those were never people.
+          There is no cleaning threshold at which npm becomes a count of
+          installs, so it is not treated as one.
         </p>
       </section>
 
