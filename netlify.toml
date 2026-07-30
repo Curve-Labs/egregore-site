@@ -280,6 +280,13 @@
   status = 200
   force = true
 
+# Public field note — retain a product-level URL for the canonical artifact.
+[[redirects]]
+  from = "/how-egregore-keeps-context-alive"
+  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/curvelabs/how-egregore-keeps-context-alive"
+  status = 200
+  force = true
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
