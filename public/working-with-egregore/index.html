@@ -1,0 +1,1629 @@
+<!doctype html>
+<html lang="en" data-theme="loam" data-theme-pair="agronomic" data-theme-mode="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A visual field guide to opening Egregore, reading activity, beginning work, saving, handing work onward, and choosing between OSS and Connect.">
+  <title>Working with Egregore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,350..700&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      var MODES = ["light", "auto", "dark"];
+      var PAIR = { light: "loam", dark: "soil" };
+
+      function savedMode() {
+        try { return localStorage.getItem("eg-theme-mode") || "auto"; }
+        catch (_) { return "auto"; }
+      }
+
+      function autoIsDark() {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return true;
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) return false;
+        var hour = new Date().getHours();
+        return hour >= 19 || hour < 7;
+      }
+
+      function apply(mode) {
+        var dark = mode === "auto" ? autoIsDark() : mode === "dark";
+        document.documentElement.dataset.theme = dark ? PAIR.dark : PAIR.light;
+        document.documentElement.dataset.themeMode = mode;
+      }
+
+      apply(savedMode());
+      window.__egTheme = {
+        modes: MODES,
+        savedMode: savedMode,
+        apply: apply
+      };
+    }());
+  </script>
+  <script type="application/json" id="egregore-design-manifest">
+    {
+      "system": "egregore-design-convention",
+      "version": "0.3.0",
+      "lineage": "meridian",
+      "pair": "agronomic",
+      "mode": "auto",
+      "resolvedTheme": "loam",
+      "target": "browser",
+      "objective": "instruct",
+      "audience": "newcomer",
+      "register": "editorial",
+      "palette": "loam",
+      "grammar": "quiet",
+      "composed": true,
+      "trail": "instruct → newcomer → editorial → loam → quiet"
+    }
+  </script>
+  <style>
+    :root {
+      --serif: "Fraunces", Georgia, serif;
+      --sans: "Hanken Grotesk", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --maxw: 1180px;
+      --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+
+    [data-theme="loam"] {
+      --paper: #f3ecdf;
+      --paper-2: #ece2d0;
+      --card: #fbf7ee;
+      --card-strong: #fffaf0;
+      --ink: #221d15;
+      --ink-soft: #5a5142;
+      --ink-faint: #8b8170;
+      --line: #d8cdb6;
+      --line-soft: #e4dcc9;
+      --soil: #3a5a40;
+      --soil-bright: #588157;
+      --soil-wash: #e7eee2;
+      --ochre: #bc6c25;
+      --ochre-wash: #f1dfcb;
+      --amber: #9a6a1a;
+      --amber-wash: #f3e9cf;
+      --clay: #a4543b;
+      --clay-wash: #f0ddd2;
+      --sky: #3d6a78;
+      --sky-wash: #dce8e9;
+      --shadow: 0 1px 2px rgba(34, 29, 21, .06), 0 18px 46px -28px rgba(34, 29, 21, .42);
+      --grain: .045;
+    }
+
+    [data-theme="soil"] {
+      --paper: #15120c;
+      --paper-2: #1c180f;
+      --card: #211c12;
+      --card-strong: #292217;
+      --ink: #ece3cf;
+      --ink-soft: #b3a98f;
+      --ink-faint: #7c7460;
+      --line: #3a3422;
+      --line-soft: #2b2719;
+      --soil: #8fb283;
+      --soil-bright: #a6c69a;
+      --soil-wash: #24301f;
+      --ochre: #df9147;
+      --ochre-wash: #352416;
+      --amber: #e0bf52;
+      --amber-wash: #312a14;
+      --clay: #d08468;
+      --clay-wash: #311f17;
+      --sky: #78a9b7;
+      --sky-wash: #192b31;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .34), 0 22px 54px -28px rgba(0, 0, 0, .8);
+      --grain: .06;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16.5px/1.68 var(--sans);
+      -webkit-font-smoothing: antialiased;
+      transition: background .3s var(--ease), color .3s var(--ease);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      opacity: var(--grain);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.84' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 82% 16%, var(--soil-wash), transparent 27%),
+        linear-gradient(90deg, transparent 0, transparent calc(50% - .5px), var(--line-soft) 50%, transparent calc(50% + .5px));
+      opacity: .28;
+    }
+    ::selection { background: var(--ochre); color: var(--paper); }
+    a { color: inherit; }
+    p, h1, h2, h3 { margin-top: 0; }
+    p { color: var(--ink-soft); }
+    strong { color: var(--ink); font-weight: 600; }
+    code {
+      padding: .12em .38em;
+      border-radius: 5px;
+      background: var(--paper-2);
+      color: var(--clay);
+      font: 500 .88em/1.4 var(--mono);
+    }
+    button { font: inherit; }
+
+    .shell { width: min(var(--maxw), calc(100% - 36px)); margin: 0 auto; }
+    .measure { max-width: 810px; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      min-height: 58px;
+      padding: 10px clamp(18px, 4vw, 48px);
+      border-bottom: 1px solid var(--line-soft);
+      background: color-mix(in srgb, var(--paper) 88%, transparent);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .brand {
+      margin-right: auto;
+      color: var(--ink-soft);
+      font: 500 10px/1.2 var(--mono);
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .brand b { color: var(--soil); }
+    .topbar nav { display: flex; gap: 3px; }
+    .topbar nav a {
+      padding: 7px 9px;
+      border-radius: 6px;
+      color: var(--ink-soft);
+      font: 500 10px/1.2 var(--mono);
+      text-decoration: none;
+    }
+    .topbar nav a:hover,
+    .topbar nav a[aria-current="true"] {
+      background: var(--paper-2);
+      color: var(--ink);
+    }
+    .theme-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 82px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: var(--ink-soft);
+      padding: 7px 10px;
+      cursor: pointer;
+      font: 500 10px/1 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .theme-control:hover { border-color: var(--soil); color: var(--ink); }
+
+    .hero {
+      padding: clamp(74px, 10vw, 126px) 0 72px;
+      position: relative;
+    }
+    .kicker, .section-mark, .visual-kicker {
+      color: var(--ochre);
+      font: 600 10px/1.3 var(--mono);
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 940px;
+      margin: 18px 0 24px;
+      font: 430 clamp(48px, 7vw, 84px)/1.01 var(--serif);
+      letter-spacing: -.035em;
+    }
+    .subtitle {
+      margin: -5px 0 32px;
+      color: var(--soil);
+      font: 500 13px/1.4 var(--mono);
+      letter-spacing: .045em;
+    }
+    .standfirst {
+      max-width: 820px;
+      margin-bottom: 28px;
+      font: 400 clamp(18px, 2.2vw, 21px)/1.7 var(--sans);
+      color: var(--ink-soft);
+    }
+    .article-meta {
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--ink-faint);
+      font: 500 10px/1.5 var(--mono);
+      letter-spacing: .04em;
+    }
+
+    section {
+      padding: 86px 0 22px;
+      border-top: 1px solid var(--line-soft);
+    }
+    .section-head {
+      display: grid;
+      grid-template-columns: 138px minmax(0, 1fr);
+      gap: 28px;
+      margin-bottom: 36px;
+    }
+    .section-mark { padding-top: 9px; }
+    h2 {
+      max-width: 900px;
+      margin-bottom: 16px;
+      font: 430 clamp(34px, 5.4vw, 62px)/1.03 var(--serif);
+      letter-spacing: -.025em;
+    }
+    .lede {
+      max-width: 790px;
+      margin-bottom: 0;
+      font-size: 1.08rem;
+    }
+    .copy {
+      max-width: 790px;
+      margin-left: 166px;
+    }
+    .copy p { margin-bottom: 1.15em; }
+
+    .visual {
+      overflow: hidden;
+      margin: 42px 0 32px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .visual-head {
+      display: grid;
+      grid-template-columns: 1fr minmax(220px, 390px);
+      gap: 24px;
+      align-items: end;
+      padding: 20px 24px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .visual-head h3 {
+      margin: 4px 0 0;
+      font: 430 clamp(24px, 3.2vw, 34px)/1.08 var(--serif);
+    }
+    .visual-note {
+      margin: 0;
+      color: var(--ink-faint);
+      font: 500 10px/1.5 var(--mono);
+      text-align: right;
+    }
+    .visual-stage {
+      padding: clamp(18px, 4vw, 42px);
+      background-image:
+        linear-gradient(var(--line-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+      background-size: 34px 34px;
+    }
+    .visual svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .visual-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      align-items: baseline;
+      padding: 17px 24px 19px;
+      border-top: 1px solid var(--line);
+    }
+    .visual-foot em {
+      color: var(--ink);
+      font: italic 430 18px/1.4 var(--serif);
+    }
+    .visual-foot span {
+      color: var(--ink-faint);
+      font: 500 9px/1.4 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      text-align: right;
+    }
+
+    .svg-card { fill: var(--card-strong); stroke: var(--line); stroke-width: 1.4; }
+    .svg-card-green { fill: var(--soil-wash); stroke: var(--soil); stroke-width: 1.7; }
+    .svg-card-orange { fill: var(--ochre-wash); stroke: var(--ochre); stroke-width: 1.7; }
+    .svg-card-blue { fill: var(--sky-wash); stroke: var(--sky); stroke-width: 1.7; }
+    .svg-card-clay { fill: var(--clay-wash); stroke: var(--clay); stroke-width: 1.7; }
+    .svg-ink { fill: var(--ink); }
+    .svg-soft { fill: var(--ink-soft); }
+    .svg-faint { fill: var(--ink-faint); }
+    .svg-soil { fill: var(--soil); }
+    .svg-ochre { fill: var(--ochre); }
+    .svg-sky { fill: var(--sky); }
+    .svg-clay { fill: var(--clay); }
+    .svg-title {
+      font: 500 23px/1 var(--serif);
+      letter-spacing: -.01em;
+    }
+    .svg-body { font: 500 13px/1.4 var(--sans); }
+    .svg-label {
+      font: 600 10px/1.2 var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .svg-micro {
+      font: 500 9px/1.3 var(--mono);
+      letter-spacing: .05em;
+    }
+    .svg-line {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+    }
+    .svg-line-soil {
+      fill: none;
+      stroke: var(--soil);
+      stroke-width: 2;
+    }
+    .svg-line-ochre {
+      fill: none;
+      stroke: var(--ochre);
+      stroke-width: 2;
+    }
+    .svg-line-sky {
+      fill: none;
+      stroke: var(--sky);
+      stroke-width: 2;
+    }
+    .svg-dash { stroke-dasharray: 6 7; }
+
+    .action-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin: 28px 0 24px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+    }
+    .action-cell {
+      min-height: 126px;
+      padding: 17px 18px 18px;
+      border-right: 1px solid var(--line);
+    }
+    .action-cell:last-child { border-right: 0; }
+    .action-cell .action-label {
+      display: block;
+      margin-bottom: 11px;
+      color: var(--ink-faint);
+      font: 600 9px/1.3 var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .action-cell b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font: 500 17px/1.28 var(--serif);
+    }
+    .action-cell p {
+      margin: 0;
+      font-size: .86rem;
+      line-height: 1.48;
+    }
+    .cmd {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--paper-2);
+      color: var(--clay);
+      font: 500 10px/1.3 var(--mono);
+    }
+    .context-link {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      margin: 28px 0 18px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--card);
+      text-decoration: none;
+      transition: border-color .2s var(--ease), transform .2s var(--ease);
+    }
+    .context-link:hover {
+      border-color: var(--ochre);
+      transform: translateY(-1px);
+    }
+    .context-link .sigil {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid var(--soil);
+      border-radius: 50%;
+      color: var(--soil);
+      font: 500 16px/1 var(--serif);
+    }
+    .context-link b {
+      display: block;
+      color: var(--ink);
+      font: 500 18px/1.2 var(--serif);
+    }
+    .context-link small {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink-faint);
+      font: 500 10px/1.4 var(--mono);
+    }
+    .context-link .go {
+      color: var(--ochre);
+      font: 600 10px/1 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 36px 0 24px;
+    }
+    .mode-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .mode-card header {
+      padding: 20px 22px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .mode-card.oss header { border-top: 3px solid var(--soil); }
+    .mode-card.connect header { border-top: 3px solid var(--ochre); }
+    .mode-card h3 {
+      margin: 7px 0 4px;
+      font: 500 28px/1.1 var(--serif);
+    }
+    .mode-card header p {
+      margin: 0;
+      font-size: .92rem;
+    }
+    .mode-row {
+      min-height: 104px;
+      padding: 15px 22px 17px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .mode-row:last-child { border-bottom: 0; }
+    .mode-row .mode-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink-faint);
+      font: 600 9px/1.2 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .mode-row p { margin: 0; font-size: .94rem; line-height: 1.55; }
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 34px 0 28px;
+    }
+    .control-card {
+      position: relative;
+      min-height: 164px;
+      padding: 20px 21px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+    }
+    .control-card::after {
+      content: attr(data-index);
+      position: absolute;
+      right: 12px;
+      bottom: -30px;
+      color: var(--paper-2);
+      font: 500 98px/1 var(--serif);
+      pointer-events: none;
+    }
+    .control-card .control-label {
+      color: var(--ochre);
+      font: 600 9px/1.2 var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .control-card b {
+      display: block;
+      position: relative;
+      z-index: 1;
+      margin: 12px 0 8px;
+      color: var(--ink);
+      font: 500 21px/1.2 var(--serif);
+    }
+    .control-card p {
+      position: relative;
+      z-index: 1;
+      max-width: 90%;
+      margin: 0;
+      font-size: .91rem;
+      line-height: 1.5;
+    }
+
+    .expectations {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 34px 0 22px;
+    }
+    .expectation {
+      min-height: 178px;
+      padding: 19px 18px;
+      border-top: 2px solid var(--soil);
+      background: color-mix(in srgb, var(--card) 72%, transparent);
+    }
+    .expectation:nth-child(2) { border-color: var(--ochre); }
+    .expectation:nth-child(3) { border-color: var(--sky); }
+    .expectation:nth-child(4) { border-color: var(--clay); }
+    .expectation b {
+      display: block;
+      margin: 12px 0 8px;
+      color: var(--ink);
+      font: 500 20px/1.2 var(--serif);
+    }
+    .expectation p {
+      margin: 0;
+      font-size: .93rem;
+      line-height: 1.55;
+    }
+    .expectation .n {
+      color: var(--ink-faint);
+      font: 500 9px/1 var(--mono);
+      letter-spacing: .12em;
+    }
+
+    footer {
+      padding: 20px 0 34px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--ink-faint);
+      font: 500 9px/1.5 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 820px) {
+      .topbar nav { display: none; }
+      .section-head { grid-template-columns: 1fr; gap: 8px; }
+      .section-mark { padding-top: 0; }
+      .copy { margin-left: 0; }
+      .visual-head { grid-template-columns: 1fr; }
+      .visual-note { text-align: left; }
+      .action-strip { grid-template-columns: repeat(2, 1fr); }
+      .action-cell:nth-child(2) { border-right: 0; }
+      .action-cell:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .expectations { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 24px, var(--maxw)); }
+      .hero { padding-top: 58px; }
+      section { padding-top: 68px; }
+      .visual { border-radius: 13px; }
+      .visual-stage { padding: 12px 6px; overflow-x: auto; }
+      .visual svg { min-width: 740px; }
+      .visual-foot { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .visual-foot span { text-align: left; }
+      .action-strip, .mode-grid, .control-grid { grid-template-columns: 1fr; }
+      .action-cell {
+        min-height: 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .action-cell:last-child { border-bottom: 0; }
+      .context-link { grid-template-columns: 42px 1fr; }
+      .context-link .go { grid-column: 2; }
+      .expectations { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .topbar, .theme-control { display: none; }
+      body { background: var(--paper); }
+      section, .visual, .expectation { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">⊙ Egregore · <b>Field guide</b></div>
+    <nav aria-label="Article sections">
+      <a href="#begin">Begin</a>
+      <a href="#activity">Activity</a>
+      <a href="#workspace">Work</a>
+      <a href="#handoff">Coordinate</a>
+      <a href="#modes">Modes</a>
+      <a href="#control">Control</a>
+    </nav>
+    <button class="theme-control" type="button" aria-label="Change color theme">
+      <span class="theme-icon">◐</span>
+      <span class="theme-label">auto</span>
+    </button>
+  </header>
+
+  <main class="shell">
+    <article>
+      <header class="hero">
+        <div class="kicker">Operating field guide · July 2026</div>
+        <h1>Working with Egregore</h1>
+        <p class="subtitle">A guide to sessions, shared memory, coordination, and repository work.</p>
+        <p class="standfirst">Egregore gives each session access to the organization’s current work and durable memory. You open an instance, read its present state, describe the task, save the result, and hand it onward when another person should continue. The agent handles the underlying Git operations.</p>
+        <a class="context-link measure" href="https://egregore.xyz/how-egregore-keeps-context-alive/" target="_blank" rel="noopener">
+          <span class="sigil">C</span>
+          <span>
+            <b>How Egregore Keeps Context Alive</b>
+            <small>The deeper account of files, Git, active context, and evidence paths.</small>
+          </span>
+          <span class="go">Open reference ↗</span>
+        </a>
+        <div class="article-meta">Egregore · Use natural language or the command shortcuts shown throughout this guide</div>
+      </header>
+
+      <section id="begin">
+        <div class="section-head">
+          <div class="section-mark">01 · Begin</div>
+          <div>
+            <h2>A session opens on the organization’s present</h2>
+            <p class="lede">The launcher prepares the instance before the agent begins. It synchronizes shared state, checks the workspace, and renders a startup card with the work that can shape your next move.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>The card shows your identity and current branch alongside recent momentum, addressed handoffs, open questions, and service health. You then state what you want to do. A concrete work request gives the agent enough information to create a topic branch and focused worktree.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="begin-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 01 · Session opening</div>
+              <h3 id="begin-visual-title">The launcher prepares a bounded place to work</h3>
+            </div>
+            <p class="visual-note">Startup gathers the present state. Historical evidence remains available when the work calls for it.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 610" role="img" aria-label="The user runs egregore, chooses an instance and agent, sees a startup card, describes work, and enters a topic worktree.">
+              <defs>
+                <marker id="arrow-ochre-begin" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+                <marker id="arrow-soil-begin" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+              </defs>
+
+              <rect x="74" y="66" width="230" height="108" rx="20" class="svg-card-orange"/>
+              <text x="189" y="109" text-anchor="middle" class="svg-title svg-ink">egregore</text>
+              <text x="189" y="139" text-anchor="middle" class="svg-micro svg-ochre">run from your terminal</text>
+
+              <path d="M304 120 L380 120" class="svg-line-ochre" marker-end="url(#arrow-ochre-begin)"/>
+              <rect x="388" y="66" width="314" height="108" rx="20" class="svg-card"/>
+              <text x="545" y="105" text-anchor="middle" class="svg-title svg-ink">Choose instance and agent</text>
+              <text x="545" y="136" text-anchor="middle" class="svg-micro svg-faint">Claude Code · Codex · Pi · saved default</text>
+
+              <path d="M702 120 L778 120" class="svg-line-ochre" marker-end="url(#arrow-ochre-begin)"/>
+              <rect x="786" y="66" width="260" height="108" rx="20" class="svg-card-green"/>
+              <text x="916" y="105" text-anchor="middle" class="svg-title svg-ink">Instance prepared</text>
+              <text x="916" y="136" text-anchor="middle" class="svg-micro svg-soil">memory · repos · services · identity</text>
+
+              <rect x="168" y="252" width="784" height="206" rx="24" class="svg-card"/>
+              <text x="206" y="290" class="svg-label svg-ochre">Startup card</text>
+              <text x="206" y="331" class="svg-title svg-ink">What is current before you speak</text>
+              <line x1="206" y1="353" x2="914" y2="353" class="svg-line"/>
+              <text x="220" y="390" class="svg-body svg-soft">identity and branch</text>
+              <text x="430" y="390" class="svg-body svg-soft">recent team activity</text>
+              <text x="676" y="390" class="svg-body svg-soft">handoffs and questions</text>
+              <text x="220" y="423" class="svg-body svg-soft">memory sync</text>
+              <text x="430" y="423" class="svg-body svg-soft">repository state</text>
+              <text x="676" y="423" class="svg-body svg-soft">service health</text>
+
+              <path d="M560 458 L560 502" class="svg-line-soil" marker-end="url(#arrow-soil-begin)"/>
+              <rect x="318" y="510" width="484" height="68" rx="34" class="svg-card-green"/>
+              <text x="560" y="539" text-anchor="middle" class="svg-title svg-ink">“What are you working on?”</text>
+              <text x="560" y="561" text-anchor="middle" class="svg-micro svg-soil">your answer defines the topic branch and worktree</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>Startup prepares context before the first work request.</em>
+            <span>launch · synchronize · orient · begin</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Session opening actions">
+          <div class="action-cell">
+            <span class="action-label">Open</span>
+            <b>Launch Egregore</b>
+            <p>Run the launcher and select your instance.</p>
+            <span class="cmd">egregore</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Choose</span>
+            <b>Select your agent</b>
+            <p>Pick Claude Code, Codex, or Pi from the launcher.</p>
+            <span class="cmd">enter → choose runtime</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Change</span>
+            <b>Set the default runtime</b>
+            <p>Select the instance, choose a runtime, and save it as the default.</p>
+            <span class="cmd">u · set default</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Diagnose</span>
+            <b>Check the instance</b>
+            <p>Ask the agent to inspect Git, memory, and available services.</p>
+            <span class="cmd">run checkup</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="activity">
+        <div class="section-head">
+          <div class="section-mark">02 · Activity</div>
+          <div>
+            <h2>Activity turns shared traces into an agenda</h2>
+            <p class="lede">The startup card gives a compact signal. Activity opens the fuller team view, organized around work that may require your attention.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>Running activity refreshes shared memory, reads the current repository state, and gathers addressed handoffs, pending questions, recent sessions, and open work. Connect adds relationship and status data from the organization graph. The result remains useful from Git-backed files in OSS.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="activity-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 02 · Activity view</div>
+              <h3 id="activity-visual-title">Many traces become one working view</h3>
+            </div>
+            <p class="visual-note">Activity reads the latest state. Closing or expiring an item changes its lifecycle after you choose that action.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 620" role="img" aria-label="Memory files, repository state, pull requests, and the Connect graph flow through activity into handoffs, questions, recent work, and repository status.">
+              <defs>
+                <marker id="arrow-soil-activity" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+                <marker id="arrow-ochre-activity" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+              </defs>
+
+              <text x="70" y="42" class="svg-label svg-faint">Current sources</text>
+              <rect x="64" y="68" width="282" height="90" rx="17" class="svg-card-green"/>
+              <text x="92" y="104" class="svg-title svg-ink">Memory files</text>
+              <text x="92" y="132" class="svg-micro svg-faint">handoffs · questions · wraps · decisions</text>
+
+              <rect x="64" y="178" width="282" height="90" rx="17" class="svg-card-blue"/>
+              <text x="92" y="214" class="svg-title svg-ink">Repository state</text>
+              <text x="92" y="242" class="svg-micro svg-faint">branches · changes · commits · pull requests</text>
+
+              <rect x="64" y="288" width="282" height="90" rx="17" class="svg-card"/>
+              <text x="92" y="324" class="svg-title svg-ink">Recent sessions</text>
+              <text x="92" y="352" class="svg-micro svg-faint">topics · owners · outcomes · open threads</text>
+
+              <rect x="64" y="398" width="282" height="90" rx="17" class="svg-card-orange"/>
+              <text x="92" y="434" class="svg-title svg-ink">Connect graph</text>
+              <text x="92" y="462" class="svg-micro svg-faint">relationships · lineage · lifecycle · status</text>
+
+              <path d="M346 113 C432 113 416 248 484 270" class="svg-line-soil"/>
+              <path d="M346 223 C432 223 422 272 484 284" class="svg-line-sky"/>
+              <path d="M346 333 C432 333 422 309 484 300" class="svg-line"/>
+              <path d="M346 443 C432 443 416 333 484 312" class="svg-line-ochre"/>
+
+              <circle cx="560" cy="292" r="82" fill="var(--ochre-wash)" stroke="var(--ochre)" stroke-width="2"/>
+              <text x="560" y="283" text-anchor="middle" class="svg-title svg-ink">activity</text>
+              <text x="560" y="310" text-anchor="middle" class="svg-label svg-ochre">refresh and organize</text>
+
+              <path d="M642 292 L724 292" class="svg-line-ochre" marker-end="url(#arrow-ochre-activity)"/>
+
+              <rect x="734" y="68" width="318" height="420" rx="22" class="svg-card"/>
+              <text x="768" y="108" class="svg-label svg-ochre">Your working view</text>
+              <line x1="768" y1="130" x2="1018" y2="130" class="svg-line"/>
+              <text x="768" y="175" class="svg-title svg-ink">Handoffs for you</text>
+              <text x="768" y="203" class="svg-micro svg-faint">claim · review · close</text>
+              <line x1="768" y1="224" x2="1018" y2="224" class="svg-line"/>
+              <text x="768" y="269" class="svg-title svg-ink">Open questions</text>
+              <text x="768" y="297" class="svg-micro svg-faint">answer · inspect · route</text>
+              <line x1="768" y1="318" x2="1018" y2="318" class="svg-line"/>
+              <text x="768" y="363" class="svg-title svg-ink">Recent work</text>
+              <text x="768" y="391" class="svg-micro svg-faint">sessions · wraps · pull requests</text>
+              <line x1="768" y1="412" x2="1018" y2="412" class="svg-line"/>
+              <text x="768" y="457" class="svg-title svg-ink">Repository status</text>
+              <text x="768" y="475" class="svg-micro svg-faint">current branches and unresolved work</text>
+
+              <path d="M893 488 L893 542" class="svg-line-soil" marker-end="url(#arrow-soil-activity)"/>
+              <rect x="756" y="548" width="274" height="46" rx="23" class="svg-card-green"/>
+              <text x="893" y="576" text-anchor="middle" class="svg-label svg-soil">choose what needs attention</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>Activity reads the organization’s current traces and presents the work addressed to you.</em>
+            <span>refresh · gather · order · act</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Activity actions">
+          <div class="action-cell">
+            <span class="action-label">Universal</span>
+            <b>Ask for activity</b>
+            <p>Natural language works in every supported agent.</p>
+            <span class="cmd">show activity</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Codex</span>
+            <b>Use the skill shortcut</b>
+            <p>Codex exposes Egregore workflows as skills.</p>
+            <span class="cmd">$activity</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Claude Code and Pi</span>
+            <b>Use the slash form</b>
+            <p>The same workflow appears through the runtime command surface.</p>
+            <span class="cmd">/activity</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Manage</span>
+            <b>Close an item from its number</b>
+            <p>Open activity first, then act on the numbered result.</p>
+            <span class="cmd">activity done 1</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="workspace">
+        <div class="section-head">
+          <div class="section-mark">03 · Workspace</div>
+          <div>
+            <h2>Your workspace has a stable center</h2>
+            <p class="lede">The Egregore repository is where sessions begin. Shared memory and selected code repositories live beside it as independent Git checkouts.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>The Egregore repository holds the organization’s settings and the agent workflows available in the workspace. Its <code>memory/</code> path points to a separate memory repository, giving every branch and worktree the same route to decisions, handoffs, questions, and findings.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="workspace-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 03 · Repository structure</div>
+              <h3 id="workspace-visual-title">One workspace, several histories</h3>
+            </div>
+            <p class="visual-note">Component labels describe repository roles. Selected repository names come from your setup.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 600" role="img" aria-label="The Egregore repository sits beside a memory repository and selected code repositories. The memory path is a symbolic link.">
+              <defs>
+                <marker id="arrow-soil-1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+                <marker id="arrow-ochre-1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+              </defs>
+
+              <text x="40" y="34" class="svg-label svg-faint">Your workspace directory</text>
+              <rect x="34" y="55" width="1052" height="492" rx="28" fill="var(--paper-2)" stroke="var(--line)" stroke-width="1.5"/>
+
+              <rect x="390" y="124" width="340" height="280" rx="24" class="svg-card-orange"/>
+              <circle cx="560" cy="178" r="26" fill="var(--ochre)"/>
+              <text x="560" y="183" text-anchor="middle" fill="var(--card)" class="svg-label">START</text>
+              <text x="560" y="242" text-anchor="middle" class="svg-title svg-ink">Egregore repository</text>
+              <text x="560" y="273" text-anchor="middle" class="svg-body svg-soft">Open your coding agent here</text>
+              <line x1="442" y1="301" x2="678" y2="301" class="svg-line"/>
+              <text x="560" y="333" text-anchor="middle" class="svg-micro svg-faint">settings · skills · runtime · session entry</text>
+              <rect x="465" y="354" width="190" height="34" rx="17" fill="var(--card)" stroke="var(--ochre)"/>
+              <text x="560" y="375" text-anchor="middle" class="svg-label svg-ochre">memory/ → sibling repo</text>
+
+              <rect x="72" y="168" width="250" height="190" rx="20" class="svg-card-green"/>
+              <text x="104" y="209" class="svg-label svg-soil">Shared record</text>
+              <text x="104" y="254" class="svg-title svg-ink">Memory repository</text>
+              <text x="104" y="286" class="svg-body svg-soft">Decisions and handoffs</text>
+              <text x="104" y="310" class="svg-body svg-soft">Questions and findings</text>
+              <text x="104" y="337" class="svg-micro svg-faint">independent Git history · main</text>
+
+              <path d="M390 312 C348 312 348 263 322 263" class="svg-line-soil svg-dash" marker-end="url(#arrow-soil-1)"/>
+              <text x="347" y="293" text-anchor="middle" class="svg-micro svg-soil">symlink</text>
+
+              <rect x="798" y="122" width="250" height="144" rx="20" class="svg-card-blue"/>
+              <text x="830" y="160" class="svg-label svg-sky">Selected during setup</text>
+              <text x="830" y="202" class="svg-title svg-ink">Code repository</text>
+              <text x="830" y="232" class="svg-micro svg-faint">keeps its own remote and branches</text>
+
+              <rect x="798" y="286" width="250" height="144" rx="20" class="svg-card-clay"/>
+              <text x="830" y="324" class="svg-label svg-clay">Any further selection</text>
+              <text x="830" y="366" class="svg-title svg-ink">Code repository</text>
+              <text x="830" y="396" class="svg-micro svg-faint">available from the same workspace</text>
+
+              <path d="M730 225 C758 225 766 194 798 194" class="svg-line-ochre" marker-end="url(#arrow-ochre-1)"/>
+              <path d="M730 325 C758 325 766 358 798 358" class="svg-line-ochre" marker-end="url(#arrow-ochre-1)"/>
+              <text x="764" y="274" text-anchor="middle" class="svg-micro svg-ochre">agent access</text>
+
+              <line x1="98" y1="480" x2="1022" y2="480" class="svg-line"/>
+              <text x="560" y="510" text-anchor="middle" class="svg-micro svg-faint">Each repository preserves its own commits, branches, permissions, and pull requests.</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>The workspace keeps access paths stable across task worktrees.</em>
+            <span>stable path · separate histories</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Workspace actions">
+          <div class="action-cell">
+            <span class="action-label">Start here</span>
+            <b>Open the Egregore repository</b>
+            <p>The launcher places your agent in the instance’s stable entry point.</p>
+            <span class="cmd">egregore</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Inspect</span>
+            <b>See every repository</b>
+            <p>Ask the agent for the current branches and work across the instance.</p>
+            <span class="cmd">show repository state</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Change</span>
+            <b>Open launcher settings</b>
+            <p>Select the instance, then open its managed repository list.</p>
+            <span class="cmd">egregore → s → Managed repos</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Direct CLI</span>
+            <b>Add a repository</b>
+            <p>Use the instance slug when several Egregores are installed.</p>
+            <span class="cmd">egregore settings &lt;slug&gt; repo add &lt;name&gt;</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="repositories">
+        <div class="section-head">
+          <div class="section-mark">04 · Repositories</div>
+          <div>
+            <h2>A repository is cloned once</h2>
+            <p class="lede">Selecting repositories during setup defines the workspace available to your agents. Egregore first checks the sibling directory where that repository would live.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>An existing checkout is reused in place. A missing checkout is cloned beside Egregore. Later launches fetch its current state, so the normal session path uses the repository already present on your machine.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="repo-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 04 · Setup behavior</div>
+              <h3 id="repo-visual-title">Selection resolves to one local checkout</h3>
+            </div>
+            <p class="visual-note">Removing a repository from settings leaves its local checkout in place.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 560" role="img" aria-label="Setup checks for a local repository. Existing checkouts are reused and missing checkouts are cloned once. Both paths become a ready repository.">
+              <defs>
+                <marker id="arrow-ochre-2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+                <marker id="arrow-soil-2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+              </defs>
+
+              <rect x="390" y="34" width="340" height="88" rx="44" class="svg-card-orange"/>
+              <text x="560" y="71" text-anchor="middle" class="svg-title svg-ink">Select a GitHub repository</text>
+              <text x="560" y="96" text-anchor="middle" class="svg-micro svg-ochre">during create-egregore or settings</text>
+
+              <path d="M560 122 L560 172" class="svg-line-ochre" marker-end="url(#arrow-ochre-2)"/>
+              <rect x="390" y="178" width="340" height="96" rx="18" class="svg-card"/>
+              <text x="560" y="218" text-anchor="middle" class="svg-title svg-ink">Check the sibling path</text>
+              <text x="560" y="244" text-anchor="middle" class="svg-micro svg-faint">Is the checkout already on this machine?</text>
+
+              <path d="M450 274 C420 308 324 302 277 338" class="svg-line-soil" marker-end="url(#arrow-soil-2)"/>
+              <path d="M670 274 C700 308 796 302 843 338" class="svg-line-ochre" marker-end="url(#arrow-ochre-2)"/>
+
+              <text x="337" y="309" text-anchor="middle" class="svg-label svg-soil">Present</text>
+              <text x="783" y="309" text-anchor="middle" class="svg-label svg-ochre">Absent</text>
+
+              <rect x="100" y="344" width="350" height="118" rx="20" class="svg-card-green"/>
+              <text x="275" y="389" text-anchor="middle" class="svg-title svg-ink">Reuse the checkout</text>
+              <text x="275" y="421" text-anchor="middle" class="svg-body svg-soft">Existing files and Git state remain in place</text>
+
+              <rect x="670" y="344" width="350" height="118" rx="20" class="svg-card-orange"/>
+              <text x="845" y="389" text-anchor="middle" class="svg-title svg-ink">Clone it once</text>
+              <text x="845" y="421" text-anchor="middle" class="svg-body svg-soft">The new checkout becomes a sibling of Egregore</text>
+
+              <path d="M275 462 C300 502 440 498 500 498" class="svg-line-soil"/>
+              <path d="M845 462 C820 502 680 498 620 498" class="svg-line-ochre"/>
+              <rect x="500" y="478" width="120" height="42" rx="21" fill="var(--soil)" stroke="var(--soil)"/>
+              <text x="560" y="504" text-anchor="middle" fill="var(--card)" class="svg-label">Ready</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>Future sessions return to the same local checkout and fetch its current state.</em>
+            <span>select · resolve · reuse · fetch</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Managed repository actions">
+          <div class="action-cell">
+            <span class="action-label">Add</span>
+            <b>Select another repository</b>
+            <p>Open settings and add its GitHub repository name.</p>
+            <span class="cmd">egregore → s → Managed repos</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Fetch</span>
+            <b>Clone missing selections</b>
+            <p>Ask the agent to synchronize managed repositories.</p>
+            <span class="cmd">sync repositories</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Remove</span>
+            <b>Stop managing a repository</b>
+            <p>The settings change preserves the local checkout on disk.</p>
+            <span class="cmd">egregore settings &lt;slug&gt; repo remove &lt;name&gt;</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Describe</span>
+            <b>Give the agent routing context</b>
+            <p>Add a short description when the repository’s role needs explanation.</p>
+            <span class="cmd">egregore settings &lt;slug&gt; repo add &lt;name&gt; "&lt;description&gt;"</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="branches">
+        <div class="section-head">
+          <div class="section-mark">05 · Branches</div>
+          <div>
+            <h2>Work begins away from main</h2>
+            <p class="lede">New Egregore installations use <code>main</code> as the base branch. After you state a concrete task, the agent creates a working branch and performs the task inside its worktree.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>The branch appears because Egregore protects the shared base from unfinished work. Existing organizations retain the base branch already stored in their settings. Teams that use a release stage can choose <code>develop</code> as the integration branch.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="branch-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 05 · Default branch flow</div>
+              <h3 id="branch-visual-title">A task leaves main and returns by pull request</h3>
+            </div>
+            <p class="visual-note">The agent handles branch creation. The branch name remains visible in session status.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 570" role="img" aria-label="A task starts from main, moves to a working branch, and returns to main through a pull request created by save.">
+              <defs>
+                <marker id="arrow-soil-3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+                <marker id="arrow-ochre-3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+              </defs>
+
+              <text x="72" y="74" class="svg-label svg-faint">Default for new installations</text>
+              <line x1="90" y1="356" x2="1030" y2="356" class="svg-line-soil" marker-end="url(#arrow-soil-3)"/>
+              <text x="94" y="390" class="svg-label svg-soil">main</text>
+              <circle cx="240" cy="356" r="12" fill="var(--soil)"/>
+              <circle cx="895" cy="356" r="12" fill="var(--soil)"/>
+
+              <path d="M240 356 C290 356 290 192 350 192 L760 192 C820 192 820 356 895 356" class="svg-line-ochre" marker-end="url(#arrow-ochre-3)"/>
+              <circle cx="350" cy="192" r="13" fill="var(--ochre)"/>
+              <circle cx="760" cy="192" r="13" fill="var(--ochre)"/>
+
+              <rect x="300" y="103" width="510" height="68" rx="34" class="svg-card-orange"/>
+              <text x="555" y="133" text-anchor="middle" class="svg-title svg-ink">Working branch</text>
+              <text x="555" y="155" text-anchor="middle" class="svg-micro svg-ochre">dev / author / topic</text>
+
+              <rect x="119" y="252" width="242" height="64" rx="14" class="svg-card-green"/>
+              <text x="240" y="279" text-anchor="middle" class="svg-label svg-soil">You describe the task</text>
+              <text x="240" y="299" text-anchor="middle" class="svg-micro svg-faint">branch and worktree created</text>
+
+              <rect x="690" y="252" width="240" height="64" rx="14" class="svg-card-orange"/>
+              <text x="810" y="279" text-anchor="middle" class="svg-label svg-ochre">You invoke $save</text>
+              <text x="810" y="299" text-anchor="middle" class="svg-micro svg-faint">pull request opened</text>
+
+              <rect x="90" y="450" width="940" height="72" rx="16" class="svg-card"/>
+              <text x="122" y="480" class="svg-label svg-faint">Optional setting</text>
+              <text x="122" y="505" class="svg-body svg-soft">A staged release workflow sends task pull requests to </text>
+              <text x="520" y="505" class="svg-body svg-ochre">develop</text>
+              <text x="582" y="505" class="svg-body svg-soft">, then promotes a release to </text>
+              <text x="788" y="505" class="svg-body svg-soil">main</text>
+              <text x="830" y="505" class="svg-body svg-soft">.</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>The default integration target is main; task changes remain on their working branch until review.</em>
+            <span>task · branch · save · pull request</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Branch workflow actions">
+          <div class="action-cell">
+            <span class="action-label">Begin</span>
+            <b>Describe concrete work</b>
+            <p>The agent derives the topic and creates the working branch.</p>
+            <span class="cmd">fix the sign-in timeout</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">See</span>
+            <b>Check the active branch</b>
+            <p>Ask for repository state whenever the work location matters.</p>
+            <span class="cmd">where is this work?</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Default</span>
+            <b>Integrate into main</b>
+            <p>New instances create task pull requests against <code>main</code>.</p>
+            <span class="cmd">base_branch: main</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Change</span>
+            <b>Use a staged integration branch</b>
+            <p>Ask the agent to set the instance base to <code>develop</code> and save that configuration.</p>
+            <span class="cmd">change the base branch to develop</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="save">
+        <div class="section-head">
+          <div class="section-mark">06 · Save</div>
+          <div>
+            <h2><code>$save</code> routes each change home</h2>
+            <p class="lede">Saving is the user action that turns session work into durable Git history. Egregore scans the workspace, groups changed files by repository, and follows the correct path for each group.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>Code and settings produce commits on their working branches, followed by pull requests to the configured base. Memory records commit through the memory repository’s own path. A task that changes several code repositories creates a separate pull request for every affected repository.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="save-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 06 · Save mechanism</div>
+              <h3 id="save-visual-title">One command, repository-specific outcomes</h3>
+            </div>
+            <p class="visual-note">Each Git root keeps its own commit authorship, branch, remote, and review path.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 650" role="img" aria-label="The save skill scans changed Git repositories. Code changes become commits and pull requests. Memory changes commit and synchronize through the memory repository.">
+              <defs>
+                <marker id="arrow-ochre-4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+                <marker id="arrow-soil-4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+              </defs>
+
+              <circle cx="560" cy="88" r="64" fill="var(--ochre-wash)" stroke="var(--ochre)" stroke-width="2"/>
+              <text x="560" y="82" text-anchor="middle" class="svg-title svg-ink">$save</text>
+              <text x="560" y="108" text-anchor="middle" class="svg-label svg-ochre">you invoke</text>
+
+              <path d="M560 152 L560 205" class="svg-line-ochre" marker-end="url(#arrow-ochre-4)"/>
+              <rect x="360" y="212" width="400" height="92" rx="20" class="svg-card"/>
+              <text x="560" y="250" text-anchor="middle" class="svg-title svg-ink">Find every changed Git root</text>
+              <text x="560" y="278" text-anchor="middle" class="svg-micro svg-faint">Egregore · selected repositories · memory · active worktree</text>
+
+              <path d="M450 304 C405 340 322 340 280 382" class="svg-line-ochre" marker-end="url(#arrow-ochre-4)"/>
+              <path d="M670 304 C715 340 798 340 840 382" class="svg-line-soil" marker-end="url(#arrow-soil-4)"/>
+
+              <rect x="84" y="390" width="392" height="172" rx="22" class="svg-card-orange"/>
+              <text x="116" y="429" class="svg-label svg-ochre">Code or Egregore settings</text>
+              <text x="116" y="472" class="svg-title svg-ink">Commit on the working branch</text>
+              <line x1="116" y1="493" x2="444" y2="493" class="svg-line"/>
+              <text x="116" y="524" class="svg-body svg-soft">Push branch → open pull request</text>
+              <text x="116" y="548" class="svg-micro svg-faint">one pull request per affected repository</text>
+
+              <rect x="644" y="390" width="392" height="172" rx="22" class="svg-card-green"/>
+              <text x="676" y="429" class="svg-label svg-soil">Shared memory records</text>
+              <text x="676" y="472" class="svg-title svg-ink">Commit in the memory repository</text>
+              <line x1="676" y1="493" x2="1004" y2="493" class="svg-line"/>
+              <text x="676" y="524" class="svg-body svg-soft">Synchronize the shared main branch</text>
+              <text x="676" y="548" class="svg-micro svg-faint">available through memory/ in later sessions</text>
+
+              <path d="M280 562 C340 612 450 610 514 610" class="svg-line-ochre"/>
+              <path d="M840 562 C780 612 670 610 606 610" class="svg-line-soil"/>
+              <rect x="514" y="588" width="92" height="44" rx="22" fill="var(--ink)"/>
+              <text x="560" y="615" text-anchor="middle" fill="var(--card)" class="svg-label">Durable</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>The <code>$save</code> skill scans every changed Git root and follows its configured path.</em>
+            <span>scan · group · commit · propose</span>
+          </div>
+        </figure>
+
+        <div class="expectations" aria-label="What a user will see">
+          <div class="expectation">
+            <span class="n">01 · Start</span>
+            <b>The Egregore repository</b>
+            <p>This is the stable directory where you open a coding agent.</p>
+          </div>
+          <div class="expectation">
+            <span class="n">02 · Memory</span>
+            <b>A <code>memory/</code> path</b>
+            <p>The path points to the sibling memory repository shared across worktrees.</p>
+          </div>
+          <div class="expectation">
+            <span class="n">03 · Work</span>
+            <b>A topic branch</b>
+            <p>It appears after you describe a concrete task and starts from the configured base.</p>
+          </div>
+          <div class="expectation">
+            <span class="n">04 · Persist</span>
+            <b>A pull request after <code>$save</code></b>
+            <p>Each affected code repository receives its own review path.</p>
+          </div>
+        </div>
+
+        <div class="action-strip" aria-label="Save actions">
+          <div class="action-cell">
+            <span class="action-label">Universal</span>
+            <b>Ask the agent to save</b>
+            <p>The agent determines the repositories and prepares their Git records.</p>
+            <span class="cmd">save this</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Codex</span>
+            <b>Use the save skill</b>
+            <p>The skill commits, pushes, opens pull requests, and synchronizes memory.</p>
+            <span class="cmd">$save</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Claude Code and Pi</span>
+            <b>Use the slash form</b>
+            <p>The runtime routes the same save workflow.</p>
+            <span class="cmd">/save</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Verify</span>
+            <b>Ask what was saved</b>
+            <p>The receipt names the branch, commit, push, pull request, and memory state.</p>
+            <span class="cmd">show me the save result</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="handoff">
+        <div class="section-head">
+          <div class="section-mark">07 · Handoff</div>
+          <div>
+            <h2>A handoff gives the next session an entry point</h2>
+            <p class="lede">A handoff captures work for a named person or future session. It records the claim, current state, unresolved threads, and the place where work should resume.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>Egregore writes the handoff into shared memory and gives it a durable identity. The receiver sees it through startup or activity, then claims the continuation. Repository and branch references travel with the record, allowing the next session to recover the relevant working state.</p>
+        </div>
+
+        <figure class="visual" aria-labelledby="handoff-visual-title">
+          <figcaption class="visual-head">
+            <div>
+              <div class="visual-kicker">Visual 07 · Addressed continuation</div>
+              <h3 id="handoff-visual-title">The work moves through a durable briefing</h3>
+            </div>
+            <p class="visual-note">OSS shares the record through Git. Connect also records lineage and may prepare a notification for explicit approval.</p>
+          </figcaption>
+          <div class="visual-stage">
+            <svg viewBox="0 0 1120 680" role="img" aria-label="A current session creates a structured handoff in memory. The receiver sees it at startup or in activity, claims it, and resumes the referenced branch and repositories. Connect adds graph lineage and an approved notification path.">
+              <defs>
+                <marker id="arrow-ochre-handoff" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-ochre"/>
+                </marker>
+                <marker id="arrow-soil-handoff" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z" class="svg-soil"/>
+                </marker>
+              </defs>
+
+              <rect x="58" y="86" width="248" height="150" rx="22" class="svg-card-blue"/>
+              <text x="88" y="126" class="svg-label svg-sky">Current session</text>
+              <text x="88" y="171" class="svg-title svg-ink">Work in progress</text>
+              <text x="88" y="202" class="svg-micro svg-faint">branch · files · decisions · open work</text>
+
+              <path d="M306 161 L382 161" class="svg-line-ochre" marker-end="url(#arrow-ochre-handoff)"/>
+
+              <rect x="392" y="54" width="336" height="246" rx="24" class="svg-card-orange"/>
+              <text x="426" y="94" class="svg-label svg-ochre">Handoff record</text>
+              <text x="426" y="136" class="svg-title svg-ink">Addressed briefing</text>
+              <line x1="426" y1="156" x2="694" y2="156" class="svg-line"/>
+              <text x="426" y="188" class="svg-body svg-soft">claim and ask</text>
+              <text x="426" y="215" class="svg-body svg-soft">current state and decisions</text>
+              <text x="426" y="242" class="svg-body svg-soft">open threads and next step</text>
+              <text x="426" y="269" class="svg-body svg-soft">files, branches, and entry points</text>
+
+              <path d="M728 161 L806 161" class="svg-line-soil" marker-end="url(#arrow-soil-handoff)"/>
+
+              <rect x="816" y="86" width="248" height="150" rx="22" class="svg-card-green"/>
+              <text x="846" y="126" class="svg-label svg-soil">Shared memory</text>
+              <text x="846" y="171" class="svg-title svg-ink">Durable record</text>
+              <text x="846" y="202" class="svg-micro svg-faint">indexed · synchronized · addressable</text>
+
+              <path d="M940 236 C940 322 810 324 760 352" class="svg-line-soil" marker-end="url(#arrow-soil-handoff)"/>
+              <rect x="590" y="360" width="344" height="122" rx="20" class="svg-card"/>
+              <text x="620" y="399" class="svg-label svg-faint">Receiver’s next session</text>
+              <text x="620" y="439" class="svg-title svg-ink">Startup or activity surfaces it</text>
+              <text x="620" y="466" class="svg-micro svg-faint">review · claim · continue</text>
+
+              <path d="M590 421 L510 421" class="svg-line-ochre" marker-end="url(#arrow-ochre-handoff)"/>
+              <rect x="184" y="360" width="316" height="122" rx="20" class="svg-card-blue"/>
+              <text x="214" y="399" class="svg-label svg-sky">Claimed continuation</text>
+              <text x="214" y="439" class="svg-title svg-ink">Relevant work is restored</text>
+              <text x="214" y="466" class="svg-micro svg-faint">topic · branch · repositories · evidence</text>
+
+              <rect x="184" y="548" width="750" height="78" rx="18" class="svg-card"/>
+              <text x="216" y="579" class="svg-label svg-ochre">Connect extension</text>
+              <text x="216" y="605" class="svg-body svg-soft">Graph lineage connects handoff → session → branch → pull request. A notification remains a proposal until you approve its exact recipient, channel, and message.</text>
+            </svg>
+          </div>
+          <div class="visual-foot">
+            <em>The handoff record preserves enough state for another session to continue the work.</em>
+            <span>address · record · claim · continue</span>
+          </div>
+        </figure>
+
+        <div class="action-strip" aria-label="Handoff actions">
+          <div class="action-cell">
+            <span class="action-label">Universal</span>
+            <b>Address the continuation</b>
+            <p>Name the receiver and the work they should pick up.</p>
+            <span class="cmd">hand this to @name</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Codex</span>
+            <b>Use the handoff skill</b>
+            <p>Preview the briefing before Egregore records it.</p>
+            <span class="cmd">$handoff @name</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Claude Code and Pi</span>
+            <b>Use the slash form</b>
+            <p>The same addressed capture runs through the runtime command.</p>
+            <span class="cmd">/handoff @name</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Personal closure</span>
+            <b>Wrap a session for yourself</b>
+            <p>Use wrap for personal session closure.</p>
+            <span class="cmd">wrap this session</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="modes">
+        <div class="section-head">
+          <div class="section-mark">08 · Modes</div>
+          <div>
+            <h2>OSS and Connect share the same working grammar</h2>
+            <p class="lede">Both configurations use Git-backed memory, repository-specific work, activity, save, handoff, and the same agent-facing commands. Connect adds hosted services around that core.</p>
+          </div>
+        </div>
+
+        <div class="mode-grid" aria-label="OSS and Connect comparison">
+          <article class="mode-card oss">
+            <header>
+              <div class="visual-kicker">OSS · Local mode</div>
+              <h3>Files and Git carry the organization</h3>
+              <p>The checkout remains self-contained and inspectable.</p>
+            </header>
+            <div class="mode-row">
+              <span class="mode-label">Memory</span>
+              <p>Markdown records in the memory repository form the source of truth.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Startup and activity</span>
+              <p>Egregore reads shared files, Git history, repository state, and available pull request data.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Handoffs</span>
+              <p>The addressed record is committed to memory and shared through Git synchronization.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Search and views</span>
+              <p>Agents search the memory corpus and render browser artifacts on the local machine.</p>
+            </div>
+          </article>
+
+          <article class="mode-card connect">
+            <header>
+              <div class="visual-kicker">Egregore Connect</div>
+              <h3>Hosted services extend the same record</h3>
+              <p>Git evidence remains present as the graph adds relationships and live coordination.</p>
+            </header>
+            <div class="mode-row">
+              <span class="mode-label">Memory</span>
+              <p>The same records project into an organization graph while canonical files remain available.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Startup and activity</span>
+              <p>Relationship status, lineage, and hosted service health enrich the current view.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Handoffs</span>
+              <p>The record gains graph lineage, and Egregore may prepare a notification proposal for approval.</p>
+            </div>
+            <div class="mode-row">
+              <span class="mode-label">Search and views</span>
+              <p>Relationship-aware retrieval, hosted dashboards, and published coordination surfaces become available.</p>
+            </div>
+          </article>
+        </div>
+
+        <a class="context-link" href="https://egregore.xyz/how-egregore-keeps-context-alive/" target="_blank" rel="noopener">
+          <span class="sigil">C</span>
+          <span>
+            <b>See how active context is assembled</b>
+            <small>The companion artifact follows files, Git, graph relationships, and evidence paths.</small>
+          </span>
+          <span class="go">Open context note ↗</span>
+        </a>
+
+        <div class="action-strip" aria-label="Mode actions">
+          <div class="action-cell">
+            <span class="action-label">OSS setup</span>
+            <b>Create a local instance</b>
+            <p>The default installer creates the Git-backed configuration.</p>
+            <span class="cmd">npx -y create-egregore@latest</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Connect setup</span>
+            <b>Use the hosted flow</b>
+            <p>Connect instances arrive through the organization’s hosted setup.</p>
+            <span class="cmd">npx -y create-egregore@latest --connected</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">See</span>
+            <b>Read the mode badge</b>
+            <p>The launcher identifies an instance as Local or Connected.</p>
+            <span class="cmd">egregore</span>
+          </div>
+          <div class="action-cell">
+            <span class="action-label">Diagnose</span>
+            <b>Check available services</b>
+            <p>The report follows the capabilities configured for that mode.</p>
+            <span class="cmd">run checkup</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="control">
+        <div class="section-head">
+          <div class="section-mark">09 · Control</div>
+          <div>
+            <h2>The CLI keeps every action close</h2>
+            <p class="lede">Natural language is the common interface across agent runtimes. Shortcuts make repeated actions faster, while the launcher settings panel changes the instance itself.</p>
+          </div>
+        </div>
+
+        <div class="copy">
+          <p>Open the launcher with <code>egregore</code> and press <code>s</code> on the selected instance to manage hosted artifacts, repositories, administrators, and people. Direct settings commands expose the same changes for scripted use.</p>
+        </div>
+
+        <div class="control-grid" aria-label="Egregore command reference">
+          <div class="control-card" data-index="1">
+            <span class="control-label">Open</span>
+            <b>Launch an instance</b>
+            <p><span class="cmd">egregore</span> opens the instance and agent selector.</p>
+          </div>
+          <div class="control-card" data-index="2">
+            <span class="control-label">Catch up</span>
+            <b>Read current activity</b>
+            <p>Say <span class="cmd">show activity</span> or use the runtime shortcut.</p>
+          </div>
+          <div class="control-card" data-index="3">
+            <span class="control-label">Persist</span>
+            <b>Save session work</b>
+            <p>Say <span class="cmd">save this</span> to create the required commits and pull requests.</p>
+          </div>
+          <div class="control-card" data-index="4">
+            <span class="control-label">Coordinate</span>
+            <b>Hand work onward</b>
+            <p>Say <span class="cmd">hand this to @name</span> and review the briefing.</p>
+          </div>
+          <div class="control-card" data-index="5">
+            <span class="control-label">Repositories</span>
+            <b>Add or remove codebases</b>
+            <p>Use <span class="cmd">egregore → s → Managed repos</span> or the direct settings verb.</p>
+          </div>
+          <div class="control-card" data-index="6">
+            <span class="control-label">People</span>
+            <b>Manage access and identity</b>
+            <p>Open <span class="cmd">egregore → s → People / Admins</span> for the selected instance.</p>
+          </div>
+          <div class="control-card" data-index="7">
+            <span class="control-label">Publishing</span>
+            <b>Control hosted artifacts</b>
+            <p>Toggle <span class="cmd">egregore → s → Hosted Artifacts</span> or run <code>egregore settings &lt;slug&gt; hosting on|off</code>.</p>
+          </div>
+          <div class="control-card" data-index="8">
+            <span class="control-label">Maintenance</span>
+            <b>Update framework and repositories</b>
+            <p>Ask the agent to <span class="cmd">update Egregore</span> or <span class="cmd">sync repositories</span>.</p>
+          </div>
+        </div>
+      </section>
+
+    </article>
+  </main>
+
+  <footer>
+    <div class="shell">Agronomic theme · Loam / Soil</div>
+  </footer>
+
+  <script>
+    (function () {
+      var modes = window.__egTheme.modes;
+      var button = document.querySelector(".theme-control");
+      var label = button.querySelector(".theme-label");
+      var icon = button.querySelector(".theme-icon");
+      var icons = { light: "☼", auto: "◐", dark: "☾" };
+
+      function update(mode) {
+        window.__egTheme.apply(mode);
+        label.textContent = mode;
+        icon.textContent = icons[mode];
+      }
+
+      var current = window.__egTheme.savedMode();
+      update(current);
+      button.addEventListener("click", function () {
+        current = modes[(modes.indexOf(current) + 1) % modes.length];
+        try { localStorage.setItem("eg-theme-mode", current); } catch (_) {}
+        update(current);
+      });
+
+      if (window.matchMedia) {
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+          if (current === "auto") update("auto");
+        });
+      }
+
+      var links = Array.prototype.slice.call(document.querySelectorAll(".topbar nav a"));
+      var sections = links.map(function (link) {
+        return document.querySelector(link.getAttribute("href"));
+      }).filter(Boolean);
+
+      if ("IntersectionObserver" in window) {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              links.forEach(function (link) {
+                link.removeAttribute("aria-current");
+                if (link.getAttribute("href") === "#" + entry.target.id) {
+                  link.setAttribute("aria-current", "true");
+                }
+              });
+            }
+          });
+        }, { rootMargin: "-20% 0px -65% 0px" });
+        sections.forEach(function (section) { observer.observe(section); });
+      }
+    }());
+  </script>
+</body>
+</html>
