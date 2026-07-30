@@ -272,6 +272,14 @@
   status = 200
   force = true
 
+# LEGO context-management review — keep the client-facing URL separate from
+# the internal organization that published the encrypted artifact.
+[[redirects]]
+  from = "/view/lego/context-management"
+  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/curvelabs/lego-context-management"
+  status = 200
+  force = true
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
