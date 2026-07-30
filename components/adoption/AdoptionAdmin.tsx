@@ -44,6 +44,7 @@ type OrgRow = {
   users: number;
   handoffs: number;
   artifacts: number;
+  knowledge_writes: number;
   signal: "active" | "lost" | "none";
   first_seen: string | null;
   last_activity: string | null;
@@ -345,6 +346,8 @@ export default function AdoptionAdmin() {
     handoffOrgs: extOrgs.filter((o) => (o.handoffs || 0) > 0).length,
     artifacts: extOrgs.reduce((n, o) => n + (o.artifacts || 0), 0),
     artifactOrgs: extOrgs.filter((o) => (o.artifacts || 0) > 0).length,
+    knowledge: extOrgs.reduce((n, o) => n + (o.knowledge_writes || 0), 0),
+    knowledgeOrgs: extOrgs.filter((o) => (o.knowledge_writes || 0) > 0).length,
   };
   const npm = data.external?.npm?.["create-egregore"];
   const npmRaw = npm?.downloads_raw?.value ?? null;
@@ -432,25 +435,33 @@ export default function AdoptionAdmin() {
               across {act.handoffOrgs} {act.handoffOrgs === 1 ? "org" : "orgs"}
             </span>
           </div>
-          <div className="ad-step">
-            <span className="ad-step-n">{nf.format(act.artifacts)}</span>
-            <span className="ad-step-l">Knowledge</span>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">{nf.format(act.knowledge)}</span>
+            <span className="ad-step-l">Knowledge written</span>
             <span className="ad-step-s">
-              {act.artifacts === 0
-                ? "none published externally"
-                : `across ${act.artifactOrgs} orgs`}
+              across {act.knowledgeOrgs}{" "}
+              {act.knowledgeOrgs === 1 ? "org" : "orgs"}
             </span>
           </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(act.artifacts)}</span>
+            <span className="ad-step-l">Published here</span>
+            <span className="ad-step-s">hosted on egregore.xyz</span>
+          </div>
         </div>
-        {act.artifacts === 0 ? (
-          <p className="ad-note">
-            <strong>No external organisation has published a knowledge
-            artifact.</strong> All 1,541 in the registry belong to us. Handoffs
-            are the only collaborative primitive with any external usage at all
-            — {nf.format(act.handoffs)} of 150. That gap is the product
-            question worth answering, and padding it would hide it.
-          </p>
-        ) : null}
+        <p className="ad-note">
+          <strong>Written and published are different things.</strong>{" "}
+          {nf.format(act.knowledge)} knowledge writes — wraps, reflects,
+          handoffs, meetings — happened across {act.knowledgeOrgs} external
+          orgs. Those land as markdown in each org&apos;s own memory repo, on
+          their own GitHub, which we cannot read and should not. That is the
+          product working as designed.{" "}
+          {act.artifacts === 0
+            ? "Zero were published to our hosting, which measures our surface, not their behaviour."
+            : `${nf.format(act.artifacts)} were also published to our hosting.`}{" "}
+          Command telemetry is agent-emitted, so treat the write count as a
+          floor.
+        </p>
       </section>
 
       <section>
