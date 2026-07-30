@@ -42,6 +42,9 @@ type OrgRow = {
   sessions_total: number;
   active_days: number;
   users: number;
+  handoffs: number;
+  artifacts: number;
+  signal: "active" | "lost" | "none";
   first_seen: string | null;
   last_activity: string | null;
   commands: string | null;
@@ -73,6 +76,10 @@ type AdminData = {
   orgs: OrgRow[];
   versions: VersionRow[];
   coverage: { installs_observed: number; orgs_ever_reporting: number };
+  external?: Record<
+    string,
+    Record<string, Record<string, { value: number | null }>>
+  >;
 };
 
 const nf = new Intl.NumberFormat("en-US");
@@ -91,15 +98,36 @@ function ago(iso: string | null): number | null {
   return Math.floor((Date.now() - d.getTime()) / 86_400_000);
 }
 
-// Status is derived from behaviour, not from a field. Anything else would
-// be us deciding who counts.
-function status(o: OrgRow): { label: string; cls: string } {
-  if (o.is_internal) return { label: "ours", cls: "is-ours" };
+// Status comes from `signal` (see migration 035), not from absence of data.
+// The old logic printed "never ran" whenever last_activity was null, which
+// asserted the customer did nothing. We cannot know that: bin/init-gh.sh
+// installs never register, DO_NOT_TRACK hides everything, and five orgs have
+// health check-ins with zero session_start events — a check-in fires AT
+// session start, so those provably ran and we lost the record.
+function status(o: OrgRow): { label: string; cls: string; title: string } {
+  if (o.is_internal)
+    return { label: "ours", cls: "is-ours", title: "Our own org or a test fixture" };
+  if (o.signal === "lost")
+    return {
+      label: "signal lost",
+      cls: "is-warn",
+      title:
+        "Provably ran — health check-ins or other telemetry exist — but no session events reached us. Our instrumentation failed, not their usage.",
+    };
+  if (o.signal === "none")
+    return {
+      label: "unknown",
+      cls: "is-unknown",
+      title:
+        "No telemetry of any kind. They may be using Egregore via an untracked install path (bin/init-gh.sh never registers) or with DO_NOT_TRACK set. We cannot tell.",
+    };
   const d = ago(o.last_activity);
-  if (d === null) return { label: "never ran", cls: "is-gone" };
-  if (o.active_days >= 10 && d <= 14) return { label: "using it", cls: "is-live" };
-  if (d <= 14) return { label: "trialling", cls: "is-trial" };
-  return { label: `quiet ${d}d`, cls: "is-gone" };
+  if (d === null) return { label: "unknown", cls: "is-unknown", title: "No activity recorded" };
+  if (o.active_days >= 10 && d <= 14)
+    return { label: "using it", cls: "is-live", title: `${o.active_days} active days` };
+  if (d <= 14)
+    return { label: "trialling", cls: "is-trial", title: `${o.active_days} active day(s), last seen ${d}d ago` };
+  return { label: `quiet ${d}d`, cls: "is-gone", title: `Last active ${d} days ago` };
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -308,6 +336,20 @@ export default function AdoptionAdmin() {
   const returned = withUse.filter((o) => o.active_days > 1).length;
   const deepest = Math.max(1, ...withUse.map((o) => o.active_days));
 
+  // Totals computed from the rows we already have — no extra request.
+  const extOrgs = data.orgs.filter((o) => !o.is_internal);
+  const act = {
+    egregores: extOrgs.length,
+    sessions: extOrgs.reduce((n, o) => n + (o.sessions_total || 0), 0),
+    handoffs: extOrgs.reduce((n, o) => n + (o.handoffs || 0), 0),
+    handoffOrgs: extOrgs.filter((o) => (o.handoffs || 0) > 0).length,
+    artifacts: extOrgs.reduce((n, o) => n + (o.artifacts || 0), 0),
+    artifactOrgs: extOrgs.filter((o) => (o.artifacts || 0) > 0).length,
+  };
+  const npm = data.external?.npm?.["create-egregore"];
+  const npmRaw = npm?.downloads_raw?.value ?? null;
+  const npmOrganic = npm?.downloads_organic?.value ?? null;
+
   return (
     <Shell>
       <section className="ad-hero">
@@ -368,6 +410,107 @@ export default function AdoptionAdmin() {
       <section>
         <div className="ad-sec">
           <span className="ad-sec-num">§ 02</span>
+          <span className="ad-sec-label">Activity</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">external, all time</span>
+        </div>
+        <div className="ad-funnel">
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(act.egregores)}</span>
+            <span className="ad-step-l">Egregores</span>
+            <span className="ad-step-s">registered</span>
+          </div>
+          <div className="ad-step is-key">
+            <span className="ad-step-n">{nf.format(act.sessions)}</span>
+            <span className="ad-step-l">Sessions</span>
+            <span className="ad-step-s">work sessions started</span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(act.handoffs)}</span>
+            <span className="ad-step-l">Handoffs</span>
+            <span className="ad-step-s">
+              across {act.handoffOrgs} {act.handoffOrgs === 1 ? "org" : "orgs"}
+            </span>
+          </div>
+          <div className="ad-step">
+            <span className="ad-step-n">{nf.format(act.artifacts)}</span>
+            <span className="ad-step-l">Knowledge</span>
+            <span className="ad-step-s">
+              {act.artifacts === 0
+                ? "none published externally"
+                : `across ${act.artifactOrgs} orgs`}
+            </span>
+          </div>
+        </div>
+        {act.artifacts === 0 ? (
+          <p className="ad-note">
+            <strong>No external organisation has published a knowledge
+            artifact.</strong> All 1,541 in the registry belong to us. Handoffs
+            are the only collaborative primitive with any external usage at all
+            — {nf.format(act.handoffs)} of 150. That gap is the product
+            question worth answering, and padding it would hide it.
+          </p>
+        ) : null}
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 03</span>
+          <span className="ad-sec-label">create-egregore</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">npm vs reality</span>
+        </div>
+        <div className="ad-tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Measure</th>
+                <th className="num">30 days</th>
+                <th>What it actually counts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="ad-org">npm downloads, raw</td>
+                <td className="num">{npmRaw !== null ? nf.format(npmRaw) : "—"}</td>
+                <td className="ad-who">Every fetch, including mirrors and scanners</td>
+              </tr>
+              <tr>
+                <td className="ad-org">npm, publish days excluded</td>
+                <td className="num">{npmOrganic !== null ? nf.format(npmOrganic) : "—"}</td>
+                <td className="ad-who">Removes the release spike, not the baseline</td>
+              </tr>
+              <tr>
+                <td className="ad-org">Registrations</td>
+                <td className="num">{nf.format(ext.installs_window)}</td>
+                <td className="ad-who">Setup completed and org created — verifiable</td>
+              </tr>
+              <tr>
+                <td className="ad-org">Ran a session</td>
+                <td className="num">{nf.format(ext.orgs_active_window)}</td>
+                <td className="ad-who">Opened Egregore and worked in it</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="ad-note">
+          <strong>The npm figures cannot be reconciled, and that is the finding.</strong>{" "}
+          In one week <strong>82 distinct versions</strong> of{" "}
+          <code>create-egregore</code> were downloaded, including releases
+          months old that no human would install by hand. Real users run{" "}
+          <code>npx create-egregore@latest</code> and always get the newest.
+          Even the publish-day-excluded number is roughly{" "}
+          {npmOrganic && ext.installs_window
+            ? Math.round(npmOrganic / ext.installs_window)
+            : "50"}
+          × the registrations. There is no threshold at which npm becomes a
+          measure of installs — it is shown here only so nobody quotes it.
+        </p>
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 04</span>
           <span className="ad-sec-label">Every organisation</span>
           <span className="ad-sec-rule" />
           <button
@@ -387,6 +530,7 @@ export default function AdoptionAdmin() {
                 <th className="num">Active days</th>
                 <th style={{ width: 110 }}>Depth</th>
                 <th className="num">Sessions</th>
+                <th className="num">Handoffs</th>
                 <th>First</th>
                 <th>Last</th>
                 <th>Status</th>
@@ -422,10 +566,13 @@ export default function AdoptionAdmin() {
                     <td className="num">
                       {o.sessions_total ? nf.format(o.sessions_total) : "—"}
                     </td>
+                    <td className="num ad-dim">{o.handoffs || "—"}</td>
                     <td className="ad-who">{day(o.first_seen)}</td>
                     <td className="ad-who">{day(o.last_activity)}</td>
                     <td>
-                      <span className={`ad-chip ${s.cls}`}>{s.label}</span>
+                      <span className={`ad-chip ${s.cls}`} title={s.title}>
+                        {s.label}
+                      </span>
                     </td>
                     <td className="ad-who">
                       {o.commands
@@ -451,7 +598,7 @@ export default function AdoptionAdmin() {
 
       <section>
         <div className="ad-sec">
-          <span className="ad-sec-num">§ 03</span>
+          <span className="ad-sec-num">§ 05</span>
           <span className="ad-sec-label">Versions in the wild</span>
           <span className="ad-sec-rule" />
           <span className="ad-sec-label">of those reporting</span>
@@ -488,7 +635,7 @@ export default function AdoptionAdmin() {
 
       <section>
         <div className="ad-sec">
-          <span className="ad-sec-num">§ 04</span>
+          <span className="ad-sec-num">§ 06</span>
           <span className="ad-sec-label">What this cannot see</span>
           <span className="ad-sec-rule" />
         </div>

@@ -213,6 +213,22 @@
 .ad-chip.is-gone { border-color: var(--line-2); color: var(--muted-2); }
 .ad-chip.is-ours { border-color: var(--line-2); color: var(--muted-2); }
 
+/* Signal-quality chips.
+   "unknown" must not read as a negative verdict — it means we cannot see,
+   not that the customer did nothing. So: muted, dashed, deliberately not red.
+   "signal lost" is OUR instrumentation failing, not a customer state, so it
+   carries the warn colour to stay visible as a bug worth fixing. */
+.ad-chip.is-warn {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: #fbf3e6;
+}
+.ad-chip.is-unknown {
+  border-color: var(--line-2);
+  color: var(--muted-2);
+  border-style: dashed;
+}
+
 /* ── Summary line (not vanity tiles) ───────────────────────── */
 
 .ad-funnel {
