@@ -458,3 +458,28 @@
   font-family: var(--mono); font-size: 11px; color: var(--muted);
 }
 .ad-pager .grp { display: flex; gap: 6px; }
+
+/* ── Layout reconciliation ──────────────────────────────────
+   The (setup) layout renders a centred 752px header with the site logo.
+   This page breaks full-bleed to 100vw, which distorts that flex parent
+   and pushes the logo into the top-left corner. The page carries its own
+   masthead, so the layout header is redundant here as well as misplaced —
+   hide it, and clamp horizontal overflow the breakout can cause. */
+body:has(.ad) .setup-header { display: none; }
+body:has(.ad) { overflow-x: hidden; }
+
+/* ── Refresh spinner ────────────────────────────────────────
+   Window changes refetch. Without feedback the page sits on stale numbers
+   for a second and the click reads as ignored — the exact failure the
+   filters already had once. */
+.ad-spin {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid var(--line-2); border-top-color: var(--accent);
+  border-radius: 50%; animation: ad-rot .7s linear infinite;
+}
+@keyframes ad-rot { to { transform: rotate(360deg); } }
+.ad-loading {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--accent-deep);
+}
+.ad-stale { opacity: .45; transition: opacity .15s; pointer-events: none; }

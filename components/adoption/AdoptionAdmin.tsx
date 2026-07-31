@@ -265,6 +265,7 @@ export default function AdoptionAdmin() {
   // user never loses their place.
   const [focus, setFocus] = useState<{ label: string; test: (o: OrgRow) => boolean } | null>(null);
   const [page, setPage] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const PAGE = 10;
 
   // Drilling down from a chart must land the user on the result, otherwise
@@ -278,6 +279,7 @@ export default function AdoptionAdmin() {
   }
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     const token =
       typeof window !== "undefined"
         ? window.sessionStorage.getItem(TOKEN_KEY)
@@ -285,6 +287,7 @@ export default function AdoptionAdmin() {
     if (!token) {
       setNeedsAuth(true);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
     try {
@@ -300,18 +303,22 @@ export default function AdoptionAdmin() {
             : "Session expired — sign in again.",
         );
         setLoading(false);
+      setRefreshing(false);
         return;
       }
       if (!resp.ok) {
         setDetail(`Endpoint returned HTTP ${resp.status}.`);
         setLoading(false);
+      setRefreshing(false);
         return;
       }
       setData((await resp.json()) as AdminData);
       setLoading(false);
+      setRefreshing(false);
     } catch {
       setDetail("Could not reach the API.");
       setLoading(false);
+      setRefreshing(false);
     }
   }, [windowDays]);
 
@@ -482,6 +489,11 @@ export default function AdoptionAdmin() {
             </button>
           ))}
         </div>
+        {refreshing ? (
+          <span className="ad-loading" style={{ marginLeft: "auto" }}>
+            <span className="ad-spin" /> loading…
+          </span>
+        ) : null}
         {focus ? (
           <span className="ad-focus">
             showing: {focus.label}
@@ -497,7 +509,7 @@ export default function AdoptionAdmin() {
           <span className="ad-sec-rule" />
           <span className="ad-sec-label">external only</span>
         </div>
-        <div className="ad-funnel">
+        <div className={`ad-funnel${refreshing ? " ad-stale" : ""}`}>
           <div
             className="ad-step ad-clickable"
             onClick={() => drill("registered", () => true)}
@@ -553,7 +565,7 @@ export default function AdoptionAdmin() {
           <span className="ad-sec-rule" />
           <span className="ad-sec-label">click any bar to list the orgs</span>
         </div>
-        <div className="ad-charts">
+        <div className={`ad-charts${refreshing ? " ad-stale" : ""}`}>
           <div className="ad-chart">
             <h4>Activation by registration month</h4>
             <div className="sub">All time, by month of registration — the window filter does not apply here.</div>
