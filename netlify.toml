@@ -9,11 +9,6 @@
   function = "emissary-metrics"
   path = "/api/emissary-metrics"
 
-# Public adoption dashboard (/adoption). Same secret-injection pattern as
-# emissary-metrics — the static export has no runtime to hold a key.
-[[edge_functions]]
-  function = "adoption-metrics"
-  path = "/api/adoption-metrics"
 
 # Emissary platform namespace (spec §2.3): /@{handle},
 # /@{handle}/{slug}, /@{handle}/{slug}/raw → Railway. Redirect
