@@ -288,7 +288,7 @@ export default function AdoptionAdmin() {
       return;
     }
     try {
-      const resp = await fetch(`${API_URL}/api/admin/adoption?window_days=${windowDays}`, {
+      const resp = await fetch(`${API_URL}/api/admin/adoption?window_days=${windowDays}&series_days=${Math.max(windowDays, 14)}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -365,6 +365,7 @@ export default function AdoptionAdmin() {
   // returns one payload and every chart is a view over it, so filtering
   // never costs a round trip.
   const month = (iso: string) => (iso || "").slice(0, 7);
+  const winLabel = windowDays === 30 ? "30 days" : windowDays === 90 ? "90 days" : "12 months";
 
   // 1. cohort activation — the chart that stops 71→18 being misread
   const cohorts = Array.from(
@@ -503,8 +504,8 @@ export default function AdoptionAdmin() {
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(ext.installs_total)}</span>
-            <span className="ad-step-l">Registered</span>
-            <span className="ad-step-s">completed setup</span>
+            <span className="ad-step-l">Registered · all time</span>
+            <span className="ad-step-s">{nf.format(ext.installs_window)} in the last {winLabel}</span>
           </div>
           <div
             className="ad-step ad-clickable"
@@ -512,7 +513,7 @@ export default function AdoptionAdmin() {
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(ext.orgs_ever_active)}</span>
-            <span className="ad-step-l">Ever ran a session</span>
+            <span className="ad-step-l">Ran a session · all time</span>
             <span className="ad-step-s">
               {ext.installs_total - ext.orgs_ever_active} never started
             </span>
@@ -523,14 +524,14 @@ export default function AdoptionAdmin() {
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(returned)}</span>
-            <span className="ad-step-l">Came back</span>
+            <span className="ad-step-l">Came back · all time</span>
             <span className="ad-step-s">active on more than one day</span>
           </div>
           <div className="ad-step is-key">
             <span className="ad-step-n">
               {nf.format(ext.orgs_active_window)}
             </span>
-            <span className="ad-step-l">Active this month</span>
+            <span className="ad-step-l">Active in {winLabel}</span>
             <span className="ad-step-s">
               {nf.format(ext.users_active_window)} people ·{" "}
               {nf.format(ext.sessions_window)} sessions
@@ -555,7 +556,7 @@ export default function AdoptionAdmin() {
         <div className="ad-charts">
           <div className="ad-chart">
             <h4>Activation by registration month</h4>
-            <div className="sub">Where each cohort ended up. The overall figure averages these.</div>
+            <div className="sub">All time, by month of registration — the window filter does not apply here.</div>
             <div className="ad-cols">
               {cohorts.map((c) => (
                 <div key={c.m} className="ad-colw">
@@ -590,7 +591,7 @@ export default function AdoptionAdmin() {
 
           <div className="ad-chart">
             <h4>Time from registering to first session</h4>
-            <div className="sub">If they don&apos;t start on the first day, they almost never start.</div>
+            <div className="sub">All time. If they don&apos;t start on the first day, they almost never start.</div>
             <div className="ad-hbars">
               {ttf.map((t) => (
                 <div
@@ -614,7 +615,7 @@ export default function AdoptionAdmin() {
 
           <div className="ad-chart">
             <h4>Depth — active days per organisation</h4>
-            <div className="sub">Days they showed up, not sessions. Top 8.</div>
+            <div className="sub">All time, in days they showed up rather than sessions. Top 8.</div>
             <div className="ad-hbars">
               {depth.map((o) => (
                 <div
@@ -638,7 +639,7 @@ export default function AdoptionAdmin() {
 
           <div className="ad-chart">
             <h4>Sessions per week — external</h4>
-            <div className="sub">{weeks.length} weeks. The only growth line we have.</div>
+            <div className="sub">Last {winLabel} · {weeks.length} weeks. Follows the window filter.</div>
             <div className="ad-spark">
               {weeks.map((w) => (
                 <span
