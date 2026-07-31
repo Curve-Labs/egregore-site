@@ -432,15 +432,15 @@
   font-family: var(--mono); font-size: 11px; color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.ad-htrack { height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
-.ad-hfill { height: 100%; background: var(--accent); border-radius: 3px; }
+.ad-htrack { display: block; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.ad-hfill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 3px; }
 .ad-hfill.deep { background: var(--accent-deep); }
 .ad-hfill.dim { background: var(--line-2); }
 .ad-hval { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; }
 
 /* sparkline-ish weekly columns */
 .ad-spark { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
-.ad-sbar { flex: 1; min-height: 1px; background: var(--accent); border-radius: 2px 2px 0 0; }
+.ad-sbar { display: block; flex: 1; min-height: 1px; background: var(--accent); border-radius: 2px 2px 0 0; }
 .ad-legend { display: flex; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 .ad-lg { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .ad-swatch { width: 9px; height: 9px; border-radius: 2px; }
@@ -450,3 +450,11 @@
 
 .ad-clickable { cursor: pointer; }
 .ad-clickable:hover { background: var(--bg); }
+
+/* pagination */
+.ad-pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+.ad-pager .grp { display: flex; gap: 6px; }

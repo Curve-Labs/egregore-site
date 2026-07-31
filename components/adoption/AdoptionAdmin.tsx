@@ -264,6 +264,18 @@ export default function AdoptionAdmin() {
   // rather than opening a modal — one surface, always the same one, so the
   // user never loses their place.
   const [focus, setFocus] = useState<{ label: string; test: (o: OrgRow) => boolean } | null>(null);
+  const [page, setPage] = useState(0);
+  const PAGE = 10;
+
+  // Drilling down from a chart must land the user on the result, otherwise
+  // the table is off-screen and the click reads as a no-op.
+  function drill(label: string, test: (o: OrgRow) => boolean) {
+    setFocus({ label, test });
+    setPage(0);
+    requestAnimationFrame(() =>
+      document.getElementById("orgs")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
 
   const load = useCallback(async () => {
     const token =
@@ -340,14 +352,14 @@ export default function AdoptionAdmin() {
       </Shell>
     );
 
-  const ext = data.summary.external;
+  const ext = showOurs ? data.summary.all : data.summary.external;
   const all = data.orgs
     .filter((o) => showOurs || !o.is_internal)
     .filter((o) => (focus ? focus.test(o) : true));
   const withUse = all.filter((o) => o.sessions_total > 0);
   const returned = withUse.filter((o) => o.active_days > 1).length;
   const deepest = Math.max(1, ...withUse.map((o) => o.active_days));
-  const extOrgs = data.orgs.filter((o) => !o.is_internal);
+  const extOrgs = data.orgs.filter((o) => showOurs || !o.is_internal);
 
   // ── Derived series. All computed from rows already fetched — the API
   // returns one payload and every chart is a view over it, so filtering
@@ -452,8 +464,8 @@ export default function AdoptionAdmin() {
         </div>
         <div className="ad-fgroup">
           <span className="ad-flabel">Scope</span>
-          <button className={`ad-pill${!showOurs ? " on" : ""}`} onClick={() => setShowOurs(false)}>External</button>
-          <button className={`ad-pill${showOurs ? " on" : ""}`} onClick={() => setShowOurs(true)}>Include ours</button>
+          <button className={`ad-pill${!showOurs ? " on" : ""}`} onClick={() => { setShowOurs(false); setPage(0); }}>External</button>
+          <button className={`ad-pill${showOurs ? " on" : ""}`} onClick={() => { setShowOurs(true); setPage(0); }}>Include ours</button>
         </div>
         <div className="ad-fgroup">
           <span className="ad-flabel">Signal</span>
@@ -461,7 +473,9 @@ export default function AdoptionAdmin() {
             <button
               key={sig}
               className={`ad-pill${focus?.label === sig ? " on" : ""}`}
-              onClick={() => setFocus(focus?.label === sig ? null : { label: sig, test: (o) => o.signal === sig })}
+              onClick={() =>
+                focus?.label === sig ? setFocus(null) : drill(sig, (o) => o.signal === sig)
+              }
             >
               {sig === "none" ? "unknown" : sig}
             </button>
@@ -485,7 +499,7 @@ export default function AdoptionAdmin() {
         <div className="ad-funnel">
           <div
             className="ad-step ad-clickable"
-            onClick={() => setFocus({ label: "registered", test: () => true })}
+            onClick={() => drill("registered", () => true)}
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(ext.installs_total)}</span>
@@ -494,7 +508,7 @@ export default function AdoptionAdmin() {
           </div>
           <div
             className="ad-step ad-clickable"
-            onClick={() => setFocus({ label: "ran a session", test: (o) => o.sessions_total > 0 })}
+            onClick={() => drill("ran a session", (o) => o.sessions_total > 0)}
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(ext.orgs_ever_active)}</span>
@@ -505,7 +519,7 @@ export default function AdoptionAdmin() {
           </div>
           <div
             className="ad-step is-key ad-clickable"
-            onClick={() => setFocus({ label: "returned", test: (o) => o.active_days > 1 })}
+            onClick={() => drill("returned", (o) => o.active_days > 1)}
             title="Click to list these organisations"
           >
             <span className="ad-step-n">{nf.format(returned)}</span>
@@ -554,10 +568,10 @@ export default function AdoptionAdmin() {
                           style={{ flex: c[k] }}
                           title={`${c.m} · ${k === "none" ? "unknown" : k}: ${c[k]}`}
                           onClick={() =>
-                            setFocus({
-                              label: `${c.m} · ${k === "none" ? "unknown" : k}`,
-                              test: (o) => o.created_at.slice(0, 7) === c.m && o.signal === k,
-                            })
+                            drill(
+                              `${c.m} · ${k === "none" ? "unknown" : k}`,
+                              (o) => o.created_at.slice(0, 7) === c.m && o.signal === k,
+                            )
                           }
                         />
                       ) : null,
@@ -582,7 +596,7 @@ export default function AdoptionAdmin() {
                 <div
                   key={t.k}
                   className="ad-hrow"
-                  onClick={() => setFocus({ label: t.label, test: (o) => ttfBucket(o) === t.k })}
+                  onClick={() => drill(t.label, (o) => ttfBucket(o) === t.k)}
                   title="Click to list these organisations"
                 >
                   <span className="ad-hlabel">{t.label}</span>
@@ -606,7 +620,7 @@ export default function AdoptionAdmin() {
                 <div
                   key={o.slug}
                   className="ad-hrow"
-                  onClick={() => setFocus({ label: o.slug, test: (x) => x.slug === o.slug })}
+                  onClick={() => drill(o.slug, (x) => x.slug === o.slug)}
                   title={`${o.sessions_total} sessions`}
                 >
                   <span className="ad-hlabel">{o.slug}</span>
@@ -743,7 +757,7 @@ export default function AdoptionAdmin() {
         </p>
       </section>
 
-      <section>
+      <section id="orgs">
         <div className="ad-sec">
           <span className="ad-sec-num">§ 05</span>
           <span className="ad-sec-label">
@@ -779,7 +793,7 @@ export default function AdoptionAdmin() {
               </tr>
             </thead>
             <tbody>
-              {all.map((o) => {
+              {all.slice(page * PAGE, page * PAGE + PAGE).map((o) => {
                 const s = status(o);
                 return (
                   <tr key={o.slug}>
@@ -829,6 +843,25 @@ export default function AdoptionAdmin() {
               })}
             </tbody>
           </table>
+          {all.length > PAGE ? (
+            <div className="ad-pager">
+              <span>
+                {page * PAGE + 1}–{Math.min((page + 1) * PAGE, all.length)} of {all.length}
+              </span>
+              <span className="grp">
+                <button className="ad-pill" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                  ← prev
+                </button>
+                <button
+                  className="ad-pill"
+                  disabled={(page + 1) * PAGE >= all.length}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  next →
+                </button>
+              </span>
+            </div>
+          ) : null}
         </div>
         <p className="ad-note">
           <strong>People come from memberships, not the registering handle.</strong>{" "}
