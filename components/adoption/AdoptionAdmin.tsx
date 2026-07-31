@@ -77,6 +77,10 @@ type AdminData = {
   orgs: OrgRow[];
   versions: VersionRow[];
   coverage: { installs_observed: number; orgs_ever_reporting: number };
+  timeseries?: {
+    external: { day: string; installs: number; active_orgs: number; active_users: number; sessions: number }[];
+    all: { day: string; installs: number; active_orgs: number; active_users: number; sessions: number }[];
+  };
   external?: Record<
     string,
     Record<string, Record<string, { value: number | null }>>
@@ -255,6 +259,11 @@ export default function AdoptionAdmin() {
   const [detail, setDetail] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [showOurs, setShowOurs] = useState(false);
+  const [windowDays, setWindowDays] = useState(30);
+  // Drill-down. Clicking any number or chart segment narrows the table below
+  // rather than opening a modal — one surface, always the same one, so the
+  // user never loses their place.
+  const [focus, setFocus] = useState<{ label: string; test: (o: OrgRow) => boolean } | null>(null);
 
   const load = useCallback(async () => {
     const token =
@@ -267,7 +276,7 @@ export default function AdoptionAdmin() {
       return;
     }
     try {
-      const resp = await fetch(`${API_URL}/api/admin/adoption`, {
+      const resp = await fetch(`${API_URL}/api/admin/adoption?window_days=${windowDays}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -292,7 +301,7 @@ export default function AdoptionAdmin() {
       setDetail("Could not reach the API.");
       setLoading(false);
     }
-  }, []);
+  }, [windowDays]);
 
   useEffect(() => {
     void load();
@@ -332,13 +341,79 @@ export default function AdoptionAdmin() {
     );
 
   const ext = data.summary.external;
-  const all = data.orgs.filter((o) => showOurs || !o.is_internal);
+  const all = data.orgs
+    .filter((o) => showOurs || !o.is_internal)
+    .filter((o) => (focus ? focus.test(o) : true));
   const withUse = all.filter((o) => o.sessions_total > 0);
   const returned = withUse.filter((o) => o.active_days > 1).length;
   const deepest = Math.max(1, ...withUse.map((o) => o.active_days));
+  const extOrgs = data.orgs.filter((o) => !o.is_internal);
+
+  // ── Derived series. All computed from rows already fetched — the API
+  // returns one payload and every chart is a view over it, so filtering
+  // never costs a round trip.
+  const month = (iso: string) => (iso || "").slice(0, 7);
+
+  // 1. cohort activation — the chart that stops 71→18 being misread
+  const cohorts = Array.from(
+    extOrgs.reduce((m, o) => {
+      const k = month(o.created_at);
+      const c = m.get(k) || { m: k, active: 0, lost: 0, none: 0, total: 0 };
+      c[o.signal] += 1;
+      c.total += 1;
+      m.set(k, c);
+      return m;
+    }, new Map<string, { m: string; active: number; lost: number; none: number; total: number }>()),
+  )
+    .map(([, v]) => v)
+    .sort((a, b) => a.m.localeCompare(b.m));
+  const cohortPeak = Math.max(1, ...cohorts.map((c) => c.total));
+
+  // 2. time to first session — you win or lose people during the install
+  const TTF = [
+    { k: "hour", label: "Within the hour" },
+    { k: "day", label: "Same day" },
+    { k: "week", label: "Within a week" },
+    { k: "later", label: "Later" },
+    { k: "never", label: "Never" },
+  ] as const;
+  function ttfBucket(o: OrgRow): string {
+    if (!o.first_seen) return "never";
+    const d = new Date(o.first_seen).getTime() - new Date(o.created_at).getTime();
+    if (d < 3_600_000) return "hour";
+    if (d < 86_400_000) return "day";
+    if (d < 7 * 86_400_000) return "week";
+    return "later";
+  }
+  const ttf = TTF.map((t) => ({
+    ...t,
+    n: extOrgs.filter((o) => ttfBucket(o) === t.k).length,
+  }));
+  const ttfPeak = Math.max(1, ...ttf.map((t) => t.n));
+
+  // 3. depth — active days, the honest adoption signal
+  const depth = [...extOrgs]
+    .filter((o) => o.active_days > 0)
+    .sort((a, b) => b.active_days - a.active_days)
+    .slice(0, 8);
+
+  // 4. sessions over time — weekly buckets from the daily series
+  const series = data.timeseries?.external ?? [];
+  const weeks: { w: string; n: number }[] = [];
+  series.forEach((p, i) => {
+    if (i % 7 === 0) weeks.push({ w: p.day, n: 0 });
+    if (weeks.length) weeks[weeks.length - 1].n += p.sessions || 0;
+  });
+  const weekPeak = Math.max(1, ...weeks.map((w) => w.n));
+
+  // 5. coverage — every other chart rests on this
+  const cov = {
+    active: extOrgs.filter((o) => o.signal === "active").length,
+    lost: extOrgs.filter((o) => o.signal === "lost").length,
+    none: extOrgs.filter((o) => o.signal === "none").length,
+  };
 
   // Totals computed from the rows we already have — no extra request.
-  const extOrgs = data.orgs.filter((o) => !o.is_internal);
   const act = {
     egregores: extOrgs.length,
     sessions: extOrgs.reduce((n, o) => n + (o.sessions_total || 0), 0),
@@ -366,6 +441,40 @@ export default function AdoptionAdmin() {
         </p>
       </section>
 
+      <div className="ad-filters">
+        <div className="ad-fgroup">
+          <span className="ad-flabel">Window</span>
+          {[30, 90, 365].map((d) => (
+            <button key={d} className={`ad-pill${windowDays === d ? " on" : ""}`} onClick={() => setWindowDays(d)}>
+              {d === 365 ? "1y" : `${d}d`}
+            </button>
+          ))}
+        </div>
+        <div className="ad-fgroup">
+          <span className="ad-flabel">Scope</span>
+          <button className={`ad-pill${!showOurs ? " on" : ""}`} onClick={() => setShowOurs(false)}>External</button>
+          <button className={`ad-pill${showOurs ? " on" : ""}`} onClick={() => setShowOurs(true)}>Include ours</button>
+        </div>
+        <div className="ad-fgroup">
+          <span className="ad-flabel">Signal</span>
+          {(["active", "lost", "none"] as const).map((sig) => (
+            <button
+              key={sig}
+              className={`ad-pill${focus?.label === sig ? " on" : ""}`}
+              onClick={() => setFocus(focus?.label === sig ? null : { label: sig, test: (o) => o.signal === sig })}
+            >
+              {sig === "none" ? "unknown" : sig}
+            </button>
+          ))}
+        </div>
+        {focus ? (
+          <span className="ad-focus">
+            showing: {focus.label}
+            <button onClick={() => setFocus(null)} aria-label="Clear filter">×</button>
+          </span>
+        ) : null}
+      </div>
+
       <section>
         <div className="ad-sec">
           <span className="ad-sec-num">§ 01</span>
@@ -374,19 +483,31 @@ export default function AdoptionAdmin() {
           <span className="ad-sec-label">external only</span>
         </div>
         <div className="ad-funnel">
-          <div className="ad-step">
+          <div
+            className="ad-step ad-clickable"
+            onClick={() => setFocus({ label: "registered", test: () => true })}
+            title="Click to list these organisations"
+          >
             <span className="ad-step-n">{nf.format(ext.installs_total)}</span>
             <span className="ad-step-l">Registered</span>
             <span className="ad-step-s">completed setup</span>
           </div>
-          <div className="ad-step">
+          <div
+            className="ad-step ad-clickable"
+            onClick={() => setFocus({ label: "ran a session", test: (o) => o.sessions_total > 0 })}
+            title="Click to list these organisations"
+          >
             <span className="ad-step-n">{nf.format(ext.orgs_ever_active)}</span>
             <span className="ad-step-l">Ever ran a session</span>
             <span className="ad-step-s">
               {ext.installs_total - ext.orgs_ever_active} never started
             </span>
           </div>
-          <div className="ad-step is-key">
+          <div
+            className="ad-step is-key ad-clickable"
+            onClick={() => setFocus({ label: "returned", test: (o) => o.active_days > 1 })}
+            title="Click to list these organisations"
+          >
             <span className="ad-step-n">{nf.format(returned)}</span>
             <span className="ad-step-l">Came back</span>
             <span className="ad-step-s">active on more than one day</span>
@@ -413,6 +534,126 @@ export default function AdoptionAdmin() {
       <section>
         <div className="ad-sec">
           <span className="ad-sec-num">§ 02</span>
+          <span className="ad-sec-label">Charts</span>
+          <span className="ad-sec-rule" />
+          <span className="ad-sec-label">click any bar to list the orgs</span>
+        </div>
+        <div className="ad-charts">
+          <div className="ad-chart">
+            <h4>Activation by registration month</h4>
+            <div className="sub">Where each cohort ended up. The overall figure averages these.</div>
+            <div className="ad-cols">
+              {cohorts.map((c) => (
+                <div key={c.m} className="ad-colw">
+                  <div className="ad-stack" style={{ height: `${Math.round((c.total / cohortPeak) * 100)}%` }}>
+                    {(["active", "lost", "none"] as const).map((k) =>
+                      c[k] ? (
+                        <div
+                          key={k}
+                          className={`ad-seg ${k}`}
+                          style={{ flex: c[k] }}
+                          title={`${c.m} · ${k === "none" ? "unknown" : k}: ${c[k]}`}
+                          onClick={() =>
+                            setFocus({
+                              label: `${c.m} · ${k === "none" ? "unknown" : k}`,
+                              test: (o) => o.created_at.slice(0, 7) === c.m && o.signal === k,
+                            })
+                          }
+                        />
+                      ) : null,
+                    )}
+                  </div>
+                  <span className="ad-collabel">{c.m.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="ad-legend">
+              <span className="ad-lg"><span className="ad-swatch active" />active</span>
+              <span className="ad-lg"><span className="ad-swatch lost" />signal lost</span>
+              <span className="ad-lg"><span className="ad-swatch none" />unknown</span>
+            </div>
+          </div>
+
+          <div className="ad-chart">
+            <h4>Time from registering to first session</h4>
+            <div className="sub">If they don&apos;t start on the first day, they almost never start.</div>
+            <div className="ad-hbars">
+              {ttf.map((t) => (
+                <div
+                  key={t.k}
+                  className="ad-hrow"
+                  onClick={() => setFocus({ label: t.label, test: (o) => ttfBucket(o) === t.k })}
+                  title="Click to list these organisations"
+                >
+                  <span className="ad-hlabel">{t.label}</span>
+                  <span className="ad-htrack">
+                    <span
+                      className={`ad-hfill${t.k === "never" ? " dim" : t.k === "hour" ? " deep" : ""}`}
+                      style={{ width: `${Math.round((t.n / ttfPeak) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="ad-hval">{t.n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ad-chart">
+            <h4>Depth — active days per organisation</h4>
+            <div className="sub">Days they showed up, not sessions. Top 8.</div>
+            <div className="ad-hbars">
+              {depth.map((o) => (
+                <div
+                  key={o.slug}
+                  className="ad-hrow"
+                  onClick={() => setFocus({ label: o.slug, test: (x) => x.slug === o.slug })}
+                  title={`${o.sessions_total} sessions`}
+                >
+                  <span className="ad-hlabel">{o.slug}</span>
+                  <span className="ad-htrack">
+                    <span
+                      className={`ad-hfill${o.active_days >= 10 ? " deep" : ""}`}
+                      style={{ width: `${Math.round((o.active_days / deepest) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="ad-hval">{o.active_days}d</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ad-chart">
+            <h4>Sessions per week — external</h4>
+            <div className="sub">{weeks.length} weeks. The only growth line we have.</div>
+            <div className="ad-spark">
+              {weeks.map((w) => (
+                <span
+                  key={w.w}
+                  className="ad-sbar"
+                  style={{ height: `${Math.max(2, Math.round((w.n / weekPeak) * 100))}%` }}
+                  title={`week of ${w.w}: ${w.n} sessions`}
+                />
+              ))}
+            </div>
+            <div className="ad-legend">
+              <span className="ad-lg">peak {weekPeak}/wk</span>
+              <span className="ad-lg">
+                coverage: {cov.active} seen · {cov.lost} lost · {cov.none} unknown
+              </span>
+            </div>
+          </div>
+        </div>
+        <p className="ad-note">
+          <strong>Every chart here rests on coverage.</strong> We can only see{" "}
+          {cov.active} of {extOrgs.length} external orgs directly. {cov.lost} ran
+          Egregore and their events never reached us; {cov.none} left no signal at
+          all. Read every line above as a floor.
+        </p>
+      </section>
+
+      <section>
+        <div className="ad-sec">
+          <span className="ad-sec-num">§ 03</span>
           <span className="ad-sec-label">Activity</span>
           <span className="ad-sec-rule" />
           <span className="ad-sec-label">external, all time</span>
@@ -504,16 +745,22 @@ export default function AdoptionAdmin() {
 
       <section>
         <div className="ad-sec">
-          <span className="ad-sec-num">§ 04</span>
-          <span className="ad-sec-label">Every organisation</span>
+          <span className="ad-sec-num">§ 05</span>
+          <span className="ad-sec-label">
+            {focus ? `Organisations · ${focus.label}` : "Every organisation"}
+          </span>
           <span className="ad-sec-rule" />
-          <button
-            className="ad-btn"
-            style={{ marginTop: 0, padding: "5px 12px", fontSize: 10 }}
-            onClick={() => setShowOurs((v) => !v)}
-          >
-            {showOurs ? "Hide ours" : "Show ours"}
-          </button>
+          {/* A narrowed table must never read as the whole list. */}
+          <span className="ad-sec-label">{all.length} shown</span>
+          {focus ? (
+            <button
+              className="ad-btn"
+              style={{ marginTop: 0, padding: "5px 12px", fontSize: 10 }}
+              onClick={() => setFocus(null)}
+            >
+              Clear filter
+            </button>
+          ) : null}
         </div>
         <div className="ad-tablewrap">
           <table>
@@ -592,7 +839,7 @@ export default function AdoptionAdmin() {
 
       <section>
         <div className="ad-sec">
-          <span className="ad-sec-num">§ 05</span>
+          <span className="ad-sec-num">§ 06</span>
           <span className="ad-sec-label">Versions in the wild</span>
           <span className="ad-sec-rule" />
           <span className="ad-sec-label">of those reporting</span>
@@ -629,7 +876,7 @@ export default function AdoptionAdmin() {
 
       <section>
         <div className="ad-sec">
-          <span className="ad-sec-num">§ 06</span>
+          <span className="ad-sec-num">§ 07</span>
           <span className="ad-sec-label">What this cannot see</span>
           <span className="ad-sec-rule" />
         </div>

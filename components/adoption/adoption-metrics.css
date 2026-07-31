@@ -364,3 +364,89 @@
   .ad-main { padding-top: 36px; }
   .ad-step { flex-basis: 50%; }
 }
+
+/* ── Filter bar ─────────────────────────────────────────────
+   Filters are the readability mechanism: the page shows a lot, so the
+   user narrows rather than scrolls. Active state must be obvious or
+   people misread a filtered chart as the whole picture. */
+.ad-filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 14px 18px; margin-bottom: 8px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+}
+.ad-fgroup { display: flex; gap: 4px; align-items: center; }
+.ad-flabel {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin-right: 6px;
+}
+.ad-pill {
+  font-family: var(--mono); font-size: 11px; padding: 5px 11px;
+  border-radius: 16px; border: 1px solid var(--line-2);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.ad-pill:hover { border-color: var(--accent); color: var(--accent-deep); }
+.ad-pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); font-weight: 600; }
+.ad-focus {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--accent-deep);
+  background: var(--accent-soft); border: 1px solid var(--accent);
+  border-radius: 16px; padding: 5px 8px 5px 12px;
+}
+.ad-focus button {
+  border: none; background: none; cursor: pointer; color: var(--accent-deep);
+  font-size: 14px; line-height: 1; padding: 0 2px;
+}
+
+/* ── Charts (CSS only — no charting library on this site) ── */
+.ad-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 860px) { .ad-charts { grid-template-columns: 1fr; } }
+.ad-chart {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel); padding: 20px 22px;
+}
+.ad-chart h4 {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 4px;
+}
+.ad-chart .sub { font-size: 12px; color: var(--muted-2); margin-bottom: 18px; }
+
+/* stacked column chart */
+.ad-cols { display: flex; align-items: flex-end; gap: 8px; height: 150px; }
+.ad-colw { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 6px; }
+.ad-stack { display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; gap: 2px; }
+.ad-seg { width: 100%; min-height: 2px; border-radius: 2px; cursor: pointer; transition: opacity .12s; }
+.ad-seg:hover { opacity: .7; }
+.ad-seg.active { background: var(--good); }
+.ad-seg.lost { background: var(--warn); }
+.ad-seg.none { background: var(--line-2); }
+.ad-collabel {
+  font-family: var(--mono); font-size: 9px; color: var(--muted-2);
+  text-align: center; white-space: nowrap;
+}
+
+/* horizontal bar rows */
+.ad-hbars { display: flex; flex-direction: column; gap: 9px; }
+.ad-hrow { display: grid; grid-template-columns: 108px 1fr 44px; gap: 10px; align-items: center; cursor: pointer; }
+.ad-hrow:hover .ad-hlabel { color: var(--ink); }
+.ad-hlabel {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ad-htrack { height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.ad-hfill { height: 100%; background: var(--accent); border-radius: 3px; }
+.ad-hfill.deep { background: var(--accent-deep); }
+.ad-hfill.dim { background: var(--line-2); }
+.ad-hval { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; }
+
+/* sparkline-ish weekly columns */
+.ad-spark { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
+.ad-sbar { flex: 1; min-height: 1px; background: var(--accent); border-radius: 2px 2px 0 0; }
+.ad-legend { display: flex; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+.ad-lg { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.ad-swatch { width: 9px; height: 9px; border-radius: 2px; }
+.ad-swatch.active { background: var(--good); }
+.ad-swatch.lost { background: var(--warn); }
+.ad-swatch.none { background: var(--line-2); }
+
+.ad-clickable { cursor: pointer; }
+.ad-clickable:hover { background: var(--bg); }
