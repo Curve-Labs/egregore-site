@@ -23,15 +23,21 @@ export default async (request, context) => {
     return context.next();
   }
 
+  const headers = new Headers({
+    accept: request.headers.get("accept") || "*/*",
+  });
+  const authorization = request.headers.get("authorization");
+  const cookie = request.headers.get("cookie");
+  if (authorization) headers.set("authorization", authorization);
+  if (cookie) headers.set("cookie", cookie);
+
   let upstream;
   try {
     upstream = await fetch(ORIGIN + url.pathname + url.search, {
-      headers: {
-        // bearer tokens pass through — authed /raw fetches skip the
-        // anonymous IP quota server-side
-        authorization: request.headers.get("authorization") || "",
-        accept: request.headers.get("accept") || "*/*",
-      },
+      // Do not create an empty Authorization header. The API correctly treats
+      // a present but empty credential as a failed login. Real bearer tokens
+      // and browser session cookies still pass through.
+      headers,
     });
   } catch {
     return new Response("The emissary platform is unreachable.", {
