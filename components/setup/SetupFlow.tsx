@@ -31,7 +31,6 @@ import {
   type InviteInfo,
   type AppInstallationStatus,
 } from "./api";
-import { isAdmin } from "./auth";
 import {
   pollTelegramConnection,
   type TelegramConnectionPhase,
@@ -1255,23 +1254,6 @@ function ProfileStep({
   );
 }
 
-function AccessRestricted({ user }: { user: GithubUser | null }) {
-  return (
-    <div className="setup-stage setup-stage-centered">
-      <p className="setup-title setup-title-lg">Not yet, {user?.name || user?.login || "friend"}</p>
-      <p className="setup-sub">
-        Egregore is in early access. Join the waitlist and we&apos;ll reach out when it&apos;s your turn.
-      </p>
-      <a href="/#join" className="setup-btn setup-btn-primary" style={{ alignSelf: "center" }}>
-        Join the waitlist
-      </a>
-      <p className="setup-install-note" style={{ marginTop: 16 }}>
-        Already have an invite link? <a href="/join" style={{ color: "var(--terracotta)" }}>Use it here</a>
-      </p>
-    </div>
-  );
-}
-
 function InviteLanding({ inviteToken }: { inviteToken: string }) {
   const [info, setInfo] = useState<InviteInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1638,11 +1620,6 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
       sessionStorage.removeItem("egregore_invite");
     }
     return <InviteAccept token={githubToken} user={user} inviteToken={inviteToken} />;
-  }
-
-  // Admin gate
-  if (githubToken && !inviteToken && !isAdmin(user?.login)) {
-    return <AccessRestricted user={user} />;
   }
 
   // Org picker
