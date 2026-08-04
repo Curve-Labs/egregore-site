@@ -164,6 +164,7 @@ export type ConnectContext = {
     repo_name?: string;
     managed_repo_count?: number;
     launcher_version?: string;
+    fresh?: boolean;
   };
   checkout_session_id?: string | null;
 };

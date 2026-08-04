@@ -66,7 +66,7 @@ function IdentityCard({ context }: { context: ConnectContext }) {
         </div>
       </div>
       <div className="connect-identity-org">
-        <span className="connect-meta-label">Existing Egregore</span>
+        <span className="connect-meta-label">{context.instance?.fresh ? "New Egregore" : "Existing Egregore"}</span>
         <strong>{context.organization.name}</strong>
         <small>{context.organization.slug}</small>
       </div>
@@ -167,10 +167,25 @@ function ActivationStatus({
   const activationComplete = context.status === "connected";
   const backfillActive = context.status === "backfilling";
   const provisioningActive = context.status === "provisioning";
+  // Fresh installs (Connect chosen at the end of setup) have no history to
+  // project — the backfill language belongs to the upgrade path only.
+  const fresh = context.instance?.fresh === true;
+  const stages = ACTIVATION_STAGES.map((stage) => {
+    if (!fresh) return stage;
+    if (stage.id === "backfilling") {
+      return { ...stage, label: "Workspace", detail: "A fresh instance has nothing to project yet" };
+    }
+    if (stage.id === "connected") {
+      return { ...stage, detail: "Hosted capabilities are active" };
+    }
+    return stage;
+  });
   const heading = activationComplete
     ? "Your Egregore is connected."
     : backfillActive
-      ? "Backfilling your Egregore."
+      ? fresh
+        ? "Finishing activation."
+        : "Backfilling your Egregore."
       : provisioningActive
         ? "Preparing Connected infrastructure."
         : context.status === "entitled"
@@ -179,17 +194,29 @@ function ActivationStatus({
             ? "Payment confirmed."
             : "Checkout complete.";
   const description = activationComplete
-    ? "The historical graph backfill is complete. Your local Markdown and Git history remain the source of truth."
+    ? fresh
+      ? "Hosted capabilities are active. Your local Markdown and Git history remain the source of truth."
+      : "The historical graph backfill is complete. Your local Markdown and Git history remain the source of truth."
     : backfillActive
-      ? "You can close this page. Keep the terminal open while sessions, artifacts, quests, and ingest history are projected into the graph."
-      : "You can close this page. Keep the terminal open while provisioning and the historical graph backfill continue.";
+      ? fresh
+        ? "You can close this page. The terminal is finishing activation."
+        : "You can close this page. Keep the terminal open while sessions, artifacts, quests, and ingest history are projected into the graph."
+      : fresh
+        ? "You can close this page. Keep the terminal open while provisioning finishes."
+        : "You can close this page. Keep the terminal open while provisioning and the historical graph backfill continue.";
   const terminalTitle = activationComplete
-    ? "Backfill complete"
+    ? fresh
+      ? "You're all set"
+      : "Backfill complete"
     : "You can close this page";
   const terminalDetail = activationComplete
-    ? "Return to the terminal for the final backfill counts."
+    ? fresh
+      ? "Return to the terminal — your session starts there."
+      : "Return to the terminal for the final backfill counts."
     : backfillActive
-      ? "Keep the terminal open. It will show the exact counts when projection finishes."
+      ? fresh
+        ? "Keep the terminal open. It finishes activation on its own."
+        : "Keep the terminal open. It will show the exact counts when projection finishes."
       : "Keep the terminal open. Provisioning continues there automatically after payment.";
 
   return (
@@ -204,7 +231,7 @@ function ActivationStatus({
       <IdentityCard context={context} />
 
       <ol className="connect-activation">
-        {ACTIVATION_STAGES.map((stage, index) => {
+        {stages.map((stage, index) => {
           const complete = activationComplete ? index <= effectiveIndex : index < effectiveIndex;
           const active = !activationComplete && index === effectiveIndex;
           return (
