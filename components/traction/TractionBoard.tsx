@@ -32,6 +32,10 @@ function Bars({ values, max }: { values: number[]; max: number }) {
 
 export default function TractionBoard() {
   const [mode, setMode] = useState<"light" | "auto" | "dark">("auto");
+  const [gateReady, setGateReady] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [wrongPassword, setWrongPassword] = useState(false);
 
   useEffect(() => {
     const saved = (localStorage.getItem("eg-traction-theme") || "auto") as
@@ -41,6 +45,8 @@ export default function TractionBoard() {
     setMode(saved);
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.documentElement.dataset.theme = saved === "auto" ? (dark ? "dark" : "light") : saved;
+    setUnlocked(sessionStorage.getItem("eg-traction-access") === "1");
+    setGateReady(true);
   }, []);
 
   function cycleTheme() {
@@ -50,6 +56,47 @@ export default function TractionBoard() {
     setMode(next);
     localStorage.setItem("eg-traction-theme", next);
     document.documentElement.dataset.theme = next === "auto" ? (dark ? "dark" : "light") : next;
+  }
+
+  function unlock(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (password === "moreegregore") {
+      sessionStorage.setItem("eg-traction-access", "1");
+      setUnlocked(true);
+      setWrongPassword(false);
+      return;
+    }
+    setWrongPassword(true);
+  }
+
+  if (!gateReady) return null;
+
+  if (!unlocked) {
+    return (
+      <div className="tr tr-gate-shell">
+        <form className="tr-gate" onSubmit={unlock}>
+          <span className="tr-wordmark">egregore</span>
+          <p className="tr-eyebrow">Investor traction</p>
+          <h1>This board is private.</h1>
+          <p>Enter the shared password to continue.</p>
+          <label htmlFor="traction-password">Password</label>
+          <input
+            id="traction-password"
+            type="password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setWrongPassword(false);
+            }}
+            autoComplete="current-password"
+            autoFocus
+            aria-invalid={wrongPassword}
+          />
+          {wrongPassword ? <span className="tr-gate-error">That password is not correct.</span> : null}
+          <button type="submit">View traction</button>
+        </form>
+      </div>
+    );
   }
 
   return (

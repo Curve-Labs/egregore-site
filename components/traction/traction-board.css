@@ -41,6 +41,18 @@
 }
 
 .tr ::selection { background: var(--tr-accent); color: #1d1611; }
+.tr-gate-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.tr-gate { width: min(420px, 100%); padding: 38px; border: 1px solid var(--tr-line); border-radius: 20px; background: var(--tr-panel); box-shadow: 0 24px 80px rgba(23, 17, 13, .12); }
+.tr-gate .tr-wordmark { display: block; margin-bottom: 54px; }
+.tr-gate h1 { margin: 13px 0 10px; font: 400 40px/1 var(--tr-serif); letter-spacing: -.03em; }
+.tr-gate > p:not(.tr-eyebrow) { color: var(--tr-copy); font-size: 14px; }
+.tr-gate label { display: block; margin: 28px 0 8px; color: var(--tr-muted); font: 500 9px/1 var(--tr-mono); letter-spacing: .12em; text-transform: uppercase; }
+.tr-gate input { width: 100%; padding: 13px 14px; border: 1px solid var(--tr-line); border-radius: 9px; outline: none; background: var(--tr-bg); color: var(--tr-ink); font: 500 14px/1 var(--tr-mono); }
+.tr-gate input:focus { border-color: var(--tr-accent); }
+.tr-gate input[aria-invalid="true"] { border-color: var(--tr-accent); }
+.tr-gate-error { display: block; margin-top: 9px; color: var(--tr-accent); font-size: 12px; }
+.tr-gate button { width: 100%; margin-top: 16px; padding: 13px 18px; border: 1px solid var(--tr-accent); border-radius: 9px; background: var(--tr-accent); color: #1d1611; font: 600 10px/1 var(--tr-mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.tr-gate button:hover { filter: brightness(1.06); }
 .tr-main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 30px 0 80px; }
 .tr-masthead { display: flex; align-items: center; gap: 13px; padding-bottom: 20px; border-bottom: 1px solid var(--tr-line); }
 .tr-wordmark { font: 600 22px/1 var(--tr-serif); }
