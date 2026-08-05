@@ -103,9 +103,9 @@ export default function TractionBoard() {
     <div className="tr">
       <main className="tr-main">
         <header className="tr-masthead">
-          <span className="tr-wordmark">egregore</span>
-          <span className="tr-slash">/</span>
-          <span className="tr-kicker">Traction</span>
+          <span className="tr-mark" aria-hidden="true">e</span>
+          <span className="tr-wordmark">Egregore</span>
+          <span className="tr-kicker">Investor traction</span>
           <button className="tr-theme" onClick={cycleTheme} aria-label={`Theme: ${mode}`}>
             <span>{mode === "light" ? "☀" : mode === "dark" ? "☾" : "◐"}</span>
             {mode}
@@ -142,7 +142,15 @@ export default function TractionBoard() {
           </article>
         </section>
 
-        <section className="tr-feature">
+        <nav className="tr-nav" aria-label="Traction sections">
+          <a href="#expansion">Expansion</a>
+          <a href="#activation">Activation</a>
+          <a href="#frequency">Frequency</a>
+          <a href="#memory">Memory</a>
+          <a href="#depth">Depth</a>
+        </nav>
+
+        <section className="tr-feature" id="expansion">
           <div className="tr-section-head">
             <div>
               <p className="tr-section-num">01 · Expansion</p>
@@ -170,7 +178,7 @@ export default function TractionBoard() {
         </section>
 
         <section className="tr-grid-two">
-          <article className="tr-panel">
+          <article className="tr-panel" id="activation">
             <p className="tr-section-num">02 · Activation</p>
             <h2>Recent cohorts activate faster.</h2>
             <p className="tr-panel-copy">
@@ -194,7 +202,7 @@ export default function TractionBoard() {
             </div>
           </article>
 
-          <article className="tr-panel">
+          <article className="tr-panel" id="frequency">
             <p className="tr-section-num">03 · Frequency</p>
             <h2>Session volume keeps climbing.</h2>
             <p className="tr-panel-copy">
@@ -211,7 +219,7 @@ export default function TractionBoard() {
           </article>
         </section>
 
-        <section className="tr-memory">
+        <section className="tr-memory" id="memory">
           <div className="tr-section-head">
             <div>
               <p className="tr-section-num">04 · Compounding value</p>
@@ -233,7 +241,7 @@ export default function TractionBoard() {
           </div>
         </section>
 
-        <section className="tr-depth">
+        <section className="tr-depth" id="depth">
           <div>
             <p className="tr-section-num">05 · Sustained depth</p>
             <h2>Egregore: A working habit.</h2>
@@ -256,6 +264,20 @@ export default function TractionBoard() {
           <span>Egregore · shared intelligence for organizations</span>
           <span>Telemetry is privacy-preserving and opt-out. Figures are observed floors.</span>
         </footer>
+        <script
+          type="application/json"
+          id="egregore-design-manifest"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              version: "0.3.0",
+              pair: "meridian",
+              mode: "auto",
+              target: "investor-traction",
+              register: "editorial",
+              grammar: "decisive",
+            }),
+          }}
+        />
       </main>
     </div>
   );
