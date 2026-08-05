@@ -25,6 +25,7 @@ export type Task = {
   pull_request_url?: string | null;
   artifact_url?: string | null;
   executor_preference?: "claude" | "codex" | null;
+  planner_policy?: "single" | "blind_dual";
   network_policy: "off" | "allowed";
   acceptance_criteria?: unknown[];
   plan?: { summary?: string; risks?: string[]; steps?: unknown[] } | null;
@@ -88,12 +89,26 @@ export type TaskApproval = {
   created_at?: string;
 };
 
+export type TaskPlanCandidate = {
+  id: string;
+  provider: "fable" | "sol";
+  model: string;
+  plan_content_hash: string;
+  plan: {
+    summary?: string;
+    risks?: string[];
+    steps?: unknown[];
+  };
+  created_at?: string;
+};
+
 export type TaskDetail = Task & {
   steps: TaskStep[];
   questions: TaskQuestion[];
   runs: TaskRun[];
   events: TaskEvent[];
   approvals: TaskApproval[];
+  plan_candidates?: TaskPlanCandidate[];
   progress: {
     completed_steps: number;
     total_steps: number;
@@ -136,6 +151,7 @@ export type CreateTask = {
   repository?: string;
   base_branch?: string;
   executor_preference?: "claude" | "codex";
+  planner_policy: "single" | "blind_dual";
   network_policy: "off" | "allowed";
   acceptance_criteria: string[];
 };
