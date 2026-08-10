@@ -72,7 +72,6 @@ const tiers = [
 export default function PricingPage() {
   return (
     <main className="pricing-page">
-      <div className="pricing-grid" aria-hidden="true" />
       <div className="pricing-wizard" aria-hidden="true" />
 
       <header className="pricing-header">
