@@ -43,14 +43,14 @@
 .pricing-wizard {
   position: absolute;
   z-index: -1;
-  top: 86px;
+  top: 42px;
   right: max(-110px, calc((100vw - 1500px) / 2));
-  width: clamp(360px, 40vw, 640px);
-  aspect-ratio: 346 / 357;
+  width: clamp(420px, 46vw, 720px);
+  aspect-ratio: 790 / 780;
   background: var(--pricing-accent);
-  opacity: 0.76;
-  -webkit-mask: url("/wizard-static.png") center / contain no-repeat;
-  mask: url("/wizard-static.png") center / contain no-repeat;
+  opacity: 0.8;
+  -webkit-mask: url("/wizard.png") center / contain no-repeat;
+  mask: url("/wizard.png") center / contain no-repeat;
   pointer-events: none;
 }
 
@@ -78,13 +78,6 @@
   text-underline-offset: 4px;
 }
 
-.pricing-intro {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-  padding: 88px 0 72px;
-}
-
-.pricing-kicker,
 .pricing-tier,
 .pricing-note,
 .pricing-badge {
@@ -93,33 +86,9 @@
   letter-spacing: 0.13em;
 }
 
-.pricing-kicker {
-  margin-bottom: 18px;
-  color: var(--pricing-accent);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.pricing-intro h1 {
-  max-width: 760px;
-  font-family: var(--font-serif);
-  font-size: clamp(45px, 6.2vw, 78px);
-  font-weight: 400;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
-}
-
-.pricing-intro > p:last-child {
-  max-width: 590px;
-  margin-top: 26px;
-  color: var(--pricing-muted);
-  font-size: 16px;
-  line-height: 1.6;
-}
-
 .pricing-cards {
   width: min(1180px, 100%);
-  margin: 0 auto;
+  margin: 64px auto 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
@@ -291,9 +260,8 @@
   .pricing-header { min-height: 68px; }
   .pricing-header img { height: 26px; }
   .pricing-docs-link { font-size: 10px; }
-  .pricing-intro { padding: 64px 0 54px; }
-  .pricing-intro h1 { font-size: clamp(42px, 14vw, 62px); }
   .pricing-wizard { top: 94px; right: -170px; width: 430px; opacity: 0.3; }
+  .pricing-cards { margin-top: 42px; }
   .pricing-card { padding: 28px 22px 24px; }
   .pricing-price { font-size: 48px; }
   .pricing-footer { flex-direction: column; align-items: center; }

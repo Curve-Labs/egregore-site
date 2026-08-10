@@ -85,16 +85,6 @@ export default function PricingPage() {
         </Link>
       </header>
 
-      <section className="pricing-intro">
-        <p className="pricing-kicker">Pricing</p>
-        <h1>Free to practice. Pay when the work needs a body.</h1>
-        <p>
-          Every laptop runs the full practice for free, forever. You start
-          paying when your team&apos;s work needs one shared, durable home it can
-          all see.
-        </p>
-      </section>
-
       <section className="pricing-cards" aria-label="Pricing plans">
         {tiers.map((tier) => (
           <article
