@@ -91,7 +91,6 @@ export default function PricingPage() {
             className={`pricing-card${tier.featured ? " pricing-card-featured" : ""}`}
             key={tier.name}
           >
-            {tier.featured && <div className="pricing-badge">For teams</div>}
             <p className="pricing-tier">{tier.name}</p>
             <div className={`pricing-price${tier.cadence ? "" : " pricing-price-talk"}`}>
               {tier.price}

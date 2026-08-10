@@ -44,7 +44,8 @@
   position: absolute;
   z-index: -1;
   top: 42px;
-  right: max(-110px, calc((100vw - 1500px) / 2));
+  right: auto;
+  left: max(-48px, calc((100vw - 1500px) / 2));
   width: clamp(420px, 46vw, 720px);
   aspect-ratio: 790 / 780;
   background: url("/wizard.png") center / contain no-repeat;
@@ -78,8 +79,7 @@
 }
 
 .pricing-tier,
-.pricing-note,
-.pricing-badge {
+.pricing-note {
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.13em;
@@ -112,17 +112,6 @@
   background: rgba(245, 242, 237, 0.96);
 }
 
-.pricing-badge {
-  position: absolute;
-  top: -12px;
-  right: 22px;
-  padding: 6px 11px;
-  border-radius: 999px;
-  background: var(--pricing-accent);
-  color: var(--pricing-cream);
-  font-size: 9px;
-}
-
 .pricing-tier {
   color: var(--pricing-faint);
   font-size: 11px;
@@ -131,6 +120,9 @@
 .pricing-card-featured .pricing-tier { color: var(--pricing-accent); }
 
 .pricing-price {
+  display: flex;
+  min-height: 52px;
+  align-items: baseline;
   margin-top: 16px;
   font-family: var(--font-serif);
   font-size: 52px;
@@ -148,7 +140,10 @@
   letter-spacing: 0;
 }
 
-.pricing-price-talk { font-size: 38px; }
+.pricing-price-talk {
+  align-items: center;
+  font-size: 38px;
+}
 
 .pricing-note {
   min-height: 34px;
@@ -238,7 +233,8 @@
 @media (max-width: 920px) {
   .pricing-wizard {
     top: 110px;
-    right: -120px;
+    right: auto;
+    left: -120px;
     width: 480px;
     opacity: 0.42;
   }
@@ -259,7 +255,7 @@
   .pricing-header { min-height: 68px; }
   .pricing-header img { height: 26px; }
   .pricing-docs-link { font-size: 10px; }
-  .pricing-wizard { top: 94px; right: -170px; width: 430px; opacity: 0.3; }
+  .pricing-wizard { top: 94px; right: auto; left: -170px; width: 430px; opacity: 0.3; }
   .pricing-cards { margin-top: 42px; }
   .pricing-card { padding: 28px 22px 24px; }
   .pricing-price { font-size: 48px; }
