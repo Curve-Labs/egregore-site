@@ -47,10 +47,9 @@
   right: max(-110px, calc((100vw - 1500px) / 2));
   width: clamp(420px, 46vw, 720px);
   aspect-ratio: 790 / 780;
-  background: var(--pricing-accent);
-  opacity: 0.8;
-  -webkit-mask: url("/wizard.png") center / contain no-repeat;
-  mask: url("/wizard.png") center / contain no-repeat;
+  background: url("/wizard.png") center / contain no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.72;
   pointer-events: none;
 }
 
