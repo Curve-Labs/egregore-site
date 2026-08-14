@@ -4,13 +4,26 @@ const API_URL =
 
 const GITHUB_CLIENT_ID = "Iv23li2obNsAjakoK2RE";
 const GITHUB_SCOPE = "";
+const GITHUB_RETURN_KEY = "egregore_github_return";
 
-export function getGitHubAuthUrl(): string {
+export function getGitHubAuthUrl(returnTo?: string): string {
   if (typeof window === "undefined") return "";
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes("\\")) {
+    sessionStorage.setItem(GITHUB_RETURN_KEY, returnTo);
+  }
   const redirectUri = `${window.location.origin}/callback`;
   let url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   if (GITHUB_SCOPE) url += `&scope=${GITHUB_SCOPE}`;
   return url;
+}
+
+export function consumeGitHubAuthReturn(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = sessionStorage.getItem(GITHUB_RETURN_KEY);
+  sessionStorage.removeItem(GITHUB_RETURN_KEY);
+  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\")
+    ? value
+    : null;
 }
 
 type RequestOpts = {
@@ -149,6 +162,38 @@ export type CheckoutStatus = {
 
 export async function exchangeCode(code: string): Promise<{ github_token: string; user: GithubUser }> {
   return request("POST", "/api/auth/github/callback", { body: { code } });
+}
+
+export type EditableArtifact = {
+  id: string;
+  org: string;
+  title: string;
+  artifact_type: string;
+  html: string;
+  sha256: string;
+};
+
+export async function getEditableArtifact(
+  token: string,
+  org: string,
+  id: string,
+): Promise<EditableArtifact> {
+  return request("GET", `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`, { token });
+}
+
+export async function saveEditableArtifact(
+  token: string,
+  artifact: EditableArtifact,
+  html: string,
+): Promise<{ status: string; id: string; url: string; sha256: string }> {
+  return request(
+    "PUT",
+    `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`,
+    {
+      token,
+      body: { html, expected_sha256: artifact.sha256 },
+    },
+  );
 }
 
 export async function getOrgs(token: string): Promise<SetupOrgsResponse> {

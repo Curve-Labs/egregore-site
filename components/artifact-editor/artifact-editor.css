@@ -1,0 +1,198 @@
+:root {
+  --ae-paper: #f5f2ed;
+  --ae-paper-2: #ece6dc;
+  --ae-card: #fffdf9;
+  --ae-ink: #16100b;
+  --ae-ink-soft: #4f473f;
+  --ae-muted: #81786e;
+  --ae-line: #d8cfc3;
+  --ae-accent: #d4875a;
+  --ae-accent-soft: rgba(212, 135, 90, 0.12);
+  --ae-on-accent: #1d1611;
+  --ae-error: #9f3f3f;
+  --ae-shadow: rgba(51, 37, 25, 0.14);
+}
+
+[data-theme="dark"] {
+  --ae-paper: #1d1611;
+  --ae-paper-2: #161210;
+  --ae-card: #241e19;
+  --ae-ink: rgba(255, 255, 255, 0.92);
+  --ae-ink-soft: rgba(255, 255, 255, 0.75);
+  --ae-muted: rgba(255, 255, 255, 0.50);
+  --ae-line: rgba(255, 255, 255, 0.10);
+  --ae-accent: #d4875a;
+  --ae-accent-soft: rgba(212, 135, 90, 0.14);
+  --ae-error: #e2887e;
+  --ae-shadow: rgba(0, 0, 0, 0.34);
+}
+
+html, body { min-height: 100%; }
+body { background: var(--ae-paper); color: var(--ae-ink); }
+::selection { background: var(--ae-accent); color: var(--ae-paper); }
+[data-theme="dark"] ::selection { color: var(--ae-on-accent); }
+
+.ae-shell {
+  --ae-artifact-bg: var(--ae-paper);
+  --ae-artifact-ink: var(--ae-ink);
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--ae-artifact-bg);
+  color: var(--ae-ink);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.ae-toolbar {
+  position: relative;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 44px;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ae-artifact-ink) 12%, transparent);
+  background: color-mix(in srgb, var(--ae-artifact-bg) 94%, transparent);
+  color: var(--ae-artifact-ink);
+  backdrop-filter: blur(14px) saturate(115%);
+}
+
+.ae-identity, .ae-actions { display: flex; align-items: center; }
+.ae-identity { gap: 0.5rem; min-width: 0; overflow: hidden; }
+.ae-sigil { color: var(--ae-accent); font-size: 0.82rem; }
+.ae-mode, .ae-title, .ae-hint {
+  white-space: nowrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.67rem;
+  letter-spacing: 0.02em;
+}
+.ae-mode { color: var(--ae-accent); font-weight: 600; }
+.ae-title {
+  max-width: 20rem;
+  overflow: hidden;
+  color: var(--ae-artifact-ink);
+  text-overflow: ellipsis;
+}
+.ae-hint {
+  padding-left: 0.5rem;
+  border-left: 1px solid color-mix(in srgb, var(--ae-artifact-ink) 14%, transparent);
+  color: color-mix(in srgb, var(--ae-artifact-ink) 52%, transparent);
+}
+.ae-kicker {
+  margin: 0 0 0.18rem;
+  color: var(--ae-muted);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ae-identity h1, .ae-message-card h1 {
+  margin: 0;
+  color: var(--ae-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  font-weight: 400;
+  line-height: 1.15;
+}
+.ae-identity h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ae-actions { flex: 0 0 auto; justify-content: flex-end; gap: 0.28rem; }
+.ae-state {
+  margin-right: 0.35rem;
+  color: color-mix(in srgb, var(--ae-artifact-ink) 50%, transparent);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.65rem;
+}
+.ae-state.is-dirty { color: var(--ae-accent); }
+.ae-button, .ae-icon-button, .ae-primary-link {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ae-artifact-ink);
+  font: 500 0.68rem/1 "IBM Plex Mono", ui-monospace, monospace;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.ae-button { height: 28px; padding: 0 0.62rem; }
+.ae-icon-button {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  font-size: 0.8rem;
+}
+.ae-button:hover, .ae-icon-button:hover, .ae-primary-link:hover {
+  border-color: color-mix(in srgb, var(--ae-artifact-ink) 14%, transparent);
+  background: color-mix(in srgb, var(--ae-artifact-ink) 6%, transparent);
+}
+.ae-button:focus-visible, .ae-icon-button:focus-visible, .ae-primary-link:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+.ae-button:active, .ae-icon-button:active { transform: translateY(1px); }
+.ae-button:disabled { cursor: default; opacity: 0.42; }
+.ae-button-primary { background: var(--ae-accent); color: var(--ae-on-accent); }
+.ae-button-primary:hover { border-color: var(--ae-accent); background: var(--ae-accent); color: var(--ae-on-accent); }
+
+.ae-notice {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 30;
+  width: auto;
+  max-width: min(28rem, calc(100vw - 1.5rem));
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ae-line);
+  border-radius: 5px;
+  background: var(--ae-accent-soft);
+  color: var(--ae-accent);
+  box-shadow: 0 8px 26px var(--ae-shadow);
+  font-size: 0.72rem;
+}
+.ae-notice.is-error { color: var(--ae-error); }
+
+.ae-canvas { height: calc(100dvh - 44px); padding: 0; }
+.ae-canvas iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--ae-artifact-bg);
+}
+
+.ae-message-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: var(--ae-paper);
+  color: var(--ae-ink);
+}
+.ae-message-card {
+  width: min(460px, 100%);
+  padding: 2.3rem;
+  border: 1px solid var(--ae-line);
+  border-radius: 12px;
+  background: var(--ae-card);
+}
+.ae-message-card > p:not(.ae-kicker) { margin: 0.85rem 0 1.5rem; color: var(--ae-ink-soft); line-height: 1.6; }
+.ae-primary-link { display: inline-flex; min-height: 38px; align-items: center; padding: 0.62rem 0.85rem; border-color: var(--ae-accent); }
+
+@media (max-width: 860px) {
+  .ae-title, .ae-hint { display: none; }
+  .ae-state { margin-right: 0.15rem; }
+}
+
+@media print {
+  .ae-toolbar, .ae-notice { display: none; }
+  .ae-canvas { padding: 0; }
+  .ae-canvas iframe { border: 0; box-shadow: none; }
+}
