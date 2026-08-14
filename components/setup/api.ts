@@ -192,6 +192,38 @@ export async function exchangeCode(code: string): Promise<{ github_token: string
   return data as { github_token: string; user: GithubUser };
 }
 
+export type EditableArtifact = {
+  id: string;
+  org: string;
+  title: string;
+  artifact_type: string;
+  html: string;
+  sha256: string;
+};
+
+export async function getEditableArtifact(
+  token: string,
+  org: string,
+  id: string,
+): Promise<EditableArtifact> {
+  return request("GET", `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`, { token });
+}
+
+export async function saveEditableArtifact(
+  token: string,
+  artifact: EditableArtifact,
+  html: string,
+): Promise<{ status: string; id: string; url: string; sha256: string }> {
+  return request(
+    "PUT",
+    `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`,
+    {
+      token,
+      body: { html, expected_sha256: artifact.sha256 },
+    },
+  );
+}
+
 export async function getOrgs(token: string, signal?: AbortSignal): Promise<SetupOrgsResponse> {
   return request("GET", "/api/org/setup/orgs", { token, signal });
 }

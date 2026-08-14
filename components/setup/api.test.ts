@@ -108,4 +108,28 @@ describe("setup organization API", () => {
     expect(consumeGitHubAuthReturn()).toBe("/desk");
     expect(consumeGitHubAuthReturn()).toBeNull();
   });
+
+  it("returns from GitHub OAuth to the exact artifact editor", () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", {
+      location: { origin: "https://egregore.xyz" },
+      sessionStorage: {
+        getItem: (key: string) => values.get(key) || null,
+        setItem: (key: string, value: string) => values.set(key, value),
+        removeItem: (key: string) => values.delete(key),
+      },
+    });
+    vi.stubGlobal("sessionStorage", window.sessionStorage);
+
+    const target = "/edit?org=alpha&id=launch-note";
+    const authUrl = getGitHubAuthUrl(target);
+
+    expect(authUrl).toContain(encodeURIComponent("https://egregore.xyz/callback"));
+    expect(consumeGitHubAuthReturn()).toBe(target);
+  });
+
+  it("rejects a cross-origin OAuth return target", () => {
+    getGitHubAuthUrl("//attacker.example/path");
+    expect(consumeGitHubAuthReturn()).toBeNull();
+  });
 });
