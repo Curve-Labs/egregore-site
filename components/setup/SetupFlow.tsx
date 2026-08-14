@@ -11,6 +11,7 @@ import {
   getTelegramStatus,
   getInviteInfo,
   acceptInvite,
+  consumeGitHubAuthReturn,
   getGitHubAuthUrl,
   checkTelegramMembership,
   checkAppInstallation,
@@ -140,7 +141,6 @@ function InstallCommand({ setupToken, label = "Install" }: { setupToken: string;
 
 function OAuthCallback({ onAuth }: { onAuth: (token: string, user: GithubUser) => void }) {
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -151,7 +151,6 @@ function OAuthCallback({ onAuth }: { onAuth: (token: string, user: GithubUser) =
     }
     exchangeCode(code)
       .then(({ github_token, user }) => {
-        router.replace("/setup");
         onAuth(github_token, user);
       })
       .catch((err: Error) => setError(err.message));
@@ -1304,8 +1303,11 @@ export default function SetupFlow({ mode }: { mode: FlowMode }) {
           setUser(u);
           if (typeof window !== "undefined") {
             const savedInvite = sessionStorage.getItem("egregore_invite");
+            const authReturn = consumeGitHubAuthReturn();
             if (savedInvite) {
               router.replace(`/join?invite=${savedInvite}`);
+            } else if (authReturn) {
+              router.replace(authReturn);
             } else {
               router.replace("/setup");
             }
