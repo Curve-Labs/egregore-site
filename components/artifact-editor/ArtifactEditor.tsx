@@ -12,6 +12,7 @@ import "./artifact-editor.css";
 
 const TOKEN_KEY = "egregore_github_token";
 const EDITABLE_ATTR = "data-eg-text-editable";
+const ORIGINAL_TEXT_ATTR = "data-eg-original-text";
 const EDITOR_STYLE_ID = "eg-text-editor-preview-style";
 const BLOCKED_TAGS = new Set([
   "BODY", "MAIN", "SECTION", "ARTICLE", "HEADER", "FOOTER", "NAV",
@@ -50,19 +51,26 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.dataset.theme = mode === "auto" ? resolveAutoTheme() : mode;
 }
 
-function editableElements(doc: Document): HTMLElement[] {
+function editableElements(doc: Document, textSources?: string[]): HTMLElement[] {
   const all = Array.from(doc.body.querySelectorAll<HTMLElement>("*"));
   return all.filter((element) => {
     if (BLOCKED_TAGS.has(element.tagName)) return false;
-    if (!element.textContent?.trim()) return false;
+    const text = element.textContent?.trim();
+    if (!text) return false;
     if (element.closest("button, input, select, textarea, [aria-hidden='true']")) return false;
+    if (textSources && !textSources.some((source) => source.includes(text))) return false;
     return Array.from(element.children).every((child) => INLINE_TAGS.has(child.tagName));
   }).filter((element, index, candidates) => {
     return !candidates.slice(0, index).some((parent) => parent.contains(element));
   });
 }
 
-function preparePreviewDocument(doc: Document, onDirty: () => void, onSave: () => void): number {
+function preparePreviewDocument(
+  doc: Document,
+  textSources: string[] | undefined,
+  onDirty: () => void,
+  onSave: () => void,
+): number {
   doc.getElementById(EDITOR_STYLE_ID)?.remove();
   const style = doc.createElement("style");
   style.id = EDITOR_STYLE_ID;
@@ -73,9 +81,10 @@ function preparePreviewDocument(doc: Document, onDirty: () => void, onSave: () =
   `;
   doc.head.appendChild(style);
 
-  const elements = editableElements(doc);
+  const elements = editableElements(doc, textSources);
   for (const element of elements) {
     element.setAttribute(EDITABLE_ATTR, "");
+    element.setAttribute(ORIGINAL_TEXT_ATTR, element.textContent || "");
     element.setAttribute("contenteditable", "plaintext-only");
     element.setAttribute("spellcheck", "true");
     element.addEventListener("input", onDirty);
@@ -89,11 +98,21 @@ function preparePreviewDocument(doc: Document, onDirty: () => void, onSave: () =
   return elements.length;
 }
 
+function collectTextChanges(doc: Document): { before: string; after: string }[] {
+  return Array.from(doc.querySelectorAll<HTMLElement>(`[${EDITABLE_ATTR}]`))
+    .map((element) => ({
+      before: element.getAttribute(ORIGINAL_TEXT_ATTR) || "",
+      after: element.textContent || "",
+    }))
+    .filter((change) => change.before && change.before !== change.after);
+}
+
 function serializePreview(doc: Document): string {
   const clone = doc.documentElement.cloneNode(true) as HTMLElement;
   clone.querySelector(`#${EDITOR_STYLE_ID}`)?.remove();
   clone.querySelectorAll(`[${EDITABLE_ATTR}]`).forEach((element) => {
     element.removeAttribute(EDITABLE_ATTR);
+    element.removeAttribute(ORIGINAL_TEXT_ATTR);
     element.removeAttribute("contenteditable");
     element.removeAttribute("spellcheck");
   });
@@ -104,6 +123,8 @@ export default function ArtifactEditor() {
   const searchParams = useSearchParams();
   const org = searchParams.get("org") || "";
   const id = searchParams.get("id") || "";
+  const kind = searchParams.get("kind") === "handoff" ? "handoff" : "org";
+  const locatorReady = Boolean(id && (kind === "handoff" || org));
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [token, setToken] = useState<string | null>(null);
   const [artifact, setArtifact] = useState<EditableArtifact | null>(null);
@@ -132,20 +153,20 @@ export default function ArtifactEditor() {
   }, []);
 
   useEffect(() => {
-    if (!token || !org || !id) {
+    if (!token || !locatorReady) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError("");
-    getEditableArtifact(token, org, id)
+    getEditableArtifact(token, org, id, kind)
       .then((value) => {
         setArtifact(value);
         setDirty(false);
       })
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
-  }, [token, org, id]);
+  }, [token, org, id, kind, locatorReady]);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -164,10 +185,12 @@ export default function ArtifactEditor() {
     setNotice("");
     try {
       const html = serializePreview(iframeRef.current.contentDocument);
-      const result = await saveEditableArtifact(token, artifact, html);
-      setArtifact({ ...artifact, html, sha256: result.sha256 });
+      const textChanges = collectTextChanges(iframeRef.current.contentDocument);
+      const result = await saveEditableArtifact(token, artifact, html, textChanges);
+      setArtifact({ ...artifact, html: result.html || html, sha256: result.sha256 });
       setDirty(false);
-      setNotice("Saved to the published artifact.");
+      setNotice("Saved.");
+      setPreviewKey((value) => value + 1);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not save artifact");
     } finally {
@@ -192,11 +215,11 @@ export default function ArtifactEditor() {
       }
       shell.style.setProperty("--ae-artifact-ink", bodyStyle.color);
     }
-    setEditableCount(preparePreviewDocument(doc, () => {
+    setEditableCount(preparePreviewDocument(doc, artifact?.text_sources, () => {
       setDirty(true);
       setNotice("");
     }, () => { void save(); }));
-  }, [save]);
+  }, [artifact?.text_sources, save]);
 
   const cancelChanges = () => {
     if (!artifact) return;
@@ -213,14 +236,16 @@ export default function ArtifactEditor() {
     applyTheme(next);
   };
 
-  if (!org || !id) {
+  if (!locatorReady) {
     return <EditorMessage title="Artifact not specified" body="Open the editor from an artifact’s Edit text button." />;
   }
 
   if (!token && !loading) {
-    const returnTo = `/edit?org=${encodeURIComponent(org)}&id=${encodeURIComponent(id)}`;
+    const returnTo = kind === "handoff"
+      ? `/edit?kind=handoff&id=${encodeURIComponent(id)}`
+      : `/edit?org=${encodeURIComponent(org)}&id=${encodeURIComponent(id)}`;
     return (
-      <EditorMessage title="Sign in to edit" body="Only members of this Egregore can change its published artifacts.">
+      <EditorMessage title="Sign in to edit" body="Only people with edit access can change this artifact.">
         <a className="ae-primary-link" href={getGitHubAuthUrl(returnTo)}>Sign in with GitHub</a>
       </EditorMessage>
     );
@@ -230,7 +255,10 @@ export default function ArtifactEditor() {
   if (error && !artifact) return <EditorMessage title="Couldn’t open this artifact" body={error} />;
   if (!artifact) return <EditorMessage title="Artifact unavailable" body="This artifact could not be loaded." />;
 
-  const publishedUrl = `/view/${encodeURIComponent(org)}/${encodeURIComponent(id)}`;
+  const publishedUrl = artifact.published_url
+    || (kind === "handoff"
+      ? `/h/${encodeURIComponent(id)}`
+      : `/view/${encodeURIComponent(org)}/${encodeURIComponent(id)}`);
   return (
     <main className="ae-shell">
       <header className="ae-toolbar">

@@ -195,31 +195,47 @@ export async function exchangeCode(code: string): Promise<{ github_token: string
 export type EditableArtifact = {
   id: string;
   org: string;
+  kind?: "org" | "handoff";
   title: string;
   artifact_type: string;
+  published_url?: string;
+  text_sources?: string[];
   html: string;
   sha256: string;
+};
+
+export type ArtifactTextChange = {
+  before: string;
+  after: string;
 };
 
 export async function getEditableArtifact(
   token: string,
   org: string,
   id: string,
+  kind: "org" | "handoff" = "org",
 ): Promise<EditableArtifact> {
-  return request("GET", `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`, { token });
+  const path = kind === "handoff"
+    ? `/api/artifacts/edit/handoff/${encodeURIComponent(id)}`
+    : `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`;
+  return request("GET", path, { token });
 }
 
 export async function saveEditableArtifact(
   token: string,
   artifact: EditableArtifact,
   html: string,
-): Promise<{ status: string; id: string; url: string; sha256: string }> {
+  textChanges: ArtifactTextChange[] = [],
+): Promise<{ status: string; id: string; url: string; html: string; sha256: string }> {
+  const path = artifact.kind === "handoff"
+    ? `/api/artifacts/edit/handoff/${encodeURIComponent(artifact.id)}`
+    : `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`;
   return request(
     "PUT",
-    `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`,
+    path,
     {
       token,
-      body: { html, expected_sha256: artifact.sha256 },
+      body: { html, expected_sha256: artifact.sha256, text_changes: textChanges },
     },
   );
 }
