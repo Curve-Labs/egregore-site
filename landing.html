@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Egregore</title>
+  <meta name="description" content="A brain for your team. Built on Claude Code.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafafa;
+      --text: #1a1a1a;
+      --muted: #888;
+      --light: #ccc;
+      --accent: #1a1a1a;
+      --mono: 'IBM Plex Mono', monospace;
+      --serif: 'Source Serif 4', Georgia, serif;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--serif); font-size: 17px;
+      line-height: 1.7; -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: #1a1a1a; color: #fafafa; }
+
+    a { color: inherit; }
+
+    /* Nav — minimal like Maeda */
+    nav {
+      padding: 2rem 2rem 0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    nav a { text-decoration: none; color: var(--muted); transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+
+    /* Centered container */
+    .c { max-width: 600px; margin: 0 auto; padding: 0 2rem; text-align: center; }
+
+    /* Sections */
+    section { padding: 8rem 0; }
+
+    /* Hero */
+    .hero { padding: 12rem 0 8rem; }
+    .hero h1 {
+      font-family: var(--mono); font-size: 13px; font-weight: 400;
+      letter-spacing: 0.25em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 2rem;
+    }
+    .hero .title {
+      font-family: var(--serif); font-size: clamp(32px, 5vw, 48px);
+      font-weight: 600; line-height: 1.15; margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+    .hero .sub {
+      font-size: 18px; color: var(--muted); line-height: 1.6;
+      font-style: italic; max-width: 440px; margin: 0 auto;
+    }
+
+    /* Law-style headings */
+    .law {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.5rem;
+    }
+
+    /* Statement + body */
+    .statement {
+      font-family: var(--serif); font-size: 24px; font-weight: 600;
+      line-height: 1.35; margin-bottom: 1.5rem; letter-spacing: -0.01em;
+    }
+    .body { font-size: 16px; color: #444; line-height: 1.8; text-align: left; max-width: 520px; margin: 0 auto; }
+    .body p { margin-bottom: 1rem; }
+    .body p:last-child { margin-bottom: 0; }
+    .body strong { color: var(--text); font-weight: 600; }
+
+    /* Code */
+    .code {
+      font-family: var(--mono); font-size: 15px; color: var(--text);
+      background: #f0f0f0; display: inline-block; padding: 0.6rem 1.5rem;
+      margin: 2rem 0; letter-spacing: 0.02em;
+    }
+
+    /* Diagram */
+    pre.dia {
+      font-family: var(--mono); font-size: 12px; line-height: 1.7;
+      color: var(--muted); text-align: left; display: inline-block;
+      margin: 1.5rem 0;
+    }
+    pre.dia b { color: var(--text); font-weight: 500; }
+
+    /* Contrast table — Maeda style */
+    .contrast {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      gap: 1rem; margin: 2rem auto; max-width: 500px;
+      font-family: var(--mono); font-size: 12px;
+      text-align: center; align-items: start;
+    }
+    .contrast .vs { color: var(--light); font-style: italic; padding-top: 0.3rem; }
+    .contrast .left, .contrast .right { line-height: 1.8; }
+    .contrast .left { text-align: right; color: var(--muted); }
+    .contrast .right { text-align: left; color: var(--text); }
+
+    /* Command list */
+    .cmds { text-align: left; max-width: 440px; margin: 2rem auto 0; }
+    .cmd-row { padding: 0.75rem 0; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 90px 1fr; gap: 1rem; }
+    .cmd-row:last-child { border-bottom: none; }
+    .cmd-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+    .cmd-desc { font-size: 14px; color: #666; line-height: 1.6; }
+
+    /* File tree */
+    .tree {
+      font-family: var(--mono); font-size: 12px; line-height: 2;
+      text-align: left; display: inline-block; color: var(--muted);
+    }
+    .tree b { color: var(--text); font-weight: 500; }
+
+    /* Hint box */
+    .hint {
+      border: 1px solid #e0e0e0; padding: 2rem;
+      text-align: left; max-width: 480px; margin: 2rem auto 0;
+      font-size: 15px; color: #666; line-height: 1.8;
+    }
+    .hint strong { color: var(--text); }
+
+    /* Separator */
+    .sep { width: 40px; height: 1px; background: var(--light); margin: 0 auto; }
+
+    /* Footer */
+    footer {
+      padding: 4rem 2rem 2rem;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--light); text-align: center;
+    }
+    footer a { color: var(--light); text-decoration: none; }
+    footer a:hover { color: var(--muted); }
+
+    /* Page routing */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Research */
+    .article-card {
+      padding: 2.5rem 0; border-bottom: 1px solid #eee;
+      text-align: left; max-width: 480px; margin: 0 auto;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .article-card:hover { opacity: 0.7; }
+    .article-card .meta {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--light); margin-bottom: 0.5rem;
+    }
+    .article-card h3 { font-size: 20px; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.3; }
+    .article-card p { font-size: 15px; color: var(--muted); line-height: 1.7; }
+    .article-body { text-align: left; max-width: 520px; margin: 0 auto; }
+    .article-body h2 {
+      font-family: var(--mono); font-size: 12px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted); margin: 3rem 0 1rem; font-weight: 500;
+    }
+    .article-body p { font-size: 16px; line-height: 1.85; margin-bottom: 1.25rem; color: #444; }
+    .article-body .lead { font-size: 18px; color: var(--text); font-style: italic; }
+    .article-body blockquote { border-left: 2px solid #ddd; padding-left: 1.25rem; color: var(--muted); font-style: italic; margin: 1.5rem 0; }
+    .article-body hr { border: none; width: 40px; height: 1px; background: var(--light); margin: 2.5rem 0; }
+    .article-back {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); display: inline-block;
+      margin-bottom: 3rem; text-decoration: none;
+    }
+    .article-back:hover { color: var(--text); }
+
+    @media (max-width: 600px) {
+      .hero { padding: 8rem 0 5rem; }
+      section { padding: 5rem 0; }
+      .contrast { grid-template-columns: 1fr; gap: 0.5rem; }
+      .contrast .vs { display: none; }
+      .contrast .left, .contrast .right { text-align: center; }
+      .cmd-row { grid-template-columns: 1fr; gap: 0.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="#" data-nav="home">Egregore</a>
+  <div style="display:flex;gap:2rem;">
+    <a href="#" data-nav="research">Research</a>
+    <a href="https://github.com/egregore-ai/egregore" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<!-- ==================== HOME ==================== -->
+<div id="page-home" class="page active">
+
+  <section class="hero">
+    <div class="c">
+      <h1>Egregore</h1>
+      <div class="title">A brain for your team.</div>
+      <div class="sub">Built on Claude Code. Open source.</div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Premise</div>
+      <div class="statement">One person, one session, gone.</div>
+      <div class="contrast">
+        <div class="left">Claude Code today:<br>individual memory<br>single session<br>lost when closed</div>
+        <div class="vs"><em>vs</em></div>
+        <div class="right">With Egregore:<br>shared memory<br>every session connects<br>nothing gets lost</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Start</div>
+      <div class="statement">Two questions. You're in.</div>
+      <pre class="dia">
+  <b>$ npx create-egregore</b>
+          │
+     ┌────┴────┐
+     ▼         ▼
+   <b>Start</b>     <b>Connect</b>
+   <b>new</b>       <b>existing</b>
+     │         │
+   Name?     Name?
+   Role?     Role?
+     │         │
+     └────┬────┘
+          ▼
+     <b>You're in.</b></pre>
+      <p style="font-size:14px;color:var(--muted);">No signup. No configuration. No infrastructure.</p>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Interface</div>
+      <div class="statement">Four commands. That's the whole product.</div>
+      <div class="cmds">
+        <div class="cmd-row">
+          <div class="cmd-name">/activity</div>
+          <div class="cmd-desc">Everything your team is doing, in one view.</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-name">/handoff</div>
+          <div class="cmd-desc">Pass the baton. Knowledge captured, context preserved.</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-name">/invite</div>
+          <div class="cmd-desc">Send a link. They run one command. They're in.</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-name">/quest</div>
+          <div class="cmd-desc">Questions worth pursuing together.</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-top:2rem;font-style:italic;">More commands unlock as you use it — ammo we haven't fired yet.</p>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Loop</div>
+      <div class="statement">Work. Handoff. Repeat.</div>
+      <pre class="dia">
+  <b>Open Claude Code</b>
+          │
+  Egregore greets you
+  shows what's happening
+          │
+  <b>"What are you working on?"</b>
+          │
+  You work — with full team context
+          │
+  <b>/handoff</b> when you're done
+          │
+  Next person picks up
+  exactly where you left off</pre>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Substrate</div>
+      <div class="statement">Everything is a file.</div>
+      <div class="body">
+        <p>Markdown files in a git repo. Readable by humans, indexed for Claude. No database. No hosted services. Just a repo your team shares.</p>
+      </div>
+      <div style="margin-top:2rem;">
+        <pre class="tree"><b>my-team/</b>
+├── <b>people/</b>       who's on the team
+├── <b>handoffs/</b>     session-to-session notes
+├── <b>knowledge/</b>    decisions, findings, patterns
+├── <b>sessions/</b>     what happened when
+└── <b>soul.md</b>        who this team is</pre>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Why Open Source</div>
+      <div class="statement">It was too fun to keep to ourselves.</div>
+      <div class="body">
+        <p>We built Egregore for ourselves — a small team spread across time zones, trying to build something ambitious without losing our minds.</p>
+        <p>Sessions stopped disappearing. Meetings became searchable artifacts. New people got context in minutes instead of days.</p>
+        <p><strong>The team got smarter whether or not any one person was in the room.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">What's Next</div>
+      <div class="statement">This is the core. There's more.</div>
+      <div class="hint">
+        <p>Internally, we run a version with a <strong>knowledge graph</strong> connecting every session, person, and decision. <strong>Meeting analysis</strong> that cross-references insights across months. <strong>Autonomous agents</strong> that synthesize while you sleep.</p>
+        <p style="margin-top:1rem;">We're packaging that. It's coming.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <section>
+    <div class="c">
+      <div class="law">Begin</div>
+      <div class="statement">Start a new project or connect an existing repo.</div>
+      <div class="code">$ npx create-egregore</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ==================== RESEARCH ==================== -->
+<div id="page-research" class="page">
+  <section style="padding-top:6rem;">
+    <div class="c">
+      <div class="law">Research</div>
+      <div class="statement">Dispatches from the field.</div>
+      <p style="font-size:15px;color:var(--muted);margin-bottom:3rem;">On shared cognition, coordination infrastructure, and what emerges when organizations develop memory.</p>
+
+      <div id="article-list">
+        <div class="article-card" data-article="towards-shared-minds">
+          <div class="meta">Cem Dagdelen · Feb 2026</div>
+          <h3>Towards Shared Minds</h3>
+          <p>Everyone with their workflows, their agents, their terminals — all they can share is stories of their single-player adventures.</p>
+        </div>
+        <div class="article-card" data-article="context-gardening">
+          <div class="meta">Cem Dagdelen · Feb 2026</div>
+          <h3>Context Gardening</h3>
+          <p>You don't manufacture context, you cultivate the conditions for it to grow.</p>
+        </div>
+      </div>
+
+      <div id="article-view" style="display:none;padding:2rem 0 4rem;">
+        <a href="#" class="article-back" id="back-to-list">← Research</a>
+        <div id="article-content" class="article-body"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <a href="https://www.curvelabs.eu/" target="_blank">Curve Labs</a> · Berlin · MMXXVI
+</footer>
+
+<script>
+const pages={home:'page-home',research:'page-research'};
+function showPage(n){Object.values(pages).forEach(id=>document.getElementById(id).classList.remove('active'));document.getElementById(pages[n]).classList.add('active');window.scrollTo(0,0);}
+document.querySelectorAll('[data-nav]').forEach(el=>{el.addEventListener('click',e=>{e.preventDefault();showPage(el.dataset.nav);history.pushState({page:el.dataset.nav},'',el.dataset.nav==='home'?'/':'/'+el.dataset.nav);});});
+
+const articles={"towards-shared-minds":{title:"Towards Shared Minds",author:"Cem Dagdelen",date:"Feb 2026",content:`<p class="lead">Magical times are upon us. Yet it somehow feels atomised.</p><p class="lead">Everyone with their workflows, their agents, their terminals turning natural language into unprecedented capabilities, yet all they can share is stories of their single-player adventures. Our visceral rebellion against this status quo led us to Egregore.</p><hr><p>What started as an AI-native OS for our lab quickly turned into an internal obsession. Shortly after, we knew this was what we needed to build — and build it through it.</p><p>As Alan Kay put it, "the computer is an instrument whose music is ideas" — and the interface determines which ideas are playable. The terminal makes AI composable in a way no other interface does.</p><hr><h2>Mental Models</h2><p>Egregore is a relational context engine which proactively engages with your processes. Let it ask questions — presets for user responses are contextually generated but typing your response will always yield better results.</p><p>I refer to this as context gardening (as opposed to engineering): the overhead approaches zero as context surfaces are pegged to the edges of the organization, and these edges multiply as the organization interacts.</p><p>Egregore, with Claude Code, lives and operates on your file system. It is the living infrastructure of your group. Both its body and its soul will change through use.</p><hr><h2>Beyond Single-Player</h2><p>AI massively empowers solo users, however, it is clear to us — after a month building Egregore with Egregore — that groups who share context and frontier capabilities will be the most significant force in AI-native production.</p><hr><h2>Origin</h2><p>Before Egregore had a name, Oguzhan and I had been experimenting for almost a year with dynamic knowledge graphs and emergent ontologies. At some point we decided to radically recalibrate — to stop thinking about product, and to simply play, together.</p><p>A few days later, at a cafe in Kreuzberg, we were deploying our AI-native "lab OS". Within a week we were exchanging handoffs every day. The magic hit fast.</p><hr><p>Til next time.</p>`},"context-gardening":{title:"Context Gardening",author:"Cem Dagdelen",date:"Feb 2026",content:`<blockquote>"What liberates us is the knowledge of who we were, what we became, where we were, whereinto we have been thrown, whereto we speed, where from we are redeemed, what birth is and what rebirth." — Theodotus</blockquote><p>The prevailing term in AI tooling right now is "context engineering" — the idea that if you're methodical enough, you can assemble the optimal set of information for a model to work with.</p><p>But this framing carries a quiet assumption that doesn't survive contact with real organizations. It assumes one person can know in advance what the relevant context is.</p><p>In practice, context doesn't work like that. Context emerges.</p><hr><h2>What Emergence Knows</h2><p>Context gardening starts from a different premise: you don't manufacture context, you cultivate the conditions for it to grow.</p><p>Engineering is top-down: someone decides what's relevant, builds a pipeline to surface it, and hopes the selection holds. Gardening is bottom-up: priorities emerge from interactions, from the actual texture of work.</p><hr><h2>Egregore as a Context Garden</h2><p>When teams work inside an Egregore environment, every session contributes to a growing substrate of organizational intelligence.</p><p>AI systems plugged into an Egregore workspace don't operate on a static retrieval set. They operate on living context — context that reflects real priorities, real tensions, real momentum.</p><hr><h2>What This Means in Practice</h2><p>The most powerful context for AI is the one that no single person designed — the kind that can only emerge from the collective intelligence of the people who produced it.</p><p>Egregore is the environment where that emergence happens.</p>`}};
+
+document.querySelectorAll('.article-card').forEach(c=>{c.addEventListener('click',()=>{const a=articles[c.dataset.article];if(!a)return;document.getElementById('article-list').style.display='none';const v=document.getElementById('article-view');v.style.display='block';document.getElementById('article-content').innerHTML=`<div style="margin-bottom:3rem"><div style="font-family:var(--mono);font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--light);margin-bottom:0.5rem">${a.author} · ${a.date}</div><h1 style="font-size:28px;font-weight:600;line-height:1.2">${a.title}</h1></div>${a.content}`;window.scrollTo(0,0);});});
+document.getElementById('back-to-list').addEventListener('click',e=>{e.preventDefault();document.getElementById('article-list').style.display='block';document.getElementById('article-view').style.display='none';window.scrollTo(0,0);});
+window.addEventListener('popstate',e=>{if(e.state&&e.state.page)showPage(e.state.page);else showPage('home');});
+if(window.location.pathname.replace(/^\//,'')==='research')showPage('research');
+</script>
+</body>
+</html>
