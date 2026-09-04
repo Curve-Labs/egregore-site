@@ -28,6 +28,10 @@
   path = "/deck"
 
 [[edge_functions]]
+  function = "memo"
+  path = "/memo"
+
+[[edge_functions]]
   function = "og"
   path = "/"
 
