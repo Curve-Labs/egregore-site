@@ -292,6 +292,19 @@
   status = 200
   force = true
 
+# Private research desk API: handled on Egregore's own Netlify site.
+[[redirects]]
+  from = "/api/research-drafts/*"
+  to = "/.netlify/functions/research-drafts/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/drafts/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Referrer-Policy = "no-referrer"
+
 # Artifact serving — proxy to API (must be before catch-all)
 # Ephemeral artifacts: /view/_/{id}
 [[redirects]]
