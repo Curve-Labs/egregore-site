@@ -104,6 +104,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .desk-steps p { color: var(--desk-muted); font-size: 12px; margin-top: 3px; }
 .desk-steps code, .desk-output-links code { display: inline-block; margin-top: 7px; color: var(--desk-green); font-family: var(--font-mono); font-size: 9px; background: rgba(86,116,94,.08); padding: 3px 6px; }
 .desk-step-weight { color: var(--desk-muted); font-family: var(--font-mono); font-size: 10px; }
+.desk-candidates { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--desk-line); border: 1px solid var(--desk-line); }
+.desk-candidates article { min-width: 0; padding: 22px; background: #f8f5f0; }
+.desk-candidates h3 { margin: 12px 0 14px; font-family: var(--font-serif); font-size: 22px; font-weight: 500; line-height: 1.2; }
+.desk-candidates ul { margin: 0 0 16px 18px; color: var(--desk-muted); font-size: 11px; }
+.desk-candidates li + li { margin-top: 5px; }
+.desk-candidates p { margin-bottom: 16px; color: var(--desk-muted); font-size: 11px; }
+.desk-candidates code { color: var(--desk-blue); font-family: var(--font-mono); font-size: 9px; }
 .desk-run-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .desk-run-grid > div { padding-right: 42px; }
 .desk-run-grid > div + div { border-left: 1px solid var(--desk-line); padding: 0 0 0 42px; }
@@ -200,6 +207,7 @@ input:focus, textarea:focus, select:focus { border-color: #958b7f; box-shadow: 0
   .desk-plan-ready, .desk-danger { align-items: flex-start; flex-direction: column; }
   .desk-plan-actions { width: 100%; align-items: stretch; flex-direction: column; }
   .desk-run-grid { grid-template-columns: 1fr; gap: 34px; }
+  .desk-candidates { grid-template-columns: 1fr; }
   .desk-run-grid > div + div { border-left: 0; border-top: 1px solid var(--desk-line); padding: 34px 0 0; }
   .desk-form-row { grid-template-columns: 1fr; }
   .desk-create-panel > header, .desk-create-panel form { padding-left: 22px; padding-right: 22px; }

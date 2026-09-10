@@ -110,7 +110,8 @@ function CreatePanel({ org, onClose, onCreated, token, workers }: {
   const executors = liveExecutors(workers);
   const [form, setForm] = useState({
     title: "", description: "", kind: "code" as CreateTask["kind"], repository: "",
-    base_branch: "develop", executor: (executors[0] || "") as "codex" | "claude" | "", network: false, criteria: "",
+    base_branch: "develop", executor: (executors[0] || "") as "codex" | "claude" | "",
+    significant: false, network: false, criteria: "",
   });
 
   async function submit(event: FormEvent) {
@@ -126,6 +127,7 @@ function CreatePanel({ org, onClose, onCreated, token, workers }: {
         repository: form.repository.trim() || undefined,
         base_branch: form.base_branch.trim() || undefined,
         executor_preference: form.executor || undefined,
+        planner_policy: form.significant ? "blind_dual" : "single",
         network_policy: form.network ? "allowed" : "off",
         acceptance_criteria: form.criteria.split("\n").map((line) => line.trim()).filter(Boolean),
       }, crypto.randomUUID());
@@ -152,6 +154,7 @@ function CreatePanel({ org, onClose, onCreated, token, workers }: {
             <label>Base branch<input value={form.base_branch} onChange={(e) => setForm({ ...form, base_branch: e.target.value })} /></label>
           </div>
           <label>Acceptance criteria <span>one per line</span><textarea rows={4} value={form.criteria} onChange={(e) => setForm({ ...form, criteria: e.target.value })} placeholder={"Tests pass\nA pull request is ready\nNo deployment"} /></label>
+          <label className="desk-check"><input type="checkbox" checked={form.significant} onChange={(e) => setForm({ ...form, significant: e.target.checked })} /><span><strong>Significant task</strong>Fable and Sol plan independently, then a separate planning run reconciles both.</span></label>
           <label className="desk-check"><input type="checkbox" checked={form.network} onChange={(e) => setForm({ ...form, network: e.target.checked })} /><span><strong>Allow network access</strong>Needed for online research or dependency access.</span></label>
           {error && <p className="desk-error" role="alert">{error}</p>}
           <footer><p>Planning is read-only. Implementation waits for approval.</p><button className="desk-button desk-button-dark" disabled={saving}>{saving ? "Starting…" : "Start planning"} <ArrowIcon /></button></footer>
@@ -305,7 +308,7 @@ function Detail({ detail, token, workers, onChanged }: { detail: TaskDetail; tok
   return (
     <article className="desk-detail">
       <header className="desk-detail-header">
-        <div className="desk-title-line"><span className="desk-kicker">{detail.kind} · {detail.executor_preference || "auto"}</span><span className={`desk-status status-${detail.status}`}><StatusMark status={detail.status} />{STATUS_LABEL[detail.status]}</span></div>
+        <div className="desk-title-line"><span className="desk-kicker">{detail.kind} · {detail.executor_preference || "auto"}{detail.planner_policy === "blind_dual" ? " · Fable + Sol" : ""}</span><span className={`desk-status status-${detail.status}`}><StatusMark status={detail.status} />{STATUS_LABEL[detail.status]}</span></div>
         <h1>{detail.title}</h1>
         <p>{detail.description}</p>
         <div className="desk-detail-meta"><span>{detail.repository || "No repository"}</span>{detail.branch && <span>{detail.branch}</span>}<span>Updated {relativeTime(detail.updated_at)} ago</span></div>
@@ -316,6 +319,13 @@ function Detail({ detail, token, workers, onChanged }: { detail: TaskDetail; tok
         <div className="desk-progress-track"><span style={{ width: `${detail.progress.percent}%` }} /></div>
         <p>{detail.progress.completed_steps} of {detail.progress.total_steps} steps have accepted evidence.</p>
       </section>
+
+      {!!detail.plan_candidates?.length && (
+        <section className="desk-section">
+          <div className="desk-section-heading"><div><span className="desk-kicker">Blind planning</span><h2>Independent candidates</h2></div><span>{detail.plan_candidates.length} of 2 ready</span></div>
+          <div className="desk-candidates">{detail.plan_candidates.map((candidate) => <article key={candidate.id}><span className="desk-kicker">{candidate.provider === "fable" ? "Fable" : "Sol"} · {candidate.model}</span><h3>{candidate.plan.summary || "Candidate ready"}</h3>{candidate.plan.risks?.length ? <ul>{candidate.plan.risks.map((risk) => <li key={risk}>{risk}</li>)}</ul> : <p>No explicit risks recorded.</p>}<code>{candidate.plan_content_hash.slice(0, 10)}</code></article>)}</div>
+        </section>
+      )}
 
       {openQuestions.map((question) => (
         <section className="desk-attention" key={question.id}>
