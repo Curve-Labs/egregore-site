@@ -121,6 +121,15 @@
   status = 200
   force = true
 
+# Simurgh is an API-served multi-principal Emissary, not a second site app.
+# Keep its runnable room surface on the public egregore.xyz origin; the generic
+# /api/v1/* rule above already carries its capability-authenticated data calls.
+[[redirects]]
+  from = "/simurgh/*"
+  to = "https://egregore-production-55f2.up.railway.app/simurgh/:splat"
+  status = 200
+  force = true
+
 # Emissary package preview endpoints (manifest + raw skill) — agents
 # inspect these before consenting to install.
 [[redirects]]
