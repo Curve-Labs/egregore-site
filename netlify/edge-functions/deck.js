@@ -21,6 +21,20 @@ const OG_TAGS = [
 const INJECTED_OG_BLOCK =
   /<meta property="og:type"[\s\S]*?twitter:description" content="[^"]*" \/>\n?/g;
 
+// The deck is an organization page: its HTML is published by an organization
+// and served here on egregore.xyz itself. It takes the same opaque-origin
+// sandbox as /view/{org}/{id} (api/main.py _ORG_PAGE_HEADERS), set here rather
+// than copied from the API response, so the page is sandboxed whichever of the
+// site and the API deploys first.
+const ORG_PAGE_HEADERS = {
+  "content-security-policy":
+    "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox " +
+    "allow-forms allow-modals allow-downloads; frame-ancestors 'none'",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "x-frame-options": "DENY",
+};
+
 export default async () => {
   try {
     const response = await fetch(SOURCE);
@@ -40,6 +54,7 @@ export default async () => {
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
+        ...ORG_PAGE_HEADERS,
       },
     });
   } catch {
