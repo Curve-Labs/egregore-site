@@ -72,6 +72,14 @@
   [headers.values]
     Content-Type = "text/x-shellscript; charset=utf-8"
 
+# Sign-in URLs can carry a private continuation or a legacy one-time token.
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    Cache-Control = "private, no-store"
+    Netlify-CDN-Cache-Control = "no-store"
+
 # /install (no extension) rewrites to /install.sh — both URLs serve the
 # same content; the no-extension form is what we tell users to curl.
 # Must come before the SPA catch-all.
