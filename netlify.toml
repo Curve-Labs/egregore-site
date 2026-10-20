@@ -72,6 +72,14 @@
   [headers.values]
     Content-Type = "text/x-shellscript; charset=utf-8"
 
+# Sign-in URLs can carry a private continuation or a legacy one-time token.
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    Cache-Control = "private, no-store"
+    Netlify-CDN-Cache-Control = "no-store"
+
 # /install (no extension) rewrites to /install.sh — both URLs serve the
 # same content; the no-extension form is what we tell users to curl.
 # Must come before the SPA catch-all.
@@ -215,6 +223,25 @@
   from = "/emissary/i/:token"
   to = "/emissary/i.html"
   status = 200
+
+# Member setup remains API-owned and shares the first-party browser session.
+[[redirects]]
+  from = "/account/connect"
+  to = "https://egregore-production-55f2.up.railway.app/account/connect"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/spirits/connect"
+  to = "https://egregore-production-55f2.up.railway.app/spirits/connect"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/spirits/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/spirits/:splat"
+  status = 200
+  force = true
 
 # Emissary identity spine — proxy the API-owned identity + platform surfaces to
 # Railway so they're first-party on egregore.xyz (the eg_session cookie must ride
