@@ -129,6 +129,24 @@
   force = true
 
 [[redirects]]
+  from = "/api/v1/accounts/link/begin"
+  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/begin"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/v1/accounts/link/approve"
+  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/approve"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/v1/accounts/link/cancel"
+  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/cancel"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/v1/emissary/login-link"
   to = "https://api-standby.egregore.xyz/api/v1/emissary/login-link"
   status = 200
