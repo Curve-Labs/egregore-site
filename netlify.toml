@@ -216,6 +216,25 @@
   to = "/emissary/i.html"
   status = 200
 
+# Member setup remains API-owned and shares the first-party browser session.
+[[redirects]]
+  from = "/account/connect"
+  to = "https://egregore-production-55f2.up.railway.app/account/connect"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/spirits/connect"
+  to = "https://egregore-production-55f2.up.railway.app/spirits/connect"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/spirits/*"
+  to = "https://egregore-production-55f2.up.railway.app/api/spirits/:splat"
+  status = 200
+  force = true
+
 # Emissary identity spine — proxy the API-owned identity + platform surfaces to
 # Railway so they're first-party on egregore.xyz (the eg_session cookie must ride
 # the same origin, and Set-Cookie passes through the 200-rewrite). Must be before

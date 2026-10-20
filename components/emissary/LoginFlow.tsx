@@ -30,6 +30,7 @@ export default function LoginFlow() {
   const params = useSearchParams();
   const token = params.get("token");
   const next = safeNext(params.get("next"));
+  const spiritSetup = !!next && /^\/spirits\/connect\?challenge=[A-Za-z0-9_-]{43}$/.test(next);
   const [stage, setStage] = useState<Stage>(token ? "verifying" : "form");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -86,6 +87,10 @@ export default function LoginFlow() {
             If that email is registered, a one-time sign-in link is on its way.
             It&apos;s valid for 15 minutes — no password, just open the link.
           </p>
+          {spiritSetup && <p className="em-prose">The link will bring you back to connect your Telegram spirit.</p>}
+          <button className="setup-btn" type="button" onClick={() => { setError(""); setStage("form"); }}>
+            Use another email or try again
+          </button>
         </div>
       </div>
     );
@@ -94,7 +99,7 @@ export default function LoginFlow() {
   return (
     <div className="setup-stage">
       <div className="setup-stage-centered">
-        <div className="setup-eyebrow">Emissary · sign in</div>
+        <div className="setup-eyebrow">{spiritSetup ? "Egregore · connect your spirit" : "Emissary · sign in"}</div>
         <h1 className="setup-title">Sign in</h1>
         <p className="setup-sub">
           Enter your email and we&apos;ll send a one-time sign-in link. No password.
