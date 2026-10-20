@@ -119,45 +119,6 @@
   status = 200
   force = true
 
-# Keep member setup and its sign-in requests on the standby API while
-# retaining egregore.xyz as the browser and registered OAuth callback origin.
-# These narrow routes must precede the general /api/v1/* proxy.
-[[redirects]]
-  from = "/api/v1/accounts/link/github/*"
-  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/github/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/v1/accounts/link/begin"
-  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/begin"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/v1/accounts/link/approve"
-  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/approve"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/v1/accounts/link/cancel"
-  to = "https://api-standby.egregore.xyz/api/v1/accounts/link/cancel"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/v1/emissary/login-link"
-  to = "https://api-standby.egregore.xyz/api/v1/emissary/login-link"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/v1/emissary/login-verify"
-  to = "https://api-standby.egregore.xyz/api/v1/emissary/login-verify"
-  status = 200
-  force = true
-
 # Emissary + platform JSON API (/api/v1/*) — same-origin for the browse
 # shelf and any page fetching the platform API (Railway CORS allowlist is
 # egregore.xyz, so the site must call these same-origin). Must be before
@@ -263,22 +224,22 @@
   to = "/emissary/i.html"
   status = 200
 
-# Member setup stays API-owned on standby and shares the first-party session.
+# Member setup remains API-owned and shares the first-party browser session.
 [[redirects]]
   from = "/account/connect"
-  to = "https://api-standby.egregore.xyz/account/connect"
+  to = "https://egregore-production-55f2.up.railway.app/account/connect"
   status = 200
   force = true
 
 [[redirects]]
   from = "/spirits/connect"
-  to = "https://api-standby.egregore.xyz/spirits/connect"
+  to = "https://egregore-production-55f2.up.railway.app/spirits/connect"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/spirits/*"
-  to = "https://api-standby.egregore.xyz/api/spirits/:splat"
+  to = "https://egregore-production-55f2.up.railway.app/api/spirits/:splat"
   status = 200
   force = true
 
