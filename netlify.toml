@@ -80,6 +80,57 @@
     Cache-Control = "private, no-store"
     Netlify-CDN-Cache-Control = "no-store"
 
+# Artifact recovery: exact routes to the independently operated API. These
+# precede the retired /api/auth/* and /view/:org/:id proxies. The API verifies
+# identities, methods, queries and UUIDs; other hosted capabilities stay held.
+[[redirects]]
+  from = "/view/curvelabs/:id"
+  to = "https://api.egregore.xyz/api/recovery/artifacts/:id/page"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/recovery/artifacts/sign-in"
+  to = "https://api.egregore.xyz/recovery/artifacts/sign-in"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/callback"
+  to = "https://api.egregore.xyz/callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/github/start"
+  to = "https://api.egregore.xyz/api/auth/recovery/github/start"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/github/callback"
+  to = "https://api.egregore.xyz/api/auth/recovery/github/callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/session"
+  to = "https://api.egregore.xyz/api/auth/recovery/session"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/session/orgs/curvelabs"
+  to = "https://api.egregore.xyz/api/auth/recovery/session/orgs/curvelabs"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/logout"
+  to = "https://api.egregore.xyz/api/auth/recovery/logout"
+  status = 200
+  force = true
+
 # /install (no extension) rewrites to /install.sh — both URLs serve the
 # same content; the no-extension form is what we tell users to curl.
 # Must come before the SPA catch-all.
