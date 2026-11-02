@@ -1,6 +1,6 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+// Same-origin by default. The old hosted API is retired; egregore.xyz
+// answers its paths with a held 503 during security recovery.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export const TOKEN_KEY = "egregore_github_token";
 

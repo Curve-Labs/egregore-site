@@ -37,9 +37,10 @@ import {
 } from "./telegram-polling";
 import "./setup.css";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+// Absolute because it is printed into a curl command. The old hosted API
+// is retired; egregore.xyz answers its paths with a held 503 during
+// security recovery.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://egregore.xyz";
 
 // ── Icons ──────────────────────────────────────────────────────
 

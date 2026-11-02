@@ -37,9 +37,8 @@ import "./account.css";
 // The emissary MCP server's OAuth connector endpoint — paste into Claude/ChatGPT
 // connectors; the OAuth flow (Connect → sign in → Allow) handles identity, so
 // nothing needs to be minted or pasted as a key.
-const MCP_CONNECTOR_URL =
-  process.env.NEXT_PUBLIC_MCP_URL ??
-  "https://egregore-handoff-mcp-production.up.railway.app/mcp";
+// No default: the old hosted connector is retired during security recovery.
+const MCP_CONNECTOR_URL = process.env.NEXT_PUBLIC_MCP_URL ?? "";
 
 type State = "loading" | "signed-out" | "signed-in" | "error";
 type VersionState =
@@ -745,7 +744,13 @@ export default function AccountFlow() {
               Add this connector, click <strong>Connect</strong>, and sign in with your
               Egregore email.
             </p>
-            <CommandBlock command={MCP_CONNECTOR_URL} />
+            {MCP_CONNECTOR_URL ? (
+              <CommandBlock command={MCP_CONNECTOR_URL} />
+            ) : (
+              <p className="acct-panel-copy">
+                Temporarily unavailable during security recovery.
+              </p>
+            )}
             <p className="acct-panel-copy">
               <strong>Claude:</strong> Settings → Connectors → Add custom connector →
               paste the URL → Connect → sign in → Allow.
