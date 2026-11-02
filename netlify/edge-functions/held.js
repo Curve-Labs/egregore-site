@@ -10,6 +10,12 @@
 
 const HELD_DETAIL = "Temporarily unavailable during security recovery.";
 
+// The artifact-recovery routes (redirects to the independent API) are
+// never held, even if a declaration in netlify.toml matches them by
+// mistake: they continue to their redirects.
+const RECOVERY_PATH =
+  /^\/(view\/curvelabs\/|api\/auth\/recovery\/|recovery\/)|^\/callback\/?$/;
+
 // API, OAuth and agent payload paths answer JSON; everything else is a
 // page for a person.
 const MACHINE_PATH =
@@ -72,8 +78,11 @@ a.home:hover { color: var(--terracotta); }
 </html>
 `;
 
-export default (request) => {
+export default (request, context) => {
   const { pathname } = new URL(request.url);
+  if (RECOVERY_PATH.test(pathname)) {
+    return context.next();
+  }
   if (MACHINE_PATH.test(pathname)) {
     return Response.json(
       { detail: HELD_DETAIL },

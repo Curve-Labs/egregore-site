@@ -114,7 +114,9 @@
 # before [[redirects]], so the artifact-recovery redirects above are kept
 # out of these paths: /api/auth/recovery/* by excludedPath and
 # /view/curvelabs/* by excludedPattern; /recovery/artifacts/sign-in and
-# /callback match no held path.
+# /callback match no held path. held.js also passes those paths through
+# itself. Netlify anchors every pattern and excludedPattern at both ends,
+# so a prefix needs a trailing .* to match.
 
 # API, OAuth and agent payloads (JSON). /api/* covers the former proxies
 # (/api/auth/*, /api/v1/*, /api/artifacts/handoff/*, /api/spirits/*,
@@ -229,7 +231,7 @@
 [[edge_functions]]
   function = "held"
   pattern = "^/view/[^/]+/[^/]+/?$"
-  excludedPattern = ["^/view/curvelabs/", "^/view/_/"]
+  excludedPattern = ["^/view/curvelabs/.*$", "^/view/_/.*$"]
 
 # /install (no extension) rewrites to /install.sh — both URLs serve the
 # same content; the no-extension form is what we tell users to curl.

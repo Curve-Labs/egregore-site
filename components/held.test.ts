@@ -8,8 +8,12 @@ afterEach(() => {
 
 const DETAIL = "Temporarily unavailable during security recovery.";
 
+const PASSED_THROUGH = new Response("recovery redirect");
+
 function hold(path: string) {
-  return held(new Request(`https://egregore.xyz${path}`));
+  return held(new Request(`https://egregore.xyz${path}`), {
+    next: () => PASSED_THROUGH,
+  });
 }
 
 function expectHeldHeaders(response: Response) {
@@ -61,6 +65,16 @@ it.each([
   expectHeldHeaders(response);
   expect(response.headers.get("content-type")).toContain("application/json");
   await expect(response.json()).resolves.toEqual({ detail: DETAIL });
+});
+
+it.each([
+  "/view/curvelabs/2f6c4675-6ca4-4d5c-9e50-698817990ffa",
+  "/recovery/artifacts/sign-in",
+  "/callback",
+  "/api/auth/recovery/github/start",
+  "/api/auth/recovery/session/orgs/curvelabs",
+])("passes the recovery route %s through to its redirect", async (path) => {
+  expect(await hold(path)).toBe(PASSED_THROUGH);
 });
 
 it("never reaches the network", async () => {
