@@ -26,9 +26,9 @@ import { TOKEN_KEY } from "../desk/api";
 import { getGitHubAuthUrl } from "../setup/api";
 import "./adoption-metrics.css";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+// Same-origin by default. The old hosted API is retired; egregore.xyz
+// answers its paths with a held 503 during security recovery.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 type OrgRow = {
   slug: string;
