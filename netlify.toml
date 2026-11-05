@@ -54,6 +54,22 @@
     Cache-Control = "private, no-store"
     Netlify-CDN-Cache-Control = "no-store"
 
+# Shared Minds: a public explainer whose link is already circulating. The site
+# serves it directly, so the link stays public under its original name. Every
+# other /view/curvelabs/{id} goes to the recovery API below. The first rule
+# moves the page's earlier name to this one.
+[[redirects]]
+  from = "/view/curvelabs/shared-memory"
+  to = "/view/curvelabs/shared-minds"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/view/curvelabs/shared-minds"
+  to = "/view/curvelabs/shared-minds/index.html"
+  status = 200
+  force = true
+
 # Artifact recovery: exact routes to the independently operated API. These
 # precede the retired /api/auth/* and /view/:org/:id proxies. The API verifies
 # identities, methods, queries and UUIDs; other hosted capabilities stay held.
