@@ -6,10 +6,6 @@
   NODE_VERSION = "22"
 
 [[edge_functions]]
-  function = "emissary-metrics"
-  path = "/api/emissary-metrics"
-
-[[edge_functions]]
   function = "og"
   path = "/"
 
@@ -50,6 +46,209 @@
   [headers.values]
     Content-Type = "text/x-shellscript; charset=utf-8"
 
+# Sign-in URLs can carry a private continuation or a legacy one-time token.
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    Cache-Control = "private, no-store"
+    Netlify-CDN-Cache-Control = "no-store"
+
+# Shared Minds: a public explainer whose link is already circulating. The site
+# serves it directly, so the link stays public under its original name. Every
+# other /view/curvelabs/{id} goes to the recovery API below. The first rule
+# moves the page's earlier name to this one.
+[[redirects]]
+  from = "/view/curvelabs/shared-memory"
+  to = "/view/curvelabs/shared-minds"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/view/curvelabs/shared-minds"
+  to = "/view/curvelabs/shared-minds/index.html"
+  status = 200
+  force = true
+
+# Artifact recovery: exact routes to the independently operated API. These
+# precede the retired /api/auth/* and /view/:org/:id proxies. The API verifies
+# identities, methods, queries and UUIDs; other hosted capabilities stay held.
+[[redirects]]
+  from = "/view/curvelabs/:id"
+  to = "https://api.egregore.xyz/api/recovery/artifacts/:id/page"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/recovery/artifacts/sign-in"
+  to = "https://api.egregore.xyz/recovery/artifacts/sign-in"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/callback"
+  to = "https://api.egregore.xyz/callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/github/start"
+  to = "https://api.egregore.xyz/api/auth/recovery/github/start"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/github/callback"
+  to = "https://api.egregore.xyz/api/auth/recovery/github/callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/session"
+  to = "https://api.egregore.xyz/api/auth/recovery/session"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/session/orgs/curvelabs"
+  to = "https://api.egregore.xyz/api/auth/recovery/session/orgs/curvelabs"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/recovery/logout"
+  to = "https://api.egregore.xyz/api/auth/recovery/logout"
+  status = 200
+  force = true
+
+# ── Held during security recovery ─────────────────────────────────────
+# Since the 22 Oct 2026 security incident the old hosted API no longer
+# serves egregore.xyz, and the site must not proxy to a host it no longer
+# controls. Every path that used to reach it is answered by the `held`
+# edge function (netlify/edge-functions/held.js): 503, no-store, noindex;
+# a page for people, JSON for API and agent paths. Edge functions run
+# before [[redirects]], so the artifact-recovery redirects above are kept
+# out of these paths: /api/auth/recovery/* by excludedPath and
+# /view/curvelabs/* by excludedPattern; /recovery/artifacts/sign-in and
+# /callback match no held path. held.js also passes those paths through
+# itself. Netlify anchors every pattern and excludedPattern at both ends,
+# so a prefix needs a trailing .* to match.
+
+# API, OAuth and agent payloads (JSON). /api/* covers the former proxies
+# (/api/auth/*, /api/v1/*, /api/artifacts/handoff/*, /api/spirits/*,
+# /api/billing/*), the former emissary-metrics function, and the setup,
+# desk and admin calls the client code now makes same-origin.
+[[edge_functions]]
+  function = "held"
+  path = "/api/*"
+  excludedPath = ["/api/auth/recovery/*", "/api/research-drafts/*"]
+
+[[edge_functions]]
+  function = "held"
+  path = "/oauth/*"
+
+[[edge_functions]]
+  function = "held"
+  path = "/.well-known/oauth-authorization-server"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/manifest.json"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/raw/*"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/plugin.zip"
+
+# Handoff and emissary reads: /h/{id} and /emissary/e/{id} are pages;
+# /h/{id}/reply and /emissary/e/{id}/raw answer JSON. The install hub
+# (/emissary, /emissary/verify, /emissary/i/*) stays static.
+[[edge_functions]]
+  function = "held"
+  path = "/h/*"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/e/*"
+
+# Vanity emissary slugs.
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/traction"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/dataroom"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/deck"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/paper"
+
+[[edge_functions]]
+  function = "held"
+  path = "/emissary/evals"
+
+# Member setup, spirits and CLI device approval.
+[[edge_functions]]
+  function = "held"
+  path = "/account/connect"
+
+[[edge_functions]]
+  function = "held"
+  path = "/spirits/connect"
+
+[[edge_functions]]
+  function = "held"
+  path = "/connect/device"
+
+# Platform namespace: /@{handle}, /@{handle}/{slug}, /@{handle}/{slug}/raw.
+[[edge_functions]]
+  function = "held"
+  path = "/@*"
+
+# Artifact short links that were served from the old API.
+[[edge_functions]]
+  function = "held"
+  path = "/deck"
+
+[[edge_functions]]
+  function = "held"
+  path = "/demo"
+
+[[edge_functions]]
+  function = "held"
+  path = "/memo"
+
+[[edge_functions]]
+  function = "held"
+  path = "/view/lego/context-management"
+
+[[edge_functions]]
+  function = "held"
+  path = "/how-egregore-keeps-context-alive"
+
+# ── Legacy artifact pages: held pending a decision ──────────────────────
+# /view/_/{id} (ephemeral) and /view/{org}/{id} for every organization
+# other than curvelabs used to proxy to the old API. A pending decision
+# may repoint these legacy pages; change this block when it lands.
+# /view/curvelabs/{id} stays with the recovery redirect above, and
+# /view/{org} alone was never proxied.
+[[edge_functions]]
+  function = "held"
+  pattern = "^/view/_/[^/]+/?$"
+
+[[edge_functions]]
+  function = "held"
+  pattern = "^/view/[^/]+/[^/]+/?$"
+  excludedPattern = ["^/view/curvelabs/.*$", "^/view/_/.*$"]
+
 # /install (no extension) rewrites to /install.sh — both URLs serve the
 # same content; the no-extension form is what we tell users to curl.
 # Must come before the SPA catch-all.
@@ -66,45 +265,10 @@
 # The setup page never needed the proxy; install instructions have
 # always pointed at the Railway URL directly.
 
-# Handoff v1 — proxy all handoff surfaces to Railway. Must be before SPA catch-all.
-# Reply: POST /h/{id}/reply — must be before /h/{id} to match the longer path first
-[[redirects]]
-  from = "/h/:id/reply"
-  to = "https://egregore-production-55f2.up.railway.app/h/:id/reply"
-  status = 200
-  force = true
-
-# View: /h/{id} serves static HTML with embedded JSON-LD
-[[redirects]]
-  from = "/h/:id"
-  to = "https://egregore-production-55f2.up.railway.app/h/:id"
-  status = 200
-  force = true
-
-# API: publish, extend, get canonical JSON — no Railway URL leaks to users
-[[redirects]]
-  from = "/api/artifacts/handoff/*"
-  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/handoff/:splat"
-  status = 200
-  force = true
-
-# Emissary v0 — proxy emissary read surfaces to Railway. Must be before SPA catch-all.
-# These match only /emissary/e/* — the install-hub pages (/emissary,
-# /emissary/verify, /emissary/i/*) are static Next routes and fall through.
-# Raw agent payload: /emissary/e/{id}/raw — must be before /emissary/e/{id}
-# to match the longer path first.
-[[redirects]]
-  from = "/emissary/e/:id/raw"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id/raw"
-  status = 200
-  force = true
-
-# Human render: /emissary/e/{id} serves the metadata-only HTML preview
-[[redirects]]
-  from = "/emissary/e/:id"
-  to = "https://egregore-production-55f2.up.railway.app/emissary/e/:id"
-  status = 200
-  force = true
+# Emissary platform browse page — a static Next route
+# (app/(setup)/emissary/browse) that fetches the shelf client-side from
+# the public platform API. The former Railway proxy is gone; the static
+# file wins over the unforced SPA catch-all.
 
 # Token-bound install entry point: /emissary/i/{token} — a static Next page
 # (out/emissary/i.html) that reads the token from the URL path client-side.
@@ -114,59 +278,18 @@
   to = "/emissary/i.html"
   status = 200
 
-# Emissary identity spine — proxy the API-owned identity + platform surfaces to
-# Railway so they're first-party on egregore.xyz (the eg_session cookie must ride
-# the same origin, and Set-Cookie passes through the 200-rewrite). Must be before
-# the SPA catch-all. /login is intentionally NOT proxied — it's a static Next page
-# (out/login.html) that owns the email form and forwards ?token= to login-verify.
-#
-# Identity + platform API: session, login-link, login-verify, logout, device
-# flow, stars CRUD. Splat covers every current and future sub-path.
+# Private research desk API: handled on Egregore's own Netlify site.
 [[redirects]]
-  from = "/api/v1/emissary/*"
-  to = "https://egregore-production-55f2.up.railway.app/api/v1/emissary/:splat"
+  from = "/api/research-drafts/*"
+  to = "/.netlify/functions/research-drafts/:splat"
   status = 200
   force = true
 
-[[redirects]]
-  from = "/api/v1/platform/*"
-  to = "https://egregore-production-55f2.up.railway.app/api/v1/platform/:splat"
-  status = 200
-  force = true
-
-# Device-approval page (session-gated). Billing/package selection owns the
-# public /connect route in the Next.js site; CLI device verification remains
-# an API-rendered surface at /connect/device.
-[[redirects]]
-  from = "/connect/device"
-  to = "https://egregore-production-55f2.up.railway.app/connect/device"
-  status = 200
-  force = true
-
-# Profile + address render + raw: /@handle, /@handle/slug, /@handle/slug/raw.
-# Splat — no static route begins with /@, so nothing collides.
-[[redirects]]
-  from = "/@*"
-  to = "https://egregore-production-55f2.up.railway.app/@:splat"
-  status = 200
-  force = true
-
-# Artifact serving — proxy to API (must be before catch-all)
-# Ephemeral artifacts: /view/_/{id}
-[[redirects]]
-  from = "/view/_/:id"
-  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/_/:id"
-  status = 200
-  force = true
-
-# Org-scoped artifacts: /view/{org}/{id}
-[[redirects]]
-  from = "/view/:org/:id"
-  to = "https://egregore-production-55f2.up.railway.app/api/artifacts/:org/:id"
-  status = 200
-  force = true
-
-# /view/{org} falls through to SPA catch-all → React Router handles listing page
+[[headers]]
+  for = "/drafts/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Referrer-Policy = "no-referrer"
 
 [[redirects]]
   from = "/*"

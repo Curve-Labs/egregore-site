@@ -1,9 +1,10 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://egregore-production-55f2.up.railway.app";
+// Same-origin by default. The old hosted API is retired; egregore.xyz
+// answers its paths with a held 503 during security recovery.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 const GITHUB_CLIENT_ID = "Iv23li2obNsAjakoK2RE";
 const GITHUB_SCOPE = "";
+
 const GITHUB_RETURN_KEY = "egregore_github_return";
 
 export function getGitHubAuthUrl(returnTo?: string): string {
@@ -29,8 +30,8 @@ export function consumeGitHubAuthReturn(): string | null {
 type RequestOpts = {
   body?: unknown;
   token?: string;
-  headers?: Record<string, string>;
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 };
 
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
@@ -103,6 +104,7 @@ export type OrgReposResponse = {
 export type SetupResult = {
   org_slug: string;
   setup_token: string;
+  repo_name?: string;
   telegram_invite_link?: string;
   telegram_group_link?: string;
   org_name?: string;
@@ -127,6 +129,20 @@ export type InviteInfo = {
   invited_by: string;
 };
 
+export type GithubSearchUser = {
+  login: string;
+  avatar_url?: string;
+  profile_url?: string;
+};
+
+export type InviteResult = {
+  invite_url: string;
+  invited_username: string;
+  github_invite: { status: string; reason?: string };
+  memory_access?: { repo: string; status: string };
+  managed_access?: { repo: string; status: string }[];
+};
+
 export type UserProfile = {
   name: string;
   telegram_username?: string;
@@ -148,6 +164,7 @@ export type ConnectContext = {
     repo_name?: string;
     managed_repo_count?: number;
     launcher_version?: string;
+    fresh?: boolean;
   };
   checkout_session_id?: string | null;
 };
@@ -161,47 +178,85 @@ export type CheckoutStatus = {
 // ── API ────────────────────────────────────────────────────────
 
 export async function exchangeCode(code: string): Promise<{ github_token: string; user: GithubUser }> {
-  return request("POST", "/api/auth/github/callback", { body: { code } });
+  const authBase = typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+    ? API_URL
+    : "";
+  const resp = await fetch(`${authBase}/api/auth/github/callback`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+  return data as { github_token: string; user: GithubUser };
 }
 
 export type EditableArtifact = {
   id: string;
   org: string;
+  kind?: "org" | "handoff";
   title: string;
   artifact_type: string;
+  published_url?: string;
+  text_sources?: string[];
   html: string;
   sha256: string;
+};
+
+export type ArtifactTextChange = {
+  before: string;
+  after: string;
 };
 
 export async function getEditableArtifact(
   token: string,
   org: string,
   id: string,
+  kind: "org" | "handoff" = "org",
 ): Promise<EditableArtifact> {
-  return request("GET", `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`, { token });
+  const path = kind === "handoff"
+    ? `/api/artifacts/edit/handoff/${encodeURIComponent(id)}`
+    : `/api/artifacts/edit/${encodeURIComponent(org)}/${encodeURIComponent(id)}`;
+  return request("GET", path, { token });
 }
 
 export async function saveEditableArtifact(
   token: string,
   artifact: EditableArtifact,
   html: string,
-): Promise<{ status: string; id: string; url: string; sha256: string }> {
+  textChanges: ArtifactTextChange[] = [],
+): Promise<{ status: string; id: string; url: string; html: string; sha256: string }> {
+  const path = artifact.kind === "handoff"
+    ? `/api/artifacts/edit/handoff/${encodeURIComponent(artifact.id)}`
+    : `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`;
   return request(
     "PUT",
-    `/api/artifacts/edit/${encodeURIComponent(artifact.org)}/${encodeURIComponent(artifact.id)}`,
+    path,
     {
       token,
-      body: { html, expected_sha256: artifact.sha256 },
+      body: { html, expected_sha256: artifact.sha256, text_changes: textChanges },
     },
   );
 }
 
-export async function getOrgs(token: string): Promise<SetupOrgsResponse> {
-  return request("GET", "/api/org/setup/orgs", { token });
+export async function getOrgs(token: string, signal?: AbortSignal): Promise<SetupOrgsResponse> {
+  return request("GET", "/api/org/setup/orgs", { token, signal });
 }
 
 export async function getOrgRepos(token: string, org: string): Promise<OrgReposResponse> {
   return request("GET", `/api/org/setup/repos?org=${encodeURIComponent(org)}`, { token });
+}
+
+export async function searchGithubUsers(
+  token: string,
+  query: string,
+  org?: string,
+  signal?: AbortSignal,
+): Promise<{ users: GithubSearchUser[] }> {
+  const params = new URLSearchParams({ q: query });
+  if (org) params.set("org", org);
+  return request("GET", `/api/github/users/search?${params.toString()}`, { token, signal });
 }
 
 export type AppInstallationStatus = {
@@ -263,6 +318,13 @@ export async function getInviteInfo(inviteToken: string): Promise<InviteInfo> {
 
 export async function acceptInvite(token: string, inviteToken: string): Promise<SetupResult> {
   return request("POST", `/api/org/invite/${inviteToken}/accept`, { token });
+}
+
+export async function inviteTeammate(
+  token: string,
+  body: { github_org: string; github_username: string; repo_name: string; slug: string },
+): Promise<InviteResult> {
+  return request("POST", "/api/org/invite", { token, body });
 }
 
 export async function getUserProfile(token: string): Promise<UserProfile> {

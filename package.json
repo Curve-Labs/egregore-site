@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@netlify/blobs": "11.0.3",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/mdx": "^2.0.13",
     "framer-motion": "^12.38.0",

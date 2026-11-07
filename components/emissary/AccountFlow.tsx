@@ -34,6 +34,12 @@ import "../setup/setup.css";
 import "./emissary.css";
 import "./account.css";
 
+// The emissary MCP server's OAuth connector endpoint — paste into Claude/ChatGPT
+// connectors; the OAuth flow (Connect → sign in → Allow) handles identity, so
+// nothing needs to be minted or pasted as a key.
+// No default: the old hosted connector is retired during security recovery.
+const MCP_CONNECTOR_URL = process.env.NEXT_PUBLIC_MCP_URL ?? "";
+
 type State = "loading" | "signed-out" | "signed-in" | "error";
 type VersionState =
   | { state: "loading"; versions: PublishedVersion[] }
@@ -726,6 +732,35 @@ export default function AccountFlow() {
               Compose with your agent. The site receives the public address when it is ready.
             </p>
             <CommandBlock command="emissary new" />
+          </section>
+
+          <section className="acct-panel">
+            <div className="acct-section-head">
+              <span className="acct-section-label">Connect ChatGPT / Claude</span>
+              <span className="acct-section-rule" />
+            </div>
+            <p className="acct-panel-copy">
+              Create emissaries straight from ChatGPT or Claude — no install, no keys.
+              Add this connector, click <strong>Connect</strong>, and sign in with your
+              Egregore email.
+            </p>
+            {MCP_CONNECTOR_URL ? (
+              <CommandBlock command={MCP_CONNECTOR_URL} />
+            ) : (
+              <p className="acct-panel-copy">
+                Temporarily unavailable during security recovery.
+              </p>
+            )}
+            <p className="acct-panel-copy">
+              <strong>Claude:</strong> Settings → Connectors → Add custom connector →
+              paste the URL → Connect → sign in → Allow.
+              <br />
+              <strong>ChatGPT:</strong> Settings → Connectors → Add → paste the URL →
+              Connect → sign in → Allow.
+            </p>
+            <p className="em-prose acct-empty">
+              Each connection appears under Connected CLIs and can be revoked anytime.
+            </p>
           </section>
 
           <section className="acct-panel">

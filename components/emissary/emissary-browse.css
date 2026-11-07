@@ -1,0 +1,104 @@
+/* emissary-browse.css — the /emissary/browse shelf page.
+   Mounts under .em-hub (emissary-hub.css supplies every token and
+   primitive: --accent, --line, sec-head, em-copy, footer …). Everything
+   here is scoped under the .em-browse modifier so nothing leaks back
+   into the hub.
+
+   Design read (2026-06-29): the shelf is the social surface, so it leads
+   with the signals that have data — kind (the filter axis), carries (the
+   live metric), and the people. Categories/stars are empty at launch and
+   no longer drive the layout. */
+
+/* ── Hero pulse — contributors + one-line stat ─────────── */
+.em-browse .em-hero { padding: 40px 0 44px; }
+.em-browse .bw-pulse { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+.em-browse .bw-contributors { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.em-browse .bw-contrib { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 6px; transition: border-color 140ms, transform 140ms; }
+.em-browse .bw-contrib:hover { border-color: var(--accent); transform: translateY(-1px); }
+.em-browse .bw-contrib-meta { display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.em-browse .bw-contrib-name { font-family: var(--em-sans); font-weight: 500; font-size: 13px; color: var(--ink); line-height: 1.15; }
+.em-browse .bw-contrib-count { font-family: var(--em-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--muted); line-height: 1.15; }
+
+.em-browse .bw-stat { font-family: var(--em-mono); font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted); margin: 0; }
+.em-browse .bw-stat strong { color: var(--accent-deep); font-weight: 600; }
+
+/* ── Controls — filter row (left) + sort (right) ───────── */
+.em-browse .bw-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px; margin: 0 0 26px; }
+
+.em-browse .bw-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.em-browse .bw-filter { display: inline-flex; align-items: center; gap: 7px; background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 7px 13px; font-family: var(--em-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink-2); cursor: pointer; transition: color 120ms, border-color 120ms, background 120ms; }
+.em-browse .bw-filter:hover { border-color: var(--accent); color: var(--accent-deep); }
+.em-browse .bw-filter[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.em-browse .bw-filter-n { font-size: 10px; opacity: 0.7; }
+.em-browse .bw-filter[aria-pressed="true"] .bw-filter-n { opacity: 0.85; }
+
+/* Sort — quieter mono toggle */
+.em-browse .bw-sort { display: inline-flex; align-items: center; gap: 4px; }
+.em-browse .bw-sort-label { font-family: var(--em-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); margin-right: 4px; }
+.em-browse .bw-sort-opt { background: transparent; border: none; padding: 5px 9px; border-radius: 7px; font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.02em; color: var(--muted); cursor: pointer; transition: color 120ms, background 120ms; }
+.em-browse .bw-sort-opt:hover { color: var(--accent-deep); }
+.em-browse .bw-sort-opt[aria-pressed="true"] { color: var(--accent-deep); background: var(--accent-soft); }
+
+/* ── States — quiet mono lines, no spinners ───── */
+.em-browse .bw-note { font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--muted); margin: 8px 0 0; }
+.em-browse .bw-empty { border: 1px dashed var(--line-2); border-radius: 14px; padding: 48px 28px; text-align: center; }
+.em-browse .bw-empty-line { font-family: var(--em-serif); font-size: 24px; font-weight: 500; color: var(--ink); margin: 0 0 10px; }
+.em-browse .bw-empty-sub { font-family: var(--em-serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 0; }
+.em-browse .bw-empty-sub a { color: var(--accent-deep); text-decoration: none; border-bottom: 1px dotted var(--line-2); padding-bottom: 1px; }
+.em-browse .bw-empty-sub a:hover { border-color: var(--accent); }
+
+/* ── Card grid — denser social feed (3-up on wide) ────── */
+.em-browse .bw-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (min-width: 1040px) { .em-browse .bw-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.em-browse .bw-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 11px; transition: border-color 160ms, box-shadow 160ms, transform 160ms; }
+.em-browse .bw-card:hover { border-color: var(--line-2); box-shadow: 0 6px 22px -14px rgba(26, 20, 16, 0.28); transform: translateY(-2px); }
+
+/* Top row — kind chip + counts */
+.em-browse .bw-tags { display: flex; align-items: center; gap: 8px; }
+.em-browse .bw-kind { font-family: var(--em-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 5px; padding: 4px 8px; border: 1px solid var(--line-2); color: var(--muted); }
+/* Kind accents — a quiet color key so the eye sorts the shelf by type */
+.em-browse .bw-kind.k-dialogue { background: #eef1ea; border-color: transparent; color: #5d6b4e; }
+.em-browse .bw-kind.k-build { background: var(--accent-soft); border-color: transparent; color: var(--accent-deep); }
+.em-browse .bw-kind.k-documentation { background: #e9eef1; border-color: transparent; color: #4e5f6b; }
+
+.em-browse .bw-counts { margin-left: auto; display: inline-flex; align-items: center; gap: 12px; font-family: var(--em-mono); font-size: 11px; letter-spacing: 0.04em; }
+.em-browse .bw-uses { display: inline-flex; align-items: center; gap: 5px; color: var(--accent-deep); font-weight: 500; }
+.em-browse .bw-uses svg { color: var(--accent-deep); flex-shrink: 0; }
+.em-browse .bw-stars { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.em-browse .bw-stars svg { color: var(--muted-2); flex-shrink: 0; }
+
+/* Title + summary — the hub card's serif rhythm */
+.em-browse .bw-name { font-family: var(--em-serif); font-weight: 500; font-size: 21px; line-height: 1.14; letter-spacing: -0.015em; margin: 0; text-wrap: pretty; }
+.em-browse .bw-name a { color: var(--ink); text-decoration: none; transition: color 120ms; }
+.em-browse .bw-name a:hover { color: var(--accent-deep); }
+.em-browse .bw-summary { font-family: var(--em-serif); font-size: 14.5px; line-height: 1.5; color: var(--ink-2); margin: 0; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Footer — author badge above the address row */
+.em-browse .bw-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+
+/* Avatar — initial disc, shared by card badge + contributors */
+.em-browse .bw-avatar { border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--code); color: var(--code-ink); font-family: var(--em-mono); font-weight: 500; letter-spacing: 0.02em; flex-shrink: 0; }
+.em-browse .bw-avatar.sm { width: 30px; height: 30px; font-size: 12px; }
+.em-browse .bw-avatar.lg { width: 38px; height: 38px; font-size: 14px; }
+
+/* Author badge — avatar + display ✓ + @handle */
+.em-browse .bw-author { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; align-self: flex-start; }
+.em-browse .bw-author-id { display: flex; flex-direction: column; gap: 1px; }
+.em-browse .bw-author-name { font-family: var(--em-sans); font-weight: 500; font-size: 13px; color: var(--ink); line-height: 1.2; }
+.em-browse .bw-author-handle { font-family: var(--em-mono); font-size: 11px; color: var(--muted); line-height: 1.2; }
+.em-browse .bw-author:hover .bw-author-handle { color: var(--accent-deep); }
+.em-browse .bw-check { color: var(--accent); margin-left: 4px; font-weight: 700; }
+
+/* Address row — mono address chip + dark copy button */
+.em-browse .bw-address-row { display: flex; align-items: stretch; gap: 8px; }
+.em-browse .bw-address { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--accent-soft); border-radius: 8px; padding: 9px 12px; font-family: var(--em-mono); font-size: 12px; color: var(--accent-deep); text-decoration: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: filter 120ms; }
+.em-browse .bw-address:hover { filter: brightness(0.96); }
+.em-browse .bw-version { color: var(--muted); font-size: 10.5px; letter-spacing: 0.06em; }
+
+/* Responsive */
+@media (max-width: 760px) {
+  .em-browse .bw-grid { grid-template-columns: 1fr; }
+  .em-browse .bw-controls { flex-direction: column; align-items: flex-start; }
+}

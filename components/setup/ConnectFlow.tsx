@@ -31,8 +31,8 @@ const ACTIVATION_STAGES = [
   { id: "checkout_pending", label: "Payment", detail: "Stripe confirms the subscription" },
   { id: "entitled", label: "Entitlement", detail: "Connected access is recorded" },
   { id: "provisioning", label: "Infrastructure", detail: "Organization and graph scope are prepared" },
-  { id: "backfilling", label: "Backfill", detail: "Existing memory is projected into the graph" },
-  { id: "connected", label: "Connected", detail: "Hosted capabilities are active" },
+  { id: "backfilling", label: "Backfill", detail: "The terminal is projecting existing memory" },
+  { id: "connected", label: "Connected", detail: "Backfill complete; hosted capabilities are active" },
 ] as const;
 
 type PackageChoice = "local" | "connect";
@@ -66,7 +66,7 @@ function IdentityCard({ context }: { context: ConnectContext }) {
         </div>
       </div>
       <div className="connect-identity-org">
-        <span className="connect-meta-label">Existing Egregore</span>
+        <span className="connect-meta-label">{context.instance?.fresh ? "New Egregore" : "Existing Egregore"}</span>
         <strong>{context.organization.name}</strong>
         <small>{context.organization.slug}</small>
       </div>
@@ -164,26 +164,76 @@ function ActivationStatus({
 }) {
   const currentIndex = ACTIVATION_STAGES.findIndex((stage) => stage.id === context.status);
   const effectiveIndex = currentIndex >= 0 ? currentIndex : paymentState === "confirmed" ? 1 : 0;
+  const activationComplete = context.status === "connected";
+  const backfillActive = context.status === "backfilling";
+  const provisioningActive = context.status === "provisioning";
+  // Fresh installs (Connect chosen at the end of setup) have no history to
+  // project — the backfill language belongs to the upgrade path only.
+  const fresh = context.instance?.fresh === true;
+  const stages = ACTIVATION_STAGES.map((stage) => {
+    if (!fresh) return stage;
+    if (stage.id === "backfilling") {
+      return { ...stage, label: "Workspace", detail: "A fresh instance has nothing to project yet" };
+    }
+    if (stage.id === "connected") {
+      return { ...stage, detail: "Hosted capabilities are active" };
+    }
+    return stage;
+  });
+  const heading = activationComplete
+    ? "Your Egregore is connected."
+    : backfillActive
+      ? fresh
+        ? "Finishing activation."
+        : "Backfilling your Egregore."
+      : provisioningActive
+        ? "Preparing Connected infrastructure."
+        : context.status === "entitled"
+          ? "Subscription confirmed."
+          : paymentState === "confirmed"
+            ? "Payment confirmed."
+            : "Checkout complete.";
+  const description = activationComplete
+    ? fresh
+      ? "Hosted capabilities are active. Your local Markdown and Git history remain the source of truth."
+      : "The historical graph backfill is complete. Your local Markdown and Git history remain the source of truth."
+    : backfillActive
+      ? fresh
+        ? "You can close this page. The terminal is finishing activation."
+        : "You can close this page. Keep the terminal open while sessions, artifacts, quests, and ingest history are projected into the graph."
+      : fresh
+        ? "You can close this page. Keep the terminal open while provisioning finishes."
+        : "You can close this page. Keep the terminal open while provisioning and the historical graph backfill continue.";
+  const terminalTitle = activationComplete
+    ? fresh
+      ? "You're all set"
+      : "Backfill complete"
+    : "You can close this page";
+  const terminalDetail = activationComplete
+    ? fresh
+      ? "Return to the terminal — your session starts there."
+      : "Return to the terminal for the final backfill counts."
+    : backfillActive
+      ? fresh
+        ? "Keep the terminal open. It finishes activation on its own."
+        : "Keep the terminal open. It will show the exact counts when projection finishes."
+      : "Keep the terminal open. Provisioning continues there automatically after payment.";
 
   return (
     <div className="setup-stage connect-flow">
       <div className="setup-stage-centered connect-result-heading">
         <div className="setup-success-check"><CheckMark /></div>
         <p className="setup-eyebrow">Egregore Connect</p>
-        <h1 className="setup-title setup-title-lg">
-          {paymentState === "confirmed" ? "Payment confirmed." : "Checkout complete."}
-        </h1>
-        <p className="setup-sub">
-          Keep the terminal open. It is already continuing with provisioning and the historical graph backfill.
-        </p>
+        <h1 className="setup-title setup-title-lg">{heading}</h1>
+        <p className="setup-sub">{description}</p>
       </div>
 
       <IdentityCard context={context} />
 
       <ol className="connect-activation">
-        {ACTIVATION_STAGES.map((stage, index) => {
-          const complete = index < effectiveIndex;
-          const active = index === effectiveIndex;
+        {stages.map((stage, index) => {
+          const complete = activationComplete ? index <= effectiveIndex : index < effectiveIndex;
+          const active = !activationComplete && index === effectiveIndex;
           return (
             <li key={stage.id} className={`${complete ? "is-complete" : ""} ${active ? "is-active" : ""}`}>
               <span className="connect-activation-mark">{complete ? <CheckMark /> : String(index + 1).padStart(2, "0")}</span>
@@ -197,10 +247,14 @@ function ActivationStatus({
       </ol>
 
       <div className="connect-terminal-note">
-        <span className="connect-terminal-pulse" aria-hidden="true" />
+        {activationComplete ? (
+          <span className="connect-terminal-check" aria-hidden="true"><CheckMark /></span>
+        ) : (
+          <span className="connect-terminal-pulse" aria-hidden="true" />
+        )}
         <div>
-          <strong>Return to the terminal</strong>
-          <p>Your Markdown, Git history, branches, and memory remain in place throughout activation.</p>
+          <strong>{terminalTitle}</strong>
+          <p>{terminalDetail}</p>
         </div>
       </div>
     </div>
