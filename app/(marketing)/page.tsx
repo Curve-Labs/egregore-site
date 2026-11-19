@@ -115,8 +115,8 @@ const labPosts = [
   {
     label: "From the lab",
     title: "Context gardening",
-    body: "Most teams treat knowledge like a warehouse. Store it, label it, forget where you put it. Context gardening is different: it treats organizational knowledge as something alive that grows, connects, and compounds when you tend to it.",
-    href: "/blog/teams-forgot-how-to-remember",
+    body: "Models now choose their own context. What they can choose from is the part an organization has to grow. Context gardening is the practice of letting that context accumulate from the work itself, readable by agents and correctable by people.",
+    href: "/research/context-gardening",
     img: "/context-gardening.png",
     imgWidth: 234,
   },

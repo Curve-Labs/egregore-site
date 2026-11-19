@@ -102,7 +102,9 @@ export default function BlogPost() {
         </p>
 
         <p>
-          I refer to this as context gardening (as opposed to engineering): the
+          I refer to this as{" "}
+          <Link href="/research/context-gardening">context gardening</Link>{" "}
+          (as opposed to engineering): the
           overhead approaches zero as context surfaces are pegged to the edges of
           the organization, and these edges multiply as the organization
           interacts.
