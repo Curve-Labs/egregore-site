@@ -9,10 +9,6 @@ const ARTICLES = {
     title: "Machinations of Egregore",
     description: "Not a tool Claude connects to \u2014 an environment Claude operates within. Each group receives a self-contained workspace distributed through GitHub: the codebase, the command protocol, the connection layer, and the collective memory.",
   },
-  "context-gardening": {
-    title: "Context Gardening",
-    description: "Engineering is top-down. Gardening is bottom-up. The best context engineering is already being delegated to AI \u2014 the right move is to let it do the engineering, give it the tools, and get out of its way.",
-  },
   "interface-of-desire": {
     title: "Interface of Desire",
     description: "People create workarounds when tools don\u2019t match their natural workflow \u2014 copying conversation logs, writing \u201Chere\u2019s what I tried\u201D messages, building shared prompt libraries. These desire paths reveal latent demand.",

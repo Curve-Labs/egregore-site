@@ -14,8 +14,8 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
-        text: 'Blog',
-        url: 'https://egregore.xyz/blog/teams-forgot-how-to-remember',
+        text: 'Research',
+        url: 'https://egregore.xyz/research/context-gardening',
       },
       {
         text: 'GitHub',
